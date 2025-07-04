@@ -28,6 +28,41 @@ Returns the health status of the API.
 }
 ```
 
+#### GET `/health/basic`
+
+Returns basic health status without database connectivity (suitable for CI environments).
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "service": "Normaize API",
+  "version": "1.0.0",
+  "environment": "Development"
+}
+```
+
+#### GET `/health/startup`
+
+Returns startup health check status using ASP.NET Core health checks.
+
+**Response:**
+```json
+{
+  "status": "Healthy",
+  "totalDuration": "00:00:00.0012345",
+  "entries": {
+    "startup": {
+      "data": {},
+      "duration": "00:00:00.0012345",
+      "status": "Healthy",
+      "tags": []
+    }
+  }
+}
+```
+
 ### DataSets
 
 #### GET `/api/datasets`

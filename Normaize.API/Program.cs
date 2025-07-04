@@ -29,10 +29,24 @@ builder.Services.AddSwaggerGen(c =>
             // c.EnableAnnotations(); // Commented out as it's not available in this version
 });
 
+// Add health checks
+builder.Services.AddHealthChecks()
+    .AddCheck("startup", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Application started successfully"));
+
 // Database
 var connectionString = $"Server={Environment.GetEnvironmentVariable("MYSQLHOST")};Database={Environment.GetEnvironmentVariable("MYSQLDATABASE")};User={Environment.GetEnvironmentVariable("MYSQLUSER")};Password={Environment.GetEnvironmentVariable("MYSQLPASSWORD")};Port={Environment.GetEnvironmentVariable("MYSQLPORT")};";
-builder.Services.AddDbContext<NormaizeContext>(options =>
-    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 0))));
+
+// Only add database context if connection string is available
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
+{
+    builder.Services.AddDbContext<NormaizeContext>(options =>
+        options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 0))));
+}
+else
+{
+    // Skip database context for CI/testing environments
+    // The application will still start but database operations will fail
+}
 
 // CORS
 builder.Services.AddCors(options =>
@@ -81,6 +95,9 @@ app.UseCors("AllowAll");
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Map health checks
+app.MapHealthChecks("/health/startup");
 
 // Global exception handler
 app.UseMiddleware<ExceptionHandlingMiddleware>();

@@ -25,4 +25,19 @@ public class HealthController : ControllerBase
             service = "Normaize API"
         });
     }
+
+    [HttpGet("basic")]
+    public IActionResult GetBasic()
+    {
+        _logger.LogInformation("Basic health check requested at {Timestamp}", DateTime.UtcNow);
+        
+        return Ok(new
+        {
+            status = "healthy",
+            timestamp = DateTime.UtcNow,
+            service = "Normaize API",
+            version = "1.0.0",
+            environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown"
+        });
+    }
 } 
