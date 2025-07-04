@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["dotnet-sdk_8"]
+
+[phases.install]
+cmds = ["dotnet restore"]
+
+[phases.build]
+cmds = ["dotnet publish Normaize.API/Normaize.API.csproj -c Release -o out"]
+
+[start]
+cmd = "dotnet Normaize.API/out/Normaize.API.dll" 
