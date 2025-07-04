@@ -85,4 +85,8 @@ app.MapControllers();
 // Global exception handler
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
+// Use PORT environment variable if set (for Railway)
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+app.Urls.Add($"http://*:{port}");
+
 app.Run(); 
