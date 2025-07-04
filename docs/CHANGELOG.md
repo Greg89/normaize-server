@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated documentation to reflect .NET 9 requirements
 
 ### Added
+- GitHub Actions CI/CD pipeline for automated testing and deployment
+- Pull request validation workflow
+- Code coverage reporting with Codecov integration
+- Security vulnerability scanning
+- Docker image testing in CI pipeline
+
+### Added
 - Initial project setup with .NET 9 Web API
 - DataSet management endpoints (CRUD operations)
 - File upload functionality for CSV, JSON, and Excel files

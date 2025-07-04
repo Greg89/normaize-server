@@ -1,5 +1,8 @@
 # Normaize - Data Toolbox
 
+[![CI/CD Pipeline](https://github.com/Greg89/normaize-server/actions/workflows/ci.yml/badge.svg)](https://github.com/Greg89/normaize-server/actions/workflows/ci.yml)
+[![Pull Request Check](https://github.com/Greg89/normaize-server/actions/workflows/pr-check.yml/badge.svg)](https://github.com/Greg89/normaize-server/actions/workflows/pr-check.yml)
+
 A comprehensive web application for normalizing, comparing, analyzing, and visualizing data from various sources.
 
 ## Features
