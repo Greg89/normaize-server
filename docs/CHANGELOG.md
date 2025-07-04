@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pull request validation workflow
 - Code coverage reporting with Codecov integration
 - Security vulnerability scanning (integrated into main build job)
-- Docker image testing in CI pipeline (basic startup validation)
+- Docker image testing in CI pipeline (validates image structure and .NET runtime)
 
 ### Added
 - Initial project setup with .NET 9 Web API
