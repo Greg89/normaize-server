@@ -24,4 +24,8 @@ RUN dotnet publish "Normaize.API.csproj" -c Release -o /app/publish
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD curl --fail http://localhost:8080/health || exit 1
+
 ENTRYPOINT ["dotnet", "Normaize.API.dll"] 
