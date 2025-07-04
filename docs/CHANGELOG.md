@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Actions CI/CD pipeline for automated testing and deployment
 - Pull request validation workflow
 - Code coverage reporting with Codecov integration
-- Security vulnerability scanning
+- Security vulnerability scanning (integrated into main build job)
 - Docker image testing in CI pipeline
 
 ### Added
