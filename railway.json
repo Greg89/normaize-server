@@ -1,4 +1,0 @@
-{
-  "build": "dotnet publish Normaize.API/Normaize.API.csproj -c Release -o out",
-  "start": "dotnet Normaize.API/out/Normaize.API.dll"
-} 
