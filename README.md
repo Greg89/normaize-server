@@ -14,7 +14,7 @@ A comprehensive web application for normalizing, comparing, analyzing, and visua
 ## Tech Stack
 
 ### Backend
-- **.NET 8** Web API
+- **.NET 9** Web API
 - **Entity Framework Core** with MySQL
 - **AutoMapper** for object mapping
 - **Swagger/OpenAPI** for API documentation
@@ -54,7 +54,7 @@ normaize-server/
 ## Getting Started
 
 ### Prerequisites
-- .NET 8 SDK
+- .NET 9 SDK
 - MySQL database (or use Railway's MySQL plugin)
 - Docker (optional, for containerized development)
 

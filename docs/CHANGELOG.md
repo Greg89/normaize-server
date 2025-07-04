@@ -8,7 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial project setup with .NET 8 Web API
+- Upgraded to .NET 9 for improved performance and latest features
+
+### Changed
+- Updated all NuGet packages to .NET 9 compatible versions
+- Updated Dockerfile to use .NET 9 SDK and runtime
+- Updated documentation to reflect .NET 9 requirements
+
+### Added
+- Initial project setup with .NET 9 Web API
 - DataSet management endpoints (CRUD operations)
 - File upload functionality for CSV, JSON, and Excel files
 - Health check endpoint

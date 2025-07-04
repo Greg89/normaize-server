@@ -14,7 +14,7 @@ Thank you for your interest in contributing to Normaize! This document provides 
 ## Development Setup
 
 ### Prerequisites
-- .NET 8 SDK
+- .NET 9 SDK
 - Node.js 18+ (if working on frontend)
 - Docker (optional)
 
