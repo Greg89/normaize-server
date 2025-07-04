@@ -41,23 +41,23 @@ public class FileUploadService : IFileUploadService
         return filePath;
     }
 
-    public async Task<bool> ValidateFileAsync(FileUploadRequest fileRequest)
+    public Task<bool> ValidateFileAsync(FileUploadRequest fileRequest)
     {
         if (fileRequest.FileStream == null || fileRequest.FileStream.Length == 0)
-            return false;
+            return Task.FromResult(false);
 
         var maxFileSize = _configuration.GetValue<long>("FileUpload:MaxFileSize", 10 * 1024 * 1024); // 10MB default
         if (fileRequest.FileSize > maxFileSize)
-            return false;
+            return Task.FromResult(false);
 
         var allowedExtensions = _configuration.GetSection("FileUpload:AllowedExtensions").Get<string[]>() ?? 
                                new[] { ".csv", ".json", ".xlsx", ".xls" };
 
         var fileExtension = Path.GetExtension(fileRequest.FileName).ToLowerInvariant();
         if (!allowedExtensions.Contains(fileExtension))
-            return false;
+            return Task.FromResult(false);
 
-        return true;
+        return Task.FromResult(true);
     }
 
     public async Task<DataSet> ProcessFileAsync(string filePath, string fileType)
@@ -167,7 +167,7 @@ public class FileUploadService : IFileUploadService
         dataSet.PreviewData = JsonSerializer.Serialize(records.Take(10).ToList());
     }
 
-    private async Task ProcessExcelFileAsync(string filePath, DataSet dataSet)
+    private Task ProcessExcelFileAsync(string filePath, DataSet dataSet)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
@@ -203,9 +203,11 @@ public class FileUploadService : IFileUploadService
         dataSet.RowCount = rowCount;
         dataSet.Schema = JsonSerializer.Serialize(headers);
         dataSet.PreviewData = JsonSerializer.Serialize(records.Take(10).ToList());
+
+        return Task.CompletedTask;
     }
 
-    public async Task DeleteFileAsync(string filePath)
+    public Task DeleteFileAsync(string filePath)
     {
         try
         {
@@ -218,5 +220,7 @@ public class FileUploadService : IFileUploadService
         {
             _logger.LogError(ex, "Error deleting file {FilePath}", filePath);
         }
+
+        return Task.CompletedTask;
     }
 } 
