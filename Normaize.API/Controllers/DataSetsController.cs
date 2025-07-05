@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
@@ -7,6 +8,7 @@ namespace Normaize.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class DataSetsController : ControllerBase
 {
     private readonly IDataProcessingService _dataProcessingService;

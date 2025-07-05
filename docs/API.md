@@ -9,7 +9,28 @@ This document provides detailed information about the Normaize API endpoints, re
 
 ## Authentication
 
-Currently, the API does not require authentication. All endpoints are publicly accessible.
+The API uses Auth0 JWT Bearer token authentication. All `/api/*` endpoints require a valid JWT token.
+
+### Getting a Token
+
+1. Authenticate with your Auth0 application
+2. Include the JWT token in the Authorization header:
+   ```
+   Authorization: Bearer <your-jwt-token>
+   ```
+
+### Public Endpoints
+
+- `GET /health` - Health check (no authentication required)
+- `GET /health/basic` - Basic health check (no authentication required)
+- `GET /health/startup` - Startup health check (no authentication required)
+
+### Protected Endpoints
+
+All `/api/*` endpoints require authentication:
+- `GET /api/datasets` - Get all datasets
+- `POST /api/datasets/upload` - Upload new dataset
+- etc.
 
 ## Endpoints
 
