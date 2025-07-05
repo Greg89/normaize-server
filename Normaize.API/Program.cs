@@ -7,12 +7,42 @@ using Normaize.Data.Repositories;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DotNetEnv;
+using Serilog;
+using Serilog.Events;
 
 
 // Load environment variables from .env file
 Env.Load();
 
+// Configure Serilog
+var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+var seqUrl = Environment.GetEnvironmentVariable("SEQ_URL");
+
+var loggerConfiguration = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .Enrich.FromLogContext()
+    .Enrich.WithEnvironmentName()
+    .Enrich.WithThreadId()
+    .Enrich.WithProcessId()
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}",
+        restrictedToMinimumLevel: LogEventLevel.Information
+    );
+
+// Add Seq sink for non-local environments
+if (!string.IsNullOrEmpty(seqUrl) && environment != "Development")
+{
+    loggerConfiguration.WriteTo.Seq(seqUrl, 
+        restrictedToMinimumLevel: LogEventLevel.Information,
+        apiKey: Environment.GetEnvironmentVariable("SEQ_API_KEY"));
+}
+
+Log.Logger = loggerConfiguration.CreateLogger();
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Serilog for dependency injection
+builder.Host.UseSerilog();
 
 // Add services to the container.
 builder.Services.AddControllers()
@@ -83,6 +113,8 @@ builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
 builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();
 builder.Services.AddScoped<IDataVisualizationService, DataVisualizationService>();
 builder.Services.AddScoped<IFileUploadService, FileUploadService>();
+builder.Services.AddScoped<IStructuredLoggingService, StructuredLoggingService>();
+builder.Services.AddHttpContextAccessor();
 
 // Repositories
 builder.Services.AddScoped<IDataSetRepository, DataSetRepository>();
@@ -115,6 +147,9 @@ app.UseAuthorization();
 // Add Auth0 middleware
 app.UseAuth0();
 
+// Add request logging middleware
+app.UseMiddleware<RequestLoggingMiddleware>();
+
 app.MapControllers();
 
 // Map health checks
@@ -127,4 +162,16 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 app.Urls.Add($"http://*:{port}");
 
-app.Run(); 
+try
+{
+    Log.Information("Starting Normaize API on port {Port}", port);
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+} 

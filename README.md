@@ -12,7 +12,9 @@ A comprehensive web application for normalizing, comparing, analyzing, and visua
 - **Data Comparison**: Compare datasets and identify differences
 - **Data Analysis**: Statistical analysis and insights
 - **Data Visualization**: Interactive charts and graphs
-- **Modern API**: Clean, RESTful API built with .NET 8
+- **Modern API**: Clean, RESTful API built with .NET 9
+- **Structured Logging**: Comprehensive logging with Seq integration for production monitoring
+- **Authentication**: Auth0 integration for secure access
 
 ## Tech Stack
 
@@ -23,6 +25,8 @@ A comprehensive web application for normalizing, comparing, analyzing, and visua
 - **Swagger/OpenAPI** for API documentation
 - **CORS** enabled for frontend communication
 - **Docker** for containerization
+- **Serilog** with Seq for structured logging
+- **Auth0** for authentication
 
 ### Database
 - **MySQL** (via Railway)
@@ -72,11 +76,20 @@ normaize-server/
 2. **Set up environment variables**
    Create a `.env` file in the root directory:
    ```env
+   # Database Configuration
    MYSQLHOST=localhost
    MYSQLDATABASE=normaize
    MYSQLUSER=your_username
    MYSQLPASSWORD=your_password
    MYSQLPORT=3306
+   
+   # Auth0 Configuration
+   AUTH0_ISSUER=https://your-domain.auth0.com/
+   AUTH0_AUDIENCE=https://your-api.com
+   
+   # Seq Logging (optional for local development)
+   SEQ_URL=https://your-seq-instance.railway.app
+   SEQ_API_KEY=your-seq-api-key
    ```
 
 3. **Run the application**
@@ -141,7 +154,13 @@ For detailed API documentation, see [API.md](docs/API.md).
 | `MYSQLUSER` | Database username | Yes |
 | `MYSQLPASSWORD` | Database password | Yes |
 | `MYSQLPORT` | Database port | Yes |
+| `AUTH0_ISSUER` | Auth0 issuer URL | Yes |
+| `AUTH0_AUDIENCE` | Auth0 audience | Yes |
+| `SEQ_URL` | Seq logging server URL | No* |
+| `SEQ_API_KEY` | Seq API key | No* |
 | `PORT` | Application port (set by Railway) | No |
+
+*Seq logging is only enabled in non-Development environments when `SEQ_URL` is provided.
 
 ## Development
 

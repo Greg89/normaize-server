@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+using Normaize.API.Services;
 using System.Net;
 using System.Text.Json;
 
@@ -6,12 +8,12 @@ namespace Normaize.API.Middleware;
 public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly ILogger<ExceptionHandlingMiddleware> _logger;
+    private readonly IStructuredLoggingService _loggingService;
 
-    public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+    public ExceptionHandlingMiddleware(RequestDelegate next, IStructuredLoggingService loggingService)
     {
         _next = next;
-        _logger = logger;
+        _loggingService = loggingService;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -22,7 +24,9 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An unhandled exception occurred");
+            // Log the exception with full context
+            _loggingService.LogException(ex, "Global exception handler");
+            
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -35,18 +39,27 @@ public class ExceptionHandlingMiddleware
         {
             error = new
             {
-                message = exception.Message,
-                type = exception.GetType().Name
+                message = "An error occurred while processing your request.",
+                type = exception.GetType().Name,
+                details = exception.Message
             }
         };
 
-        context.Response.StatusCode = exception switch
+        switch (exception)
         {
-            ArgumentException => (int)HttpStatusCode.BadRequest,
-            UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
-            InvalidOperationException => (int)HttpStatusCode.BadRequest,
-            _ => (int)HttpStatusCode.InternalServerError
-        };
+            case ArgumentException:
+                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                break;
+            case UnauthorizedAccessException:
+                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                break;
+            case InvalidOperationException:
+                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                break;
+            default:
+                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                break;
+        }
 
         var jsonResponse = JsonSerializer.Serialize(response, new JsonSerializerOptions
         {
