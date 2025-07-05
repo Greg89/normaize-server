@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Normaize.API.Services;
 
 namespace Normaize.API.Controllers;
 
@@ -6,17 +7,17 @@ namespace Normaize.API.Controllers;
 [Route("[controller]")]
 public class HealthController : ControllerBase
 {
-    private readonly ILogger<HealthController> _logger;
+    private readonly IStructuredLoggingService _loggingService;
 
-    public HealthController(ILogger<HealthController> logger)
+    public HealthController(IStructuredLoggingService loggingService)
     {
-        _logger = logger;
+        _loggingService = loggingService;
     }
 
     [HttpGet]
     public IActionResult Get()
     {
-        _logger.LogInformation("Health check requested at {Timestamp}", DateTime.UtcNow);
+        _loggingService.LogUserAction("Health check requested");
         
         return Ok(new
         {
@@ -29,7 +30,7 @@ public class HealthController : ControllerBase
     [HttpGet("basic")]
     public IActionResult GetBasic()
     {
-        _logger.LogInformation("Basic health check requested at {Timestamp}", DateTime.UtcNow);
+        _loggingService.LogUserAction("Basic health check requested");
         
         return Ok(new
         {

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
+using Normaize.API.Services;
 
 namespace Normaize.API.Controllers;
 
@@ -12,12 +13,12 @@ namespace Normaize.API.Controllers;
 public class DataSetsController : ControllerBase
 {
     private readonly IDataProcessingService _dataProcessingService;
-    private readonly ILogger<DataSetsController> _logger;
+    private readonly IStructuredLoggingService _loggingService;
 
-    public DataSetsController(IDataProcessingService dataProcessingService, ILogger<DataSetsController> logger)
+    public DataSetsController(IDataProcessingService dataProcessingService, IStructuredLoggingService loggingService)
     {
         _dataProcessingService = dataProcessingService;
-        _logger = logger;
+        _loggingService = loggingService;
     }
 
     [HttpGet]
@@ -30,7 +31,7 @@ public class DataSetsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving datasets");
+            _loggingService.LogException(ex, "GetDataSets");
             return StatusCode(500, "Error retrieving datasets");
         }
     }
@@ -48,7 +49,7 @@ public class DataSetsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving dataset {Id}", id);
+            _loggingService.LogException(ex, $"GetDataSet({id})");
             return StatusCode(500, "Error retrieving dataset");
         }
     }
@@ -85,7 +86,7 @@ public class DataSetsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error uploading dataset");
+            _loggingService.LogException(ex, "UploadDataSet");
             return StatusCode(500, "Error uploading dataset");
         }
     }
@@ -103,7 +104,7 @@ public class DataSetsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving dataset preview {Id}", id);
+            _loggingService.LogException(ex, $"GetDataSetPreview({id})");
             return StatusCode(500, "Error retrieving dataset preview");
         }
     }
@@ -121,7 +122,7 @@ public class DataSetsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving dataset schema {Id}", id);
+            _loggingService.LogException(ex, $"GetDataSetSchema({id})");
             return StatusCode(500, "Error retrieving dataset schema");
         }
     }
@@ -139,7 +140,7 @@ public class DataSetsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting dataset {Id}", id);
+            _loggingService.LogException(ex, $"DeleteDataSet({id})");
             return StatusCode(500, "Error deleting dataset");
         }
     }
