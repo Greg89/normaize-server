@@ -42,6 +42,33 @@ jobs:
         name: codecov-umbrella
         fail_ci_if_error: false
 
+    - name: Generate coverage report
+      env:
+        REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
+      run: |
+        # Install ReportGenerator Pro
+        dotnet tool install --global dotnet-reportgenerator-globaltool
+        
+        # Generate HTML report
+        reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html
+        
+        # Generate summary and badges
+        reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-summary" -reporttypes:"TextSummary;Badges"
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: ./coverage-report/
+        retention-days: 30
+
+    - name: Upload coverage summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-summary
+        path: ./coverage-summary/
+        retention-days: 30
+
     - name: Run security scan
       run: dotnet list package --vulnerable
 
@@ -80,4 +107,62 @@ jobs:
         docker run --rm --entrypoint="" normaize-api test -f /app/Normaize.API.dll && echo "✅ Application DLL found"
         
         echo "✅ Docker image test completed"
-        echo "Image builds successfully and contains all required files" 
+        echo "Image builds successfully and contains all required files"
+
+  deploy-coverage-pages:
+    runs-on: ubuntu-latest
+    needs: build-test-coverage
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download coverage report
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage-report
+        path: ./coverage-report/
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Upload to GitHub Pages
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ./coverage-report/
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+
+  coverage-summary:
+    runs-on: ubuntu-latest
+    needs: build-test-coverage
+    if: always()
+
+    steps:
+    - name: Download coverage summary
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage-summary
+        path: coverage-summary/
+
+    - name: Display coverage summary
+      run: |
+        if [ -f "coverage-summary/Summary.txt" ]; then
+          echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          cat coverage-summary/Summary.txt >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "No coverage summary found"
+        fi
+
+    - name: Upload coverage badges
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-badges
+        path: coverage-summary/
+        retention-days: 30 
