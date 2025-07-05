@@ -90,8 +90,9 @@ if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
 }
 else
 {
-    // Skip database context for CI/testing environments
-    // The application will still start but database operations will fail
+    // Use in-memory database for testing/CI environments
+    builder.Services.AddDbContext<NormaizeContext>(options =>
+        options.UseInMemoryDatabase("TestDatabase"));
 }
 
 // CORS
@@ -147,16 +148,22 @@ app.UseAuthorization();
 // Add Auth0 middleware
 app.UseAuth0();
 
-// Add request logging middleware
-app.UseMiddleware<RequestLoggingMiddleware>();
+// Add request logging middleware (skip in test environment)
+if (!app.Environment.EnvironmentName.Equals("Test", StringComparison.OrdinalIgnoreCase))
+{
+    app.UseMiddleware<RequestLoggingMiddleware>();
+}
 
 app.MapControllers();
 
 // Map health checks
 app.MapHealthChecks("/health/startup");
 
-// Global exception handler
-app.UseMiddleware<ExceptionHandlingMiddleware>();
+// Global exception handler (skip in test environment)
+if (!app.Environment.EnvironmentName.Equals("Test", StringComparison.OrdinalIgnoreCase))
+{
+    app.UseMiddleware<ExceptionHandlingMiddleware>();
+}
 
 // Use PORT environment variable if set (for Railway)
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";

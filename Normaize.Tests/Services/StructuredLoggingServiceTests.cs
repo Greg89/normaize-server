@@ -23,18 +23,30 @@ public class StructuredLoggingServiceTests
         _mockHttpContext = new Mock<HttpContext>();
         _mockRequest = new Mock<HttpRequest>();
         
+        // Set up default HttpContext with anonymous user and request
+        var anonymousPrincipal = new ClaimsPrincipal(new ClaimsIdentity()); // Empty claims identity
+        _mockHttpContext.Setup(x => x.User).Returns(anonymousPrincipal);
         _mockHttpContext.Setup(x => x.Request).Returns(_mockRequest.Object);
+        _mockHttpContext.Setup(x => x.Items).Returns(new Dictionary<object, object>()); // <-- Add this line
         _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
         
         _loggingService = new StructuredLoggingService(_mockLogger.Object, _mockHttpContextAccessor.Object);
     }
 
+    // Patch each test that sets up a different user to re-setup the mock
     [Fact]
     public void LogUserAction_WithValidAction_ShouldLogInformation()
     {
         // Arrange
         var action = "Test Action";
         var data = new { testProperty = "testValue" };
+        // Always use ClaimsPrincipal with ClaimsIdentity
+        var principal = new ClaimsPrincipal(new ClaimsIdentity());
+        _mockHttpContext.Setup(x => x.User).Returns(principal);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+        // Debug output
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         _loggingService.LogUserAction(action, data);
@@ -47,7 +59,15 @@ public class StructuredLoggingServiceTests
                 It.Is<It.IsAnyType>((v, t) => v != null && v!.ToString().Contains("User Action: Test Action")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Exactly(2)); // Once for action, once for data
+            Times.Once);
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v != null && v!.ToString().Contains("Action Data")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     [Fact]
@@ -55,6 +75,12 @@ public class StructuredLoggingServiceTests
     {
         // Arrange
         var action = "Test Action";
+        var principal = new ClaimsPrincipal(new ClaimsIdentity());
+        _mockHttpContext.Setup(x => x.User).Returns(principal);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+        // Debug output
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         _loggingService.LogUserAction(action);
@@ -76,6 +102,12 @@ public class StructuredLoggingServiceTests
         // Arrange
         var exception = new InvalidOperationException("Test exception");
         var context = "Test Context";
+        var principal = new ClaimsPrincipal(new ClaimsIdentity());
+        _mockHttpContext.Setup(x => x.User).Returns(principal);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+        // Debug output
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         _loggingService.LogException(exception, context);
@@ -98,6 +130,12 @@ public class StructuredLoggingServiceTests
         var method = "GET";
         var path = "/api/test";
         var userId = "user123";
+        var principal = new ClaimsPrincipal(new ClaimsIdentity());
+        _mockHttpContext.Setup(x => x.User).Returns(principal);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+        // Debug output
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         _loggingService.LogRequestStart(method, path, userId);
@@ -121,6 +159,12 @@ public class StructuredLoggingServiceTests
         var path = "/api/test";
         var statusCode = 200;
         var durationMs = 150L;
+        var principal = new ClaimsPrincipal(new ClaimsIdentity());
+        _mockHttpContext.Setup(x => x.User).Returns(principal);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+        // Debug output
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         _loggingService.LogRequestEnd(method, path, statusCode, durationMs);
@@ -142,6 +186,12 @@ public class StructuredLoggingServiceTests
         // Arrange
         var userId = "user123";
         var userEmail = "user@example.com";
+        var principal = new ClaimsPrincipal(new ClaimsIdentity());
+        _mockHttpContext.Setup(x => x.User).Returns(principal);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+        // Debug output
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         using var scope = _loggingService.CreateUserScope(userId, userEmail);
@@ -160,10 +210,12 @@ public class StructuredLoggingServiceTests
             new Claim(ClaimTypes.NameIdentifier, expectedUserId),
             new Claim(ClaimTypes.Email, "user@example.com")
         };
-        var identity = new ClaimsIdentity(claims, "Test");
-        var principal = new ClaimsPrincipal(identity);
-        
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"));
         _mockHttpContext.Setup(x => x.User).Returns(principal);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+        // Debug output
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         var method = _loggingService.GetType()
@@ -179,7 +231,12 @@ public class StructuredLoggingServiceTests
     public void GetCurrentUserId_WithNoUser_ShouldReturnNull()
     {
         // Arrange
-        _mockHttpContext.Setup(x => x.User).Returns(new ClaimsPrincipal());
+        var principal = new ClaimsPrincipal(new ClaimsIdentity());
+        _mockHttpContext.Setup(x => x.User).Returns(principal);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+        // Debug output
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         var method = _loggingService.GetType()
@@ -201,10 +258,12 @@ public class StructuredLoggingServiceTests
             new Claim(ClaimTypes.NameIdentifier, "user123"),
             new Claim(ClaimTypes.Email, expectedEmail)
         };
-        var identity = new ClaimsIdentity(claims, "Test");
-        var principal = new ClaimsPrincipal(identity);
-        
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"));
         _mockHttpContext.Setup(x => x.User).Returns(principal);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+        // Debug output
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         var method = _loggingService.GetType()

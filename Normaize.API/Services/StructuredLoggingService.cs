@@ -74,13 +74,43 @@ public class StructuredLoggingService : IStructuredLoggingService
 
     private string? GetCurrentUserId()
     {
-        return _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-            ?? _httpContextAccessor.HttpContext?.Items["UserId"]?.ToString();
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+            return null;
+        var user = httpContext.User;
+        if (user == null)
+            return null;
+        
+        // Try to get from claims first
+        var userIdFromClaims = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrEmpty(userIdFromClaims))
+            return userIdFromClaims;
+        
+        // Try to get from Items
+        if (httpContext.Items.TryGetValue("UserId", out var userIdFromItems))
+            return userIdFromItems as string;
+        
+        return null;
     }
 
     private string? GetCurrentUserEmail()
     {
-        return _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Email)?.Value
-            ?? _httpContextAccessor.HttpContext?.Items["UserEmail"]?.ToString();
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+            return null;
+        var user = httpContext.User;
+        if (user == null)
+            return null;
+        
+        // Try to get from claims first
+        var emailFromClaims = user.FindFirst(ClaimTypes.Email)?.Value;
+        if (!string.IsNullOrEmpty(emailFromClaims))
+            return emailFromClaims;
+        
+        // Try to get from Items
+        if (httpContext.Items.TryGetValue("UserEmail", out var emailFromItems))
+            return emailFromItems as string;
+        
+        return null;
     }
 } 
