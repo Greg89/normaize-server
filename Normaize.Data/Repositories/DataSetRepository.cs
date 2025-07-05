@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
+using Normaize.Data;
 
 namespace Normaize.Data.Repositories;
 

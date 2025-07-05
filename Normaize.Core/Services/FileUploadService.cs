@@ -1,14 +1,16 @@
-using CsvHelper;
-using CsvHelper.Configuration;
-using Microsoft.Extensions.Configuration;
+using AutoMapper;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
+using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using OfficeOpenXml;
 using System.Globalization;
+using CsvHelper;
+using CsvHelper.Configuration;
 using System.Text.Json;
 
-namespace Normaize.API.Services;
+namespace Normaize.Core.Services;
 
 public class FileUploadService : IFileUploadService
 {
@@ -207,20 +209,13 @@ public class FileUploadService : IFileUploadService
         return Task.CompletedTask;
     }
 
-    public Task DeleteFileAsync(string filePath)
+    public Task DeleteFileAsync(string fileName)
     {
-        try
+        var filePath = Path.Combine(_uploadPath, fileName);
+        if (File.Exists(filePath))
         {
-            if (File.Exists(filePath))
-            {
-                File.Delete(filePath);
-            }
+            File.Delete(filePath);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting file {FilePath}", filePath);
-        }
-
         return Task.CompletedTask;
     }
 } 

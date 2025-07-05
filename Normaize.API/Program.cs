@@ -109,10 +109,10 @@ builder.Services.AddCors(options =>
 builder.Services.AddAutoMapper(typeof(Program));
 
 // Services
-builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
-builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();
-builder.Services.AddScoped<IDataVisualizationService, DataVisualizationService>();
-builder.Services.AddScoped<IFileUploadService, FileUploadService>();
+builder.Services.AddScoped<IDataProcessingService, Normaize.Core.Services.DataProcessingService>();
+builder.Services.AddScoped<IDataAnalysisService, Normaize.Core.Services.DataAnalysisService>();
+builder.Services.AddScoped<IDataVisualizationService, Normaize.Core.Services.DataVisualizationService>();
+builder.Services.AddScoped<IFileUploadService, Normaize.Core.Services.FileUploadService>();
 builder.Services.AddScoped<IStructuredLoggingService, StructuredLoggingService>();
 builder.Services.AddHttpContextAccessor();
 
@@ -174,4 +174,7 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
-} 
+}
+
+// Make Program class accessible for integration tests
+public partial class Program { } 

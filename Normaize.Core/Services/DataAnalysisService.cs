@@ -3,9 +3,8 @@ using Microsoft.Extensions.Logging;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
-using Normaize.Data.Repositories;
 
-namespace Normaize.API.Services;
+namespace Normaize.Core.Services;
 
 public class DataAnalysisService : IDataAnalysisService
 {
