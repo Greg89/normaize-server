@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using DotNetEnv;
 
+
 // Load environment variables from .env file
 Env.Load();
 
@@ -32,6 +33,21 @@ builder.Services.AddSwaggerGen(c =>
 // Add health checks
 builder.Services.AddHealthChecks()
     .AddCheck("startup", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Application started successfully"));
+
+// Add JWT Authentication for Auth0
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.Authority = Environment.GetEnvironmentVariable("AUTH0_ISSUER");
+        options.Audience = Environment.GetEnvironmentVariable("AUTH0_AUDIENCE");
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true
+        };
+    });
 
 // Database
 var connectionString = $"Server={Environment.GetEnvironmentVariable("MYSQLHOST")};Database={Environment.GetEnvironmentVariable("MYSQLDATABASE")};User={Environment.GetEnvironmentVariable("MYSQLUSER")};Password={Environment.GetEnvironmentVariable("MYSQLPASSWORD")};Port={Environment.GetEnvironmentVariable("MYSQLPORT")};";
@@ -92,7 +108,12 @@ app.UseHttpsRedirection();
 
 app.UseCors("AllowAll");
 
+// Add authentication middleware
+app.UseAuthentication();
 app.UseAuthorization();
+
+// Add Auth0 middleware
+app.UseAuth0();
 
 app.MapControllers();
 
