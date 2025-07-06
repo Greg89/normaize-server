@@ -2,6 +2,8 @@
 
 [![CI/CD Pipeline](https://github.com/Greg89/normaize-server/actions/workflows/ci.yml/badge.svg)](https://github.com/Greg89/normaize-server/actions/workflows/ci.yml)
 [![Pull Request Check](https://github.com/Greg89/normaize-server/actions/workflows/pr-check.yml/badge.svg)](https://github.com/Greg89/normaize-server/actions/workflows/pr-check.yml)
+[![.NET](https://img.shields.io/badge/.NET-9.0-blue.svg)](https://dotnet.microsoft.com/download/dotnet/9.0)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A comprehensive web application for normalizing, comparing, analyzing, and visualizing data from various sources.
 
