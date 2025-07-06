@@ -116,6 +116,7 @@ jobs:
     permissions:
       pages: write
       id-token: write
+      contents: read
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -123,6 +124,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Download coverage report
       uses: actions/download-artifact@v4
@@ -130,19 +133,55 @@ jobs:
         name: coverage-report
         path: ./coverage-report/
 
+    - name: Debug repository info
+      run: |
+        echo "Repository: ${{ github.repository }}"
+        echo "Repository owner: ${{ github.repository_owner }}"
+        echo "Repository name: ${{ github.event.repository.name }}"
+        echo "GitHub server URL: ${{ github.server_url }}"
+        echo "Current ref: ${{ github.ref }}"
+        echo "Current SHA: ${{ github.sha }}"
+        echo "Repository visibility: ${{ github.event.repository.private }}"
+
+    - name: Check repository access
+      run: |
+        # Test if we can access the repository
+        if git ls-remote --exit-code origin > /dev/null 2>&1; then
+          echo "✅ Repository access confirmed"
+          echo "REPO_ACCESS=true" >> $GITHUB_ENV
+        else
+          echo "❌ Repository access failed"
+          echo "REPO_ACCESS=false" >> $GITHUB_ENV
+        fi
+
     - name: Setup Pages
+      if: env.REPO_ACCESS == 'true'
       uses: actions/configure-pages@v4
       with:
         enablement: true
 
     - name: Upload to GitHub Pages
+      if: env.REPO_ACCESS == 'true'
       uses: actions/upload-pages-artifact@v3
       with:
         path: ./coverage-report/
 
     - name: Deploy to GitHub Pages
+      if: env.REPO_ACCESS == 'true'
       id: deployment
       uses: actions/deploy-pages@v4
+
+    - name: Skip deployment - Access issues
+      if: env.REPO_ACCESS == 'false'
+      run: |
+        echo "⚠️ Skipping GitHub Pages deployment due to repository access issues"
+        echo "This might be due to repository permissions or configuration"
+        echo "Please check your GitHub Pages settings in the repository"
+        echo ""
+        echo "For private repositories with GitHub Pro:"
+        echo "1. Ensure GitHub Pages is enabled in repository settings"
+        echo "2. Check that the repository has proper permissions"
+        echo "3. Verify that GitHub Pro features are enabled for this repository"
 
   coverage-summary:
     runs-on: ubuntu-latest
