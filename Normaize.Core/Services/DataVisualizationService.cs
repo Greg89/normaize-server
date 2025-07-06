@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Normaize.Core.Interfaces;
 
-namespace Normaize.API.Services;
+namespace Normaize.Core.Services;
 
 public class DataVisualizationService : IDataVisualizationService
 {

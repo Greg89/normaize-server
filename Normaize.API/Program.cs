@@ -7,11 +7,42 @@ using Normaize.Data.Repositories;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DotNetEnv;
+using Serilog;
+using Serilog.Events;
+
 
 // Load environment variables from .env file
 Env.Load();
 
+// Configure Serilog
+var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+var seqUrl = Environment.GetEnvironmentVariable("SEQ_URL");
+
+var loggerConfiguration = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .Enrich.FromLogContext()
+    .Enrich.WithEnvironmentName()
+    .Enrich.WithThreadId()
+    .Enrich.WithProcessId()
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}",
+        restrictedToMinimumLevel: LogEventLevel.Information
+    );
+
+// Add Seq sink for non-local environments
+if (!string.IsNullOrEmpty(seqUrl) && environment != "Development")
+{
+    loggerConfiguration.WriteTo.Seq(seqUrl, 
+        restrictedToMinimumLevel: LogEventLevel.Information,
+        apiKey: Environment.GetEnvironmentVariable("SEQ_API_KEY"));
+}
+
+Log.Logger = loggerConfiguration.CreateLogger();
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Serilog for dependency injection
+builder.Host.UseSerilog();
 
 // Add services to the container.
 builder.Services.AddControllers()
@@ -29,10 +60,40 @@ builder.Services.AddSwaggerGen(c =>
             // c.EnableAnnotations(); // Commented out as it's not available in this version
 });
 
+// Add health checks
+builder.Services.AddHealthChecks()
+    .AddCheck("startup", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Application started successfully"));
+
+// Add JWT Authentication for Auth0
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.Authority = Environment.GetEnvironmentVariable("AUTH0_ISSUER");
+        options.Audience = Environment.GetEnvironmentVariable("AUTH0_AUDIENCE");
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true
+        };
+    });
+
 // Database
 var connectionString = $"Server={Environment.GetEnvironmentVariable("MYSQLHOST")};Database={Environment.GetEnvironmentVariable("MYSQLDATABASE")};User={Environment.GetEnvironmentVariable("MYSQLUSER")};Password={Environment.GetEnvironmentVariable("MYSQLPASSWORD")};Port={Environment.GetEnvironmentVariable("MYSQLPORT")};";
-builder.Services.AddDbContext<NormaizeContext>(options =>
-    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 0))));
+
+// Only add database context if connection string is available
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
+{
+    builder.Services.AddDbContext<NormaizeContext>(options =>
+        options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 0))));
+}
+else
+{
+    // Use in-memory database for testing/CI environments
+    builder.Services.AddDbContext<NormaizeContext>(options =>
+        options.UseInMemoryDatabase("TestDatabase"));
+}
 
 // CORS
 builder.Services.AddCors(options =>
@@ -49,10 +110,12 @@ builder.Services.AddCors(options =>
 builder.Services.AddAutoMapper(typeof(Program));
 
 // Services
-builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
-builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();
-builder.Services.AddScoped<IDataVisualizationService, DataVisualizationService>();
-builder.Services.AddScoped<IFileUploadService, FileUploadService>();
+builder.Services.AddScoped<IDataProcessingService, Normaize.Core.Services.DataProcessingService>();
+builder.Services.AddScoped<IDataAnalysisService, Normaize.Core.Services.DataAnalysisService>();
+builder.Services.AddScoped<IDataVisualizationService, Normaize.Core.Services.DataVisualizationService>();
+builder.Services.AddScoped<IFileUploadService, Normaize.Core.Services.FileUploadService>();
+builder.Services.AddScoped<IStructuredLoggingService, StructuredLoggingService>();
+builder.Services.AddHttpContextAccessor();
 
 // Repositories
 builder.Services.AddScoped<IDataSetRepository, DataSetRepository>();
@@ -78,15 +141,47 @@ app.UseHttpsRedirection();
 
 app.UseCors("AllowAll");
 
+// Add authentication middleware
+app.UseAuthentication();
 app.UseAuthorization();
+
+// Add Auth0 middleware
+app.UseAuth0();
+
+// Add request logging middleware (skip in test environment)
+if (!app.Environment.EnvironmentName.Equals("Test", StringComparison.OrdinalIgnoreCase))
+{
+    app.UseMiddleware<RequestLoggingMiddleware>();
+}
 
 app.MapControllers();
 
-// Global exception handler
-app.UseMiddleware<ExceptionHandlingMiddleware>();
+// Map health checks
+app.MapHealthChecks("/health/startup");
+
+// Global exception handler (skip in test environment)
+if (!app.Environment.EnvironmentName.Equals("Test", StringComparison.OrdinalIgnoreCase))
+{
+    app.UseMiddleware<ExceptionHandlingMiddleware>();
+}
 
 // Use PORT environment variable if set (for Railway)
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 app.Urls.Add($"http://*:{port}");
 
-app.Run(); 
+try
+{
+    Log.Information("Starting Normaize API on port {Port}", port);
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
+
+// Make Program class accessible for integration tests
+public partial class Program { } 

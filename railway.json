@@ -1,4 +1,11 @@
 {
-  "build": "dotnet publish Normaize.API/Normaize.API.csproj -c Release -o out",
-  "start": "dotnet Normaize.API/out/Normaize.API.dll"
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE"
+  },
+  "deploy": {
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 300,
+    "restartPolicyType": "on_failure"
+  }
 } 
