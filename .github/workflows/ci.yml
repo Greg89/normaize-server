@@ -109,6 +109,64 @@ jobs:
         echo "✅ Docker image test completed"
         echo "Image builds successfully and contains all required files"
 
+  database-migration:
+    runs-on: ubuntu-latest
+    needs: build-test-coverage
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Setup MySQL
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y mysql-server mysql-client
+        sudo systemctl start mysql
+        sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'test123';"
+        sudo mysql -e "FLUSH PRIVILEGES;"
+
+    - name: Wait for MySQL
+      run: |
+        while ! mysql -h 127.0.0.1 -P 3306 -u root -ptest123 -e "SELECT 1" > /dev/null 2>&1; do
+          echo "Waiting for MySQL to be ready..."
+          sleep 2
+        done
+        echo "✅ MySQL is ready"
+
+    - name: Create database
+      run: |
+        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 -e "CREATE DATABASE IF NOT EXISTS normaize;"
+
+    - name: Apply EF Core Migration
+      run: |
+        cd Normaize.Data
+        dotnet ef database update --startup-project ../Normaize.API --connection "Server=127.0.0.1;Database=normaize;User=root;Password=test123;CharSet=utf8mb4;"
+
+    - name: Apply MySQL Optimizations
+      run: |
+        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 normaize < Normaize.Data/Migrations/MySQL_Optimizations.sql
+
+    - name: Verify Migration
+      run: |
+        echo "Verifying database migration..."
+        
+        # Check if new tables exist
+        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 normaize -e "SHOW TABLES LIKE 'DataSetRows';"
+        
+        # Check if new columns exist
+        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 normaize -e "DESCRIBE DataSets;" | grep -E "(DataHash|FilePath|ProcessedData|StorageProvider|UseSeparateTable)"
+        
+        # Check if JSON columns are properly configured
+        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 normaize -e "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'DataSets' AND DATA_TYPE = 'json';"
+        
+        echo "✅ Database migration verification completed"
+
   deploy-coverage-pages:
     runs-on: ubuntu-latest
     needs: build-test-coverage

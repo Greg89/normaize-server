@@ -25,6 +25,9 @@ FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
+# Copy migration files to the container
+COPY --from=build /src/Normaize.Data/Migrations ./Migrations/
+
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD curl --fail http://localhost:8080/health/basic || exit 1
 

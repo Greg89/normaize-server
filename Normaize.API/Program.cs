@@ -80,7 +80,7 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 // Database
-var connectionString = $"Server={Environment.GetEnvironmentVariable("MYSQLHOST")};Database={Environment.GetEnvironmentVariable("MYSQLDATABASE")};User={Environment.GetEnvironmentVariable("MYSQLUSER")};Password={Environment.GetEnvironmentVariable("MYSQLPASSWORD")};Port={Environment.GetEnvironmentVariable("MYSQLPORT")};";
+var connectionString = $"Server={Environment.GetEnvironmentVariable("MYSQLHOST")};Database={Environment.GetEnvironmentVariable("MYSQLDATABASE")};User={Environment.GetEnvironmentVariable("MYSQLUSER")};Password={Environment.GetEnvironmentVariable("MYSQLPASSWORD")};Port={Environment.GetEnvironmentVariable("MYSQLPORT")};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
 
 // Only add database context if connection string is available
 if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
@@ -120,11 +120,33 @@ builder.Services.AddHttpContextAccessor();
 // Repositories
 builder.Services.AddScoped<IDataSetRepository, DataSetRepository>();
 builder.Services.AddScoped<IAnalysisRepository, AnalysisRepository>();
+builder.Services.AddScoped<IDataSetRowRepository, DataSetRowRepository>();
 
 // HTTP Client
 builder.Services.AddHttpClient();
 
 var app = builder.Build();
+
+// Apply database migrations automatically (only for Railway/Production environments)
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
+{
+    try
+    {
+        Log.Information("Applying database migrations...");
+        using var scope = app.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<NormaizeContext>();
+        context.Database.Migrate();
+        Log.Information("Database migrations applied successfully");
+        
+        // Apply MySQL optimizations if not already applied
+        await ApplyMySqlOptimizationsAsync(context);
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Error applying database migrations");
+        // Don't throw - allow application to start even if migrations fail
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName.Equals("Beta", StringComparison.OrdinalIgnoreCase))
@@ -181,6 +203,56 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+}
+
+// Helper method to apply MySQL optimizations
+static async Task ApplyMySqlOptimizationsAsync(NormaizeContext context)
+{
+    try
+    {
+        Log.Information("Checking for MySQL optimizations...");
+        
+        // Check if optimizations table exists (indicates optimizations were applied)
+        var optimizationsApplied = await context.Database.SqlQueryRaw<bool>(
+            "SELECT COUNT(*) > 0 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'DataSetStatistics'"
+        ).FirstOrDefaultAsync();
+        
+        if (!optimizationsApplied)
+        {
+            Log.Information("Applying MySQL optimizations...");
+            
+            // Read and execute the optimization script
+            var optimizationScript = await File.ReadAllTextAsync("Migrations/MySQL_Optimizations.sql");
+            var commands = optimizationScript.Split(';', StringSplitOptions.RemoveEmptyEntries);
+            
+            foreach (var command in commands)
+            {
+                var trimmedCommand = command.Trim();
+                if (!string.IsNullOrEmpty(trimmedCommand) && !trimmedCommand.StartsWith("--"))
+                {
+                    try
+                    {
+                        await context.Database.ExecuteSqlRawAsync(trimmedCommand);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log but continue - some commands might fail if objects already exist
+                        Log.Warning(ex, "MySQL optimization command failed (this is usually safe): {Command}", trimmedCommand.Substring(0, Math.Min(50, trimmedCommand.Length)));
+                    }
+                }
+            }
+            
+            Log.Information("MySQL optimizations applied successfully");
+        }
+        else
+        {
+            Log.Information("MySQL optimizations already applied, skipping");
+        }
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Error applying MySQL optimizations - this is not critical");
+    }
 }
 
 // Make Program class accessible for integration tests
