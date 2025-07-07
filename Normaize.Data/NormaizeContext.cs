@@ -27,7 +27,7 @@ public class NormaizeContext : DbContext
             entity.Property(e => e.FileType).IsRequired().HasMaxLength(50);
             entity.Property(e => e.FilePath).IsRequired().HasMaxLength(500);
             entity.Property(e => e.StorageProvider).HasMaxLength(50).HasDefaultValue("Local");
-            entity.Property(e => e.UploadedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UploadedAt);
             entity.Property(e => e.IsProcessed).HasDefaultValue(false);
             entity.Property(e => e.UseSeparateTable).HasDefaultValue(false);
             
@@ -43,8 +43,7 @@ public class NormaizeContext : DbContext
             entity.HasIndex(e => e.IsProcessed);
             entity.HasIndex(e => e.UseSeparateTable);
             
-            // JSON indexes for MySQL 8.0+
-            entity.HasIndex(e => e.Schema).HasDatabaseName("idx_dataset_schema");
+            // Note: JSON indexes require generated columns in MySQL, removed for simplicity
         });
 
         // DataSetRow configuration
@@ -52,7 +51,7 @@ public class NormaizeContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Data).IsRequired().HasColumnType("JSON");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt);
             
             entity.HasOne(e => e.DataSet)
                   .WithMany(d => d.Rows)
@@ -62,8 +61,7 @@ public class NormaizeContext : DbContext
             // Composite index for performance
             entity.HasIndex(e => new { e.DataSetId, e.RowIndex }).HasDatabaseName("idx_datasetrow_dataset_row");
             
-            // JSON index for data field
-            entity.HasIndex(e => e.Data).HasDatabaseName("idx_datasetrow_data");
+            // Note: JSON indexes require generated columns in MySQL, removed for simplicity
         });
 
         // Analysis configuration
@@ -74,7 +72,7 @@ public class NormaizeContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.Type).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Pending");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt);
             
             // MySQL JSON fields
             entity.Property(e => e.Configuration).HasColumnType("JSON");

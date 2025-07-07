@@ -12,7 +12,24 @@ using Serilog.Events;
 
 
 // Load environment variables from .env file
-Env.Load();
+var currentDir = Directory.GetCurrentDirectory();
+
+// Find the project root directory (where .env file is located)
+var projectRoot = currentDir;
+while (!File.Exists(Path.Combine(projectRoot, ".env")) && Directory.GetParent(projectRoot) != null)
+{
+    projectRoot = Directory.GetParent(projectRoot)?.FullName ?? projectRoot;
+}
+
+var envPath = Path.Combine(projectRoot, ".env");
+if (File.Exists(envPath))
+{
+    Env.Load(envPath);
+}
+else
+{
+    Env.Load(); // Fallback to default behavior
+}
 
 // Configure Serilog
 var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
@@ -107,7 +124,7 @@ builder.Services.AddCors(options =>
 });
 
 // AutoMapper
-builder.Services.AddAutoMapper(typeof(Program));
+builder.Services.AddAutoMapper(typeof(Program), typeof(Normaize.Core.Mapping.MappingProfile));
 
 // Services
 builder.Services.AddScoped<IDataProcessingService, Normaize.Core.Services.DataProcessingService>();
@@ -138,8 +155,8 @@ if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
         context.Database.Migrate();
         Log.Information("Database migrations applied successfully");
         
-        // Apply MySQL optimizations if not already applied
-        await ApplyMySqlOptimizationsAsync(context);
+        // Note: MySQL optimizations are now handled through EF Core migrations
+        Log.Information("Database setup complete");
     }
     catch (Exception ex)
     {
@@ -203,56 +220,6 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
-}
-
-// Helper method to apply MySQL optimizations
-static async Task ApplyMySqlOptimizationsAsync(NormaizeContext context)
-{
-    try
-    {
-        Log.Information("Checking for MySQL optimizations...");
-        
-        // Check if optimizations table exists (indicates optimizations were applied)
-        var optimizationsApplied = await context.Database.SqlQueryRaw<bool>(
-            "SELECT COUNT(*) > 0 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'DataSetStatistics'"
-        ).FirstOrDefaultAsync();
-        
-        if (!optimizationsApplied)
-        {
-            Log.Information("Applying MySQL optimizations...");
-            
-            // Read and execute the optimization script
-            var optimizationScript = await File.ReadAllTextAsync("Migrations/MySQL_Optimizations.sql");
-            var commands = optimizationScript.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            
-            foreach (var command in commands)
-            {
-                var trimmedCommand = command.Trim();
-                if (!string.IsNullOrEmpty(trimmedCommand) && !trimmedCommand.StartsWith("--"))
-                {
-                    try
-                    {
-                        await context.Database.ExecuteSqlRawAsync(trimmedCommand);
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log but continue - some commands might fail if objects already exist
-                        Log.Warning(ex, "MySQL optimization command failed (this is usually safe): {Command}", trimmedCommand.Substring(0, Math.Min(50, trimmedCommand.Length)));
-                    }
-                }
-            }
-            
-            Log.Information("MySQL optimizations applied successfully");
-        }
-        else
-        {
-            Log.Information("MySQL optimizations already applied, skipping");
-        }
-    }
-    catch (Exception ex)
-    {
-        Log.Warning(ex, "Error applying MySQL optimizations - this is not critical");
-    }
 }
 
 // Make Program class accessible for integration tests

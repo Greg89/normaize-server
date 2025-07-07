@@ -12,8 +12,8 @@ using Normaize.Data;
 namespace Normaize.Data.Migrations
 {
     [DbContext(typeof(NormaizeContext))]
-    [Migration("20250706183536_EnhancedFileUploadAndStorage")]
-    partial class EnhancedFileUploadAndStorage
+    [Migration("20250706230302_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -43,9 +43,7 @@ namespace Normaize.Data.Migrations
                         .HasColumnType("JSON");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime(6)")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("datetime(6)");
 
                     b.Property<int>("DataSetId")
                         .HasColumnType("int");
@@ -163,9 +161,7 @@ namespace Normaize.Data.Migrations
                         .HasDefaultValue("Local");
 
                     b.Property<DateTime>("UploadedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime(6)")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("datetime(6)");
 
                     b.Property<bool>("UseSeparateTable")
                         .ValueGeneratedOnAdd()
@@ -175,9 +171,6 @@ namespace Normaize.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("IsProcessed");
-
-                    b.HasIndex("Schema")
-                        .HasDatabaseName("idx_dataset_schema");
 
                     b.HasIndex("UploadedAt");
 
@@ -195,9 +188,7 @@ namespace Normaize.Data.Migrations
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime(6)")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Data")
                         .IsRequired()
@@ -210,9 +201,6 @@ namespace Normaize.Data.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Data")
-                        .HasDatabaseName("idx_datasetrow_data");
 
                     b.HasIndex("DataSetId", "RowIndex")
                         .HasDatabaseName("idx_datasetrow_dataset_row");

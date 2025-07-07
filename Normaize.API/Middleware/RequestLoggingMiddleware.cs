@@ -7,12 +7,10 @@ namespace Normaize.API.Middleware;
 public class RequestLoggingMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly IStructuredLoggingService _loggingService;
 
-    public RequestLoggingMiddleware(RequestDelegate next, IStructuredLoggingService loggingService)
+    public RequestLoggingMiddleware(RequestDelegate next)
     {
         _next = next;
-        _loggingService = loggingService;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -25,24 +23,27 @@ public class RequestLoggingMiddleware
         var userId = context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
             ?? context.Items["UserId"]?.ToString();
 
+        // Get logging service from service provider
+        var loggingService = context.RequestServices.GetRequiredService<IStructuredLoggingService>();
+
         try
         {
             // Log request start
-            _loggingService.LogRequestStart(method, path, userId);
+            loggingService.LogRequestStart(method, path, userId);
 
             // Process the request
             await _next(context);
 
             // Log request completion
             stopwatch.Stop();
-            _loggingService.LogRequestEnd(method, path, context.Response.StatusCode, stopwatch.ElapsedMilliseconds);
+            loggingService.LogRequestEnd(method, path, context.Response.StatusCode, stopwatch.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
             
             // Log the exception with full context
-            _loggingService.LogException(ex, $"Request processing failed: {method} {path}");
+            loggingService.LogException(ex, $"Request processing failed: {method} {path}");
             
             // Re-throw to let the global exception handler deal with it
             throw;
