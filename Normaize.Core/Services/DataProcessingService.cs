@@ -52,6 +52,7 @@ public class DataProcessingService : IDataProcessingService
             // Update with user-provided information
             dataSet.Name = createDto.Name;
             dataSet.Description = createDto.Description;
+            dataSet.UserId = createDto.UserId;
 
             // Save to database
             var savedDataSet = await _dataSetRepository.AddAsync(dataSet);
@@ -74,46 +75,49 @@ public class DataProcessingService : IDataProcessingService
         }
     }
 
-    public async Task<DataSetDto?> GetDataSetAsync(int id)
+    public async Task<DataSetDto?> GetDataSetAsync(int id, string userId)
     {
         var dataSet = await _dataSetRepository.GetByIdAsync(id);
+        if (dataSet?.UserId != userId)
+            return null;
+        
         return _mapper.Map<DataSetDto>(dataSet);
     }
 
-    public async Task<IEnumerable<DataSetDto>> GetAllDataSetsAsync()
+    public async Task<IEnumerable<DataSetDto>> GetDataSetsByUserAsync(string userId)
     {
-        var dataSets = await _dataSetRepository.GetAllAsync();
+        var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
         return _mapper.Map<IEnumerable<DataSetDto>>(dataSets);
     }
 
-    public async Task<bool> DeleteDataSetAsync(int id)
+    public async Task<bool> DeleteDataSetAsync(int id, string userId)
     {
         var dataSet = await _dataSetRepository.GetByIdAsync(id);
-        if (dataSet == null)
+        if (dataSet == null || dataSet.UserId != userId)
             return false;
 
         // Delete the file
-        if (!string.IsNullOrEmpty(dataSet.FileName))
+        if (!string.IsNullOrEmpty(dataSet.FilePath))
         {
-            await _fileUploadService.DeleteFileAsync(dataSet.FileName);
+            await _fileUploadService.DeleteFileAsync(dataSet.FilePath);
         }
 
         return await _dataSetRepository.DeleteAsync(id);
     }
 
-    public async Task<string?> GetDataSetPreviewAsync(int id, int rows = 10)
+    public async Task<string?> GetDataSetPreviewAsync(int id, int rows, string userId)
     {
         var dataSet = await _dataSetRepository.GetByIdAsync(id);
-        if (dataSet == null || string.IsNullOrEmpty(dataSet.PreviewData))
+        if (dataSet == null || dataSet.UserId != userId || string.IsNullOrEmpty(dataSet.PreviewData))
             return null;
 
         return dataSet.PreviewData;
     }
 
-    public async Task<object?> GetDataSetSchemaAsync(int id)
+    public async Task<object?> GetDataSetSchemaAsync(int id, string userId)
     {
         var dataSet = await _dataSetRepository.GetByIdAsync(id);
-        if (dataSet == null || string.IsNullOrEmpty(dataSet.Schema))
+        if (dataSet == null || dataSet.UserId != userId || string.IsNullOrEmpty(dataSet.Schema))
             return null;
 
         return JsonSerializer.Deserialize<object>(dataSet.Schema);

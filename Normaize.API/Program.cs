@@ -134,6 +134,40 @@ builder.Services.AddScoped<IFileUploadService, Normaize.Core.Services.FileUpload
 builder.Services.AddScoped<IStructuredLoggingService, StructuredLoggingService>();
 builder.Services.AddHttpContextAccessor();
 
+// Storage Service Registration
+var appEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER")?.ToLowerInvariant();
+
+// Environment-aware storage selection
+if (string.IsNullOrEmpty(storageProvider))
+{
+    if (appEnvironment.Equals("Production", StringComparison.OrdinalIgnoreCase))
+    {
+        storageProvider = "sftp";
+    }
+    else
+    {
+        storageProvider = "memory"; // Use in-memory for dev/beta
+    }
+}
+
+switch (storageProvider)
+{
+    case "sftp":
+        builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, SftpStorageService>();
+        Log.Information("Using SFTP storage service for production");
+        break;
+    case "local":
+        builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, LocalStorageService>();
+        Log.Information("Using local storage service");
+        break;
+    case "memory":
+    default:
+        builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+        Log.Information("Using in-memory storage service for development/beta");
+        break;
+}
+
 // Repositories
 builder.Services.AddScoped<IDataSetRepository, DataSetRepository>();
 builder.Services.AddScoped<IAnalysisRepository, AnalysisRepository>();

@@ -23,6 +23,10 @@ public class DataSet
     
     public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
     
+    // User association
+    [Required]
+    public string UserId { get; set; } = string.Empty;
+    
     public string? Schema { get; set; }
     
     public int RowCount { get; set; }

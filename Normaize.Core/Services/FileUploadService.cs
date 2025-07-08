@@ -20,35 +20,25 @@ public class FileUploadService : IFileUploadService
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<FileUploadService> _logger;
-    private readonly string _uploadPath;
+    private readonly IStorageService _storageService;
     private readonly int _maxRowsForInlineStorage;
     private readonly int _maxFileSizeForInlineStorage;
 
-    public FileUploadService(IConfiguration configuration, ILogger<FileUploadService> logger)
+    public FileUploadService(
+        IConfiguration configuration, 
+        ILogger<FileUploadService> logger,
+        IStorageService storageService)
     {
         _configuration = configuration;
         _logger = logger;
-        _uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
-        _maxRowsForInlineStorage = _configuration.GetValue<int>("FileUpload:MaxRowsForInlineStorage", 10000);
-        _maxFileSizeForInlineStorage = _configuration.GetValue<int>("FileUpload:MaxFileSizeForInlineStorage", 5 * 1024 * 1024); // 5MB
-        
-        if (!Directory.Exists(_uploadPath))
-        {
-            Directory.CreateDirectory(_uploadPath);
-        }
+        _storageService = storageService;
+        _maxRowsForInlineStorage = configuration.GetValue<int>("DataProcessing:MaxRowsPerDataset", 10000);
+        _maxFileSizeForInlineStorage = configuration.GetValue<int>("FileUpload:MaxFileSize", 10485760); // 10MB
     }
 
     public async Task<string> SaveFileAsync(FileUploadRequest fileRequest)
     {
-        var fileName = $"{Guid.NewGuid()}_{fileRequest.FileName}";
-        var filePath = Path.Combine(_uploadPath, fileName);
-
-        using (var fileStream = new FileStream(filePath, FileMode.Create))
-        {
-            await fileRequest.FileStream.CopyToAsync(fileStream);
-        }
-
-        return filePath;
+        return await _storageService.SaveFileAsync(fileRequest);
     }
 
     public Task<bool> ValidateFileAsync(FileUploadRequest fileRequest)
@@ -72,14 +62,21 @@ public class FileUploadService : IFileUploadService
 
     public async Task<DataSet> ProcessFileAsync(string filePath, string fileType)
     {
+        // Get file size from storage service
+        var fileExists = await _storageService.FileExistsAsync(filePath);
+        if (!fileExists)
+        {
+            throw new FileNotFoundException($"File not found: {filePath}");
+        }
+
         var dataSet = new DataSet
         {
             FileName = Path.GetFileName(filePath),
             FilePath = filePath,
             FileType = fileType,
-            FileSize = new FileInfo(filePath).Length,
+            FileSize = 0, // Will be calculated during processing
             UploadedAt = DateTime.UtcNow,
-            StorageProvider = "Local"
+            StorageProvider = filePath.StartsWith("sftp://") ? "SFTP" : "Local"
         };
 
         try
@@ -128,7 +125,8 @@ public class FileUploadService : IFileUploadService
 
     private async Task ProcessCsvFileAsync(string filePath, DataSet dataSet)
     {
-        using var reader = new StreamReader(filePath);
+        using var fileStream = await _storageService.GetFileAsync(filePath);
+        using var reader = new StreamReader(fileStream);
         using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
         {
             HeaderValidated = null,
@@ -176,7 +174,9 @@ public class FileUploadService : IFileUploadService
 
     private async Task ProcessJsonFileAsync(string filePath, DataSet dataSet)
     {
-        var jsonContent = await File.ReadAllTextAsync(filePath);
+        using var fileStream = await _storageService.GetFileAsync(filePath);
+        using var reader = new StreamReader(fileStream);
+        var jsonContent = await reader.ReadToEndAsync();
         var jsonElement = JsonSerializer.Deserialize<JsonElement>(jsonContent);
 
         var records = new List<Dictionary<string, object>>();
@@ -221,11 +221,12 @@ public class FileUploadService : IFileUploadService
         }
     }
 
-    private Task ProcessExcelFileAsync(string filePath, DataSet dataSet)
+    private async Task ProcessExcelFileAsync(string filePath, DataSet dataSet)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-        using var package = new ExcelPackage(new FileInfo(filePath));
+        using var fileStream = await _storageService.GetFileAsync(filePath);
+        using var package = new ExcelPackage(fileStream);
         var worksheet = package.Workbook.Worksheets.FirstOrDefault() ?? 
                        throw new InvalidOperationException("No worksheet found in Excel file");
 
@@ -263,13 +264,13 @@ public class FileUploadService : IFileUploadService
         {
             dataSet.ProcessedData = JsonSerializer.Serialize(records);
         }
-
-        return Task.CompletedTask;
     }
 
     private async Task ProcessXmlFileAsync(string filePath, DataSet dataSet)
     {
-        var xmlContent = await File.ReadAllTextAsync(filePath);
+        using var fileStream = await _storageService.GetFileAsync(filePath);
+        using var reader = new StreamReader(fileStream);
+        var xmlContent = await reader.ReadToEndAsync();
         var doc = XDocument.Parse(xmlContent);
         
         var records = new List<Dictionary<string, object>>();
@@ -334,7 +335,11 @@ public class FileUploadService : IFileUploadService
 
     private async Task ProcessTextFileAsync(string filePath, DataSet dataSet)
     {
-        var lines = await File.ReadAllLinesAsync(filePath);
+        using var fileStream = await _storageService.GetFileAsync(filePath);
+        using var reader = new StreamReader(fileStream);
+        var content = await reader.ReadToEndAsync();
+        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        
         var records = new List<Dictionary<string, object>>();
         var headers = new List<string> { "LineNumber", "Content" };
 
@@ -362,7 +367,7 @@ public class FileUploadService : IFileUploadService
     private async Task<string> GenerateDataHashAsync(string filePath)
     {
         using var sha256 = SHA256.Create();
-        using var stream = File.OpenRead(filePath);
+        using var stream = await _storageService.GetFileAsync(filePath);
         var hash = await sha256.ComputeHashAsync(stream);
         return Convert.ToBase64String(hash);
     }
@@ -371,10 +376,7 @@ public class FileUploadService : IFileUploadService
     {
         try
         {
-            if (File.Exists(filePath))
-            {
-                File.Delete(filePath);
-            }
+            await _storageService.DeleteFileAsync(filePath);
         }
         catch (Exception ex)
         {

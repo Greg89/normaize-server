@@ -6,6 +6,7 @@ public interface IDataSetRepository
 {
     Task<DataSet?> GetByIdAsync(int id);
     Task<IEnumerable<DataSet>> GetAllAsync();
+    Task<IEnumerable<DataSet>> GetByUserIdAsync(string userId);
     Task<DataSet> AddAsync(DataSet dataSet);
     Task<DataSet> UpdateAsync(DataSet dataSet);
     Task<bool> DeleteAsync(int id);
