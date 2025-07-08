@@ -141,21 +141,31 @@ var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER")?.To
 // Environment-aware storage selection
 if (string.IsNullOrEmpty(storageProvider))
 {
-    if (appEnvironment.Equals("Production", StringComparison.OrdinalIgnoreCase))
-    {
-        storageProvider = "sftp";
-    }
-    else
-    {
-        storageProvider = "memory"; // Use in-memory for dev/beta
-    }
+    // Default to memory for all environments unless explicitly configured
+    storageProvider = "memory";
 }
 
 switch (storageProvider)
 {
     case "sftp":
-        builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, SftpStorageService>();
-        Log.Information("Using SFTP storage service for production");
+        // Only use SFTP if explicitly configured with proper credentials
+        var sftpHost = Environment.GetEnvironmentVariable("SFTP_HOST");
+        var sftpUsername = Environment.GetEnvironmentVariable("SFTP_USERNAME");
+        var sftpPassword = Environment.GetEnvironmentVariable("SFTP_PASSWORD");
+        var sftpPrivateKey = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY");
+        var sftpPrivateKeyPath = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY_PATH");
+        
+        if (string.IsNullOrEmpty(sftpHost) || string.IsNullOrEmpty(sftpUsername) ||
+            (string.IsNullOrEmpty(sftpPassword) && string.IsNullOrEmpty(sftpPrivateKey) && string.IsNullOrEmpty(sftpPrivateKeyPath)))
+        {
+            Log.Warning("SFTP storage requested but credentials not configured. Falling back to memory storage.");
+            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+        }
+        else
+        {
+            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, SftpStorageService>();
+            Log.Information("Using SFTP storage service");
+        }
         break;
     case "local":
         builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, LocalStorageService>();

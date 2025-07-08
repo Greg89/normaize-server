@@ -10,7 +10,9 @@ public class SftpStorageService : IStorageService
 {
     private readonly string _host;
     private readonly string _username;
-    private readonly string _password;
+    private readonly string? _password;
+    private readonly string? _privateKeyContent;
+    private readonly string? _privateKeyPath;
     private readonly string _basePath;
     private readonly ILogger<SftpStorageService> _logger;
 
@@ -18,9 +20,39 @@ public class SftpStorageService : IStorageService
     {
         _host = configuration["SFTP:Host"] ?? throw new ArgumentException("SFTP:Host configuration is required");
         _username = configuration["SFTP:Username"] ?? throw new ArgumentException("SFTP:Username configuration is required");
-        _password = configuration["SFTP:Password"] ?? throw new ArgumentException("SFTP:Password configuration is required");
+        _password = configuration["SFTP:Password"];
+        _privateKeyContent = configuration["SFTP:PrivateKey"];
+        _privateKeyPath = configuration["SFTP:PrivateKeyPath"];
         _basePath = configuration["SFTP:BasePath"] ?? "/uploads";
         _logger = logger;
+
+        // Validate that either password or private key is provided
+        if (string.IsNullOrEmpty(_password) && string.IsNullOrEmpty(_privateKeyContent) && string.IsNullOrEmpty(_privateKeyPath))
+        {
+            throw new ArgumentException("Either SFTP:Password, SFTP:PrivateKey, or SFTP:PrivateKeyPath must be provided");
+        }
+    }
+
+    private SftpClient CreateSftpClient()
+    {
+        if (!string.IsNullOrEmpty(_privateKeyContent))
+        {
+            // Use private key content
+            using var keyStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(_privateKeyContent));
+            var keyFile = new PrivateKeyFile(keyStream);
+            return new SftpClient(_host, _username, keyFile);
+        }
+        else if (!string.IsNullOrEmpty(_privateKeyPath))
+        {
+            // Use private key file
+            var keyFile = new PrivateKeyFile(_privateKeyPath);
+            return new SftpClient(_host, _username, keyFile);
+        }
+        else
+        {
+            // Use password authentication
+            return new SftpClient(_host, _username, _password);
+        }
     }
 
     public async Task<string> SaveFileAsync(FileUploadRequest fileRequest)
@@ -29,7 +61,7 @@ public class SftpStorageService : IStorageService
         var datePath = DateTime.UtcNow.ToString("yyyy/MM/dd");
         var remotePath = $"{_basePath}/{datePath}/{fileName}";
         
-        using var client = new SftpClient(_host, _username, _password);
+        using var client = CreateSftpClient();
         
         try
         {
@@ -73,7 +105,7 @@ public class SftpStorageService : IStorageService
         // Extract path from sftp:// URL
         var remotePath = ExtractPathFromUrl(filePath);
         
-        using var client = new SftpClient(_host, _username, _password);
+        using var client = CreateSftpClient();
         
         try
         {
@@ -113,7 +145,7 @@ public class SftpStorageService : IStorageService
     {
         var remotePath = ExtractPathFromUrl(filePath);
         
-        using var client = new SftpClient(_host, _username, _password);
+        using var client = CreateSftpClient();
         
         try
         {
@@ -148,7 +180,7 @@ public class SftpStorageService : IStorageService
     {
         var remotePath = ExtractPathFromUrl(filePath);
         
-        using var client = new SftpClient(_host, _username, _password);
+        using var client = CreateSftpClient();
         
         try
         {

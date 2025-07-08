@@ -43,8 +43,7 @@ apt install openssh-server -y
 ```bash
 # Create user for SFTP
 adduser normaize-sftp
-# Add user to sftp group
-usermod -aG sftp normaize-sftp
+
 # Set password (you'll need this for configuration)
 passwd normaize-sftp
 ```
@@ -70,8 +69,10 @@ Match User normaize-sftp
 ```bash
 # Create uploads directory
 mkdir -p /home/normaize-sftp/uploads
+
 # Set ownership
-chown normaize-sftp:sftp /home/normaize-sftp/uploads
+chown normaize-sftp:normaize-sftp /home/normaize-sftp/uploads
+
 # Set permissions
 chmod 755 /home/normaize-sftp/uploads
 ```
