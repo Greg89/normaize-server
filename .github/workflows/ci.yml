@@ -146,8 +146,7 @@ jobs:
 
     - name: Apply EF Core Migration
       run: |
-        cd Normaize.Data
-        dotnet ef database update --startup-project ../Normaize.API --connection "Server=127.0.0.1;Database=normaize;User=root;Password=test123;CharSet=utf8mb4;"
+        dotnet ef database update --project Normaize.Data --startup-project Normaize.API --connection "Server=127.0.0.1;Database=normaize;User=root;Password=test123;CharSet=utf8mb4;"
 
     - name: Verify Migration
       run: |
