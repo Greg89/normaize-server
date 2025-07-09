@@ -147,7 +147,6 @@ jobs:
         
         # Now we can connect without password and set up the root user
         sudo mysql -e "UPDATE mysql.user SET plugin='mysql_native_password', authentication_string='' WHERE user='root';"
-        sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'test123';"
         sudo mysql -e "FLUSH PRIVILEGES;"
         
         # Remove the temporary configuration
@@ -156,6 +155,10 @@ jobs:
         # Restart MySQL normally
         sudo systemctl restart mysql
         sleep 5
+        
+        # Now set the password with normal authentication
+        sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'test123';"
+        sudo mysql -e "FLUSH PRIVILEGES;"
         
         # Verify the password was set
         mysql -u root -ptest123 -e "SELECT 1;" || echo "Password setup failed"
