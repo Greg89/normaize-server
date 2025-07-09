@@ -109,6 +109,66 @@ jobs:
         echo "✅ Docker image test completed"
         echo "Image builds successfully and contains all required files"
 
+  database-migration:
+    runs-on: ubuntu-latest
+    needs: build-test-coverage
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test123
+          MYSQL_DATABASE: normaize
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Install MySQL Client
+      run: sudo apt-get update && sudo apt-get install -y mysql-client
+
+    - name: Wait for MySQL
+      run: |
+        echo "Waiting for MySQL to be ready..."
+        while ! mysql -h 127.0.0.1 -P 3306 -u root -ptest123 -e "SELECT 1" > /dev/null 2>&1; do
+          sleep 2
+        done
+        echo "✅ MySQL is ready"
+
+    - name: Install EF Core Tools
+      run: dotnet tool install --global dotnet-ef
+
+    - name: Apply EF Core Migration
+      env:
+        MYSQLHOST: 127.0.0.1
+        MYSQLDATABASE: normaize
+        MYSQLUSER: root
+        MYSQLPASSWORD: test123
+        MYSQLPORT: 3306
+      run: |
+        dotnet ef database update --project Normaize.Data --startup-project Normaize.API
+
+    - name: Verify Migration
+      run: |
+        echo "Verifying database migration..."
+        
+        # Check if tables exist
+        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 normaize -e "SHOW TABLES;"
+        
+        # Check if DataSets table exists and has expected columns
+        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 normaize -e "DESCRIBE DataSets;"
+        
+        echo "✅ Database migration verification completed"
+
   deploy-coverage-pages:
     runs-on: ubuntu-latest
     needs: build-test-coverage

@@ -12,7 +12,24 @@ using Serilog.Events;
 
 
 // Load environment variables from .env file
-Env.Load();
+var currentDir = Directory.GetCurrentDirectory();
+
+// Find the project root directory (where .env file is located)
+var projectRoot = currentDir;
+while (!File.Exists(Path.Combine(projectRoot, ".env")) && Directory.GetParent(projectRoot) != null)
+{
+    projectRoot = Directory.GetParent(projectRoot)?.FullName ?? projectRoot;
+}
+
+var envPath = Path.Combine(projectRoot, ".env");
+if (File.Exists(envPath))
+{
+    Env.Load(envPath);
+}
+else
+{
+    Env.Load(); // Fallback to default behavior
+}
 
 // Configure Serilog
 var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
@@ -80,7 +97,7 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 // Database
-var connectionString = $"Server={Environment.GetEnvironmentVariable("MYSQLHOST")};Database={Environment.GetEnvironmentVariable("MYSQLDATABASE")};User={Environment.GetEnvironmentVariable("MYSQLUSER")};Password={Environment.GetEnvironmentVariable("MYSQLPASSWORD")};Port={Environment.GetEnvironmentVariable("MYSQLPORT")};";
+var connectionString = $"Server={Environment.GetEnvironmentVariable("MYSQLHOST")};Database={Environment.GetEnvironmentVariable("MYSQLDATABASE")};User={Environment.GetEnvironmentVariable("MYSQLUSER")};Password={Environment.GetEnvironmentVariable("MYSQLPASSWORD")};Port={Environment.GetEnvironmentVariable("MYSQLPORT")};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
 
 // Only add database context if connection string is available
 if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
@@ -107,7 +124,7 @@ builder.Services.AddCors(options =>
 });
 
 // AutoMapper
-builder.Services.AddAutoMapper(typeof(Program));
+builder.Services.AddAutoMapper(typeof(Program), typeof(Normaize.Core.Mapping.MappingProfile));
 
 // Services
 builder.Services.AddScoped<IDataProcessingService, Normaize.Core.Services.DataProcessingService>();
@@ -117,14 +134,80 @@ builder.Services.AddScoped<IFileUploadService, Normaize.Core.Services.FileUpload
 builder.Services.AddScoped<IStructuredLoggingService, StructuredLoggingService>();
 builder.Services.AddHttpContextAccessor();
 
+// Storage Service Registration
+var appEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER")?.ToLowerInvariant();
+
+// Environment-aware storage selection
+if (string.IsNullOrEmpty(storageProvider))
+{
+    // Default to memory for all environments unless explicitly configured
+    storageProvider = "memory";
+}
+
+switch (storageProvider)
+{
+    case "sftp":
+        // Only use SFTP if explicitly configured with proper credentials
+        var sftpHost = Environment.GetEnvironmentVariable("SFTP_HOST");
+        var sftpUsername = Environment.GetEnvironmentVariable("SFTP_USERNAME");
+        var sftpPassword = Environment.GetEnvironmentVariable("SFTP_PASSWORD");
+        var sftpPrivateKey = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY");
+        var sftpPrivateKeyPath = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY_PATH");
+        
+        if (string.IsNullOrEmpty(sftpHost) || string.IsNullOrEmpty(sftpUsername) ||
+            (string.IsNullOrEmpty(sftpPassword) && string.IsNullOrEmpty(sftpPrivateKey) && string.IsNullOrEmpty(sftpPrivateKeyPath)))
+        {
+            Log.Warning("SFTP storage requested but credentials not configured. Falling back to memory storage.");
+            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+        }
+        else
+        {
+            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, SftpStorageService>();
+            Log.Information("Using SFTP storage service");
+        }
+        break;
+    case "local":
+        builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, LocalStorageService>();
+        Log.Information("Using local storage service");
+        break;
+    case "memory":
+    default:
+        builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+        Log.Information("Using in-memory storage service for development/beta");
+        break;
+}
+
 // Repositories
 builder.Services.AddScoped<IDataSetRepository, DataSetRepository>();
 builder.Services.AddScoped<IAnalysisRepository, AnalysisRepository>();
+builder.Services.AddScoped<IDataSetRowRepository, DataSetRowRepository>();
 
 // HTTP Client
 builder.Services.AddHttpClient();
 
 var app = builder.Build();
+
+// Apply database migrations automatically (only for Railway/Production environments)
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
+{
+    try
+    {
+        Log.Information("Applying database migrations...");
+        using var scope = app.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<NormaizeContext>();
+        context.Database.Migrate();
+        Log.Information("Database migrations applied successfully");
+        
+        // Note: MySQL optimizations are now handled through EF Core migrations
+        Log.Information("Database setup complete");
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Error applying database migrations");
+        // Don't throw - allow application to start even if migrations fail
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName.Equals("Beta", StringComparison.OrdinalIgnoreCase))
