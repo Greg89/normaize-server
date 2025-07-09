@@ -114,6 +114,16 @@ jobs:
     needs: build-test-coverage
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test123
+          MYSQL_DATABASE: normaize
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -123,60 +133,13 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
-    - name: Setup MySQL
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y mysql-server mysql-client
-        
-        # Start MySQL service
-        sudo systemctl start mysql
-        sudo systemctl enable mysql
-        
-        # Wait for MySQL to start
-        sleep 10
-        
-        # Create a temporary MySQL configuration to allow root access
-        sudo tee /etc/mysql/conf.d/allow-root.cnf > /dev/null <<EOF
-        [mysqld]
-        skip-grant-tables
-        EOF
-        
-        # Restart MySQL with the new configuration
-        sudo systemctl restart mysql
-        sleep 5
-        
-        # Now we can connect without password and set up the root user
-        sudo mysql -e "UPDATE mysql.user SET plugin='mysql_native_password', authentication_string='' WHERE user='root';"
-        sudo mysql -e "FLUSH PRIVILEGES;"
-        
-        # Remove the temporary configuration
-        sudo rm /etc/mysql/conf.d/allow-root.cnf
-        
-        # Restart MySQL normally
-        sudo systemctl restart mysql
-        sleep 5
-        
-        # Now set the password with normal authentication
-        sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'test123';"
-        sudo mysql -e "FLUSH PRIVILEGES;"
-        
-        # Verify the password was set
-        mysql -u root -ptest123 -e "SELECT 1;" || echo "Password setup failed"
-        
-        # Show MySQL status
-        sudo systemctl status mysql
-
     - name: Wait for MySQL
       run: |
+        echo "Waiting for MySQL to be ready..."
         while ! mysql -h 127.0.0.1 -P 3306 -u root -ptest123 -e "SELECT 1" > /dev/null 2>&1; do
-          echo "Waiting for MySQL to be ready..."
           sleep 2
         done
         echo "✅ MySQL is ready"
-
-    - name: Create database
-      run: |
-        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 -e "CREATE DATABASE IF NOT EXISTS normaize;"
 
     - name: Apply EF Core Migration
       run: |
