@@ -141,6 +141,9 @@ jobs:
         done
         echo "✅ MySQL is ready"
 
+    - name: Install EF Core Tools
+      run: dotnet tool install --global dotnet-ef
+
     - name: Apply EF Core Migration
       run: |
         cd Normaize.Data
