@@ -132,6 +132,9 @@ builder.Services.AddScoped<IDataAnalysisService, Normaize.Core.Services.DataAnal
 builder.Services.AddScoped<IDataVisualizationService, Normaize.Core.Services.DataVisualizationService>();
 builder.Services.AddScoped<IFileUploadService, Normaize.Core.Services.FileUploadService>();
 builder.Services.AddScoped<IStructuredLoggingService, StructuredLoggingService>();
+builder.Services.AddScoped<IDatabaseHealthService, Normaize.Data.Services.DatabaseHealthService>();
+builder.Services.AddScoped<IMigrationService, Normaize.Data.Services.MigrationService>();
+builder.Services.AddScoped<IHealthCheckService, Normaize.Data.Services.HealthCheckService>();
 builder.Services.AddHttpContextAccessor();
 
 // Storage Service Registration
@@ -188,24 +191,90 @@ builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
-// Apply database migrations automatically (only for Railway/Production environments)
+// Apply database migrations and verify health (only for Railway/Production environments)
 if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
 {
     try
     {
-        Log.Information("Applying database migrations...");
+        Log.Information("Starting database setup and health verification...");
         using var scope = app.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<NormaizeContext>();
-        context.Database.Migrate();
-        Log.Information("Database migrations applied successfully");
         
-        // Note: MySQL optimizations are now handled through EF Core migrations
-        Log.Information("Database setup complete");
+        // Apply migrations first
+        var migrationService = scope.ServiceProvider.GetRequiredService<IMigrationService>();
+        var migrationResult = await migrationService.ApplyMigrationsAsync();
+        
+        if (!migrationResult.Success)
+        {
+            Log.Error("Migration failed: {Error}", migrationResult.ErrorMessage);
+            
+            // Log specific migration error details
+            if (migrationResult.ErrorMessage?.Contains("Unknown column") == true)
+            {
+                Log.Error("Database schema mismatch detected. This may indicate a failed or incomplete migration.");
+                Log.Error("Please check if all migrations have been applied correctly.");
+            }
+            
+            // Fail fast in production
+            var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            if (currentEnvironment == "Production" || currentEnvironment == "Staging")
+            {
+                Log.Fatal("Database migration failed in production environment. Application will not start.");
+                throw new InvalidOperationException($"Database migration failed: {migrationResult.ErrorMessage}");
+            }
+            else
+            {
+                Log.Warning("Migration failed but continuing in Development mode");
+            }
+        }
+        else
+        {
+            Log.Information("Database migrations applied successfully");
+        }
+        
+        // Perform comprehensive startup health check using readiness probe
+        var healthCheckService = scope.ServiceProvider.GetRequiredService<IHealthCheckService>();
+        var healthResult = await healthCheckService.CheckReadinessAsync();
+        
+        if (!healthResult.IsHealthy)
+        {
+            Log.Error("Startup health check failed");
+            foreach (var issue in healthResult.Issues)
+            {
+                Log.Error("Issue: {Issue}", issue);
+            }
+            
+            // Fail fast in production
+            var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            if (currentEnvironment == "Production" || currentEnvironment == "Staging")
+            {
+                Log.Fatal("Startup health check failed in production environment. Application will not start.");
+                throw new InvalidOperationException($"Startup health check failed: {string.Join("; ", healthResult.Issues)}");
+            }
+            else
+            {
+                Log.Warning("Startup health check failed but continuing in Development mode");
+            }
+        }
+        else
+        {
+            Log.Information("Startup health check passed - all systems healthy");
+        }
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "Error applying database migrations");
-        // Don't throw - allow application to start even if migrations fail
+        Log.Error(ex, "Error during database setup and health verification");
+        
+        // Fail fast in production
+        var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (currentEnvironment == "Production" || currentEnvironment == "Staging")
+        {
+            Log.Fatal("Database setup failed in production environment. Application will not start.");
+            throw;
+        }
+        else
+        {
+            Log.Warning("Database setup failed but continuing in Development mode");
+        }
     }
 }
 
@@ -240,7 +309,7 @@ if (!app.Environment.EnvironmentName.Equals("Test", StringComparison.OrdinalIgno
 app.MapControllers();
 
 // Map health checks
-app.MapHealthChecks("/health/startup");
+app.MapHealthChecks("/health/readiness");
 
 // Global exception handler (skip in test environment)
 if (!app.Environment.EnvironmentName.Equals("Test", StringComparison.OrdinalIgnoreCase))

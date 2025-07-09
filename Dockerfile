@@ -29,6 +29,6 @@ COPY --from=build /app/publish .
 COPY --from=build /src/Normaize.Data/Migrations ./Migrations/
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD curl --fail http://localhost:8080/health/basic || exit 1
+  CMD curl --fail http://localhost:8080/health/readiness || exit 1
 
 ENTRYPOINT ["dotnet", "Normaize.API.dll"] 

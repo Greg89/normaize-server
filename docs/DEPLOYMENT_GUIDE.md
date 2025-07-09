@@ -286,6 +286,15 @@ OPTIMIZE TABLE DataSets;
 OPTIMIZE TABLE DataSetRows;
 ```
 
+## Troubleshooting
+
+If you encounter migration issues, particularly "Unknown column" errors, refer to the [Migration Troubleshooting Guide](MIGRATION_TROUBLESHOOTING.md) for detailed solutions.
+
+Common issues and quick fixes:
+- **"Unknown column 'd.DataHash'"**: Run `./scripts/fix-database-schema.ps1`
+- **Migration fails**: Check `dotnet ef migrations list --startup-project ../Normaize.API`
+- **Database connection issues**: Verify environment variables and connectivity
+
 ## Summary
 
 1. **EF Core Migration**: Handles core schema changes (required)
