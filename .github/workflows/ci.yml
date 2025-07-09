@@ -133,6 +133,9 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
+    - name: Install MySQL Client
+      run: sudo apt-get update && sudo apt-get install -y mysql-client
+
     - name: Wait for MySQL
       run: |
         echo "Waiting for MySQL to be ready..."
@@ -145,8 +148,14 @@ jobs:
       run: dotnet tool install --global dotnet-ef
 
     - name: Apply EF Core Migration
+      env:
+        MYSQLHOST: 127.0.0.1
+        MYSQLDATABASE: normaize
+        MYSQLUSER: root
+        MYSQLPASSWORD: test123
+        MYSQLPORT: 3306
       run: |
-        dotnet ef database update --project Normaize.Data --startup-project Normaize.API --connection "Server=127.0.0.1;Database=normaize;User=root;Password=test123;CharSet=utf8mb4;"
+        dotnet ef database update --project Normaize.Data --startup-project Normaize.API
 
     - name: Verify Migration
       run: |

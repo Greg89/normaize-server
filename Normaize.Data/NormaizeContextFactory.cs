@@ -8,7 +8,7 @@ public class NormaizeContextFactory : IDesignTimeDbContextFactory<NormaizeContex
 {
     public NormaizeContext CreateDbContext(string[] args)
     {
-        // Load .env file for design-time tools
+        // Try to load .env file for design-time tools (local development)
         var currentDir = Directory.GetCurrentDirectory();
         
         // Find the project root directory (where .env file is located)
@@ -26,8 +26,8 @@ public class NormaizeContextFactory : IDesignTimeDbContextFactory<NormaizeContex
         }
         else
         {
-            throw new InvalidOperationException($"Could not find .env file. Looked in: {envPath}\n" +
-                "Please ensure your .env file exists in the project root directory with MySQL configuration.");
+            Console.WriteLine($"No .env file found at: {envPath}");
+            Console.WriteLine("Using environment variables directly (CI/CD environment)");
         }
         
         var host = Environment.GetEnvironmentVariable("MYSQLHOST");
@@ -46,7 +46,7 @@ public class NormaizeContextFactory : IDesignTimeDbContextFactory<NormaizeContex
         if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(database) || string.IsNullOrEmpty(user) || string.IsNullOrEmpty(password))
         {
             throw new InvalidOperationException(
-                "Database environment variables are not set. Please check your .env file contains:\n" +
+                "Database environment variables are not set. Please check your .env file or environment variables contain:\n" +
                 "MYSQLHOST=your_host\n" +
                 "MYSQLDATABASE=your_database\n" +
                 "MYSQLUSER=your_user\n" +
