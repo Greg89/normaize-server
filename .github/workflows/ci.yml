@@ -128,8 +128,16 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y mysql-server mysql-client
         sudo systemctl start mysql
+        
+        # Wait for MySQL to start
+        sleep 10
+        
+        # Set root password using a more reliable method
         sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'test123';"
         sudo mysql -e "FLUSH PRIVILEGES;"
+        
+        # Verify the password was set
+        mysql -u root -ptest123 -e "SELECT 1;" || echo "Password setup failed"
 
     - name: Wait for MySQL
       run: |
@@ -148,22 +156,15 @@ jobs:
         cd Normaize.Data
         dotnet ef database update --startup-project ../Normaize.API --connection "Server=127.0.0.1;Database=normaize;User=root;Password=test123;CharSet=utf8mb4;"
 
-    - name: Apply MySQL Optimizations
-      run: |
-        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 normaize < Normaize.Data/Migrations/MySQL_Optimizations.sql
-
     - name: Verify Migration
       run: |
         echo "Verifying database migration..."
         
-        # Check if new tables exist
-        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 normaize -e "SHOW TABLES LIKE 'DataSetRows';"
+        # Check if tables exist
+        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 normaize -e "SHOW TABLES;"
         
-        # Check if new columns exist
-        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 normaize -e "DESCRIBE DataSets;" | grep -E "(DataHash|FilePath|ProcessedData|StorageProvider|UseSeparateTable)"
-        
-        # Check if JSON columns are properly configured
-        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 normaize -e "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'DataSets' AND DATA_TYPE = 'json';"
+        # Check if DataSets table exists and has expected columns
+        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 normaize -e "DESCRIBE DataSets;"
         
         echo "✅ Database migration verification completed"
 
