@@ -4,6 +4,7 @@ using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using Normaize.API.Services;
+using System.Security.Claims;
 
 namespace Normaize.API.Controllers;
 
@@ -21,13 +22,27 @@ public class DataSetsController : ControllerBase
         _loggingService = loggingService;
     }
 
+    private string GetCurrentUserId()
+    {
+        // Get user ID from JWT token (Auth0 sub claim)
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                    ?? User.FindFirst("sub")?.Value 
+                    ?? throw new UnauthorizedAccessException("User ID not found in token");
+        return userId;
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDataSets()
     {
         try
         {
-            var dataSets = await _dataProcessingService.GetAllDataSetsAsync();
+            var userId = GetCurrentUserId();
+            var dataSets = await _dataProcessingService.GetDataSetsByUserAsync(userId);
             return Ok(dataSets);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
         }
         catch (Exception ex)
         {
@@ -41,11 +56,16 @@ public class DataSetsController : ControllerBase
     {
         try
         {
-            var dataSet = await _dataProcessingService.GetDataSetAsync(id);
+            var userId = GetCurrentUserId();
+            var dataSet = await _dataProcessingService.GetDataSetAsync(id, userId);
             if (dataSet == null)
                 return NotFound();
 
             return Ok(dataSet);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
         }
         catch (Exception ex)
         {
@@ -62,10 +82,12 @@ public class DataSetsController : ControllerBase
             if (file == null || file.Length == 0)
                 return BadRequest("No file provided");
 
+            var userId = GetCurrentUserId();
             var createDto = new CreateDataSetDto
             {
                 Name = name,
-                Description = description
+                Description = description,
+                UserId = userId
             };
 
             // Convert IFormFile to FileUploadRequest (abstraction)
@@ -84,6 +106,10 @@ public class DataSetsController : ControllerBase
 
             return Ok(result);
         }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
         catch (Exception ex)
         {
             _loggingService.LogException(ex, "UploadDataSet");
@@ -96,11 +122,16 @@ public class DataSetsController : ControllerBase
     {
         try
         {
-            var preview = await _dataProcessingService.GetDataSetPreviewAsync(id, rows);
+            var userId = GetCurrentUserId();
+            var preview = await _dataProcessingService.GetDataSetPreviewAsync(id, rows, userId);
             if (preview == null)
                 return NotFound();
 
             return Ok(preview);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
         }
         catch (Exception ex)
         {
@@ -114,11 +145,16 @@ public class DataSetsController : ControllerBase
     {
         try
         {
-            var schema = await _dataProcessingService.GetDataSetSchemaAsync(id);
+            var userId = GetCurrentUserId();
+            var schema = await _dataProcessingService.GetDataSetSchemaAsync(id, userId);
             if (schema == null)
                 return NotFound();
 
             return Ok(schema);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
         }
         catch (Exception ex)
         {
@@ -132,11 +168,16 @@ public class DataSetsController : ControllerBase
     {
         try
         {
-            var result = await _dataProcessingService.DeleteDataSetAsync(id);
+            var userId = GetCurrentUserId();
+            var result = await _dataProcessingService.DeleteDataSetAsync(id, userId);
             if (!result)
                 return NotFound();
 
             return NoContent();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
         }
         catch (Exception ex)
         {

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Normaize.Data;
@@ -11,22 +12,26 @@ using Normaize.Data;
 namespace Normaize.Data.Migrations
 {
     [DbContext(typeof(NormaizeContext))]
-    [Migration("20250703163140_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250708012107_AddUserIdToDataSet")]
+    partial class AddUserIdToDataSet
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
+
+            MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
             modelBuilder.Entity("Normaize.Core.Models.Analysis", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("ComparisonDataSetId")
                         .HasColumnType("int");
@@ -35,12 +40,10 @@ namespace Normaize.Data.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Configuration")
-                        .HasColumnType("longtext");
+                        .HasColumnType("JSON");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime(6)")
-                        .HasDefaultValueSql("datetime('now')");
+                        .HasColumnType("datetime(6)");
 
                     b.Property<int>("DataSetId")
                         .HasColumnType("int");
@@ -50,7 +53,7 @@ namespace Normaize.Data.Migrations
                         .HasColumnType("varchar(1000)");
 
                     b.Property<string>("ErrorMessage")
-                        .HasColumnType("longtext");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -58,23 +61,29 @@ namespace Normaize.Data.Migrations
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("Results")
-                        .HasColumnType("longtext");
+                        .HasColumnType("JSON");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("longtext")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
                         .HasDefaultValue("Pending");
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ComparisonDataSetId");
 
+                    b.HasIndex("CreatedAt");
+
                     b.HasIndex("DataSetId");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("Analyses");
                 });
@@ -85,8 +94,14 @@ namespace Normaize.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
                     b.Property<int>("ColumnCount")
                         .HasColumnType("int");
+
+                    b.Property<string>("DataHash")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
@@ -94,14 +109,21 @@ namespace Normaize.Data.Migrations
 
                     b.Property<string>("FileName")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
 
                     b.Property<long>("FileSize")
                         .HasColumnType("bigint");
 
                     b.Property<string>("FileType")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<bool>("IsProcessed")
                         .ValueGeneratedOnAdd()
@@ -114,25 +136,80 @@ namespace Normaize.Data.Migrations
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("PreviewData")
-                        .HasColumnType("longtext");
+                        .HasColumnType("JSON");
 
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ProcessedData")
+                        .HasColumnType("JSON");
+
+                    b.Property<string>("ProcessingErrors")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("RowCount")
                         .HasColumnType("int");
 
                     b.Property<string>("Schema")
-                        .HasColumnType("longtext");
+                        .HasColumnType("JSON");
+
+                    b.Property<string>("StorageProvider")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasDefaultValue("Local");
 
                     b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("UseSeparateTable")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime(6)")
-                        .HasDefaultValueSql("datetime('now')");
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("IsProcessed");
+
+                    b.HasIndex("UploadedAt");
+
+                    b.HasIndex("UseSeparateTable");
+
                     b.ToTable("DataSets");
+                });
+
+            modelBuilder.Entity("Normaize.Core.Models.DataSetRow", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Data")
+                        .IsRequired()
+                        .HasColumnType("JSON");
+
+                    b.Property<int>("DataSetId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RowIndex")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DataSetId", "RowIndex")
+                        .HasDatabaseName("idx_datasetrow_dataset_row");
+
+                    b.ToTable("DataSetRows");
                 });
 
             modelBuilder.Entity("Normaize.Core.Models.Analysis", b =>
@@ -153,9 +230,22 @@ namespace Normaize.Data.Migrations
                     b.Navigation("DataSet");
                 });
 
+            modelBuilder.Entity("Normaize.Core.Models.DataSetRow", b =>
+                {
+                    b.HasOne("Normaize.Core.Models.DataSet", "DataSet")
+                        .WithMany("Rows")
+                        .HasForeignKey("DataSetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DataSet");
+                });
+
             modelBuilder.Entity("Normaize.Core.Models.DataSet", b =>
                 {
                     b.Navigation("Analyses");
+
+                    b.Navigation("Rows");
                 });
 #pragma warning restore 612, 618
         }

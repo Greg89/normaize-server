@@ -9,6 +9,7 @@ public class DataSetDto
     public string FileType { get; set; } = string.Empty;
     public long FileSize { get; set; }
     public DateTime UploadedAt { get; set; }
+    public string UserId { get; set; } = string.Empty;
     public int RowCount { get; set; }
     public int ColumnCount { get; set; }
     public bool IsProcessed { get; set; }
@@ -20,6 +21,7 @@ public class CreateDataSetDto
 {
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string UserId { get; set; } = string.Empty;
 }
 
 public class DataSetUploadResponse

@@ -6,9 +6,9 @@ namespace Normaize.Core.Interfaces;
 public interface IDataProcessingService
 {
     Task<DataSetUploadResponse> UploadDataSetAsync(FileUploadRequest fileRequest, CreateDataSetDto createDto);
-    Task<DataSetDto?> GetDataSetAsync(int id);
-    Task<IEnumerable<DataSetDto>> GetAllDataSetsAsync();
-    Task<bool> DeleteDataSetAsync(int id);
-    Task<string?> GetDataSetPreviewAsync(int id, int rows = 10);
-    Task<object?> GetDataSetSchemaAsync(int id);
+    Task<DataSetDto?> GetDataSetAsync(int id, string userId);
+    Task<IEnumerable<DataSetDto>> GetDataSetsByUserAsync(string userId);
+    Task<bool> DeleteDataSetAsync(int id, string userId);
+    Task<string?> GetDataSetPreviewAsync(int id, int rows, string userId);
+    Task<object?> GetDataSetSchemaAsync(int id, string userId);
 } 

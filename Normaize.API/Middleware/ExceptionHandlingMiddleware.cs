@@ -8,12 +8,10 @@ namespace Normaize.API.Middleware;
 public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly IStructuredLoggingService _loggingService;
 
-    public ExceptionHandlingMiddleware(RequestDelegate next, IStructuredLoggingService loggingService)
+    public ExceptionHandlingMiddleware(RequestDelegate next)
     {
         _next = next;
-        _loggingService = loggingService;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -24,8 +22,11 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
+            // Get logging service from service provider
+            var loggingService = context.RequestServices.GetRequiredService<IStructuredLoggingService>();
+            
             // Log the exception with full context
-            _loggingService.LogException(ex, "Global exception handler");
+            loggingService.LogException(ex, "Global exception handler");
             
             await HandleExceptionAsync(context, ex);
         }
