@@ -64,7 +64,7 @@ public class StructuredLoggingServiceTests
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v != null && v!.ToString().Contains("Action Data")),
+                It.Is<It.IsAnyType>((v, t) => v != null && v.ToString().Contains("Action Data")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);

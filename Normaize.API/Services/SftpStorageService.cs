@@ -51,7 +51,7 @@ public class SftpStorageService : IStorageService
         else
         {
             // Use password authentication
-            return new SftpClient(_host, _username, _password);
+            return new SftpClient(_host, _username, _password ?? string.Empty);
         }
     }
 
@@ -100,7 +100,7 @@ public class SftpStorageService : IStorageService
         }
     }
 
-    public async Task<Stream> GetFileAsync(string filePath)
+    public Task<Stream> GetFileAsync(string filePath)
     {
         // Extract path from sftp:// URL
         var remotePath = ExtractPathFromUrl(filePath);
@@ -125,7 +125,7 @@ public class SftpStorageService : IStorageService
             client.DownloadFile(remotePath, memoryStream);
             memoryStream.Position = 0;
             
-            return memoryStream;
+            return Task.FromResult<Stream>(memoryStream);
         }
         catch (Exception ex)
         {
@@ -141,7 +141,7 @@ public class SftpStorageService : IStorageService
         }
     }
 
-    public async Task DeleteFileAsync(string filePath)
+    public Task DeleteFileAsync(string filePath)
     {
         var remotePath = ExtractPathFromUrl(filePath);
         
@@ -174,9 +174,11 @@ public class SftpStorageService : IStorageService
                 client.Disconnect();
             }
         }
+
+        return Task.CompletedTask;
     }
 
-    public async Task<bool> FileExistsAsync(string filePath)
+    public Task<bool> FileExistsAsync(string filePath)
     {
         var remotePath = ExtractPathFromUrl(filePath);
         
@@ -188,15 +190,15 @@ public class SftpStorageService : IStorageService
             
             if (!client.IsConnected)
             {
-                return false;
+                return Task.FromResult(false);
             }
 
-            return client.Exists(remotePath);
+            return Task.FromResult(client.Exists(remotePath));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking file existence on SFTP: {RemotePath}", remotePath);
-            return false;
+            return Task.FromResult(false);
         }
         finally
         {

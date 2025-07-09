@@ -36,14 +36,14 @@ public class LocalStorageService : IStorageService
         return filePath;
     }
 
-    public async Task<Stream> GetFileAsync(string filePath)
+    public Task<Stream> GetFileAsync(string filePath)
     {
         if (!File.Exists(filePath))
         {
             throw new FileNotFoundException($"File not found: {filePath}");
         }
 
-        return new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        return Task.FromResult<Stream>(new FileStream(filePath, FileMode.Open, FileAccess.Read));
     }
 
     public Task DeleteFileAsync(string filePath)

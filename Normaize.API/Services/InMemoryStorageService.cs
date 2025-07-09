@@ -28,7 +28,7 @@ public class InMemoryStorageService : IStorageService
         return filePath;
     }
 
-    public async Task<Stream> GetFileAsync(string filePath)
+    public Task<Stream> GetFileAsync(string filePath)
     {
         if (!_fileStorage.ContainsKey(filePath))
         {
@@ -36,7 +36,7 @@ public class InMemoryStorageService : IStorageService
         }
 
         var fileData = _fileStorage[filePath];
-        return new MemoryStream(fileData);
+        return Task.FromResult<Stream>(new MemoryStream(fileData));
     }
 
     public Task DeleteFileAsync(string filePath)

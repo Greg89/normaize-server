@@ -6,6 +6,8 @@ using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using FluentAssertions;
 using Xunit;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 namespace Normaize.Tests.Controllers;
 
@@ -20,6 +22,16 @@ public class DataSetsControllerTests
         _mockDataProcessingService = new Mock<IDataProcessingService>();
         _mockLoggingService = new Mock<IStructuredLoggingService>();
         _controller = new DataSetsController(_mockDataProcessingService.Object, _mockLoggingService.Object);
+        // Set up mock user for controller context
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(new[] {
+                    new Claim(ClaimTypes.NameIdentifier, "test-user-id")
+                }, "mock"))
+            }
+        };
     }
 
     [Fact]
@@ -33,7 +45,7 @@ public class DataSetsControllerTests
         };
 
         _mockDataProcessingService
-            .Setup(x => x.GetAllDataSetsAsync())
+            .Setup(x => x.GetDataSetsByUserAsync(It.IsAny<string>()))
             .ReturnsAsync(expectedDataSets);
 
         // Act
@@ -53,7 +65,7 @@ public class DataSetsControllerTests
         // Arrange
         var exception = new InvalidOperationException("Database connection failed");
         _mockDataProcessingService
-            .Setup(x => x.GetAllDataSetsAsync())
+            .Setup(x => x.GetDataSetsByUserAsync(It.IsAny<string>()))
             .ThrowsAsync(exception);
 
         // Act
@@ -82,7 +94,7 @@ public class DataSetsControllerTests
         };
 
         _mockDataProcessingService
-            .Setup(x => x.GetDataSetAsync(datasetId))
+            .Setup(x => x.GetDataSetAsync(datasetId, It.IsAny<string>()))
             .ReturnsAsync(expectedDataSet);
 
         // Act
@@ -101,7 +113,7 @@ public class DataSetsControllerTests
         // Arrange
         var datasetId = 999;
         _mockDataProcessingService
-            .Setup(x => x.GetDataSetAsync(datasetId))
+            .Setup(x => x.GetDataSetAsync(datasetId, It.IsAny<string>()))
             .ReturnsAsync((DataSetDto?)null);
 
         // Act
@@ -119,7 +131,7 @@ public class DataSetsControllerTests
         var datasetId = 1;
         var exception = new InvalidOperationException("Database error");
         _mockDataProcessingService
-            .Setup(x => x.GetDataSetAsync(datasetId))
+            .Setup(x => x.GetDataSetAsync(datasetId, It.IsAny<string>()))
             .ThrowsAsync(exception);
 
         // Act
@@ -141,7 +153,7 @@ public class DataSetsControllerTests
         // Arrange
         var datasetId = 1;
         _mockDataProcessingService
-            .Setup(x => x.DeleteDataSetAsync(datasetId))
+            .Setup(x => x.DeleteDataSetAsync(datasetId, It.IsAny<string>()))
             .ReturnsAsync(true);
 
         // Act
@@ -157,7 +169,7 @@ public class DataSetsControllerTests
         // Arrange
         var datasetId = 999;
         _mockDataProcessingService
-            .Setup(x => x.DeleteDataSetAsync(datasetId))
+            .Setup(x => x.DeleteDataSetAsync(datasetId, It.IsAny<string>()))
             .ReturnsAsync(false);
 
         // Act
@@ -174,7 +186,7 @@ public class DataSetsControllerTests
         var datasetId = 1;
         var exception = new InvalidOperationException("Delete failed");
         _mockDataProcessingService
-            .Setup(x => x.DeleteDataSetAsync(datasetId))
+            .Setup(x => x.DeleteDataSetAsync(datasetId, It.IsAny<string>()))
             .ThrowsAsync(exception);
 
         // Act
