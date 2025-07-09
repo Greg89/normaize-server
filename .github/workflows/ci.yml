@@ -127,17 +127,40 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y mysql-server mysql-client
+        
+        # Start MySQL service
         sudo systemctl start mysql
+        sudo systemctl enable mysql
         
         # Wait for MySQL to start
         sleep 10
         
-        # Set root password using a more reliable method
-        sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'test123';"
+        # Create a temporary MySQL configuration to allow root access
+        sudo tee /etc/mysql/conf.d/allow-root.cnf > /dev/null <<EOF
+        [mysqld]
+        skip-grant-tables
+        EOF
+        
+        # Restart MySQL with the new configuration
+        sudo systemctl restart mysql
+        sleep 5
+        
+        # Now we can connect without password and set up the root user
+        sudo mysql -e "UPDATE mysql.user SET plugin='mysql_native_password', authentication_string=PASSWORD('test123') WHERE user='root';"
         sudo mysql -e "FLUSH PRIVILEGES;"
+        
+        # Remove the temporary configuration
+        sudo rm /etc/mysql/conf.d/allow-root.cnf
+        
+        # Restart MySQL normally
+        sudo systemctl restart mysql
+        sleep 5
         
         # Verify the password was set
         mysql -u root -ptest123 -e "SELECT 1;" || echo "Password setup failed"
+        
+        # Show MySQL status
+        sudo systemctl status mysql
 
     - name: Wait for MySQL
       run: |
