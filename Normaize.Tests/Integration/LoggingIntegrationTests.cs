@@ -7,17 +7,44 @@ using FluentAssertions;
 using System.Net;
 using Xunit;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
+using System.Linq;
+using Normaize.Core.Interfaces;
+using Normaize.API.Services;
 
 namespace Normaize.Tests.Integration;
 
-public class LoggingIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public class TestWebApplicationFactory : WebApplicationFactory<Program>
 {
-    private readonly WebApplicationFactory<Program> _factory;
-
-    public LoggingIntegrationTests(WebApplicationFactory<Program> factory)
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        // Set environment to Test to avoid middleware registration issues
+        // Set both the host environment and the process environment variable
+        builder.UseEnvironment("Test");
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Test");
+        
+        // Override services to ensure in-memory storage is used for tests
+        builder.ConfigureServices(services =>
+        {
+            // Remove any existing storage service registrations
+            var storageServiceDescriptor = services.FirstOrDefault(d => 
+                d.ServiceType == typeof(IStorageService));
+            if (storageServiceDescriptor != null)
+            {
+                services.Remove(storageServiceDescriptor);
+            }
+            
+            // Force in-memory storage for tests
+            services.AddScoped<IStorageService, InMemoryStorageService>();
+        });
+    }
+}
+
+public class LoggingIntegrationTests : IClassFixture<TestWebApplicationFactory>
+{
+    private readonly TestWebApplicationFactory _factory;
+
+    public LoggingIntegrationTests(TestWebApplicationFactory factory)
+    {
         _factory = factory;
     }
 
@@ -44,13 +71,28 @@ public class LoggingIntegrationTests : IClassFixture<WebApplicationFactory<Progr
         var client = _factory.CreateClient();
 
         // Act
-        var response = await client.GetAsync("/health/basic");
+        var response = await client.GetAsync("/health");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
         content.Should().Contain("healthy");
         content.Should().Contain("1.0.0");
+    }
+
+    [Fact]
+    public async Task HealthReadinessEndpoint_ShouldBeAccessible()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/health/readiness");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("ready");
     }
 
     [Fact]

@@ -141,44 +141,62 @@ builder.Services.AddHttpContextAccessor();
 var appEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
 var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER")?.ToLowerInvariant();
 
-// Environment-aware storage selection
-if (string.IsNullOrEmpty(storageProvider))
-{
-    // Default to memory for all environments unless explicitly configured
-    storageProvider = "memory";
-}
+Log.Information("Current environment: {Environment}, Storage provider: {StorageProvider}", appEnvironment, storageProvider ?? "default");
 
-switch (storageProvider)
+// Force in-memory storage for Test environment
+if (appEnvironment.Equals("Test", StringComparison.OrdinalIgnoreCase))
 {
-    case "sftp":
-        // Only use SFTP if explicitly configured with proper credentials
-        var sftpHost = Environment.GetEnvironmentVariable("SFTP_HOST");
-        var sftpUsername = Environment.GetEnvironmentVariable("SFTP_USERNAME");
-        var sftpPassword = Environment.GetEnvironmentVariable("SFTP_PASSWORD");
-        var sftpPrivateKey = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY");
-        var sftpPrivateKeyPath = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY_PATH");
-        
-        if (string.IsNullOrEmpty(sftpHost) || string.IsNullOrEmpty(sftpUsername) ||
-            (string.IsNullOrEmpty(sftpPassword) && string.IsNullOrEmpty(sftpPrivateKey) && string.IsNullOrEmpty(sftpPrivateKeyPath)))
+    builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+    Log.Information("Using in-memory storage service for Test environment");
+}
+else
+{
+    // Environment-aware storage selection
+    if (string.IsNullOrEmpty(storageProvider))
+    {
+        // Default to memory for Test environment, otherwise use environment-specific defaults
+        if (appEnvironment.Equals("Test", StringComparison.OrdinalIgnoreCase))
         {
-            Log.Warning("SFTP storage requested but credentials not configured. Falling back to memory storage.");
-            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+            storageProvider = "memory";
         }
         else
         {
-            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, SftpStorageService>();
-            Log.Information("Using SFTP storage service");
+            storageProvider = "memory"; // Default to memory for all environments unless explicitly configured
         }
-        break;
-    case "local":
-        builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, LocalStorageService>();
-        Log.Information("Using local storage service");
-        break;
-    case "memory":
-    default:
-        builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
-        Log.Information("Using in-memory storage service for development/beta");
-        break;
+    }
+
+    switch (storageProvider)
+    {
+        case "sftp":
+            // Only use SFTP if explicitly configured with proper credentials
+            var sftpHost = Environment.GetEnvironmentVariable("SFTP_HOST");
+            var sftpUsername = Environment.GetEnvironmentVariable("SFTP_USERNAME");
+            var sftpPassword = Environment.GetEnvironmentVariable("SFTP_PASSWORD");
+            var sftpPrivateKey = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY");
+            var sftpPrivateKeyPath = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY_PATH");
+            
+            if (string.IsNullOrEmpty(sftpHost) || string.IsNullOrEmpty(sftpUsername) ||
+                (string.IsNullOrEmpty(sftpPassword) && string.IsNullOrEmpty(sftpPrivateKey) && string.IsNullOrEmpty(sftpPrivateKeyPath)))
+            {
+                Log.Warning("SFTP storage requested but credentials not configured. Falling back to memory storage.");
+                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+            }
+            else
+            {
+                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, SftpStorageService>();
+                Log.Information("Using SFTP storage service");
+            }
+            break;
+        case "local":
+            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, LocalStorageService>();
+            Log.Information("Using local storage service");
+            break;
+        case "memory":
+        default:
+            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+            Log.Information("Using in-memory storage service for {Environment}", appEnvironment);
+            break;
+    }
 }
 
 // Repositories
