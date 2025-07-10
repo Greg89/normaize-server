@@ -55,6 +55,28 @@ if (!string.IsNullOrEmpty(seqUrl) && environment != "Development")
 
 Log.Logger = loggerConfiguration.CreateLogger();
 
+// Log all environment variables for debugging (excluding sensitive ones)
+Log.Information("=== Environment Variables Debug ===");
+var envVars = Environment.GetEnvironmentVariables();
+foreach (var key in envVars.Keys)
+{
+    var keyStr = key.ToString();
+    var value = envVars[key]?.ToString();
+    
+    // Skip sensitive environment variables
+    if (keyStr.Contains("PASSWORD", StringComparison.OrdinalIgnoreCase) ||
+        keyStr.Contains("SECRET", StringComparison.OrdinalIgnoreCase) ||
+        keyStr.Contains("KEY", StringComparison.OrdinalIgnoreCase))
+    {
+        Log.Information("  {Key}: [REDACTED]", keyStr);
+    }
+    else
+    {
+        Log.Information("  {Key}: {Value}", keyStr, value ?? "NULL");
+    }
+}
+Log.Information("=== End Environment Variables Debug ===");
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure Serilog for dependency injection
@@ -96,19 +118,47 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 // Database
-var connectionString = $"Server={Environment.GetEnvironmentVariable("MYSQLHOST")};Database={Environment.GetEnvironmentVariable("MYSQLDATABASE")};User={Environment.GetEnvironmentVariable("MYSQLUSER")};Password={Environment.GetEnvironmentVariable("MYSQLPASSWORD")};Port={Environment.GetEnvironmentVariable("MYSQLPORT")};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
+// Check for various ways Railway might provide database connection
+var mysqlHost = Environment.GetEnvironmentVariable("MYSQLHOST") ?? 
+                Environment.GetEnvironmentVariable("MYSQL_HOST") ?? 
+                Environment.GetEnvironmentVariable("DB_HOST");
+var mysqlDatabase = Environment.GetEnvironmentVariable("MYSQLDATABASE") ?? 
+                   Environment.GetEnvironmentVariable("MYSQL_DATABASE") ?? 
+                   Environment.GetEnvironmentVariable("DB_NAME");
+var mysqlUser = Environment.GetEnvironmentVariable("MYSQLUSER") ?? 
+               Environment.GetEnvironmentVariable("MYSQL_USER") ?? 
+               Environment.GetEnvironmentVariable("DB_USER");
+var mysqlPassword = Environment.GetEnvironmentVariable("MYSQLPASSWORD") ?? 
+                   Environment.GetEnvironmentVariable("MYSQL_PASSWORD") ?? 
+                   Environment.GetEnvironmentVariable("DB_PASSWORD");
+var mysqlPort = Environment.GetEnvironmentVariable("MYSQLPORT") ?? 
+               Environment.GetEnvironmentVariable("MYSQL_PORT") ?? 
+               Environment.GetEnvironmentVariable("DB_PORT") ?? 
+               "3306";
+
+// Log database configuration for debugging (without password)
+Log.Information("Database configuration:");
+Log.Information("  Host: {Host}", mysqlHost ?? "NOT SET");
+Log.Information("  Database: {Database}", mysqlDatabase ?? "NOT SET");
+Log.Information("  User: {User}", mysqlUser ?? "NOT SET");
+Log.Information("  Port: {Port}", mysqlPort);
+
+var connectionString = $"Server={mysqlHost};Database={mysqlDatabase};User={mysqlUser};Password={mysqlPassword};Port={mysqlPort};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
 
 // Only add database context if connection string is available
-if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
+if (!string.IsNullOrEmpty(mysqlHost) && !string.IsNullOrEmpty(mysqlDatabase) && !string.IsNullOrEmpty(mysqlUser) && !string.IsNullOrEmpty(mysqlPassword))
 {
     builder.Services.AddDbContext<NormaizeContext>(options =>
         options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 0))));
+    Log.Information("Using MySQL database: {Database} on {Host}:{Port}", mysqlDatabase, mysqlHost, mysqlPort);
 }
 else
 {
     // Use in-memory database for testing/CI environments
     builder.Services.AddDbContext<NormaizeContext>(options =>
         options.UseInMemoryDatabase("TestDatabase"));
+    Log.Information("Using in-memory database for testing/CI environment");
+    Log.Warning("Database connection parameters missing - using in-memory database");
 }
 
 // CORS
@@ -202,7 +252,39 @@ builder.Services.AddHttpClient();
 var app = builder.Build();
 
 // Apply database migrations and verify health (only for Railway/Production environments)
-if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
+// Check for various ways Railway might provide database connection
+var hasDatabaseConnection = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")) ||
+                           !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")) ||
+                           !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQL_HOST")) ||
+                           !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DB_HOST")) ||
+                           (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLDATABASE")) && 
+                            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLUSER")));
+
+// Log environment variables for debugging (without sensitive data)
+Log.Information("Database connection detection:");
+Log.Information("  MYSQLHOST: {MYSQLHOST}", Environment.GetEnvironmentVariable("MYSQLHOST") ?? "NOT SET");
+Log.Information("  MYSQLDATABASE: {MYSQLDATABASE}", Environment.GetEnvironmentVariable("MYSQLDATABASE") ?? "NOT SET");
+Log.Information("  MYSQLUSER: {MYSQLUSER}", Environment.GetEnvironmentVariable("MYSQLUSER") ?? "NOT SET");
+Log.Information("  MYSQLPORT: {MYSQLPORT}", Environment.GetEnvironmentVariable("MYSQLPORT") ?? "NOT SET");
+Log.Information("  DATABASE_URL: {DATABASE_URL}", Environment.GetEnvironmentVariable("DATABASE_URL") ?? "NOT SET");
+Log.Information("  ASPNETCORE_ENVIRONMENT: {Environment}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "NOT SET");
+Log.Information("  Has database connection: {HasConnection}", hasDatabaseConnection);
+
+// Also check if we're in a production-like environment and force migration attempts
+var isProductionLike = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Production", StringComparison.OrdinalIgnoreCase) == true ||
+                       Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Staging", StringComparison.OrdinalIgnoreCase) == true ||
+                       Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Beta", StringComparison.OrdinalIgnoreCase) == true;
+
+// Check if we're in a containerized environment (Railway, Docker, etc.)
+var isContainerized = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PORT")) ||
+                     File.Exists("/.dockerenv") ||
+                     Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+
+Log.Information("Environment detection:");
+Log.Information("  Is production-like: {IsProductionLike}", isProductionLike);
+Log.Information("  Is containerized: {IsContainerized}", isContainerized);
+
+if (hasDatabaseConnection || isProductionLike || isContainerized)
 {
     try
     {
@@ -286,6 +368,10 @@ if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
             Log.Warning("Database setup failed but continuing in Development mode");
         }
     }
+}
+else
+{
+    Log.Information("No database connection detected and not in production-like environment, skipping migrations and health checks");
 }
 
 // Configure the HTTP request pipeline.
