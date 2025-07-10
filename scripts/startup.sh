@@ -25,15 +25,23 @@ if [ -n "$MYSQLHOST" ]; then
         exit 1
     fi
     
+    # Change to the API project directory (where the startup project is)
+    cd /app/Normaize.API
+    
     # Run migrations
     echo "Applying database migrations using: $EF_TOOL"
-    $EF_TOOL database update --project Normaize.Data --startup-project Normaize.API
+    echo "Working directory: $(pwd)"
+    echo "Project files:"
+    ls -la *.csproj 2>/dev/null || echo "No .csproj files found in current directory"
+    
+    $EF_TOOL database update --project ../Normaize.Data --startup-project .
     
     echo "Migrations completed successfully."
 else
     echo "No database connection detected. Skipping migrations."
 fi
 
-# Start the application
+# Start the application (from the root /app directory)
+cd /app
 echo "Starting application..."
 exec dotnet Normaize.API.dll 

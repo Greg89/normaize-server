@@ -25,6 +25,10 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
+# Copy project files needed for migrations
+COPY --from=build /src/Normaize.Data ./Normaize.Data/
+COPY --from=build /src/Normaize.API ./Normaize.API/
+
 # Copy migration files to the container
 COPY --from=build /src/Normaize.Data/Migrations ./Migrations/
 
