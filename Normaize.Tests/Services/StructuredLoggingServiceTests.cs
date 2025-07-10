@@ -27,7 +27,7 @@ public class StructuredLoggingServiceTests
         var anonymousPrincipal = new ClaimsPrincipal(new ClaimsIdentity()); // Empty claims identity
         _mockHttpContext.Setup(x => x.User).Returns(anonymousPrincipal);
         _mockHttpContext.Setup(x => x.Request).Returns(_mockRequest.Object);
-        _mockHttpContext.Setup(x => x.Items).Returns(new Dictionary<object, object>()); // <-- Add this line
+        _mockHttpContext.Setup(x => x.Items).Returns(new Dictionary<object, object?>());
         _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
         
         _loggingService = new StructuredLoggingService(_mockLogger.Object, _mockHttpContextAccessor.Object);
@@ -56,7 +56,7 @@ public class StructuredLoggingServiceTests
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v != null && v!.ToString().Contains("User Action: Test Action")),
+                It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("User Action: Test Action")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -64,7 +64,7 @@ public class StructuredLoggingServiceTests
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v != null && v.ToString().Contains("Action Data")),
+                It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("Action Data")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -90,7 +90,7 @@ public class StructuredLoggingServiceTests
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v != null && v!.ToString().Contains("User Action: Test Action")),
+                It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("User Action: Test Action")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -117,7 +117,7 @@ public class StructuredLoggingServiceTests
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v != null && v!.ToString().Contains("Exception in Test Context")),
+                It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("Exception in Test Context")),
                 exception,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -145,7 +145,7 @@ public class StructuredLoggingServiceTests
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v != null && v!.ToString().Contains("Request Started: GET /api/test by User: user123")),
+                It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("Request Started: GET /api/test by User: user123")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -174,7 +174,7 @@ public class StructuredLoggingServiceTests
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v != null && v!.ToString().Contains("Request Completed: POST /api/test - Status: 200 - Duration: 150ms")),
+                It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("Request Completed: POST /api/test - Status: 200 - Duration: 150ms")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);

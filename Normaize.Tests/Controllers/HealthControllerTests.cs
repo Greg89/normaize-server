@@ -31,7 +31,7 @@ public class HealthControllerTests
         result.Should().BeOfType<OkObjectResult>().Subject.Should().NotBeNull();
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject!;
         okResult.Value.Should().NotBeNull();
-        var response = okResult.Value;
+        var response = okResult.Value!;
         // Check properties
         var responseType = response.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
@@ -54,7 +54,7 @@ public class HealthControllerTests
         // Assert
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject!;
         okResult.Value.Should().NotBeNull();
-        var response = okResult.Value;
+        var response = okResult.Value!;
         var responseType = response.GetType();
         var statusProperty = responseType.GetProperty("status");
         statusProperty.Should().NotBeNull();
@@ -83,7 +83,7 @@ public class HealthControllerTests
         // Assert
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject!;
         okResult.Value.Should().NotBeNull();
-        var response = okResult.Value;
+        var response = okResult.Value!;
         var responseType = response.GetType();
         var environmentProperty = responseType.GetProperty("environment");
         environmentProperty.Should().NotBeNull();
@@ -125,7 +125,7 @@ public class HealthControllerTests
         okResult.Value.Should().NotBeNull();
         
         var response = okResult.Value;
-        var responseType = response.GetType();
+        var responseType = response!.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
         responseType.GetProperty("timestamp").Should().NotBeNull();
         responseType.GetProperty("duration").Should().NotBeNull();
@@ -163,7 +163,7 @@ public class HealthControllerTests
         objectResult.StatusCode.Should().Be(503);
         
         var response = objectResult.Value;
-        var responseType = response.GetType();
+        var responseType = response!.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
         responseType.GetProperty("issues").Should().NotBeNull();
         
@@ -216,7 +216,7 @@ public class HealthControllerTests
         okResult.Value.Should().NotBeNull();
         
         var response = okResult.Value;
-        var responseType = response.GetType();
+        var responseType = response!.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
         responseType.GetProperty("components").Should().NotBeNull();
         responseType.GetProperty("timestamp").Should().NotBeNull();
@@ -268,7 +268,7 @@ public class HealthControllerTests
         objectResult.StatusCode.Should().Be(503);
         
         var response = objectResult.Value;
-        var responseType = response.GetType();
+        var responseType = response!.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
         responseType.GetProperty("components").Should().NotBeNull();
         responseType.GetProperty("issues").Should().NotBeNull();
@@ -316,7 +316,7 @@ public class HealthControllerTests
         okResult.Value.Should().NotBeNull();
         
         var response = okResult.Value;
-        var responseType = response.GetType();
+        var responseType = response!.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
         responseType.GetProperty("components").Should().NotBeNull();
         responseType.GetProperty("timestamp").Should().NotBeNull();
@@ -368,7 +368,7 @@ public class HealthControllerTests
         objectResult.StatusCode.Should().Be(503);
         
         var response = objectResult.Value;
-        var responseType = response.GetType();
+        var responseType = response!.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
         responseType.GetProperty("components").Should().NotBeNull();
         responseType.GetProperty("issues").Should().NotBeNull();
