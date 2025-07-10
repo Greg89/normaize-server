@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using System.Linq;
 using Normaize.Core.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace Normaize.Tests.Integration;
 
@@ -20,6 +21,9 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         // Set both the host environment and the process environment variable
         builder.UseEnvironment("Test");
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Test");
+        
+        // Clear MYSQLHOST to force in-memory database usage
+        Environment.SetEnvironmentVariable("MYSQLHOST", null);
         
         // Override services to ensure in-memory storage is used for tests
         builder.ConfigureServices(services =>
