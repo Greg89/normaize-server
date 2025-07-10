@@ -28,11 +28,18 @@ jobs:
     - name: Build solution
       run: dotnet build --no-restore --configuration Release
 
+    - name: Install PowerShell
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y powershell
+
     - name: Run tests
-      run: dotnet test --no-build --verbosity normal --configuration Release
+      shell: pwsh
+      run: ./scripts/test-env.ps1
 
     - name: Run tests with coverage
-      run: dotnet test --no-build --verbosity normal --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage
+      shell: pwsh
+      run: ./scripts/test-env.ps1 --no-build --verbosity normal --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3

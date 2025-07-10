@@ -10,7 +10,6 @@ using DotNetEnv;
 using Serilog;
 using Serilog.Events;
 
-
 // Load environment variables from .env file
 var currentDir = Directory.GetCurrentDirectory();
 
@@ -154,15 +153,8 @@ else
     // Environment-aware storage selection
     if (string.IsNullOrEmpty(storageProvider))
     {
-        // Default to memory for Test environment, otherwise use environment-specific defaults
-        if (appEnvironment.Equals("Test", StringComparison.OrdinalIgnoreCase))
-        {
-            storageProvider = "memory";
-        }
-        else
-        {
-            storageProvider = "memory"; // Default to memory for all environments unless explicitly configured
-        }
+        // Default to memory for all environments unless explicitly configured
+        storageProvider = "memory";
     }
 
     switch (storageProvider)

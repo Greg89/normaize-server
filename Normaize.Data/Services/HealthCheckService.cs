@@ -237,19 +237,33 @@ public class HealthCheckService : IHealthCheckService
     private async Task<ComponentHealth> CheckApplicationHealthAsync()
     {
         var stopwatch = Stopwatch.StartNew();
-        
         try
         {
+            // If using in-memory provider, skip relational checks and always return healthy
+            var providerName = _context.Database.ProviderName;
+            if (providerName != null && providerName.Contains("InMemory", StringComparison.OrdinalIgnoreCase))
+            {
+                stopwatch.Stop();
+                return new ComponentHealth
+                {
+                    IsHealthy = true,
+                    Status = "healthy",
+                    ErrorMessage = null,
+                    Details = new Dictionary<string, object>
+                    {
+                        ["provider"] = providerName,
+                        ["note"] = "In-memory provider: skipping relational checks"
+                    },
+                    Duration = stopwatch.Elapsed
+                };
+            }
+
             // Check if application is responsive
             var canConnect = await _context.Database.CanConnectAsync();
-            
             // Check for pending migrations
             var pendingMigrations = _context.Database.GetPendingMigrations().ToList();
-            
             stopwatch.Stop();
-            
             var isHealthy = canConnect && !pendingMigrations.Any();
-            
             return new ComponentHealth
             {
                 IsHealthy = isHealthy,
