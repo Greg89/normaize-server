@@ -18,14 +18,15 @@ public class DataSetRepository : IDataSetRepository
     public async Task<DataSet?> GetByIdAsync(int id)
     {
         return await _context.DataSets
-            .Include(d => d.Analyses)
+            .Include(d => d.Analyses.Where(a => !a.IsDeleted))
             .Include(d => d.Rows.Take(100)) // Load first 100 rows for preview
-            .FirstOrDefaultAsync(d => d.Id == id);
+            .FirstOrDefaultAsync(d => d.Id == id && !d.IsDeleted);
     }
 
     public async Task<IEnumerable<DataSet>> GetAllAsync()
     {
         return await _context.DataSets
+            .Where(d => !d.IsDeleted)
             .OrderByDescending(d => d.UploadedAt)
             .ToListAsync();
     }
@@ -33,19 +34,39 @@ public class DataSetRepository : IDataSetRepository
     public async Task<IEnumerable<DataSet>> GetByUserIdAsync(string userId)
     {
         return await _context.DataSets
-            .Where(d => d.UserId == userId)
+            .Where(d => d.UserId == userId && !d.IsDeleted)
             .OrderByDescending(d => d.UploadedAt)
             .ToListAsync();
     }
 
     public async Task<DataSet> AddAsync(DataSet dataSet)
     {
+        dataSet.LastModifiedAt = DateTime.UtcNow;
+        dataSet.LastModifiedBy = dataSet.UserId;
+        
         _context.DataSets.Add(dataSet);
         await _context.SaveChangesAsync();
         return dataSet;
     }
 
     public async Task<bool> DeleteAsync(int id)
+    {
+        var dataSet = await _context.DataSets.FindAsync(id);
+        if (dataSet == null || dataSet.IsDeleted)
+            return false;
+
+        // Soft delete
+        dataSet.IsDeleted = true;
+        dataSet.DeletedAt = DateTime.UtcNow;
+        dataSet.DeletedBy = dataSet.UserId; // This will be updated by the service layer
+        dataSet.LastModifiedAt = DateTime.UtcNow;
+        dataSet.LastModifiedBy = dataSet.DeletedBy;
+        
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> HardDeleteAsync(int id)
     {
         var dataSet = await _context.DataSets.FindAsync(id);
         if (dataSet == null)
@@ -56,8 +77,28 @@ public class DataSetRepository : IDataSetRepository
         return true;
     }
 
+    public async Task<bool> RestoreAsync(int id)
+    {
+        var dataSet = await _context.DataSets.FindAsync(id);
+        if (dataSet == null || !dataSet.IsDeleted)
+            return false;
+
+        // Restore soft deleted record
+        dataSet.IsDeleted = false;
+        dataSet.DeletedAt = null;
+        dataSet.DeletedBy = null;
+        dataSet.LastModifiedAt = DateTime.UtcNow;
+        dataSet.LastModifiedBy = dataSet.UserId; // This will be updated by the service layer
+        
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<DataSet> UpdateAsync(DataSet dataSet)
     {
+        dataSet.LastModifiedAt = DateTime.UtcNow;
+        dataSet.LastModifiedBy = dataSet.UserId;
+        
         _context.DataSets.Update(dataSet);
         await _context.SaveChangesAsync();
         return dataSet;
@@ -65,7 +106,80 @@ public class DataSetRepository : IDataSetRepository
 
     public async Task<bool> ExistsAsync(int id)
     {
-        return await _context.DataSets.AnyAsync(d => d.Id == id);
+        return await _context.DataSets.AnyAsync(d => d.Id == id && !d.IsDeleted);
+    }
+
+    public async Task<IEnumerable<DataSet>> GetDeletedAsync()
+    {
+        return await _context.DataSets
+            .Where(d => d.IsDeleted)
+            .OrderByDescending(d => d.DeletedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<DataSet>> GetByUserIdAsync(string userId, bool includeDeleted = false)
+    {
+        var query = _context.DataSets.Where(d => d.UserId == userId);
+        
+        if (!includeDeleted)
+        {
+            query = query.Where(d => !d.IsDeleted);
+        }
+        
+        return await query
+            .OrderByDescending(d => d.UploadedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<DataSet>> SearchAsync(string searchTerm, string userId)
+    {
+        return await _context.DataSets
+            .Where(d => d.UserId == userId && !d.IsDeleted)
+            .Where(d => d.Name.Contains(searchTerm) || 
+                       (d.Description != null && d.Description.Contains(searchTerm)) ||
+                       d.FileName.Contains(searchTerm))
+            .OrderByDescending(d => d.UploadedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<DataSet>> GetByFileTypeAsync(string fileType, string userId)
+    {
+        return await _context.DataSets
+            .Where(d => d.UserId == userId && !d.IsDeleted && d.FileType == fileType)
+            .OrderByDescending(d => d.UploadedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<DataSet>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, string userId)
+    {
+        return await _context.DataSets
+            .Where(d => d.UserId == userId && !d.IsDeleted && 
+                       d.UploadedAt >= startDate && d.UploadedAt <= endDate)
+            .OrderByDescending(d => d.UploadedAt)
+            .ToListAsync();
+    }
+
+    public async Task<long> GetTotalSizeAsync(string userId)
+    {
+        return await _context.DataSets
+            .Where(d => d.UserId == userId && !d.IsDeleted)
+            .SumAsync(d => d.FileSize);
+    }
+
+    public async Task<int> GetTotalCountAsync(string userId)
+    {
+        return await _context.DataSets
+            .Where(d => d.UserId == userId && !d.IsDeleted)
+            .CountAsync();
+    }
+
+    public async Task<IEnumerable<DataSet>> GetRecentlyModifiedAsync(string userId, int count = 10)
+    {
+        return await _context.DataSets
+            .Where(d => d.UserId == userId && !d.IsDeleted)
+            .OrderByDescending(d => d.LastModifiedAt)
+            .Take(count)
+            .ToListAsync();
     }
 
     // MySQL-specific JSON querying methods
@@ -181,11 +295,31 @@ public class DataSetRepository : IDataSetRepository
     {
         var cutoffDate = DateTime.UtcNow.AddDays(-daysToKeep);
         var oldDataSets = await _context.DataSets
-            .Where(d => d.UploadedAt < cutoffDate)
+            .Where(d => d.UploadedAt < cutoffDate && !d.IsDeleted)
             .ToListAsync();
 
-        _context.DataSets.RemoveRange(oldDataSets);
+        foreach (var dataSet in oldDataSets)
+        {
+            dataSet.IsDeleted = true;
+            dataSet.DeletedAt = DateTime.UtcNow;
+            dataSet.DeletedBy = "System";
+            dataSet.LastModifiedAt = DateTime.UtcNow;
+            dataSet.LastModifiedBy = "System";
+        }
+
         await _context.SaveChangesAsync();
         return oldDataSets.Count;
+    }
+
+    public async Task<int> PermanentlyDeleteOldSoftDeletedAsync(int daysToKeep)
+    {
+        var cutoffDate = DateTime.UtcNow.AddDays(-daysToKeep);
+        var oldSoftDeleted = await _context.DataSets
+            .Where(d => d.IsDeleted && d.DeletedAt < cutoffDate)
+            .ToListAsync();
+
+        _context.DataSets.RemoveRange(oldSoftDeleted);
+        await _context.SaveChangesAsync();
+        return oldSoftDeleted.Count;
     }
 } 

@@ -19,7 +19,7 @@ public class AnalysisRepository : IAnalysisRepository
         return await _context.Analyses
             .Include(a => a.DataSet)
             .Include(a => a.ComparisonDataSet)
-            .FirstOrDefaultAsync(a => a.Id == id);
+            .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted);
     }
 
     public async Task<IEnumerable<Analysis>> GetByDataSetIdAsync(int dataSetId)
@@ -27,7 +27,7 @@ public class AnalysisRepository : IAnalysisRepository
         return await _context.Analyses
             .Include(a => a.DataSet)
             .Include(a => a.ComparisonDataSet)
-            .Where(a => a.DataSetId == dataSetId)
+            .Where(a => a.DataSetId == dataSetId && !a.IsDeleted)
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync();
     }
@@ -37,6 +37,7 @@ public class AnalysisRepository : IAnalysisRepository
         return await _context.Analyses
             .Include(a => a.DataSet)
             .Include(a => a.ComparisonDataSet)
+            .Where(a => !a.IsDeleted)
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync();
     }
@@ -58,6 +59,21 @@ public class AnalysisRepository : IAnalysisRepository
     public async Task<bool> DeleteAsync(int id)
     {
         var analysis = await _context.Analyses.FindAsync(id);
+        if (analysis == null || analysis.IsDeleted)
+            return false;
+
+        // Soft delete
+        analysis.IsDeleted = true;
+        analysis.DeletedAt = DateTime.UtcNow;
+        analysis.DeletedBy = "System"; // This will be updated by the service layer
+        
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> HardDeleteAsync(int id)
+    {
+        var analysis = await _context.Analyses.FindAsync(id);
         if (analysis == null)
             return false;
 
@@ -66,8 +82,63 @@ public class AnalysisRepository : IAnalysisRepository
         return true;
     }
 
+    public async Task<bool> RestoreAsync(int id)
+    {
+        var analysis = await _context.Analyses.FindAsync(id);
+        if (analysis == null || !analysis.IsDeleted)
+            return false;
+
+        // Restore soft deleted record
+        analysis.IsDeleted = false;
+        analysis.DeletedAt = null;
+        analysis.DeletedBy = null;
+        
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<IEnumerable<Analysis>> GetDeletedAsync()
+    {
+        return await _context.Analyses
+            .Where(a => a.IsDeleted)
+            .OrderByDescending(a => a.DeletedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Analysis>> GetByStatusAsync(string status)
+    {
+        return await _context.Analyses
+            .Include(a => a.DataSet)
+            .Include(a => a.ComparisonDataSet)
+            .Where(a => a.Status == status && !a.IsDeleted)
+            .OrderByDescending(a => a.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Analysis>> GetByTypeAsync(string type)
+    {
+        return await _context.Analyses
+            .Include(a => a.DataSet)
+            .Include(a => a.ComparisonDataSet)
+            .Where(a => a.Type == type && !a.IsDeleted)
+            .OrderByDescending(a => a.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<int> PermanentlyDeleteOldSoftDeletedAsync(int daysToKeep)
+    {
+        var cutoffDate = DateTime.UtcNow.AddDays(-daysToKeep);
+        var oldSoftDeleted = await _context.Analyses
+            .Where(a => a.IsDeleted && a.DeletedAt < cutoffDate)
+            .ToListAsync();
+
+        _context.Analyses.RemoveRange(oldSoftDeleted);
+        await _context.SaveChangesAsync();
+        return oldSoftDeleted.Count;
+    }
+
     public async Task<bool> ExistsAsync(int id)
     {
-        return await _context.Analyses.AnyAsync(a => a.Id == id);
+        return await _context.Analyses.AnyAsync(a => a.Id == id && !a.IsDeleted);
     }
 } 

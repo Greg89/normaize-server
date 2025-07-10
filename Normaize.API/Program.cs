@@ -180,6 +180,7 @@ builder.Services.AddScoped<IDataProcessingService, Normaize.Core.Services.DataPr
 builder.Services.AddScoped<IDataAnalysisService, Normaize.Core.Services.DataAnalysisService>();
 builder.Services.AddScoped<IDataVisualizationService, Normaize.Core.Services.DataVisualizationService>();
 builder.Services.AddScoped<IFileUploadService, Normaize.Core.Services.FileUploadService>();
+builder.Services.AddScoped<IAuditService, Normaize.Data.Services.AuditService>();
 builder.Services.AddScoped<IStructuredLoggingService, StructuredLoggingService>();
 builder.Services.AddScoped<IMigrationService, Normaize.Data.Services.MigrationService>();
 builder.Services.AddScoped<IHealthCheckService, Normaize.Data.Services.HealthCheckService>();
@@ -241,9 +242,9 @@ else
 }
 
 // Repositories
-builder.Services.AddScoped<IDataSetRepository, DataSetRepository>();
-builder.Services.AddScoped<IAnalysisRepository, AnalysisRepository>();
-builder.Services.AddScoped<IDataSetRowRepository, DataSetRowRepository>();
+builder.Services.AddScoped<IDataSetRepository, Normaize.Data.Repositories.DataSetRepository>();
+builder.Services.AddScoped<IAnalysisRepository, Normaize.Data.Repositories.AnalysisRepository>();
+builder.Services.AddScoped<IDataSetRowRepository, Normaize.Data.Repositories.DataSetRowRepository>();
 
 // HTTP Client
 builder.Services.AddHttpClient();
