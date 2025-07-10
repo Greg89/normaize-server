@@ -28,7 +28,11 @@ COPY --from=build /app/publish .
 # Copy migration files to the container
 COPY --from=build /src/Normaize.Data/Migrations ./Migrations/
 
+# Copy and set up startup script
+COPY scripts/startup.sh ./startup.sh
+RUN chmod +x ./startup.sh
+
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD curl --fail http://localhost:8080/health/readiness || exit 1
 
-ENTRYPOINT ["dotnet", "Normaize.API.dll"] 
+ENTRYPOINT ["./startup.sh"] 
