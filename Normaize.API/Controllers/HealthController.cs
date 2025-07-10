@@ -33,7 +33,7 @@ public class HealthController : ControllerBase
     }
 
     [HttpGet("health")]
-    public async Task<IActionResult> GetComprehensiveHealth()
+    public async Task<IActionResult> GetHealth()
     {
         var result = await _healthCheckService.CheckHealthAsync();
         

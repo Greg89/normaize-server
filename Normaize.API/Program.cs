@@ -181,7 +181,6 @@ builder.Services.AddScoped<IDataAnalysisService, Normaize.Core.Services.DataAnal
 builder.Services.AddScoped<IDataVisualizationService, Normaize.Core.Services.DataVisualizationService>();
 builder.Services.AddScoped<IFileUploadService, Normaize.Core.Services.FileUploadService>();
 builder.Services.AddScoped<IStructuredLoggingService, StructuredLoggingService>();
-builder.Services.AddScoped<IDatabaseHealthService, Normaize.Data.Services.DatabaseHealthService>();
 builder.Services.AddScoped<IMigrationService, Normaize.Data.Services.MigrationService>();
 builder.Services.AddScoped<IHealthCheckService, Normaize.Data.Services.HealthCheckService>();
 builder.Services.AddHttpContextAccessor();
