@@ -31,6 +31,58 @@ public class MigrationService : IMigrationService
                 return result;
             }
 
+            // Check for migration history table
+            var migrationHistoryExists = await _context.Database.ExecuteSqlRawAsync(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory'");
+            
+            // Check for existing tables
+            var dataSetsTableExists = await _context.Database.ExecuteSqlRawAsync(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'DataSets'");
+            
+            var dataSetRowsTableExists = await _context.Database.ExecuteSqlRawAsync(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'DataSetRows'");
+
+            _logger.LogInformation("Database state check:");
+            _logger.LogInformation("  Migration history table exists: {MigrationHistoryExists}", migrationHistoryExists > 0);
+            _logger.LogInformation("  DataSets table exists: {DataSetsTableExists}", dataSetsTableExists > 0);
+            _logger.LogInformation("  DataSetRows table exists: {DataSetRowsTableExists}", dataSetRowsTableExists > 0);
+
+            // Handle inconsistent database state
+            if (migrationHistoryExists == 0 && (dataSetsTableExists > 0 || dataSetRowsTableExists > 0))
+            {
+                _logger.LogWarning("Database has tables but no migration history. This indicates an inconsistent state.");
+                _logger.LogWarning("Attempting to resolve by dropping existing tables and recreating from scratch.");
+                
+                try
+                {
+                    // Drop existing tables
+                    if (dataSetRowsTableExists > 0)
+                    {
+                        await _context.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS DataSetRows");
+                        _logger.LogInformation("Dropped DataSetRows table");
+                    }
+                    
+                    if (dataSetsTableExists > 0)
+                    {
+                        await _context.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS DataSets");
+                        _logger.LogInformation("Dropped DataSets table");
+                    }
+                    
+                    // Drop any other tables that might exist
+                    await _context.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS Analyses");
+                    await _context.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS __EFMigrationsHistory");
+                    
+                    _logger.LogInformation("Database cleaned up successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to clean up database tables");
+                    result.Success = false;
+                    result.ErrorMessage = $"Failed to resolve database state conflict: {ex.Message}";
+                    return result;
+                }
+            }
+
             // Get pending migrations
             var pendingMigrations = _context.Database.GetPendingMigrations().ToList();
             if (pendingMigrations.Any())
@@ -72,6 +124,12 @@ public class MigrationService : IMigrationService
             {
                 _logger.LogError("Database schema mismatch detected. This may indicate a failed or incomplete migration.");
                 _logger.LogError("Please check if all migrations have been applied correctly.");
+            }
+            
+            if (ex.Message.Contains("already exists"))
+            {
+                _logger.LogError("Table already exists error detected. This indicates a database state conflict.");
+                _logger.LogError("Consider running the database reset script to clean up the database state.");
             }
 
             return result;
