@@ -278,7 +278,7 @@ public class HealthControllerTests
     }
 
     [Fact]
-    public async Task GetComprehensiveHealth_WhenHealthy_ShouldReturnOkResult()
+    public async Task GetHealth_WhenHealthy_ShouldReturnOkResult()
     {
         // Arrange
         var healthyResult = new HealthCheckResult
@@ -300,24 +300,6 @@ public class HealthControllerTests
                     IsHealthy = true,
                     Status = "healthy",
                     Duration = TimeSpan.FromMilliseconds(45.2)
-                },
-                ["storage"] = new ComponentHealth
-                {
-                    IsHealthy = true,
-                    Status = "healthy",
-                    Duration = TimeSpan.FromMilliseconds(25.1)
-                },
-                ["external_services"] = new ComponentHealth
-                {
-                    IsHealthy = true,
-                    Status = "healthy",
-                    Duration = TimeSpan.FromMilliseconds(15.3)
-                },
-                ["system_resources"] = new ComponentHealth
-                {
-                    IsHealthy = true,
-                    Status = "healthy",
-                    Duration = TimeSpan.FromMilliseconds(8.7)
                 }
             }
         };
@@ -326,7 +308,7 @@ public class HealthControllerTests
             .ReturnsAsync(healthyResult);
 
         // Act
-        var result = await _controller.GetComprehensiveHealth();
+        var result = await _controller.GetHealth();
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -378,7 +360,7 @@ public class HealthControllerTests
             .ReturnsAsync(unhealthyResult);
 
         // Act
-        var result = await _controller.GetComprehensiveHealth();
+        var result = await _controller.GetHealth();
 
         // Assert
         result.Should().BeOfType<ObjectResult>();
@@ -434,7 +416,7 @@ public class HealthControllerTests
             .ReturnsAsync(healthyResult);
 
         // Act
-        await _controller.GetComprehensiveHealth();
+        await _controller.GetHealth();
 
         // Assert
         _mockHealthCheckService.Verify(x => x.CheckHealthAsync(), Times.Once);
