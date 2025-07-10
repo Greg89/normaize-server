@@ -303,7 +303,7 @@ if (hasDatabaseConnection || isProductionLike || isContainerized)
         
         // Apply migrations first
         var migrationService = scope.ServiceProvider.GetRequiredService<IMigrationService>();
-        var migrationResult = await migrationService.ApplyMigrationsAsync();
+        var migrationResult = await migrationService.ApplyMigrations();
         
         if (!migrationResult.Success)
         {

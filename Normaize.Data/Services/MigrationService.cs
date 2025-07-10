@@ -16,7 +16,7 @@ public class MigrationService : IMigrationService
         _logger = logger;
     }
 
-    public async Task<MigrationResult> ApplyMigrationsAsync()
+    public Task<MigrationResult> ApplyMigrations()
     {
         var result = new MigrationResult();
 
@@ -30,7 +30,7 @@ public class MigrationService : IMigrationService
                 result.Success = false;
                 result.ErrorMessage = "Cannot connect to database. Please check connection string and database availability.";
                 _logger.LogError(result.ErrorMessage);
-                return result;
+                return Task.FromResult(result);
             }
 
             // Get pending migrations
@@ -54,7 +54,7 @@ public class MigrationService : IMigrationService
             result.Message = "Database migrations applied successfully";
             _logger.LogInformation(result.Message);
 
-            return result;
+            return Task.FromResult(result);
         }
         catch (Exception ex)
         {
@@ -75,7 +75,7 @@ public class MigrationService : IMigrationService
                 result.ErrorMessage = "Database schema mismatch detected. Manual intervention required.";
             }
 
-            return result;
+            return Task.FromResult(result);
         }
     }
 

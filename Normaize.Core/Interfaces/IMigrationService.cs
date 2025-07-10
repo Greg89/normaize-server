@@ -2,7 +2,7 @@ namespace Normaize.Core.Interfaces;
 
 public interface IMigrationService
 {
-    Task<MigrationResult> ApplyMigrationsAsync();
+    Task<MigrationResult> ApplyMigrations();
     Task<MigrationResult> VerifySchemaAsync();
 }
 
