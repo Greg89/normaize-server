@@ -26,7 +26,7 @@ if [ -n "$MYSQLHOST" ]; then
     fi
     
     # Change to the API project directory (where the startup project is)
-    cd /app/Normaize.API
+    cd /app/src/Normaize.API
     
     # Run migrations
     echo "Applying database migrations using: $EF_TOOL"
