@@ -21,15 +21,16 @@ WORKDIR "/src/Normaize.API"
 RUN dotnet build "Normaize.API.csproj" -c Release -o /app/build
 RUN dotnet publish "Normaize.API.csproj" -c Release -o /app/publish
 
-# Install EF Core tools globally during build
-RUN dotnet tool install --global dotnet-ef
-
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
 # Copy migration files to the container
 COPY --from=build /src/Normaize.Data/Migrations ./Migrations/
+
+# Install EF Core tools locally and add to PATH
+RUN dotnet tool install --tool-path /tools dotnet-ef
+ENV PATH="/tools:${PATH}"
 
 # Copy and set up startup script
 COPY scripts/startup.sh ./startup.sh
