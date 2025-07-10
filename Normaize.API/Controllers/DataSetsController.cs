@@ -185,4 +185,155 @@ public class DataSetsController : ControllerBase
             return StatusCode(500, "Error deleting dataset");
         }
     }
+
+    [HttpPost("{id}/restore")]
+    public async Task<ActionResult> RestoreDataSet(int id)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var result = await _dataProcessingService.RestoreDataSetAsync(id, userId);
+            if (!result)
+                return NotFound();
+
+            return Ok(new { message = "Dataset restored successfully" });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogException(ex, $"RestoreDataSet({id})");
+            return StatusCode(500, "Error restoring dataset");
+        }
+    }
+
+    [HttpDelete("{id}/permanent")]
+    public async Task<ActionResult> HardDeleteDataSet(int id)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var result = await _dataProcessingService.HardDeleteDataSetAsync(id, userId);
+            if (!result)
+                return NotFound();
+
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogException(ex, $"HardDeleteDataSet({id})");
+            return StatusCode(500, "Error permanently deleting dataset");
+        }
+    }
+
+    [HttpGet("deleted")]
+    public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDeletedDataSets()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var dataSets = await _dataProcessingService.GetDeletedDataSetsAsync(userId);
+            return Ok(dataSets);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogException(ex, "GetDeletedDataSets");
+            return StatusCode(500, "Error retrieving deleted datasets");
+        }
+    }
+
+    [HttpGet("search")]
+    public async Task<ActionResult<IEnumerable<DataSetDto>>> SearchDataSets([FromQuery] string q)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(q))
+                return BadRequest("Search query is required");
+
+            var userId = GetCurrentUserId();
+            var dataSets = await _dataProcessingService.SearchDataSetsAsync(q, userId);
+            return Ok(dataSets);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogException(ex, $"SearchDataSets({q})");
+            return StatusCode(500, "Error searching datasets");
+        }
+    }
+
+    [HttpGet("filetype/{fileType}")]
+    public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDataSetsByFileType(string fileType)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var dataSets = await _dataProcessingService.GetDataSetsByFileTypeAsync(fileType, userId);
+            return Ok(dataSets);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogException(ex, $"GetDataSetsByFileType({fileType})");
+            return StatusCode(500, "Error retrieving datasets by file type");
+        }
+    }
+
+    [HttpGet("date-range")]
+    public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDataSetsByDateRange(
+        [FromQuery] DateTime startDate, 
+        [FromQuery] DateTime endDate)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var dataSets = await _dataProcessingService.GetDataSetsByDateRangeAsync(startDate, endDate, userId);
+            return Ok(dataSets);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogException(ex, $"GetDataSetsByDateRange({startDate}, {endDate})");
+            return StatusCode(500, "Error retrieving datasets by date range");
+        }
+    }
+
+    [HttpGet("statistics")]
+    public async Task<ActionResult<DataSetStatisticsDto>> GetDataSetStatistics()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var statistics = await _dataProcessingService.GetDataSetStatisticsAsync(userId);
+            return Ok(statistics);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogException(ex, "GetDataSetStatistics");
+            return StatusCode(500, "Error retrieving dataset statistics");
+        }
+    }
 } 

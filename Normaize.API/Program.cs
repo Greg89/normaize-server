@@ -10,7 +10,6 @@ using DotNetEnv;
 using Serilog;
 using Serilog.Events;
 
-
 // Load environment variables from .env file
 var currentDir = Directory.GetCurrentDirectory();
 
@@ -56,6 +55,28 @@ if (!string.IsNullOrEmpty(seqUrl) && environment != "Development")
 
 Log.Logger = loggerConfiguration.CreateLogger();
 
+// Log all environment variables for debugging (excluding sensitive ones)
+Log.Information("=== Environment Variables Debug ===");
+var envVars = Environment.GetEnvironmentVariables();
+foreach (var key in envVars.Keys)
+{
+    var keyStr = key.ToString();
+    var value = envVars[key]?.ToString();
+    
+    // Skip sensitive environment variables
+    if (keyStr.Contains("PASSWORD", StringComparison.OrdinalIgnoreCase) ||
+        keyStr.Contains("SECRET", StringComparison.OrdinalIgnoreCase) ||
+        keyStr.Contains("KEY", StringComparison.OrdinalIgnoreCase))
+    {
+        Log.Information("  {Key}: [REDACTED]", keyStr);
+    }
+    else
+    {
+        Log.Information("  {Key}: {Value}", keyStr, value ?? "NULL");
+    }
+}
+Log.Information("=== End Environment Variables Debug ===");
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure Serilog for dependency injection
@@ -97,19 +118,47 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 // Database
-var connectionString = $"Server={Environment.GetEnvironmentVariable("MYSQLHOST")};Database={Environment.GetEnvironmentVariable("MYSQLDATABASE")};User={Environment.GetEnvironmentVariable("MYSQLUSER")};Password={Environment.GetEnvironmentVariable("MYSQLPASSWORD")};Port={Environment.GetEnvironmentVariable("MYSQLPORT")};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
+// Check for various ways Railway might provide database connection
+var mysqlHost = Environment.GetEnvironmentVariable("MYSQLHOST") ?? 
+                Environment.GetEnvironmentVariable("MYSQL_HOST") ?? 
+                Environment.GetEnvironmentVariable("DB_HOST");
+var mysqlDatabase = Environment.GetEnvironmentVariable("MYSQLDATABASE") ?? 
+                   Environment.GetEnvironmentVariable("MYSQL_DATABASE") ?? 
+                   Environment.GetEnvironmentVariable("DB_NAME");
+var mysqlUser = Environment.GetEnvironmentVariable("MYSQLUSER") ?? 
+               Environment.GetEnvironmentVariable("MYSQL_USER") ?? 
+               Environment.GetEnvironmentVariable("DB_USER");
+var mysqlPassword = Environment.GetEnvironmentVariable("MYSQLPASSWORD") ?? 
+                   Environment.GetEnvironmentVariable("MYSQL_PASSWORD") ?? 
+                   Environment.GetEnvironmentVariable("DB_PASSWORD");
+var mysqlPort = Environment.GetEnvironmentVariable("MYSQLPORT") ?? 
+               Environment.GetEnvironmentVariable("MYSQL_PORT") ?? 
+               Environment.GetEnvironmentVariable("DB_PORT") ?? 
+               "3306";
+
+// Log database configuration for debugging (without password)
+Log.Information("Database configuration:");
+Log.Information("  Host: {Host}", mysqlHost ?? "NOT SET");
+Log.Information("  Database: {Database}", mysqlDatabase ?? "NOT SET");
+Log.Information("  User: {User}", mysqlUser ?? "NOT SET");
+Log.Information("  Port: {Port}", mysqlPort);
+
+var connectionString = $"Server={mysqlHost};Database={mysqlDatabase};User={mysqlUser};Password={mysqlPassword};Port={mysqlPort};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
 
 // Only add database context if connection string is available
-if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
+if (!string.IsNullOrEmpty(mysqlHost) && !string.IsNullOrEmpty(mysqlDatabase) && !string.IsNullOrEmpty(mysqlUser) && !string.IsNullOrEmpty(mysqlPassword))
 {
     builder.Services.AddDbContext<NormaizeContext>(options =>
         options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 0))));
+    Log.Information("Using MySQL database: {Database} on {Host}:{Port}", mysqlDatabase, mysqlHost, mysqlPort);
 }
 else
 {
     // Use in-memory database for testing/CI environments
     builder.Services.AddDbContext<NormaizeContext>(options =>
         options.UseInMemoryDatabase("TestDatabase"));
+    Log.Information("Using in-memory database for testing/CI environment");
+    Log.Warning("Database connection parameters missing - using in-memory database");
 }
 
 // CORS
@@ -131,82 +180,198 @@ builder.Services.AddScoped<IDataProcessingService, Normaize.Core.Services.DataPr
 builder.Services.AddScoped<IDataAnalysisService, Normaize.Core.Services.DataAnalysisService>();
 builder.Services.AddScoped<IDataVisualizationService, Normaize.Core.Services.DataVisualizationService>();
 builder.Services.AddScoped<IFileUploadService, Normaize.Core.Services.FileUploadService>();
+builder.Services.AddScoped<IAuditService, Normaize.Data.Services.AuditService>();
 builder.Services.AddScoped<IStructuredLoggingService, StructuredLoggingService>();
+builder.Services.AddScoped<IMigrationService, Normaize.Data.Services.MigrationService>();
+builder.Services.AddScoped<IHealthCheckService, Normaize.Data.Services.HealthCheckService>();
 builder.Services.AddHttpContextAccessor();
 
 // Storage Service Registration
 var appEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
 var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER")?.ToLowerInvariant();
 
-// Environment-aware storage selection
-if (string.IsNullOrEmpty(storageProvider))
-{
-    // Default to memory for all environments unless explicitly configured
-    storageProvider = "memory";
-}
+Log.Information("Current environment: {Environment}, Storage provider: {StorageProvider}", appEnvironment, storageProvider ?? "default");
 
-switch (storageProvider)
+// Force in-memory storage for Test environment
+if (appEnvironment.Equals("Test", StringComparison.OrdinalIgnoreCase))
 {
-    case "sftp":
-        // Only use SFTP if explicitly configured with proper credentials
-        var sftpHost = Environment.GetEnvironmentVariable("SFTP_HOST");
-        var sftpUsername = Environment.GetEnvironmentVariable("SFTP_USERNAME");
-        var sftpPassword = Environment.GetEnvironmentVariable("SFTP_PASSWORD");
-        var sftpPrivateKey = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY");
-        var sftpPrivateKeyPath = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY_PATH");
-        
-        if (string.IsNullOrEmpty(sftpHost) || string.IsNullOrEmpty(sftpUsername) ||
-            (string.IsNullOrEmpty(sftpPassword) && string.IsNullOrEmpty(sftpPrivateKey) && string.IsNullOrEmpty(sftpPrivateKeyPath)))
-        {
-            Log.Warning("SFTP storage requested but credentials not configured. Falling back to memory storage.");
+    builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+    Log.Information("Using in-memory storage service for Test environment");
+}
+else
+{
+    // Environment-aware storage selection
+    if (string.IsNullOrEmpty(storageProvider))
+    {
+        // Default to memory for all environments unless explicitly configured
+        storageProvider = "memory";
+    }
+
+    switch (storageProvider)
+    {
+        case "sftp":
+            // Only use SFTP if explicitly configured with proper credentials
+            var sftpHost = Environment.GetEnvironmentVariable("SFTP_HOST");
+            var sftpUsername = Environment.GetEnvironmentVariable("SFTP_USERNAME");
+            var sftpPassword = Environment.GetEnvironmentVariable("SFTP_PASSWORD");
+            var sftpPrivateKey = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY");
+            var sftpPrivateKeyPath = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY_PATH");
+            
+            if (string.IsNullOrEmpty(sftpHost) || string.IsNullOrEmpty(sftpUsername) ||
+                (string.IsNullOrEmpty(sftpPassword) && string.IsNullOrEmpty(sftpPrivateKey) && string.IsNullOrEmpty(sftpPrivateKeyPath)))
+            {
+                Log.Warning("SFTP storage requested but credentials not configured. Falling back to memory storage.");
+                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+            }
+            else
+            {
+                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, SftpStorageService>();
+                Log.Information("Using SFTP storage service");
+            }
+            break;
+        case "local":
+            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, LocalStorageService>();
+            Log.Information("Using local storage service");
+            break;
+        case "memory":
+        default:
             builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
-        }
-        else
-        {
-            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, SftpStorageService>();
-            Log.Information("Using SFTP storage service");
-        }
-        break;
-    case "local":
-        builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, LocalStorageService>();
-        Log.Information("Using local storage service");
-        break;
-    case "memory":
-    default:
-        builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
-        Log.Information("Using in-memory storage service for development/beta");
-        break;
+            Log.Information("Using in-memory storage service for {Environment}", appEnvironment);
+            break;
+    }
 }
 
 // Repositories
-builder.Services.AddScoped<IDataSetRepository, DataSetRepository>();
-builder.Services.AddScoped<IAnalysisRepository, AnalysisRepository>();
-builder.Services.AddScoped<IDataSetRowRepository, DataSetRowRepository>();
+builder.Services.AddScoped<IDataSetRepository, Normaize.Data.Repositories.DataSetRepository>();
+builder.Services.AddScoped<IAnalysisRepository, Normaize.Data.Repositories.AnalysisRepository>();
+builder.Services.AddScoped<IDataSetRowRepository, Normaize.Data.Repositories.DataSetRowRepository>();
 
 // HTTP Client
 builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
-// Apply database migrations automatically (only for Railway/Production environments)
-if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
+// Apply database migrations and verify health (only for Railway/Production environments)
+// Check for various ways Railway might provide database connection
+var hasDatabaseConnection = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")) ||
+                           !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")) ||
+                           !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQL_HOST")) ||
+                           !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DB_HOST")) ||
+                           (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLDATABASE")) && 
+                            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLUSER")));
+
+// Log environment variables for debugging (without sensitive data)
+Log.Information("Database connection detection:");
+Log.Information("  MYSQLHOST: {MYSQLHOST}", Environment.GetEnvironmentVariable("MYSQLHOST") ?? "NOT SET");
+Log.Information("  MYSQLDATABASE: {MYSQLDATABASE}", Environment.GetEnvironmentVariable("MYSQLDATABASE") ?? "NOT SET");
+Log.Information("  MYSQLUSER: {MYSQLUSER}", Environment.GetEnvironmentVariable("MYSQLUSER") ?? "NOT SET");
+Log.Information("  MYSQLPORT: {MYSQLPORT}", Environment.GetEnvironmentVariable("MYSQLPORT") ?? "NOT SET");
+Log.Information("  DATABASE_URL: {DATABASE_URL}", Environment.GetEnvironmentVariable("DATABASE_URL") ?? "NOT SET");
+Log.Information("  ASPNETCORE_ENVIRONMENT: {Environment}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "NOT SET");
+Log.Information("  Has database connection: {HasConnection}", hasDatabaseConnection);
+
+// Also check if we're in a production-like environment and force migration attempts
+var isProductionLike = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Production", StringComparison.OrdinalIgnoreCase) == true ||
+                       Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Staging", StringComparison.OrdinalIgnoreCase) == true ||
+                       Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Beta", StringComparison.OrdinalIgnoreCase) == true;
+
+// Check if we're in a containerized environment (Railway, Docker, etc.)
+var isContainerized = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PORT")) ||
+                     File.Exists("/.dockerenv") ||
+                     Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+
+Log.Information("Environment detection:");
+Log.Information("  Is production-like: {IsProductionLike}", isProductionLike);
+Log.Information("  Is containerized: {IsContainerized}", isContainerized);
+
+if (hasDatabaseConnection || isProductionLike || isContainerized)
 {
     try
     {
-        Log.Information("Applying database migrations...");
+        Log.Information("Starting database setup and health verification...");
         using var scope = app.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<NormaizeContext>();
-        context.Database.Migrate();
-        Log.Information("Database migrations applied successfully");
         
-        // Note: MySQL optimizations are now handled through EF Core migrations
-        Log.Information("Database setup complete");
+        // Apply migrations first
+        var migrationService = scope.ServiceProvider.GetRequiredService<IMigrationService>();
+        var migrationResult = await migrationService.ApplyMigrationsAsync();
+        
+        if (!migrationResult.Success)
+        {
+            Log.Error("Migration failed: {Error}", migrationResult.ErrorMessage);
+            
+            // Log specific migration error details
+            if (migrationResult.ErrorMessage?.Contains("Unknown column") == true)
+            {
+                Log.Error("Database schema mismatch detected. This may indicate a failed or incomplete migration.");
+                Log.Error("Please check if all migrations have been applied correctly.");
+            }
+            
+            // Fail fast in production
+            var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            if (currentEnvironment == "Production" || currentEnvironment == "Staging")
+            {
+                Log.Fatal("Database migration failed in production environment. Application will not start.");
+                throw new InvalidOperationException($"Database migration failed: {migrationResult.ErrorMessage}");
+            }
+            else
+            {
+                Log.Warning("Migration failed but continuing in Development mode");
+            }
+        }
+        else
+        {
+            Log.Information("Database migrations applied successfully");
+        }
+        
+        // Perform comprehensive startup health check using readiness probe
+        var healthCheckService = scope.ServiceProvider.GetRequiredService<IHealthCheckService>();
+        var healthResult = await healthCheckService.CheckReadinessAsync();
+        
+        if (!healthResult.IsHealthy)
+        {
+            Log.Error("Startup health check failed");
+            foreach (var issue in healthResult.Issues)
+            {
+                Log.Error("Issue: {Issue}", issue);
+            }
+            
+            // Fail fast in production
+            var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            if (currentEnvironment == "Production" || currentEnvironment == "Staging")
+            {
+                Log.Fatal("Startup health check failed in production environment. Application will not start.");
+                throw new InvalidOperationException($"Startup health check failed: {string.Join("; ", healthResult.Issues)}");
+            }
+            else
+            {
+                Log.Warning("Startup health check failed but continuing in Development mode");
+            }
+        }
+        else
+        {
+            Log.Information("Startup health check passed - all systems healthy");
+        }
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "Error applying database migrations");
-        // Don't throw - allow application to start even if migrations fail
+        Log.Error(ex, "Error during database setup and health verification");
+        
+        // Fail fast in production
+        var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (currentEnvironment == "Production" || currentEnvironment == "Staging")
+        {
+            Log.Fatal("Database setup failed in production environment. Application will not start.");
+            throw;
+        }
+        else
+        {
+            Log.Warning("Database setup failed but continuing in Development mode");
+        }
     }
+}
+else
+{
+    Log.Information("No database connection detected and not in production-like environment, skipping migrations and health checks");
 }
 
 // Configure the HTTP request pipeline.
@@ -240,7 +405,7 @@ if (!app.Environment.EnvironmentName.Equals("Test", StringComparison.OrdinalIgno
 app.MapControllers();
 
 // Map health checks
-app.MapHealthChecks("/health/startup");
+app.MapHealthChecks("/health/readiness");
 
 // Global exception handler (skip in test environment)
 if (!app.Environment.EnvironmentName.Equals("Test", StringComparison.OrdinalIgnoreCase))

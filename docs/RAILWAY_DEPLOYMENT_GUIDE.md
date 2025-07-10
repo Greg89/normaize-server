@@ -1,286 +1,289 @@
-# Railway Deployment Guide for Normaize
+# Railway Deployment Guide
+
+This guide explains how to deploy the Normaize application to Railway with comprehensive health checks and fail-fast behavior.
 
 ## Overview
 
-This guide explains how database migrations and MySQL optimizations work when deploying to Railway with your MySQL database.
+The application is configured to fail fast in production environments if the database is not healthy. This ensures that deployments only succeed when the application is fully functional.
 
-## How Railway Deployment Works
+## Health Check Configuration
 
-### **Automatic Migration Process**
+### Docker Health Check
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD curl --fail http://localhost:8080/health/database || exit 1
+```
 
-When your application deploys to Railway:
+### Railway Configuration
+```json
+{
+  "deploy": {
+    "healthcheckPath": "/health/database",
+    "healthcheckTimeout": 300,
+    "restartPolicyType": "on_failure",
+    "healthcheckInterval": 30,
+    "healthcheckRetries": 3
+  }
+}
+```
 
-1. **Container Starts**: Railway builds and starts your Docker container
-2. **Application Initializes**: Your `Program.cs` runs
-3. **Database Check**: App detects Railway MySQL environment variables
-4. **EF Core Migration**: Automatically applies pending migrations
-5. **MySQL Optimizations**: Applies performance optimizations (first time only)
-6. **Application Starts**: Your API becomes available
+## Health Check Endpoints
 
-### **Environment Variables in Railway**
+### Database Health Check (`/health/database`)
+Returns detailed database health information:
 
-Railway automatically provides these MySQL environment variables:
-- `MYSQLHOST` - Database host
-- `MYSQLDATABASE` - Database name
-- `MYSQLUSER` - Database user
-- `MYSQLPASSWORD` - Database password
-- `MYSQLPORT` - Database port
+```json
+{
+  "status": "healthy",
+  "component": "database",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "message": "Database schema is valid"
+}
+```
 
-## Deployment Flow
+Or if unhealthy:
+```json
+{
+  "status": "unhealthy",
+  "component": "database",
+  "error": "Missing critical columns",
+  "missingColumns": ["DataHash", "UserId"],
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
 
-### **Step 1: Code Push**
+### Basic Health Check (`/health/basic`)
+Returns basic application status:
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "service": "Normaize API",
+  "version": "1.0.0",
+  "environment": "Production"
+}
+```
+
+## Startup Health Verification
+
+The application performs comprehensive health checks during startup:
+
+### 1. Database Connectivity
+- Verifies connection to MySQL database
+- Checks connection string validity
+
+### 2. Migration Status
+- Applies pending migrations
+- Verifies migration history
+- Checks for schema mismatches
+
+### 3. Schema Validation
+- Verifies critical columns exist (`DataHash`, `UserId`, `FilePath`, `StorageProvider`)
+- Checks for required tables (`DataSetRows`)
+- Validates column types and constraints
+
+### 4. Environment Variables
+- Verifies all required environment variables are set
+- Checks database connection parameters
+
+## Fail-Fast Behavior
+
+### Production/Staging Environments
+- **Migration Failures**: Application will not start if migrations fail
+- **Health Check Failures**: Application will not start if health checks fail
+- **Database Issues**: Application will not start if database is unhealthy
+
+### Development Environment
+- **Graceful Degradation**: Application continues with warnings
+- **Detailed Logging**: All issues are logged for debugging
+- **Manual Intervention**: Allows manual fixes during development
+
+## Deployment Process
+
+### 1. Pre-Deployment Checklist
 ```bash
+# Verify environment variables
+echo $MYSQLHOST
+echo $MYSQLDATABASE
+echo $MYSQLUSER
+echo $MYSQLPASSWORD
+echo $MYSQLPORT
+
+# Test database connection
+mysql -h $MYSQLHOST -P $MYSQLPORT -u $MYSQLUSER -p$MYSQLPASSWORD $MYSQLDATABASE -e "SELECT 1;"
+```
+
+### 2. Deploy to Railway
+```bash
+# Deploy using Railway CLI
+railway up
+
+# Or deploy via GitHub integration
 git push origin main
 ```
 
-### **Step 2: Railway Build**
-```dockerfile
-# Dockerfile builds your application
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-# ... build process ...
-COPY --from=build /src/Normaize.Data/Migrations ./Migrations/
-```
-
-### **Step 3: Container Startup**
-```csharp
-// Program.cs automatically runs migrations
-if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLHOST")))
-{
-    // Apply EF Core migrations
-    context.Database.Migrate();
-    
-    // Apply MySQL optimizations
-    await ApplyMySqlOptimizationsAsync(context);
-}
-```
-
-### **Step 4: Database Changes Applied**
-- ✅ New tables created (`DataSetRows`)
-- ✅ New columns added to existing tables
-- ✅ Indexes created for performance
-- ✅ Stored procedures and views added
-
-## Railway-Specific Configuration
-
-### **Connection String Optimization**
-```csharp
-var connectionString = $"Server={Environment.GetEnvironmentVariable("MYSQLHOST")};" +
-                      $"Database={Environment.GetEnvironmentVariable("MYSQLDATABASE")};" +
-                      $"User={Environment.GetEnvironmentVariable("MYSQLUSER")};" +
-                      $"Password={Environment.GetEnvironmentVariable("MYSQLPASSWORD")};" +
-                      $"Port={Environment.GetEnvironmentVariable("MYSQLPORT")};" +
-                      "CharSet=utf8mb4;" +
-                      "AllowLoadLocalInfile=true;" +
-                      "Convert Zero Datetime=True;" +
-                      "Allow Zero Datetime=True;";
-```
-
-### **Migration File Inclusion**
-```dockerfile
-# Copy migration files to container
-COPY --from=build /src/Normaize.Data/Migrations ./Migrations/
-```
-
-## Environment-Specific Behavior
-
-### **Beta Environment**
-```csharp
-// Swagger enabled for testing
-if (app.Environment.IsDevelopment() || 
-    app.Environment.EnvironmentName.Equals("Beta", StringComparison.OrdinalIgnoreCase))
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-```
-
-### **Production Environment**
-```csharp
-// Swagger disabled, migrations still run
-// Optimizations applied only once
-```
-
-## Migration Safety Features
-
-### **Error Handling**
-```csharp
-try
-{
-    context.Database.Migrate();
-    await ApplyMySqlOptimizationsAsync(context);
-}
-catch (Exception ex)
-{
-    Log.Error(ex, "Error applying database migrations");
-    // Don't throw - allow application to start
-}
-```
-
-### **Optimization Check**
-```csharp
-// Check if optimizations already applied
-var optimizationsApplied = await context.Database.SqlQueryRaw<bool>(
-    "SELECT COUNT(*) > 0 FROM information_schema.tables " +
-    "WHERE table_schema = DATABASE() AND table_name = 'DataSetStatistics'"
-).FirstOrDefaultAsync();
-```
-
-## Monitoring and Logging
-
-### **Migration Logs**
-```csharp
-Log.Information("Applying database migrations...");
-Log.Information("Database migrations applied successfully");
-Log.Information("MySQL optimizations applied successfully");
-```
-
-### **Railway Logs**
-You can view migration progress in Railway's deployment logs:
+### 3. Monitor Deployment
 ```bash
-# In Railway dashboard
-railway logs
-```
-
-## Adding New Migrations
-
-### **1. Create New Migration**
-```bash
-cd Normaize.Data
-dotnet ef migrations add NewFeature --startup-project ../Normaize.API
-```
-
-### **2. Update Optimizations (Optional)**
-```sql
--- Add to MySQL_Optimizations.sql
-CREATE INDEX IF NOT EXISTS idx_new_feature ON DataSets(NewColumn);
-CREATE PROCEDURE IF NOT EXISTS GetNewFeature();
-```
-
-### **3. Deploy to Railway**
-```bash
-git add .
-git commit -m "Add new database migration"
-git push origin main
-```
-
-### **4. Automatic Application**
-Railway automatically applies the new migration when the container starts.
-
-## Troubleshooting
-
-### **Migration Fails**
-```bash
-# Check Railway logs
+# Check deployment logs
 railway logs
 
-# Common issues:
-# 1. Database connection issues
-# 2. Insufficient permissions
-# 3. Migration conflicts
-```
-
-### **Optimizations Not Applied**
-```sql
--- Check if optimizations table exists
-SELECT COUNT(*) FROM information_schema.tables 
-WHERE table_schema = DATABASE() AND table_name = 'DataSetStatistics';
-```
-
-### **Connection Issues**
-```bash
-# Verify Railway environment variables
-railway variables
-
-# Check database connectivity
-railway connect
-```
-
-## Railway Commands
-
-### **View Deployment Status**
-```bash
+# Monitor health checks
 railway status
+
+# Check health endpoint
+curl https://your-app.railway.app/health/database
 ```
 
-### **View Logs**
+## Troubleshooting Deployment Failures
+
+### Common Issues and Solutions
+
+#### 1. Migration Failures
+**Symptoms**: Application fails to start with migration errors
 ```bash
-railway logs
+# Check migration status
+railway logs | grep -i migration
+
+# Run manual migration if needed
+railway run dotnet ef database update --startup-project ../Normaize.API
 ```
 
-### **Connect to Database**
+#### 2. Missing Columns
+**Symptoms**: "Unknown column" errors in logs
 ```bash
-railway connect
+# Run automated fix script
+railway run ./scripts/fix-database-schema.ps1
+
+# Or run SQL directly
+railway run mysql -h $MYSQLHOST -u $MYSQLUSER -p$MYSQLPASSWORD $MYSQLDATABASE < scripts/fix-missing-columns.sql
 ```
 
-### **Check Environment Variables**
+#### 3. Database Connection Issues
+**Symptoms**: "Cannot connect to database" errors
 ```bash
+# Verify environment variables
 railway variables
+
+# Test connection
+railway run mysql -h $MYSQLHOST -P $MYSQLPORT -u $MYSQLUSER -p$MYSQLPASSWORD $MYSQLDATABASE -e "SELECT VERSION();"
+```
+
+#### 4. Health Check Timeouts
+**Symptoms**: Railway reports health check failures
+```bash
+# Check application logs
+railway logs
+
+# Verify health endpoint is responding
+curl https://your-app.railway.app/health/database
+
+# Check if application is starting properly
+railway logs | grep -i "starting"
+```
+
+## Environment Variables
+
+### Required Variables
+```bash
+MYSQLHOST=your-mysql-host
+MYSQLDATABASE=your-database-name
+MYSQLUSER=your-username
+MYSQLPASSWORD=your-password
+MYSQLPORT=3306
+ASPNETCORE_ENVIRONMENT=Production
+```
+
+### Optional Variables
+```bash
+SEQ_URL=your-seq-url
+SEQ_API_KEY=your-seq-api-key
+AUTH0_ISSUER=your-auth0-issuer
+AUTH0_AUDIENCE=your-auth0-audience
+STORAGE_PROVIDER=local
+```
+
+## Monitoring and Alerting
+
+### Railway Monitoring
+- **Health Checks**: Automatic health check monitoring
+- **Logs**: Structured logging with Serilog
+- **Metrics**: Application performance metrics
+
+### External Monitoring
+```bash
+# Health check monitoring
+curl -f https://your-app.railway.app/health/database
+
+# Basic health check
+curl -f https://your-app.railway.app/health/basic
+```
+
+### Log Analysis
+```bash
+# Check for errors
+railway logs | grep -i error
+
+# Check for warnings
+railway logs | grep -i warning
+
+# Check migration status
+railway logs | grep -i migration
+```
+
+## Rollback Procedures
+
+### Emergency Rollback
+```bash
+# Rollback to previous deployment
+railway rollback
+
+# Or rollback to specific deployment
+railway rollback <deployment-id>
+```
+
+### Database Rollback
+```bash
+# Rollback migrations
+railway run dotnet ef database update PreviousMigrationName --startup-project ../Normaize.API
+
+# Restore from backup
+railway run mysql -h $MYSQLHOST -u $MYSQLUSER -p$MYSQLPASSWORD $MYSQLDATABASE < backup.sql
 ```
 
 ## Best Practices
 
-### **1. Test Locally First**
+### 1. Always Test Locally
 ```bash
-# Test migration locally
+# Test migrations locally
 dotnet ef database update --startup-project ../Normaize.API
 
-# Test optimizations
-mysql -u root -p normaize < Normaize.Data/Migrations/MySQL_Optimizations.sql
+# Test health checks locally
+curl http://localhost:5000/health/database
 ```
 
-### **2. Use Feature Flags**
-```csharp
-// Only apply certain optimizations in production
-if (Environment.GetEnvironmentVariable("RAILWAY_ENVIRONMENT") == "production")
-{
-    // Apply production-specific optimizations
-}
-```
+### 2. Monitor Deployments
+- Watch Railway logs during deployment
+- Verify health checks pass
+- Test critical functionality after deployment
 
-### **3. Monitor Performance**
-```sql
--- Check if indexes are being used
-EXPLAIN SELECT * FROM DataSets WHERE UploadedAt > '2024-01-01';
-```
-
-### **4. Backup Before Major Changes**
+### 3. Keep Backups
 ```bash
-# Railway provides automatic backups, but you can also:
-railway backup
+# Create database backup before deployment
+mysqldump -h $MYSQLHOST -u $MYSQLUSER -p$MYSQLPASSWORD $MYSQLDATABASE > backup_$(date +%Y%m%d_%H%M%S).sql
 ```
 
-## Migration Rollback
-
-### **If Migration Fails**
-```bash
-# Railway will show error in logs
-# Fix the issue and redeploy
-git push origin main
-```
-
-### **Manual Rollback (if needed)**
-```sql
--- Drop problematic tables/columns
-DROP TABLE IF EXISTS DataSetRows;
-ALTER TABLE DataSets DROP COLUMN IF EXISTS NewColumn;
-```
+### 4. Use Staging Environment
+- Deploy to staging first
+- Test thoroughly before production
+- Use same configuration as production
 
 ## Summary
 
-**Railway Deployment Process:**
-1. ✅ **Code Push** → Triggers Railway build
-2. ✅ **Container Build** → Includes migration files
-3. ✅ **Container Start** → Program.cs runs
-4. ✅ **Migration Check** → Detects Railway MySQL
-5. ✅ **EF Core Migration** → Applies schema changes
-6. ✅ **MySQL Optimizations** → Applies performance enhancements
-7. ✅ **Application Start** → API becomes available
+The Railway deployment is configured with comprehensive health checks and fail-fast behavior to ensure:
 
-**Key Benefits:**
-- 🚀 **Fully Automated**: No manual database changes needed
-- 🔒 **Safe**: Error handling prevents deployment failures
-- 📊 **Monitored**: Comprehensive logging for troubleshooting
-- 🔄 **Idempotent**: Safe to run multiple times
-- ⚡ **Fast**: Optimizations applied only when needed
+1. **Reliability**: Only healthy deployments succeed
+2. **Visibility**: Clear logging and monitoring
+3. **Recovery**: Automated and manual fix procedures
+4. **Prevention**: Proactive health monitoring
 
-This approach ensures your database changes are automatically applied every time you deploy to Railway! 🎯 
+This approach prevents the "Unknown column" errors and similar issues by ensuring the application only starts when the database is fully healthy and properly configured. 

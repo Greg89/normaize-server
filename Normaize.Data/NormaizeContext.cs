@@ -12,6 +12,7 @@ public class NormaizeContext : DbContext
     public DbSet<DataSet> DataSets { get; set; }
     public DbSet<Analysis> Analyses { get; set; }
     public DbSet<DataSetRow> DataSetRows { get; set; }
+    public DbSet<DataSetAuditLog> DataSetAuditLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,6 +32,15 @@ public class NormaizeContext : DbContext
             entity.Property(e => e.IsProcessed).HasDefaultValue(false);
             entity.Property(e => e.UseSeparateTable).HasDefaultValue(false);
             
+            // Soft delete properties
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.DeletedAt);
+            entity.Property(e => e.DeletedBy).HasMaxLength(255);
+            
+            // Audit trail properties
+            entity.Property(e => e.LastModifiedAt);
+            entity.Property(e => e.LastModifiedBy).HasMaxLength(255);
+            
             // MySQL JSON fields for better performance
             entity.Property(e => e.ProcessedData).HasColumnType("JSON");
             entity.Property(e => e.PreviewData).HasColumnType("JSON");
@@ -42,6 +52,7 @@ public class NormaizeContext : DbContext
             entity.HasIndex(e => e.UploadedAt);
             entity.HasIndex(e => e.IsProcessed);
             entity.HasIndex(e => e.UseSeparateTable);
+            entity.HasIndex(e => new { e.IsDeleted, e.DeletedAt }).HasDatabaseName("idx_datasets_soft_delete");
             
             // Note: JSON indexes require generated columns in MySQL, removed for simplicity
         });
@@ -74,6 +85,11 @@ public class NormaizeContext : DbContext
             entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Pending");
             entity.Property(e => e.CreatedAt);
             
+            // Soft delete properties
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.DeletedAt);
+            entity.Property(e => e.DeletedBy).HasMaxLength(255);
+            
             // MySQL JSON fields
             entity.Property(e => e.Configuration).HasColumnType("JSON");
             entity.Property(e => e.Results).HasColumnType("JSON");
@@ -93,6 +109,31 @@ public class NormaizeContext : DbContext
             entity.HasIndex(e => e.DataSetId);
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => new { e.IsDeleted, e.DeletedAt }).HasDatabaseName("idx_analyses_soft_delete");
+        });
+
+        // DataSetAuditLog configuration
+        modelBuilder.Entity<DataSetAuditLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Action).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Changes).HasColumnType("JSON");
+            entity.Property(e => e.Timestamp);
+            entity.Property(e => e.IpAddress).HasMaxLength(45);
+            entity.Property(e => e.UserAgent).HasColumnType("TEXT");
+            
+            entity.HasOne(e => e.DataSet)
+                  .WithMany(d => d.AuditLogs)
+                  .HasForeignKey(e => e.DataSetId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            
+            // Indexes for audit trail queries
+            entity.HasIndex(e => e.DataSetId);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.Action);
+            entity.HasIndex(e => e.Timestamp);
+            entity.HasIndex(e => new { e.DataSetId, e.Timestamp }).HasDatabaseName("idx_audit_dataset_timestamp");
         });
     }
 } 

@@ -33,4 +33,11 @@ public class Analysis
     
     public int? ComparisonDataSetId { get; set; }
     public DataSet? ComparisonDataSet { get; set; }
+    
+    // Soft delete properties
+    public bool IsDeleted { get; set; } = false;
+    
+    public DateTime? DeletedAt { get; set; }
+    
+    public string? DeletedBy { get; set; }
 } 

@@ -55,9 +55,23 @@ public class DataSet
     
     public string? DataHash { get; set; } // For change detection
     
+    // Soft delete properties
+    public bool IsDeleted { get; set; } = false;
+    
+    public DateTime? DeletedAt { get; set; }
+    
+    public string? DeletedBy { get; set; }
+    
+    // Audit trail properties
+    public DateTime LastModifiedAt { get; set; } = DateTime.UtcNow;
+    
+    public string? LastModifiedBy { get; set; }
+    
     public List<Analysis> Analyses { get; set; } = new();
     
     public List<DataSetRow> Rows { get; set; } = new();
+    
+    public List<DataSetAuditLog> AuditLogs { get; set; } = new();
 } 
 
 public class DataSetRow
@@ -71,6 +85,33 @@ public class DataSetRow
     public string Data { get; set; } = string.Empty; // JSON serialized row data
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    
+    public DataSet DataSet { get; set; } = null!;
+}
+
+// New audit trail model
+public class DataSetAuditLog
+{
+    public int Id { get; set; }
+    
+    public int DataSetId { get; set; }
+    
+    [Required]
+    [MaxLength(255)]
+    public string UserId { get; set; } = string.Empty;
+    
+    [Required]
+    [MaxLength(50)]
+    public string Action { get; set; } = string.Empty; // Created, Updated, Deleted, Processed
+    
+    public string? Changes { get; set; } // JSON serialized changes
+    
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    
+    [MaxLength(45)]
+    public string? IpAddress { get; set; }
+    
+    public string? UserAgent { get; set; }
     
     public DataSet DataSet { get; set; } = null!;
 } 
