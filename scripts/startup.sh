@@ -11,13 +11,7 @@ echo "Starting Normaize API deployment..."
 if [ -n "$MYSQLHOST" ]; then
     echo "Database connection detected. Running migrations..."
     
-    # Install EF Core tools if not present
-    if ! command -v dotnet-ef &> /dev/null; then
-        echo "Installing EF Core tools..."
-        dotnet tool install --global dotnet-ef
-    fi
-    
-    # Run migrations
+    # Run migrations (EF Core tools are pre-installed in the image)
     echo "Applying database migrations..."
     dotnet ef database update --project Normaize.Data --startup-project Normaize.API
     

@@ -21,7 +21,10 @@ WORKDIR "/src/Normaize.API"
 RUN dotnet build "Normaize.API.csproj" -c Release -o /app/build
 RUN dotnet publish "Normaize.API.csproj" -c Release -o /app/publish
 
-FROM base AS final
+# Install EF Core tools globally during build
+RUN dotnet tool install --global dotnet-ef
+
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
