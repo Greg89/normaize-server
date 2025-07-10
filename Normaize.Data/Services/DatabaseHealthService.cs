@@ -29,7 +29,19 @@ public class DatabaseHealthService : IDatabaseHealthService
                 return result;
             }
 
-            // Check for critical columns
+            // Check if we're using an in-memory database
+            var isInMemory = _context.Database.ProviderName?.Contains("InMemory") == true;
+            
+            if (isInMemory)
+            {
+                // For in-memory databases, just check connectivity
+                result.IsHealthy = true;
+                result.Status = "healthy";
+                result.ErrorMessage = null;
+                return result;
+            }
+
+            // For real databases, check for critical columns
             var criticalColumns = new[] { "DataHash", "UserId", "FilePath", "StorageProvider" };
             var missingColumns = new List<string>();
 

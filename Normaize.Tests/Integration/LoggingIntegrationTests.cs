@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using System.Linq;
 using Normaize.Core.Interfaces;
-using Normaize.API.Services;
 
 namespace Normaize.Tests.Integration;
 
