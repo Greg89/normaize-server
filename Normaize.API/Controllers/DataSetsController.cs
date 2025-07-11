@@ -336,4 +336,105 @@ public class DataSetsController : ControllerBase
             return StatusCode(500, "Error retrieving dataset statistics");
         }
     }
+
+    [HttpGet("diagnostics")]
+    public ActionResult<object> GetDiagnostics()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER") ?? "default";
+            var sftpHost = Environment.GetEnvironmentVariable("SFTP_HOST");
+            var sftpUsername = Environment.GetEnvironmentVariable("SFTP_USERNAME");
+            var sftpPassword = Environment.GetEnvironmentVariable("SFTP_PASSWORD");
+            var sftpPrivateKey = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY");
+            var sftpPrivateKeyPath = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY_PATH");
+            
+            return Ok(new
+            {
+                storageProvider,
+                sftpConfigured = !string.IsNullOrEmpty(sftpHost) && !string.IsNullOrEmpty(sftpUsername) &&
+                                (!string.IsNullOrEmpty(sftpPassword) || !string.IsNullOrEmpty(sftpPrivateKey) || !string.IsNullOrEmpty(sftpPrivateKeyPath)),
+                sftpHost = !string.IsNullOrEmpty(sftpHost) ? "SET" : "NOT SET",
+                sftpUsername = !string.IsNullOrEmpty(sftpUsername) ? "SET" : "NOT SET",
+                sftpPassword = !string.IsNullOrEmpty(sftpPassword) ? "SET" : "NOT SET",
+                sftpPrivateKey = !string.IsNullOrEmpty(sftpPrivateKey) ? "SET" : "NOT SET",
+                sftpPrivateKeyPath = !string.IsNullOrEmpty(sftpPrivateKeyPath) ? "SET" : "NOT SET",
+                environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "NOT SET"
+            });
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogException(ex, "GetDiagnostics");
+            return StatusCode(500, "Error retrieving diagnostics");
+        }
+    }
+
+    [HttpPost("test-storage")]
+    public async Task<ActionResult<object>> TestStorage()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            
+            // Get the storage service from DI
+            var storageService = HttpContext.RequestServices.GetRequiredService<Normaize.Core.Interfaces.IStorageService>();
+            var storageType = storageService.GetType().Name;
+            
+            // Test file operations
+            var testFileName = $"test_{Guid.NewGuid()}.txt";
+            var testContent = "This is a test file to verify storage connectivity.";
+            var testStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testContent));
+            
+            var fileRequest = new FileUploadRequest
+            {
+                FileName = testFileName,
+                ContentType = "text/plain",
+                FileSize = testContent.Length,
+                FileStream = testStream
+            };
+            
+            try
+            {
+                // Test save
+                var filePath = await storageService.SaveFileAsync(fileRequest);
+                
+                // Test exists
+                var exists = await storageService.FileExistsAsync(filePath);
+                
+                // Test get
+                using var retrievedStream = await storageService.GetFileAsync(filePath);
+                using var reader = new StreamReader(retrievedStream);
+                var retrievedContent = await reader.ReadToEndAsync();
+                
+                // Test delete
+                await storageService.DeleteFileAsync(filePath);
+                
+                return Ok(new
+                {
+                    storageType,
+                    testResult = "SUCCESS",
+                    filePath,
+                    exists,
+                    contentMatch = retrievedContent == testContent,
+                    message = "Storage service is working correctly"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new
+                {
+                    storageType,
+                    testResult = "FAILED",
+                    error = ex.Message,
+                    message = "Storage service test failed"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogException(ex, "TestStorage");
+            return StatusCode(500, "Error testing storage");
+        }
+    }
 } 
