@@ -241,7 +241,7 @@ public class DataSetRepository : IDataSetRepository
     }
 
     // MySQL-specific data analysis queries
-    public async Task<object> GetDataSetStatisticsAsync(int dataSetId)
+    public async Task<object?> GetDataSetStatisticsAsync(int dataSetId)
     {
         var dataSet = await GetByIdAsync(dataSetId);
         if (dataSet == null) return null;
@@ -250,7 +250,7 @@ public class DataSetRepository : IDataSetRepository
         {
             // Analyze inline data
             var data = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(dataSet.ProcessedData);
-            return AnalyzeData(data);
+            return data != null ? AnalyzeData(data.Cast<Dictionary<string, object>?>().ToList()) : null;
         }
         else
         {
@@ -261,20 +261,23 @@ public class DataSetRepository : IDataSetRepository
                 .ToListAsync();
 
             var data = rows.Select(r => JsonSerializer.Deserialize<Dictionary<string, object>>(r.Data)).ToList();
-            return AnalyzeData(data);
+            return data.Any() ? AnalyzeData(data) : null;
         }
     }
 
-    private object AnalyzeData(List<Dictionary<string, object>> data)
+    private object AnalyzeData(List<Dictionary<string, object>?> data)
     {
         if (!data.Any()) return new { };
 
-        var columns = data.First().Keys.ToList();
+        var validData = data.Where(d => d != null).ToList();
+        if (!validData.Any()) return new { };
+
+        var columns = validData.First()!.Keys.ToList();
         var analysis = new Dictionary<string, object>();
 
         foreach (var column in columns)
         {
-            var values = data.Select(row => row.ContainsKey(column) ? row[column]?.ToString() : null)
+            var values = validData.Select(row => row!.ContainsKey(column) ? row[column]?.ToString() : null)
                             .Where(v => !string.IsNullOrEmpty(v))
                             .ToList();
 
@@ -282,7 +285,7 @@ public class DataSetRepository : IDataSetRepository
             {
                 Count = values.Count,
                 UniqueCount = values.Distinct().Count(),
-                NullCount = data.Count - values.Count,
+                NullCount = validData.Count - values.Count,
                 SampleValues = values.Take(5).ToList()
             };
         }

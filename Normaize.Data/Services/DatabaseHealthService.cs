@@ -47,7 +47,7 @@ public class DatabaseHealthService : IDatabaseHealthService
 
             foreach (var column in criticalColumns)
             {
-                var columnExists = await _context.Database.ExecuteSqlRawAsync(
+                var columnExists = await _context.Database.ExecuteSqlAsync(
                     $"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'DataSets' AND COLUMN_NAME = '{column}'");
                 
                 if (columnExists == 0)

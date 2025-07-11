@@ -9,6 +9,7 @@ using System.Text.Json.Serialization;
 using DotNetEnv;
 using Serilog;
 using Serilog.Events;
+using Microsoft.AspNetCore.HttpOverrides;
 
 // Load environment variables from .env file
 var currentDir = Directory.GetCurrentDirectory();
@@ -64,9 +65,9 @@ foreach (var key in envVars.Keys)
     var value = envVars[key]?.ToString();
     
     // Skip sensitive environment variables
-    if (keyStr.Contains("PASSWORD", StringComparison.OrdinalIgnoreCase) ||
-        keyStr.Contains("SECRET", StringComparison.OrdinalIgnoreCase) ||
-        keyStr.Contains("KEY", StringComparison.OrdinalIgnoreCase))
+    if (keyStr?.Contains("PASSWORD", StringComparison.OrdinalIgnoreCase) == true ||
+        keyStr?.Contains("SECRET", StringComparison.OrdinalIgnoreCase) == true ||
+        keyStr?.Contains("KEY", StringComparison.OrdinalIgnoreCase) == true)
     {
         Log.Information("  {Key}: [REDACTED]", keyStr);
     }
@@ -116,6 +117,15 @@ builder.Services.AddAuthentication("Bearer")
             ValidateIssuerSigningKey = true
         };
     });
+
+// Forwarded Headers (for Railway proxy)
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | 
+                               Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Database
 // Check for various ways Railway might provide database connection
@@ -293,7 +303,7 @@ if (hasDatabaseConnection || isProductionLike || isContainerized)
         
         // Apply migrations first
         var migrationService = scope.ServiceProvider.GetRequiredService<IMigrationService>();
-        var migrationResult = await migrationService.ApplyMigrationsAsync();
+        var migrationResult = await migrationService.ApplyMigrations();
         
         if (!migrationResult.Success)
         {
@@ -385,7 +395,30 @@ if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName.Equals("B
     });
 }
 
-app.UseHttpsRedirection();
+// Use forwarded headers (for Railway proxy)
+app.UseForwardedHeaders();
+
+// HTTPS Redirection
+if (app.Environment.IsProduction() || app.Environment.IsEnvironment("beta"))
+{
+    // In production (Railway), HTTPS is handled by the load balancer
+    // Only redirect if we're not behind a proxy and have HTTPS configured
+    var httpsPort = Environment.GetEnvironmentVariable("HTTPS_PORT");
+    if (!string.IsNullOrEmpty(httpsPort) && int.TryParse(httpsPort, out var httpsPortNumber))
+    {
+        app.UseHttpsRedirection();
+    }
+    else
+    {
+        // Log that we're skipping HTTPS redirection in Railway environment
+        Log.Information("Skipping HTTPS redirection - running behind Railway load balancer");
+    }
+}
+else
+{
+    // In development, always use HTTPS redirection
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("AllowAll");
 
