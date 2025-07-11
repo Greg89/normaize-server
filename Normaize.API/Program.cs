@@ -10,7 +10,6 @@ using DotNetEnv;
 using Serilog;
 using Serilog.Events;
 using Microsoft.AspNetCore.HttpOverrides;
-using Normaize.API.Swagger;
 
 // Load environment variables from .env file
 var currentDir = Directory.GetCurrentDirectory();
@@ -97,9 +96,6 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "Normaize API", Version = "v1" });
-    
-    // Configure Swagger to handle file uploads and form data
-    c.OperationFilter<FileUploadOperationFilter>();
     
     // Add JWT authentication to Swagger
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme

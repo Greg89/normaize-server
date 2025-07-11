@@ -75,28 +75,28 @@ public class DataSetsController : ControllerBase
     }
 
     [HttpPost("upload")]
-    public async Task<ActionResult<DataSetUploadResponse>> UploadDataSet([FromForm] IFormFile file, [FromForm] string name, [FromForm] string? description)
+    public async Task<ActionResult<DataSetUploadResponse>> UploadDataSet([FromForm] FileUploadDto uploadDto)
     {
         try
         {
-            if (file == null || file.Length == 0)
+            if (uploadDto.File == null || uploadDto.File.Length == 0)
                 return BadRequest("No file provided");
 
             var userId = GetCurrentUserId();
             var createDto = new CreateDataSetDto
             {
-                Name = name,
-                Description = description,
+                Name = uploadDto.Name,
+                Description = uploadDto.Description,
                 UserId = userId
             };
 
             // Convert IFormFile to FileUploadRequest (abstraction)
             var fileRequest = new FileUploadRequest
             {
-                FileName = file.FileName,
-                ContentType = file.ContentType,
-                FileSize = file.Length,
-                FileStream = file.OpenReadStream()
+                FileName = uploadDto.File.FileName,
+                ContentType = uploadDto.File.ContentType,
+                FileSize = uploadDto.File.Length,
+                FileStream = uploadDto.File.OpenReadStream()
             };
 
             var result = await _dataProcessingService.UploadDataSetAsync(fileRequest, createDto);
