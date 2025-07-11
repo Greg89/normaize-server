@@ -65,9 +65,9 @@ foreach (var key in envVars.Keys)
     var value = envVars[key]?.ToString();
     
     // Skip sensitive environment variables
-    if (keyStr.Contains("PASSWORD", StringComparison.OrdinalIgnoreCase) ||
-        keyStr.Contains("SECRET", StringComparison.OrdinalIgnoreCase) ||
-        keyStr.Contains("KEY", StringComparison.OrdinalIgnoreCase))
+    if (keyStr?.Contains("PASSWORD", StringComparison.OrdinalIgnoreCase) == true ||
+        keyStr?.Contains("SECRET", StringComparison.OrdinalIgnoreCase) == true ||
+        keyStr?.Contains("KEY", StringComparison.OrdinalIgnoreCase) == true)
     {
         Log.Information("  {Key}: [REDACTED]", keyStr);
     }
