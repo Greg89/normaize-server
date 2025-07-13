@@ -5,6 +5,7 @@ using Normaize.Core.Models;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
+using Amazon.S3.Util;
 
 namespace Normaize.Data.Services;
 
@@ -56,7 +57,7 @@ public class S3StorageService : IStorageService
     {
         try
         {
-            var bucketExists = await _s3Client.DoesS3BucketExistAsync(_bucketName);
+            var bucketExists = await AmazonS3Util.DoesS3BucketExistV2Async(_s3Client, _bucketName);
             
             if (!bucketExists)
             {
