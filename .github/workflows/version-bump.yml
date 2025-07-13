@@ -1,0 +1,132 @@
+name: Version Bump
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    branches: [main]
+    types: [completed]
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Get current version
+      id: current-version
+      run: |
+        # Extract current version from .csproj files
+        VERSION=$(grep -o '<Version>.*</Version>' Normaize.API/Normaize.API.csproj | sed 's/<Version>\(.*\)<\/Version>/\1/')
+        echo "Current version: $VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Determine version bump type
+      id: bump-type
+      run: |
+        # Analyze commit messages since last version bump
+        # Look for keywords to determine bump type
+        COMMIT_MESSAGES=$(git log --oneline --since="1 day ago" | head -10)
+        echo "Recent commits:"
+        echo "$COMMIT_MESSAGES"
+        
+        if echo "$COMMIT_MESSAGES" | grep -qi "breaking\|major\|!:"; then
+          echo "bump-type=major" >> $GITHUB_OUTPUT
+          echo "Major version bump detected"
+        elif echo "$COMMIT_MESSAGES" | grep -qi "feat\|feature\|new"; then
+          echo "bump-type=minor" >> $GITHUB_OUTPUT
+          echo "Minor version bump detected"
+        else
+          echo "bump-type=patch" >> $GITHUB_OUTPUT
+          echo "Patch version bump detected"
+        fi
+
+    - name: Calculate new version
+      id: new-version
+      run: |
+        CURRENT_VERSION="${{ steps.current-version.outputs.version }}"
+        BUMP_TYPE="${{ steps.bump-type.outputs.bump-type }}"
+        
+        # Parse current version
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+        
+        # Calculate new version based on bump type
+        case $BUMP_TYPE in
+          "major")
+            NEW_MAJOR=$((MAJOR + 1))
+            NEW_MINOR=0
+            NEW_PATCH=0
+            ;;
+          "minor")
+            NEW_MAJOR=$MAJOR
+            NEW_MINOR=$((MINOR + 1))
+            NEW_PATCH=0
+            ;;
+          "patch")
+            NEW_MAJOR=$MAJOR
+            NEW_MINOR=$MINOR
+            NEW_PATCH=$((PATCH + 1))
+            ;;
+        esac
+        
+        NEW_VERSION="$NEW_MAJOR.$NEW_MINOR.$NEW_PATCH"
+        echo "New version: $NEW_VERSION"
+        echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Update version in project files
+      run: |
+        NEW_VERSION="${{ steps.new-version.outputs.new-version }}"
+        
+        # Update all .csproj files
+        find . -name "*.csproj" -exec sed -i "s/<Version>.*<\/Version>/<Version>$NEW_VERSION<\/Version>/g" {} \;
+        
+        # Update AssemblyInfo.cs if it exists
+        find . -name "AssemblyInfo.cs" -exec sed -i "s/AssemblyVersion(\".*\")/AssemblyVersion(\"$NEW_VERSION\")/g" {} \; 2>/dev/null || true
+        
+        echo "Updated version to $NEW_VERSION in all project files"
+
+    - name: Create version bump commit
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        git add -A
+        git commit -m "chore: bump version to ${{ steps.new-version.outputs.new-version }} [skip ci]"
+        
+        # Push the commit
+        git push origin main
+
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.new-version.outputs.new-version }}
+        release_name: Release v${{ steps.new-version.outputs.new-version }}
+        body: |
+          ## Version ${{ steps.new-version.outputs.new-version }}
+          
+          This is an automated release created after successful CI/CD pipeline completion.
+          
+          ### Changes
+          - Automated version bump
+          - All tests passed
+          - CI/CD pipeline successful
+          
+          ### Version Bump Type
+          **${{ steps.bump-type.outputs.bump-type }}** version increment
+          
+          Previous version: ${{ steps.current-version.outputs.version }}
+          New version: ${{ steps.new-version.outputs.new-version }}
+        draft: false
+        prerelease: false 

@@ -4,7 +4,6 @@ using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using Amazon.S3;
 using Amazon.S3.Model;
-using Amazon.S3.Transfer;
 using Amazon.S3.Util;
 
 namespace Normaize.Data.Services;
