@@ -9,7 +9,7 @@ on:
 jobs:
   version-bump:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
     
     steps:
     - name: Checkout code
@@ -95,16 +95,34 @@ jobs:
         
         echo "Updated version to $NEW_VERSION in all project files"
 
+    - name: Check for changes
+      id: check-changes
+      run: |
+        git add -A
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+          echo "has-changes=false" >> $GITHUB_OUTPUT
+        else
+          echo "Changes detected"
+          echo "has-changes=true" >> $GITHUB_OUTPUT
+        fi
+
     - name: Create version bump commit
+      if: steps.check-changes.outputs.has-changes == 'true'
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
-        git add -A
         git commit -m "chore: bump version to ${{ steps.new-version.outputs.new-version }} [skip ci]"
         
         # Push the commit
         git push origin main
+
+    - name: Skip commit - no changes
+      if: steps.check-changes.outputs.has-changes == 'false'
+      run: |
+        echo "No version changes detected, skipping commit"
+        echo "This might happen if the version was already bumped or no relevant changes were made"
 
     - name: Create GitHub Release
       uses: actions/create-release@v1
