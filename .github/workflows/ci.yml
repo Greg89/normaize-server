@@ -49,15 +49,27 @@ jobs:
         name: codecov-umbrella
         fail_ci_if_error: false
 
-    - name: Generate coverage report
+    - name: Download previous coverage history
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage-history
+        path: ./coverage-history/
+
+    - name: Generate coverage report with history
       env:
         REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
       run: |
         # Install ReportGenerator Pro
         dotnet tool install --global dotnet-reportgenerator-globaltool
         
-        # Generate HTML report
-        reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html
+        # Generate HTML report with history if available
+        if [ -d "./coverage-history" ]; then
+          echo "Generating report with history..."
+          reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html -historydir:"./coverage-history"
+        else
+          echo "Generating report without history (first run)..."
+          reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html
+        fi
         
         # Generate summary and badges
         reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-summary" -reporttypes:"TextSummary;Badges"
@@ -75,6 +87,13 @@ jobs:
         name: coverage-summary
         path: ./coverage-summary/
         retention-days: 30
+
+    - name: Upload coverage history for next run
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-history
+        path: ./coverage-report/
+        retention-days: 90
 
     - name: Run security scan
       run: dotnet list package --vulnerable
