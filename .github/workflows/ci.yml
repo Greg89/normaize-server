@@ -193,7 +193,7 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: test123
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_TEST_ROOT_PASSWORD }}
           MYSQL_DATABASE: normaize
         ports:
           - 3306:3306
@@ -237,10 +237,10 @@ jobs:
         echo "Verifying database migration..."
         
         # Check if tables exist
-        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 normaize -e "SHOW TABLES;"
+        mysql -h 127.0.0.1 -P 3306 -u root -p${{ secrets.MYSQL_TEST_ROOT_PASSWORD }} normaize -e "SHOW TABLES;"
         
         # Check if DataSets table exists and has expected columns
-        mysql -h 127.0.0.1 -P 3306 -u root -ptest123 normaize -e "DESCRIBE DataSets;"
+        mysql -h 127.0.0.1 -P 3306 -u root -p${{ secrets.MYSQL_TEST_ROOT_PASSWORD }} normaize -e "DESCRIBE DataSets;"
         
         echo "✅ Database migration verification completed"
 

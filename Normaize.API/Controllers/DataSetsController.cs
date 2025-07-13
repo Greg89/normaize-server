@@ -342,7 +342,6 @@ public class DataSetsController : ControllerBase
     {
         try
         {
-            var userId = GetCurrentUserId();
             var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER") ?? "default";
             var sftpHost = Environment.GetEnvironmentVariable("SFTP_HOST");
             var sftpUsername = Environment.GetEnvironmentVariable("SFTP_USERNAME");
@@ -374,11 +373,9 @@ public class DataSetsController : ControllerBase
     public async Task<ActionResult<object>> TestStorage()
     {
         try
-        {
-            var userId = GetCurrentUserId();
-            
+        {            
             // Get the storage service from DI
-            var storageService = HttpContext.RequestServices.GetRequiredService<Normaize.Core.Interfaces.IStorageService>();
+            var storageService = HttpContext.RequestServices.GetRequiredService<IStorageService>();
             var storageType = storageService.GetType().Name;
             
             // Test file operations

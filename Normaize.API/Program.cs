@@ -420,7 +420,7 @@ if (app.Environment.IsProduction() || app.Environment.IsEnvironment("beta"))
     // In production (Railway), HTTPS is handled by the load balancer
     // Only redirect if we're not behind a proxy and have HTTPS configured
     var httpsPort = Environment.GetEnvironmentVariable("HTTPS_PORT");
-    if (!string.IsNullOrEmpty(httpsPort) && int.TryParse(httpsPort, out var httpsPortNumber))
+    if (!string.IsNullOrEmpty(httpsPort) && int.TryParse(httpsPort, out _))
     {
         app.UseHttpsRedirection();
     }
