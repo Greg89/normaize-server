@@ -229,7 +229,7 @@ Log.Information("Current environment: {Environment}, Storage provider: {StorageP
 // Force in-memory storage for Test environment
 if (appEnvironment.Equals("Test", StringComparison.OrdinalIgnoreCase))
 {
-    builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+    builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.InMemoryStorageService>();
     Log.Information("Using in-memory storage service for Test environment");
 }
 else
@@ -255,21 +255,42 @@ else
                 (string.IsNullOrEmpty(sftpPassword) && string.IsNullOrEmpty(sftpPrivateKey) && string.IsNullOrEmpty(sftpPrivateKeyPath)))
             {
                 Log.Warning("SFTP storage requested but credentials not configured. Falling back to memory storage.");
-                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.InMemoryStorageService>();
             }
             else
             {
-                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, SftpStorageService>();
+                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.SftpStorageService>();
                 Log.Information("Using SFTP storage service");
             }
             break;
+        case "s3":
+            // Only use S3 if explicitly configured with proper credentials
+            var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+            var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+            
+            if (string.IsNullOrEmpty(awsAccessKey) || string.IsNullOrEmpty(awsSecretKey))
+            {
+                Log.Warning("S3 storage requested but credentials not configured. Falling back to memory storage.");
+                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.InMemoryStorageService>();
+            }
+            else
+            {
+                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.S3StorageService>();
+                Log.Information("Using S3 storage service");
+            }
+            break;
+        case "minio":
+            // MinIO is now supported via S3-compatible mode
+            Log.Warning("MinIO storage requested. Please use STORAGE_PROVIDER=s3 with AWS_SERVICE_URL pointing to your MinIO endpoint.");
+            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.InMemoryStorageService>();
+            break;
         case "local":
-            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, LocalStorageService>();
+            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.LocalStorageService>();
             Log.Information("Using local storage service");
             break;
         case "memory":
         default:
-            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.InMemoryStorageService>();
             Log.Information("Using in-memory storage service for {Environment}", appEnvironment);
             break;
     }

@@ -76,7 +76,9 @@ public class FileUploadService : IFileUploadService
             FileType = fileType,
             FileSize = 0, // Will be calculated during processing
             UploadedAt = DateTime.UtcNow,
-            StorageProvider = filePath.StartsWith("sftp://") ? "SFTP" : "Local"
+            StorageProvider = filePath.StartsWith("sftp://") ? "SFTP" : 
+                             filePath.StartsWith("minio://") ? "MinIO" :
+                             filePath.StartsWith("s3://") ? "S3" : "Local"
         };
 
         try

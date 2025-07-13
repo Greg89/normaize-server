@@ -4,7 +4,7 @@ using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using Renci.SshNet;
 
-namespace Normaize.API.Services;
+namespace Normaize.Data.Services;
 
 public class SftpStorageService : IStorageService
 {
@@ -23,14 +23,21 @@ public class SftpStorageService : IStorageService
         _password = configuration["SFTP:Password"];
         _privateKeyContent = configuration["SFTP:PrivateKey"];
         _privateKeyPath = configuration["SFTP:PrivateKeyPath"];
-        _basePath = configuration["SFTP:BasePath"] ?? "/uploads";
+        _basePath = configuration["SFTP:BasePath"] ?? "/srv/sftpgo/data";
         _logger = logger;
+
+        // Log configuration (without sensitive data)
+        _logger.LogInformation("SFTP Storage Service initialized with Host: {Host}, Username: {Username}, BasePath: {BasePath}", 
+            _host, _username, _basePath);
 
         // Validate that either password or private key is provided
         if (string.IsNullOrEmpty(_password) && string.IsNullOrEmpty(_privateKeyContent) && string.IsNullOrEmpty(_privateKeyPath))
         {
             throw new ArgumentException("Either SFTP:Password, SFTP:PrivateKey, or SFTP:PrivateKeyPath must be provided");
         }
+
+        _logger.LogInformation("SFTP authentication method: {Method}", 
+            !string.IsNullOrEmpty(_password) ? "Password" : "Private Key");
     }
 
     private SftpClient CreateSftpClient()
@@ -61,40 +68,54 @@ public class SftpStorageService : IStorageService
         var datePath = DateTime.UtcNow.ToString("yyyy/MM/dd");
         var remotePath = $"{_basePath}/{datePath}/{fileName}";
         
+        _logger.LogInformation("Attempting to upload file {FileName} to SFTP path {RemotePath}", 
+            fileRequest.FileName, remotePath);
+        
         using var client = CreateSftpClient();
         
         try
         {
+            _logger.LogInformation("Connecting to SFTP server {Host} as user {Username}", _host, _username);
             client.Connect();
             
             if (!client.IsConnected)
             {
-                throw new Exception("Failed to connect to SFTP server");
+                var error = "Failed to connect to SFTP server";
+                _logger.LogError(error);
+                throw new Exception(error);
             }
+
+            _logger.LogInformation("Successfully connected to SFTP server");
 
             // Create directory structure if it doesn't exist
             var directory = Path.GetDirectoryName(remotePath);
             if (!string.IsNullOrEmpty(directory) && !client.Exists(directory))
             {
+                _logger.LogInformation("Creating directory structure: {Directory}", directory);
                 CreateDirectoryRecursive(client, directory);
             }
 
             // Upload file
+            _logger.LogInformation("Uploading file {FileName} ({FileSize} bytes)", 
+                fileRequest.FileName, fileRequest.FileSize);
+            
             using var fileStream = client.Create(remotePath);
             await fileRequest.FileStream.CopyToAsync(fileStream);
             
-            _logger.LogInformation("File uploaded to SFTP: {RemotePath}", remotePath);
+            _logger.LogInformation("File uploaded successfully to SFTP: {RemotePath}", remotePath);
             return $"sftp://{_host}{remotePath}";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error uploading file to SFTP: {RemotePath}", remotePath);
+            _logger.LogError(ex, "Error uploading file to SFTP: {RemotePath}. Host: {Host}, Username: {Username}", 
+                remotePath, _host, _username);
             throw;
         }
         finally
         {
             if (client.IsConnected)
             {
+                _logger.LogInformation("Disconnecting from SFTP server");
                 client.Disconnect();
             }
         }

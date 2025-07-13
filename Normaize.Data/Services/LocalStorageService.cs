@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 
-namespace Normaize.API.Services;
+namespace Normaize.Data.Services;
 
 public class LocalStorageService : IStorageService
 {
