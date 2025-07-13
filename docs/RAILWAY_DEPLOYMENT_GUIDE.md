@@ -277,6 +277,92 @@ mysqldump -h $MYSQLHOST -u $MYSQLUSER -p$MYSQLPASSWORD $MYSQLDATABASE > backup_$
 - Test thoroughly before production
 - Use same configuration as production
 
+## Storage Configuration
+
+The application supports two storage providers:
+
+### 1. In-Memory Storage (Default)
+- **Use case**: Development, testing, fallback
+- **Configuration**: `STORAGE_PROVIDER=memory` (or leave unset)
+- **Behavior**: Files are stored in memory and lost on application restart
+
+### 2. S3/MinIO Storage (Production)
+- **Use case**: Beta and production environments
+- **Configuration**: `STORAGE_PROVIDER=s3` with AWS credentials
+
+### Setting Up MinIO on Railway
+
+1. **Add MinIO Service to Railway**
+   - Go to your Railway project
+   - Click "New Service" → "Database" → "MinIO"
+   - Railway will provision a MinIO instance
+
+2. **Configure Environment Variables**
+   ```bash
+   # Storage Configuration
+   STORAGE_PROVIDER=s3
+   AWS_ACCESS_KEY_ID=your-minio-access-key
+   AWS_SECRET_ACCESS_KEY=your-minio-secret-key
+   AWS_REGION=us-east-1
+   AWS_S3_BUCKET=normaize-uploads
+   AWS_SERVICE_URL=https://your-minio-endpoint.railway.app
+   ```
+
+3. **File Organization Structure**
+   Files are automatically organized by environment:
+   ```
+   normaize-uploads/
+   ├── development/          # Development environment files
+   │   └── 2024/01/15/
+   │       └── [files]
+   ├── beta/                 # Beta/Staging environment files
+   │   └── 2024/01/15/
+   │       └── [files]
+   └── production/           # Production environment files
+       └── 2024/01/15/
+           └── [files]
+   ```
+
+4. **Environment Mapping**
+   - `ASPNETCORE_ENVIRONMENT=Production` → `production/` folder
+   - `ASPNETCORE_ENVIRONMENT=Staging` → `beta/` folder
+   - `ASPNETCORE_ENVIRONMENT=Beta` → `beta/` folder
+   - `ASPNETCORE_ENVIRONMENT=Development` → `development/` folder
+
+### Testing Storage Configuration
+
+Use the provided test script to verify your storage setup:
+```bash
+# Test environment folder structure
+./scripts/test-environment-folders.ps1
+
+# Test S3 configuration
+./scripts/test-s3-config.ps1
+```
+
+### Troubleshooting Storage Issues
+
+#### 1. Files Not Appearing in S3/MinIO
+- Check that `STORAGE_PROVIDER=s3` is set
+- Verify AWS credentials are correct
+- Ensure `AWS_SERVICE_URL` points to your MinIO endpoint
+- Check application logs for storage service initialization
+
+#### 2. Wrong Environment Folder
+- Verify `ASPNETCORE_ENVIRONMENT` is set correctly
+- Check that the environment mapping logic is working
+- Review storage service logs for folder creation
+
+#### 3. Permission Issues
+- Ensure S3 bucket or MinIO bucket exists and is accessible
+- Verify access key has proper permissions
+- Check MinIO service status in Railway dashboard
+
+#### 4. Fallback to In-Memory Storage
+- If S3 credentials are missing or invalid, the application will fall back to in-memory storage
+- Check logs for "Falling back to memory storage" messages
+- Verify all required S3 environment variables are set
+
 ## Summary
 
 The Railway deployment is configured with comprehensive health checks and fail-fast behavior to ensure:

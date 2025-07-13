@@ -1,6 +1,7 @@
-# Test S3 Configuration Logic
-Write-Host "Testing S3 Configuration Logic" -ForegroundColor Green
-Write-Host "===============================" -ForegroundColor Green
+# Test Storage Configuration Logic
+Write-Host "Testing Storage Configuration Logic" -ForegroundColor Green
+Write-Host "====================================" -ForegroundColor Green
+Write-Host "Available storage providers: memory (default), s3" -ForegroundColor Cyan
 
 # Test 1: No STORAGE_PROVIDER set (should default to memory)
 Write-Host "`nTest 1: No STORAGE_PROVIDER set" -ForegroundColor Yellow

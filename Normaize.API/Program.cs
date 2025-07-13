@@ -243,26 +243,6 @@ else
 
     switch (storageProvider)
     {
-        case "sftp":
-            // Only use SFTP if explicitly configured with proper credentials
-            var sftpHost = Environment.GetEnvironmentVariable("SFTP_HOST");
-            var sftpUsername = Environment.GetEnvironmentVariable("SFTP_USERNAME");
-            var sftpPassword = Environment.GetEnvironmentVariable("SFTP_PASSWORD");
-            var sftpPrivateKey = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY");
-            var sftpPrivateKeyPath = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY_PATH");
-            
-            if (string.IsNullOrEmpty(sftpHost) || string.IsNullOrEmpty(sftpUsername) ||
-                (string.IsNullOrEmpty(sftpPassword) && string.IsNullOrEmpty(sftpPrivateKey) && string.IsNullOrEmpty(sftpPrivateKeyPath)))
-            {
-                Log.Warning("SFTP storage requested but credentials not configured. Falling back to memory storage.");
-                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.InMemoryStorageService>();
-            }
-            else
-            {
-                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.SftpStorageService>();
-                Log.Information("Using SFTP storage service");
-            }
-            break;
         case "s3":
             // Only use S3 if explicitly configured with proper credentials
             var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
@@ -278,15 +258,6 @@ else
                 builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.S3StorageService>();
                 Log.Information("Using S3 storage service");
             }
-            break;
-        case "minio":
-            // MinIO is now supported via S3-compatible mode
-            Log.Warning("MinIO storage requested. Please use STORAGE_PROVIDER=s3 with AWS_SERVICE_URL pointing to your MinIO endpoint.");
-            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.InMemoryStorageService>();
-            break;
-        case "local":
-            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.LocalStorageService>();
-            Log.Information("Using local storage service");
             break;
         case "memory":
         default:

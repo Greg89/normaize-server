@@ -85,10 +85,25 @@ public class S3StorageService : IStorageService
     {
         var fileName = $"{Guid.NewGuid()}_{fileRequest.FileName}";
         var datePath = DateTime.UtcNow.ToString("yyyy/MM/dd");
-        var objectKey = $"{datePath}/{fileName}";
         
-        _logger.LogInformation("Attempting to upload file {FileName} to S3 object {ObjectKey}", 
-            fileRequest.FileName, objectKey);
+        // Get environment for folder structure
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.ToLowerInvariant() ?? "development";
+        
+        // Map environment names to folder names
+        var environmentFolder = environment switch
+        {
+            "production" => "production",
+            "staging" => "beta",
+            "beta" => "beta",
+            "development" => "development",
+            _ => "development"
+        };
+        
+        // Create object key with environment folder: environment/date/filename
+        var objectKey = $"{environmentFolder}/{datePath}/{fileName}";
+        
+        _logger.LogInformation("Attempting to upload file {FileName} to S3 object {ObjectKey} in environment {Environment}", 
+            fileRequest.FileName, objectKey, environmentFolder);
         
         try
         {
@@ -102,7 +117,7 @@ public class S3StorageService : IStorageService
 
             await _s3Client.PutObjectAsync(putRequest);
             
-            _logger.LogInformation("File uploaded successfully to S3: {ObjectKey}", objectKey);
+            _logger.LogInformation("File uploaded successfully to S3: {ObjectKey} in environment {Environment}", objectKey, environmentFolder);
             _logger.LogInformation("DEBUG: File URL returned: s3://{Bucket}/{ObjectKey}", _bucketName, objectKey);
             return $"s3://{_bucketName}/{objectKey}";
         }
