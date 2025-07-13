@@ -12,6 +12,8 @@ env:
 jobs:
   build-test-coverage:
     runs-on: ubuntu-latest
+    # Skip this job if commit message contains [skip ci]
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
     
     steps:
     - name: Checkout code
@@ -54,6 +56,7 @@ jobs:
       with:
         name: coverage-history
         path: ./coverage-history/
+      continue-on-error: true
 
     - name: Generate coverage report with history
       env:
@@ -63,11 +66,11 @@ jobs:
         dotnet tool install --global dotnet-reportgenerator-globaltool
         
         # Generate HTML report with history if available
-        if [ -d "./coverage-history" ]; then
+        if [ -d "./coverage-history" ] && [ "$(ls -A ./coverage-history)" ]; then
           echo "Generating report with history..."
           reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html -historydir:"./coverage-history"
         else
-          echo "Generating report without history (first run)..."
+          echo "Generating report without history (first run or no history available)..."
           reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html
         fi
         
