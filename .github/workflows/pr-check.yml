@@ -1,8 +1,10 @@
 name: Pull Request Check
 
 on:
-  pull_request:
+  workflow_run:
+    workflows: ["SonarQube Analysis"]
     branches: [ main, develop ]
+    types: [completed]
 
 env:
   DOTNET_VERSION: '9.0.x'
@@ -10,6 +12,8 @@ env:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    # Only run if SonarQube analysis succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     
     steps:
     - name: Checkout code

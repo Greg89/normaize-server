@@ -1,10 +1,10 @@
 name: CI/CD Pipeline
 
 on:
-  push:
+  workflow_run:
+    workflows: ["SonarQube Analysis"]
     branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+    types: [completed]
 
 env:
   DOTNET_VERSION: '9.0.x'
@@ -12,8 +12,8 @@ env:
 jobs:
   build-test-coverage:
     runs-on: ubuntu-latest
-    # Skip this job if commit message contains [skip ci]
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    # Only run if SonarQube analysis succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     
     steps:
     - name: Checkout code
