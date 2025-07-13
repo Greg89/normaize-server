@@ -12,7 +12,10 @@ CI/CD Pipeline (main/develop) ← Railway watches this
 ├── Tests & Coverage
 └── Version Bump (main only)
 
-Pull Request Check (PRs - runs in parallel)
+PR Checks (PRs only)
+├── Build & Test
+├── Security Scan
+└── SonarQube Analysis
 ```
 
 ## Workflow Details
@@ -30,10 +33,11 @@ Pull Request Check (PRs - runs in parallel)
 - **Dependencies**: CI/CD Pipeline
 - **Branches**: main only
 
-### 3. Pull Request Check (`.github/workflows/pr-check.yml`)
+### 3. PR Checks (`.github/workflows/pr-checks.yml`)
 - **Trigger**: Pull requests to main/develop
-- **Purpose**: PR validation and testing
-- **Dependencies**: Runs in parallel with SonarQube Analysis
+- **Purpose**: PR validation, testing, and quality checks
+- **Dependencies**: None (self-contained)
+- **Features**: Automatic PR comments with results
 - **Branches**: PRs to main/develop
 
 ## Execution Flow
@@ -44,8 +48,9 @@ Pull Request Check (PRs - runs in parallel)
 3. If CI/CD passes on main → **Version Bump** runs
 
 ### For Pull Requests:
-1. **CI/CD Pipeline** and **Pull Request Check** run in parallel
-2. Both must pass for PR to be mergeable
+1. **PR Checks** workflow runs automatically
+2. Results are posted as PR comments
+3. All checks must pass for PR to be mergeable
 
 ## Benefits
 
