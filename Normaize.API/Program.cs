@@ -96,7 +96,31 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "Normaize API", Version = "v1" });
-            // c.EnableAnnotations(); // Commented out as it's not available in this version
+    
+    // Add JWT authentication to Swagger
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+    
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 
 // Add health checks
@@ -205,7 +229,7 @@ Log.Information("Current environment: {Environment}, Storage provider: {StorageP
 // Force in-memory storage for Test environment
 if (appEnvironment.Equals("Test", StringComparison.OrdinalIgnoreCase))
 {
-    builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+    builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.InMemoryStorageService>();
     Log.Information("Using in-memory storage service for Test environment");
 }
 else
@@ -219,33 +243,25 @@ else
 
     switch (storageProvider)
     {
-        case "sftp":
-            // Only use SFTP if explicitly configured with proper credentials
-            var sftpHost = Environment.GetEnvironmentVariable("SFTP_HOST");
-            var sftpUsername = Environment.GetEnvironmentVariable("SFTP_USERNAME");
-            var sftpPassword = Environment.GetEnvironmentVariable("SFTP_PASSWORD");
-            var sftpPrivateKey = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY");
-            var sftpPrivateKeyPath = Environment.GetEnvironmentVariable("SFTP_PRIVATE_KEY_PATH");
+        case "s3":
+            // Only use S3 if explicitly configured with proper credentials
+            var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+            var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
             
-            if (string.IsNullOrEmpty(sftpHost) || string.IsNullOrEmpty(sftpUsername) ||
-                (string.IsNullOrEmpty(sftpPassword) && string.IsNullOrEmpty(sftpPrivateKey) && string.IsNullOrEmpty(sftpPrivateKeyPath)))
+            if (string.IsNullOrEmpty(awsAccessKey) || string.IsNullOrEmpty(awsSecretKey))
             {
-                Log.Warning("SFTP storage requested but credentials not configured. Falling back to memory storage.");
-                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+                Log.Warning("S3 storage requested but credentials not configured. Falling back to memory storage.");
+                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.InMemoryStorageService>();
             }
             else
             {
-                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, SftpStorageService>();
-                Log.Information("Using SFTP storage service");
+                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.S3StorageService>();
+                Log.Information("Using S3 storage service");
             }
-            break;
-        case "local":
-            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, LocalStorageService>();
-            Log.Information("Using local storage service");
             break;
         case "memory":
         default:
-            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, InMemoryStorageService>();
+            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.InMemoryStorageService>();
             Log.Information("Using in-memory storage service for {Environment}", appEnvironment);
             break;
     }

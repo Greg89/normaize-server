@@ -33,21 +33,32 @@ public class DataProcessingService : IDataProcessingService
     {
         try
         {
+            _logger.LogInformation("Starting file upload process for {FileName} by user {UserId}", 
+                fileRequest.FileName, createDto.UserId);
+
             // Validate file
+            _logger.LogInformation("Validating file {FileName}", fileRequest.FileName);
             if (!await _fileUploadService.ValidateFileAsync(fileRequest))
             {
+                _logger.LogWarning("File validation failed for {FileName}", fileRequest.FileName);
                 return new DataSetUploadResponse
                 {
                     Success = false,
                     Message = "Invalid file format or size"
                 };
             }
+            _logger.LogInformation("File validation passed for {FileName}", fileRequest.FileName);
 
             // Save file
+            _logger.LogInformation("Saving file {FileName} to storage", fileRequest.FileName);
             var filePath = await _fileUploadService.SaveFileAsync(fileRequest);
+            _logger.LogInformation("File saved successfully to {FilePath}", filePath);
 
             // Process file and create dataset
+            _logger.LogInformation("Processing file {FilePath}", filePath);
             var dataSet = await _fileUploadService.ProcessFileAsync(filePath, Path.GetExtension(fileRequest.FileName));
+            _logger.LogInformation("File processing completed. Rows: {RowCount}, Columns: {ColumnCount}, FileSize: {FileSize}", 
+                dataSet.RowCount, dataSet.ColumnCount, dataSet.FileSize);
             
             // Update with user-provided information
             dataSet.Name = createDto.Name;
@@ -55,7 +66,9 @@ public class DataProcessingService : IDataProcessingService
             dataSet.UserId = createDto.UserId;
 
             // Save to database
+            _logger.LogInformation("Saving dataset to database");
             var savedDataSet = await _dataSetRepository.AddAsync(dataSet);
+            _logger.LogInformation("Dataset saved to database with ID {DataSetId}", savedDataSet.Id);
 
             // Log audit trail
             await _auditService.LogDataSetActionAsync(
@@ -66,9 +79,13 @@ public class DataProcessingService : IDataProcessingService
                     fileName = fileRequest.FileName,
                     fileSize = dataSet.FileSize,
                     rowCount = dataSet.RowCount,
-                    columnCount = dataSet.ColumnCount
+                    columnCount = dataSet.ColumnCount,
+                    filePath = filePath
                 }
             );
+
+            _logger.LogInformation("File upload completed successfully. Dataset ID: {DataSetId}, File: {FilePath}", 
+                savedDataSet.Id, filePath);
 
             return new DataSetUploadResponse
             {
@@ -79,7 +96,8 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error uploading dataset");
+            _logger.LogError(ex, "Error uploading dataset {FileName} for user {UserId}", 
+                fileRequest.FileName, createDto.UserId);
             return new DataSetUploadResponse
             {
                 Success = false,

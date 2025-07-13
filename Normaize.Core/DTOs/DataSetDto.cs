@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+
 namespace Normaize.Core.DTOs;
 
 public class DataSetDto
@@ -29,4 +31,11 @@ public class DataSetUploadResponse
     public int DataSetId { get; set; }
     public string Message { get; set; } = string.Empty;
     public bool Success { get; set; }
+}
+
+public class FileUploadDto
+{
+    public IFormFile File { get; set; } = null!;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
 } 
