@@ -424,7 +424,7 @@ app.Urls.Add($"http://*:{port}");
 try
 {
     Log.Information("Starting Normaize API on port {Port}", port);
-    app.Run();
+    await app.RunAsync();
 }
 catch (Exception ex)
 {
@@ -432,7 +432,7 @@ catch (Exception ex)
 }
 finally
 {
-    Log.CloseAndFlush();
+    await Log.CloseAndFlushAsync();
 }
 
 // Make Program class accessible for integration tests
