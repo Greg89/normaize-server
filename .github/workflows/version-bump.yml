@@ -20,12 +20,18 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0
-        ref: ${{ github.event.workflow_run.head_sha }}
+        ref: main
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '9.0.x'
+
+    - name: Ensure we're on main branch
+      run: |
+        # Make sure we're on the main branch
+        git checkout main
+        git pull origin main
 
     - name: Get current version
       id: current-version
@@ -145,8 +151,8 @@ jobs:
         
         git commit -m "chore: bump version to ${{ steps.new-version.outputs.new-version }} [skip ci]"
         
-        # Push the commit
-        git push origin main
+        # Push the commit to main branch
+        git push origin HEAD:main
 
     - name: Skip commit - no changes
       if: steps.check-changes.outputs.has-changes == 'false'
