@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
+using Normaize.Core.Constants;
 using Normaize.API.Services;
 using System.Security.Claims;
 
@@ -354,12 +355,12 @@ public class DataSetsController : ControllerBase
                 storageProvider,
                 sftpConfigured = !string.IsNullOrEmpty(sftpHost) && !string.IsNullOrEmpty(sftpUsername) &&
                                 (!string.IsNullOrEmpty(sftpPassword) || !string.IsNullOrEmpty(sftpPrivateKey) || !string.IsNullOrEmpty(sftpPrivateKeyPath)),
-                sftpHost = !string.IsNullOrEmpty(sftpHost) ? "SET" : "NOT SET",
-                sftpUsername = !string.IsNullOrEmpty(sftpUsername) ? "SET" : "NOT SET",
-                sftpPassword = !string.IsNullOrEmpty(sftpPassword) ? "SET" : "NOT SET",
-                sftpPrivateKey = !string.IsNullOrEmpty(sftpPrivateKey) ? "SET" : "NOT SET",
-                sftpPrivateKeyPath = !string.IsNullOrEmpty(sftpPrivateKeyPath) ? "SET" : "NOT SET",
-                environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "NOT SET"
+                sftpHost = !string.IsNullOrEmpty(sftpHost) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
+                sftpUsername = !string.IsNullOrEmpty(sftpUsername) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
+                sftpPassword = !string.IsNullOrEmpty(sftpPassword) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
+                sftpPrivateKey = !string.IsNullOrEmpty(sftpPrivateKey) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
+                sftpPrivateKeyPath = !string.IsNullOrEmpty(sftpPrivateKeyPath) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
+                environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? AppConstants.ConfigStatus.NOT_SET
             });
         }
         catch (Exception ex)
