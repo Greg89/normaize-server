@@ -57,5 +57,6 @@ public static class AppConstants
         public const string BEARER = "Bearer";
         public const string AUTHORIZATION_HEADER = "Authorization";
         public const string JWT_SCHEME = "Bearer";
+        public const string AnonymousUser = "anonymous";
     }
 } 

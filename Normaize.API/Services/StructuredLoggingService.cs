@@ -1,5 +1,6 @@
 using Serilog.Context;
 using System.Security.Claims;
+using Normaize.Core.Constants;
 
 namespace Normaize.API.Services;
 
@@ -29,7 +30,7 @@ public class StructuredLoggingService : IStructuredLoggingService
         var userEmail = GetCurrentUserEmail();
         
         _logger.LogInformation("User Action: {Action} by User: {UserId} ({UserEmail})", 
-            action, userId ?? "anonymous", userEmail ?? "unknown");
+            action, userId ?? AppConstants.Auth.AnonymousUser, userEmail ?? "unknown");
         
         if (data != null)
         {
@@ -46,13 +47,13 @@ public class StructuredLoggingService : IStructuredLoggingService
 
         _logger.LogError(exception, 
             "Exception in {Context} - User: {UserId} ({UserEmail}) - Request: {Method} {Path}", 
-            context, userId ?? "anonymous", userEmail ?? "unknown", requestMethod, requestPath);
+            context, userId ?? AppConstants.Auth.AnonymousUser, userEmail ?? "unknown", requestMethod, requestPath);
     }
 
     public void LogRequestStart(string method, string path, string? userId = null)
     {
         _logger.LogInformation("Request Started: {Method} {Path} by User: {UserId}", 
-            method, path, userId ?? "anonymous");
+            method, path, userId ?? AppConstants.Auth.AnonymousUser);
     }
 
     public void LogRequestEnd(string method, string path, int statusCode, long durationMs)
@@ -60,7 +61,7 @@ public class StructuredLoggingService : IStructuredLoggingService
         var userId = GetCurrentUserId();
         
         _logger.LogInformation("Request Completed: {Method} {Path} - Status: {StatusCode} - Duration: {DurationMs}ms - User: {UserId}", 
-            method, path, statusCode, durationMs, userId ?? "anonymous");
+            method, path, statusCode, durationMs, userId ?? AppConstants.Auth.AnonymousUser);
     }
 
     public IDisposable CreateUserScope(string? userId, string? userEmail)
