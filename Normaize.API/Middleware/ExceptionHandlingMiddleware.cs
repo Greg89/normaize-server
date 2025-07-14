@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http;
 using Normaize.API.Services;
 using System.Net;
 using System.Text.Json;
@@ -32,6 +31,11 @@ public class ExceptionHandlingMiddleware
         }
     }
 
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";
@@ -62,10 +66,7 @@ public class ExceptionHandlingMiddleware
                 break;
         }
 
-        var jsonResponse = JsonSerializer.Serialize(response, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+        var jsonResponse = JsonSerializer.Serialize(response, _jsonOptions);
 
         await context.Response.WriteAsync(jsonResponse);
     }
