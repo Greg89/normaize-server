@@ -64,20 +64,34 @@ jobs:
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: |
-        ./.sonar/scanner/dotnet-sonarscanner begin /k:"Greg89_normaize-server" /o:"greg89" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
+        ./.sonar/scanner/dotnet-sonarscanner begin /k:"Greg89_normaize-server" /o:"greg89" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="**/coverage-report/**,**/coverage-summary/**,**/coverage-opencover/**,**/coverage/**,**/test-results/**,**/bin/**,**/obj/**,**/uploads/**,**/*.Designer.cs"
 
     - name: Build for SonarQube Analysis
       run: dotnet build --no-restore --configuration Release
 
-    - name: Run tests (develop branch)
+    - name: Run tests with coverage (develop branch)
       if: github.ref == 'refs/heads/develop'
       shell: pwsh
-      run: ./scripts/test-env.ps1
+      run: dotnet test --no-build --verbosity normal --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage --logger trx
 
     - name: Run tests with coverage (main branch)
       if: github.ref == 'refs/heads/main'
       shell: pwsh
-      run: ./scripts/test-env.ps1 --no-build --verbosity normal --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage
+      run: dotnet test --no-build --verbosity normal --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage --logger trx
+
+    - name: Convert coverage to OpenCover format for SonarQube
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+      env:
+        REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
+      run: |
+        # Install ReportGenerator to convert coverage format
+        dotnet tool install --global dotnet-reportgenerator-globaltool
+        
+        # Convert Cobertura to OpenCover format for SonarQube
+        reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-opencover" -reporttypes:OpenCover
+        
+        # Copy OpenCover file to expected location
+        cp ./coverage-opencover/OpenCover.xml ./coverage/coverage.opencover.xml
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
@@ -88,15 +102,15 @@ jobs:
         fail_ci_if_error: false
 
     - name: Download previous coverage history
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
       uses: actions/download-artifact@v4
       with:
-        name: coverage-history
+        name: coverage-history-${{ github.ref_name }}
         path: ./coverage-history/
       continue-on-error: true
 
     - name: Generate coverage report with history
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
       env:
         REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
       run: |
@@ -116,26 +130,26 @@ jobs:
         reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-summary" -reporttypes:"TextSummary;Badges"
 
     - name: Upload coverage report
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-report
+        name: coverage-report-${{ github.ref_name }}
         path: ./coverage-report/
         retention-days: 30
 
     - name: Upload coverage summary
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-summary
+        name: coverage-summary-${{ github.ref_name }}
         path: ./coverage-summary/
         retention-days: 30
 
     - name: Upload coverage history for next run
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-history
+        name: coverage-history-${{ github.ref_name }}
         path: ./coverage-report/
         retention-days: 90
 
