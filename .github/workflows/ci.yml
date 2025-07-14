@@ -66,6 +66,9 @@ jobs:
       run: |
         ./.sonar/scanner/dotnet-sonarscanner begin /k:"Greg89_normaize-server" /o:"greg89" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
 
+    - name: Build for SonarQube Analysis
+      run: dotnet build --no-restore --configuration Release
+
     - name: Run tests (develop branch)
       if: github.ref == 'refs/heads/develop'
       shell: pwsh
