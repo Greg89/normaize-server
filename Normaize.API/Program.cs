@@ -64,11 +64,6 @@ finally
     await Log.CloseAndFlushAsync();
 }
 
-// Make Program class accessible for integration tests
-public static partial class Program { }
-
-// Dummy entry point for integration tests only. Not used in production.
-namespace Normaize.API.Testing
-{
-    public class TestProgram { }
-} 
+// Entry point for integration tests
+public partial class Program { }
+ 
