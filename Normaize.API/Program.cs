@@ -291,7 +291,7 @@ if (hasDatabaseConnection || isProductionLike || isContainerized)
             
             // Fail fast in production
             var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            if (currentEnvironment == "Production" || currentEnvironment == "Staging")
+            if (currentEnvironment == AppConstants.Environment.PRODUCTION || currentEnvironment == AppConstants.Environment.STAGING)
             {
                 Log.Fatal("Database migration failed in production environment. Application will not start.");
                 throw new InvalidOperationException($"Database migration failed: {migrationResult.ErrorMessage}");
@@ -320,7 +320,7 @@ if (hasDatabaseConnection || isProductionLike || isContainerized)
             
             // Fail fast in production
             var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            if (currentEnvironment == "Production" || currentEnvironment == "Staging")
+            if (currentEnvironment == AppConstants.Environment.PRODUCTION || currentEnvironment == AppConstants.Environment.STAGING)
             {
                 Log.Fatal("Startup health check failed in production environment. Application will not start.");
                 throw new InvalidOperationException($"Startup health check failed: {string.Join("; ", healthResult.Issues)}");
@@ -341,7 +341,7 @@ if (hasDatabaseConnection || isProductionLike || isContainerized)
         
         // Fail fast in production
         var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-        if (currentEnvironment == "Production" || currentEnvironment == "Staging")
+        if (currentEnvironment == AppConstants.Environment.PRODUCTION || currentEnvironment == AppConstants.Environment.STAGING)
         {
             Log.Fatal("Database setup failed in production environment. Application will not start.");
             throw;
@@ -358,7 +358,7 @@ else
 }
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName.Equals("Beta", StringComparison.OrdinalIgnoreCase))
+if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName.Equals(AppConstants.Environment.BETA, StringComparison.OrdinalIgnoreCase))
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
@@ -372,7 +372,7 @@ if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName.Equals("B
 app.UseForwardedHeaders();
 
 // HTTPS Redirection
-if (app.Environment.IsProduction() || app.Environment.IsEnvironment("beta"))
+if (app.Environment.IsProduction() || app.Environment.IsEnvironment(AppConstants.Environment.BETA))
 {
     // In production (Railway), HTTPS is handled by the load balancer
     // Only redirect if we're not behind a proxy and have HTTPS configured
@@ -403,7 +403,7 @@ app.UseAuthorization();
 app.UseAuth0();
 
 // Add request logging middleware (skip in test environment)
-if (!app.Environment.EnvironmentName.Equals("Test", StringComparison.OrdinalIgnoreCase))
+if (!app.Environment.EnvironmentName.Equals(AppConstants.Environment.TEST, StringComparison.OrdinalIgnoreCase))
 {
     app.UseMiddleware<RequestLoggingMiddleware>();
 }
@@ -414,7 +414,7 @@ app.MapControllers();
 app.MapHealthChecks("/health/readiness");
 
 // Global exception handler (skip in test environment)
-if (!app.Environment.EnvironmentName.Equals("Test", StringComparison.OrdinalIgnoreCase))
+if (!app.Environment.EnvironmentName.Equals(AppConstants.Environment.TEST, StringComparison.OrdinalIgnoreCase))
 {
     app.UseMiddleware<ExceptionHandlingMiddleware>();
 }

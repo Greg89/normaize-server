@@ -24,6 +24,7 @@ public static class AppConstants
         public const string STAGING = "Staging";
         public const string PRODUCTION = "Production";
         public const string BETA = "Beta";
+        public const string TEST = "Test";
     }
 
     /// <summary>
