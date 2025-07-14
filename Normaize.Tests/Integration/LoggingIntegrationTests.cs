@@ -75,7 +75,7 @@ public class LoggingIntegrationTests : IClassFixture<TestWebApplicationFactory>
     }
 }
 
-public class TestWebApplicationFactory : WebApplicationFactory<Program>
+public class TestWebApplicationFactory : WebApplicationFactory<TestProgram>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {

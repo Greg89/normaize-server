@@ -69,7 +69,6 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     });
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -213,29 +212,28 @@ else
         storageProvider = "memory";
     }
 
-    switch (storageProvider)
+    if (storageProvider == "s3")
     {
-        case "s3":
-            // Only use S3 if explicitly configured with proper credentials
-            var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
-            var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
-            
-            if (string.IsNullOrEmpty(awsAccessKey) || string.IsNullOrEmpty(awsSecretKey))
-            {
-                Log.Warning("S3 storage requested but credentials not configured. Falling back to memory storage.");
-                builder.Services.AddScoped<IStorageService, Normaize.Data.Services.InMemoryStorageService>();
-            }
-            else
-            {
-                builder.Services.AddScoped<IStorageService, Normaize.Data.Services.S3StorageService>();
-                Log.Information("Using S3 storage service");
-            }
-            break;
-        case "memory":
-        default:
+        // Only use S3 if explicitly configured with proper credentials
+        var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+        var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+        
+        if (string.IsNullOrEmpty(awsAccessKey) || string.IsNullOrEmpty(awsSecretKey))
+        {
+            Log.Warning("S3 storage requested but credentials not configured. Falling back to memory storage.");
             builder.Services.AddScoped<IStorageService, Normaize.Data.Services.InMemoryStorageService>();
-            Log.Information("Using in-memory storage service for {Environment}", appEnvironment);
-            break;
+        }
+        else
+        {
+            builder.Services.AddScoped<IStorageService, Normaize.Data.Services.S3StorageService>();
+            Log.Information("Using S3 storage service");
+        }
+    }
+    else
+    {
+        // Default to memory storage
+        builder.Services.AddScoped<IStorageService, Normaize.Data.Services.InMemoryStorageService>();
+        Log.Information("Using in-memory storage service for {Environment}", appEnvironment);
     }
 }
 
@@ -426,7 +424,7 @@ app.Urls.Add($"http://*:{port}");
 try
 {
     Log.Information("Starting Normaize API on port {Port}", port);
-    app.Run();
+    await app.RunAsync();
 }
 catch (Exception ex)
 {
@@ -434,8 +432,11 @@ catch (Exception ex)
 }
 finally
 {
-    Log.CloseAndFlush();
+    await Log.CloseAndFlushAsync();
 }
 
 // Make Program class accessible for integration tests
-public partial class Program { } 
+public static partial class Program { }
+
+// Dummy entry point for integration tests only. Not used in production.
+public class TestProgram { } 

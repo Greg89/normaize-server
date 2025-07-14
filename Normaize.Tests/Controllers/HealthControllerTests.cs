@@ -34,11 +34,11 @@ public class HealthControllerTests
         var response = okResult.Value!;
         // Check properties
         var responseType = response.GetType();
-        responseType.GetProperty("status").Should().NotBeNull();
-        responseType.GetProperty("timestamp").Should().NotBeNull();
-        responseType.GetProperty("service").Should().NotBeNull();
-        responseType.GetProperty("version").Should().NotBeNull();
-        responseType.GetProperty("environment").Should().NotBeNull();
+        responseType.GetProperty("Status").Should().NotBeNull();
+        responseType.GetProperty("Timestamp").Should().NotBeNull();
+        responseType.GetProperty("Service").Should().NotBeNull();
+        responseType.GetProperty("Version").Should().NotBeNull();
+        responseType.GetProperty("Environment").Should().NotBeNull();
         // Verify logging was called
         _mockLoggingService.Verify(
             x => x.LogUserAction(It.IsAny<string>(), It.IsAny<object?>()),
@@ -56,19 +56,19 @@ public class HealthControllerTests
         okResult.Value.Should().NotBeNull();
         var response = okResult.Value!;
         var responseType = response.GetType();
-        var statusProperty = responseType.GetProperty("status");
+        var statusProperty = responseType.GetProperty("Status");
         statusProperty.Should().NotBeNull();
         var statusValue = statusProperty!.GetValue(response);
         statusValue.Should().Be("healthy");
-        var timestampProperty = responseType.GetProperty("timestamp");
+        var timestampProperty = responseType.GetProperty("Timestamp");
         timestampProperty.Should().NotBeNull();
         var timestampValue = timestampProperty!.GetValue(response);
         timestampValue.Should().NotBeNull();
-        var serviceProperty = responseType.GetProperty("service");
+        var serviceProperty = responseType.GetProperty("Service");
         serviceProperty.Should().NotBeNull();
         var serviceValue = serviceProperty!.GetValue(response);
         serviceValue.Should().Be("Normaize API");
-        var versionProperty = responseType.GetProperty("version");
+        var versionProperty = responseType.GetProperty("Version");
         versionProperty.Should().NotBeNull();
         var versionValue = versionProperty!.GetValue(response);
         versionValue.Should().Be("1.0.0");
@@ -85,7 +85,7 @@ public class HealthControllerTests
         okResult.Value.Should().NotBeNull();
         var response = okResult.Value!;
         var responseType = response.GetType();
-        var environmentProperty = responseType.GetProperty("environment");
+        var environmentProperty = responseType.GetProperty("Environment");
         environmentProperty.Should().NotBeNull();
         var environmentValue = environmentProperty!.GetValue(response);
         environmentValue.Should().NotBeNull();
