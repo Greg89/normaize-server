@@ -81,6 +81,8 @@ jobs:
 
     - name: Convert coverage to OpenCover format for SonarQube
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+      env:
+        REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
       run: |
         # Install ReportGenerator to convert coverage format
         dotnet tool install --global dotnet-reportgenerator-globaltool
