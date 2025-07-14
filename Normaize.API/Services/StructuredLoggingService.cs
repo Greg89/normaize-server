@@ -1,8 +1,5 @@
-using Microsoft.AspNetCore.Http;
-using Serilog;
 using Serilog.Context;
 using System.Security.Claims;
-using Microsoft.Extensions.Logging;
 
 namespace Normaize.API.Services;
 
@@ -17,10 +14,10 @@ public interface IStructuredLoggingService
 
 public class StructuredLoggingService : IStructuredLoggingService
 {
-    private readonly Microsoft.Extensions.Logging.ILogger<StructuredLoggingService> _logger;
+    private readonly ILogger<StructuredLoggingService> _logger;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public StructuredLoggingService(Microsoft.Extensions.Logging.ILogger<StructuredLoggingService> logger, IHttpContextAccessor httpContextAccessor)
+    public StructuredLoggingService(ILogger<StructuredLoggingService> logger, IHttpContextAccessor httpContextAccessor)
     {
         _logger = logger;
         _httpContextAccessor = httpContextAccessor;
@@ -68,7 +65,6 @@ public class StructuredLoggingService : IStructuredLoggingService
 
     public IDisposable CreateUserScope(string? userId, string? userEmail)
     {
-        var context = LogContext.PushProperty("UserId", userId ?? "anonymous");
         return LogContext.PushProperty("UserEmail", userEmail ?? "unknown");
     }
 

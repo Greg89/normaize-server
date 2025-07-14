@@ -287,7 +287,6 @@ if (hasDatabaseConnection || isProductionLike || isContainerized)
             if (migrationResult.ErrorMessage?.Contains("Unknown column") == true)
             {
                 Log.Error("Database schema mismatch detected. This may indicate a failed or incomplete migration.");
-                Log.Error("Please check if all migrations have been applied correctly.");
             }
             
             // Fail fast in production
