@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Normaize.API.Middleware;
 using Normaize.Core.Interfaces;
+using Normaize.Core.Constants;
 using Normaize.API.Services;
 using Normaize.Data;
 using Normaize.Data.Repositories;
@@ -75,13 +76,13 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new() { Title = "Normaize API", Version = "v1" });
     
     // Add JWT authentication to Swagger
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    c.AddSecurityDefinition(AppConstants.Auth.BEARER, new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-        Name = "Authorization",
+        Description = $"JWT Authorization header using the Bearer scheme. Example: \"{AppConstants.Auth.AUTHORIZATION_HEADER}: {AppConstants.Auth.BEARER} {{token}}\"",
+        Name = AppConstants.Auth.AUTHORIZATION_HEADER,
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
+        Scheme = AppConstants.Auth.JWT_SCHEME
     });
     
     c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
@@ -92,7 +93,7 @@ builder.Services.AddSwaggerGen(c =>
                 Reference = new Microsoft.OpenApi.Models.OpenApiReference
                 {
                     Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
+                    Id = AppConstants.Auth.BEARER
                 }
             },
             Array.Empty<string>()
@@ -105,8 +106,8 @@ builder.Services.AddHealthChecks()
     .AddCheck("startup", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Application started successfully"));
 
 // Add JWT Authentication for Auth0
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
+builder.Services.AddAuthentication(AppConstants.Auth.BEARER)
+    .AddJwtBearer(AppConstants.Auth.BEARER, options =>
     {
         options.Authority = Environment.GetEnvironmentVariable("AUTH0_ISSUER");
         options.Audience = Environment.GetEnvironmentVariable("AUTH0_AUDIENCE");

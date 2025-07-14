@@ -46,4 +46,14 @@ public static class AppConstants
         public const string NOT_FOUND = "Not Found";
         public const string UNAUTHORIZED = "Unauthorized";
     }
+
+    /// <summary>
+    /// Authentication and authorization constants
+    /// </summary>
+    public static class Auth
+    {
+        public const string BEARER = "Bearer";
+        public const string AUTHORIZATION_HEADER = "Authorization";
+        public const string JWT_SCHEME = "Bearer";
+    }
 } 
