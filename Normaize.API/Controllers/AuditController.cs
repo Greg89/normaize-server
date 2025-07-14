@@ -26,7 +26,6 @@ public class AuditController : ControllerBase
     {
         try
         {
-            var userId = GetCurrentUserId();
             var auditLogs = await _auditService.GetDataSetAuditLogsAsync(dataSetId, skip, take);
             return Ok(auditLogs);
         }

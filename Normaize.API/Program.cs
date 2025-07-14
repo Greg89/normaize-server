@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Normaize.API.Middleware;
 using Normaize.Core.Interfaces;
+using Normaize.Core.Constants;
 using Normaize.API.Services;
 using Normaize.Data;
 using Normaize.Data.Repositories;
@@ -9,7 +10,6 @@ using System.Text.Json.Serialization;
 using DotNetEnv;
 using Serilog;
 using Serilog.Events;
-using Microsoft.AspNetCore.HttpOverrides;
 
 // Load environment variables from .env file
 var currentDir = Directory.GetCurrentDirectory();
@@ -56,28 +56,6 @@ if (!string.IsNullOrEmpty(seqUrl) && environment != "Development")
 
 Log.Logger = loggerConfiguration.CreateLogger();
 
-// Log all environment variables for debugging (excluding sensitive ones)
-Log.Information("=== Environment Variables Debug ===");
-var envVars = Environment.GetEnvironmentVariables();
-foreach (var key in envVars.Keys)
-{
-    var keyStr = key.ToString();
-    var value = envVars[key]?.ToString();
-    
-    // Skip sensitive environment variables
-    if (keyStr?.Contains("PASSWORD", StringComparison.OrdinalIgnoreCase) == true ||
-        keyStr?.Contains("SECRET", StringComparison.OrdinalIgnoreCase) == true ||
-        keyStr?.Contains("KEY", StringComparison.OrdinalIgnoreCase) == true)
-    {
-        Log.Information("  {Key}: [REDACTED]", keyStr);
-    }
-    else
-    {
-        Log.Information("  {Key}: {Value}", keyStr, value ?? "NULL");
-    }
-}
-Log.Information("=== End Environment Variables Debug ===");
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure Serilog for dependency injection
@@ -98,13 +76,13 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new() { Title = "Normaize API", Version = "v1" });
     
     // Add JWT authentication to Swagger
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    c.AddSecurityDefinition(AppConstants.Auth.BEARER, new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-        Name = "Authorization",
+        Description = $"JWT Authorization header using the Bearer scheme. Example: \"{AppConstants.Auth.AUTHORIZATION_HEADER}: {AppConstants.Auth.BEARER} {{token}}\"",
+        Name = AppConstants.Auth.AUTHORIZATION_HEADER,
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
+        Scheme = AppConstants.Auth.JWT_SCHEME
     });
     
     c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
@@ -115,7 +93,7 @@ builder.Services.AddSwaggerGen(c =>
                 Reference = new Microsoft.OpenApi.Models.OpenApiReference
                 {
                     Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
+                    Id = AppConstants.Auth.BEARER
                 }
             },
             Array.Empty<string>()
@@ -128,8 +106,8 @@ builder.Services.AddHealthChecks()
     .AddCheck("startup", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Application started successfully"));
 
 // Add JWT Authentication for Auth0
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
+builder.Services.AddAuthentication(AppConstants.Auth.BEARER)
+    .AddJwtBearer(AppConstants.Auth.BEARER, options =>
     {
         options.Authority = Environment.GetEnvironmentVariable("AUTH0_ISSUER");
         options.Audience = Environment.GetEnvironmentVariable("AUTH0_AUDIENCE");
@@ -169,13 +147,6 @@ var mysqlPort = Environment.GetEnvironmentVariable("MYSQLPORT") ??
                Environment.GetEnvironmentVariable("MYSQL_PORT") ?? 
                Environment.GetEnvironmentVariable("DB_PORT") ?? 
                "3306";
-
-// Log database configuration for debugging (without password)
-Log.Information("Database configuration:");
-Log.Information("  Host: {Host}", mysqlHost ?? "NOT SET");
-Log.Information("  Database: {Database}", mysqlDatabase ?? "NOT SET");
-Log.Information("  User: {User}", mysqlUser ?? "NOT SET");
-Log.Information("  Port: {Port}", mysqlPort);
 
 var connectionString = $"Server={mysqlHost};Database={mysqlDatabase};User={mysqlUser};Password={mysqlPassword};Port={mysqlPort};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
 
@@ -229,7 +200,7 @@ Log.Information("Current environment: {Environment}, Storage provider: {StorageP
 // Force in-memory storage for Test environment
 if (appEnvironment.Equals("Test", StringComparison.OrdinalIgnoreCase))
 {
-    builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.InMemoryStorageService>();
+    builder.Services.AddScoped<IStorageService, Normaize.Data.Services.InMemoryStorageService>();
     Log.Information("Using in-memory storage service for Test environment");
 }
 else
@@ -286,16 +257,6 @@ var hasDatabaseConnection = !string.IsNullOrEmpty(Environment.GetEnvironmentVari
                            (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLDATABASE")) && 
                             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLUSER")));
 
-// Log environment variables for debugging (without sensitive data)
-Log.Information("Database connection detection:");
-Log.Information("  MYSQLHOST: {MYSQLHOST}", Environment.GetEnvironmentVariable("MYSQLHOST") ?? "NOT SET");
-Log.Information("  MYSQLDATABASE: {MYSQLDATABASE}", Environment.GetEnvironmentVariable("MYSQLDATABASE") ?? "NOT SET");
-Log.Information("  MYSQLUSER: {MYSQLUSER}", Environment.GetEnvironmentVariable("MYSQLUSER") ?? "NOT SET");
-Log.Information("  MYSQLPORT: {MYSQLPORT}", Environment.GetEnvironmentVariable("MYSQLPORT") ?? "NOT SET");
-Log.Information("  DATABASE_URL: {DATABASE_URL}", Environment.GetEnvironmentVariable("DATABASE_URL") ?? "NOT SET");
-Log.Information("  ASPNETCORE_ENVIRONMENT: {Environment}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "NOT SET");
-Log.Information("  Has database connection: {HasConnection}", hasDatabaseConnection);
-
 // Also check if we're in a production-like environment and force migration attempts
 var isProductionLike = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Production", StringComparison.OrdinalIgnoreCase) == true ||
                        Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Staging", StringComparison.OrdinalIgnoreCase) == true ||
@@ -305,10 +266,6 @@ var isProductionLike = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMEN
 var isContainerized = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PORT")) ||
                      File.Exists("/.dockerenv") ||
                      Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
-
-Log.Information("Environment detection:");
-Log.Information("  Is production-like: {IsProductionLike}", isProductionLike);
-Log.Information("  Is containerized: {IsContainerized}", isContainerized);
 
 if (hasDatabaseConnection || isProductionLike || isContainerized)
 {
@@ -334,7 +291,7 @@ if (hasDatabaseConnection || isProductionLike || isContainerized)
             
             // Fail fast in production
             var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            if (currentEnvironment == "Production" || currentEnvironment == "Staging")
+            if (currentEnvironment == AppConstants.Environment.PRODUCTION || currentEnvironment == AppConstants.Environment.STAGING)
             {
                 Log.Fatal("Database migration failed in production environment. Application will not start.");
                 throw new InvalidOperationException($"Database migration failed: {migrationResult.ErrorMessage}");
@@ -363,7 +320,7 @@ if (hasDatabaseConnection || isProductionLike || isContainerized)
             
             // Fail fast in production
             var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            if (currentEnvironment == "Production" || currentEnvironment == "Staging")
+            if (currentEnvironment == AppConstants.Environment.PRODUCTION || currentEnvironment == AppConstants.Environment.STAGING)
             {
                 Log.Fatal("Startup health check failed in production environment. Application will not start.");
                 throw new InvalidOperationException($"Startup health check failed: {string.Join("; ", healthResult.Issues)}");
@@ -384,7 +341,7 @@ if (hasDatabaseConnection || isProductionLike || isContainerized)
         
         // Fail fast in production
         var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-        if (currentEnvironment == "Production" || currentEnvironment == "Staging")
+        if (currentEnvironment == AppConstants.Environment.PRODUCTION || currentEnvironment == AppConstants.Environment.STAGING)
         {
             Log.Fatal("Database setup failed in production environment. Application will not start.");
             throw;
@@ -401,7 +358,7 @@ else
 }
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName.Equals("Beta", StringComparison.OrdinalIgnoreCase))
+if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName.Equals(AppConstants.Environment.BETA, StringComparison.OrdinalIgnoreCase))
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
@@ -415,12 +372,12 @@ if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName.Equals("B
 app.UseForwardedHeaders();
 
 // HTTPS Redirection
-if (app.Environment.IsProduction() || app.Environment.IsEnvironment("beta"))
+if (app.Environment.IsProduction() || app.Environment.IsEnvironment(AppConstants.Environment.BETA))
 {
     // In production (Railway), HTTPS is handled by the load balancer
     // Only redirect if we're not behind a proxy and have HTTPS configured
     var httpsPort = Environment.GetEnvironmentVariable("HTTPS_PORT");
-    if (!string.IsNullOrEmpty(httpsPort) && int.TryParse(httpsPort, out var httpsPortNumber))
+    if (!string.IsNullOrEmpty(httpsPort) && int.TryParse(httpsPort, out _))
     {
         app.UseHttpsRedirection();
     }
@@ -446,7 +403,7 @@ app.UseAuthorization();
 app.UseAuth0();
 
 // Add request logging middleware (skip in test environment)
-if (!app.Environment.EnvironmentName.Equals("Test", StringComparison.OrdinalIgnoreCase))
+if (!app.Environment.EnvironmentName.Equals(AppConstants.Environment.TEST, StringComparison.OrdinalIgnoreCase))
 {
     app.UseMiddleware<RequestLoggingMiddleware>();
 }
@@ -457,7 +414,7 @@ app.MapControllers();
 app.MapHealthChecks("/health/readiness");
 
 // Global exception handler (skip in test environment)
-if (!app.Environment.EnvironmentName.Equals("Test", StringComparison.OrdinalIgnoreCase))
+if (!app.Environment.EnvironmentName.Equals(AppConstants.Environment.TEST, StringComparison.OrdinalIgnoreCase))
 {
     app.UseMiddleware<ExceptionHandlingMiddleware>();
 }

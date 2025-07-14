@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
+using Normaize.Core.Constants;
 using Normaize.API.Services;
 using System.Security.Claims;
 
@@ -342,7 +343,6 @@ public class DataSetsController : ControllerBase
     {
         try
         {
-            var userId = GetCurrentUserId();
             var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER") ?? "default";
             var sftpHost = Environment.GetEnvironmentVariable("SFTP_HOST");
             var sftpUsername = Environment.GetEnvironmentVariable("SFTP_USERNAME");
@@ -355,12 +355,12 @@ public class DataSetsController : ControllerBase
                 storageProvider,
                 sftpConfigured = !string.IsNullOrEmpty(sftpHost) && !string.IsNullOrEmpty(sftpUsername) &&
                                 (!string.IsNullOrEmpty(sftpPassword) || !string.IsNullOrEmpty(sftpPrivateKey) || !string.IsNullOrEmpty(sftpPrivateKeyPath)),
-                sftpHost = !string.IsNullOrEmpty(sftpHost) ? "SET" : "NOT SET",
-                sftpUsername = !string.IsNullOrEmpty(sftpUsername) ? "SET" : "NOT SET",
-                sftpPassword = !string.IsNullOrEmpty(sftpPassword) ? "SET" : "NOT SET",
-                sftpPrivateKey = !string.IsNullOrEmpty(sftpPrivateKey) ? "SET" : "NOT SET",
-                sftpPrivateKeyPath = !string.IsNullOrEmpty(sftpPrivateKeyPath) ? "SET" : "NOT SET",
-                environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "NOT SET"
+                sftpHost = !string.IsNullOrEmpty(sftpHost) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
+                sftpUsername = !string.IsNullOrEmpty(sftpUsername) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
+                sftpPassword = !string.IsNullOrEmpty(sftpPassword) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
+                sftpPrivateKey = !string.IsNullOrEmpty(sftpPrivateKey) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
+                sftpPrivateKeyPath = !string.IsNullOrEmpty(sftpPrivateKeyPath) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
+                environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? AppConstants.ConfigStatus.NOT_SET
             });
         }
         catch (Exception ex)
@@ -374,11 +374,9 @@ public class DataSetsController : ControllerBase
     public async Task<ActionResult<object>> TestStorage()
     {
         try
-        {
-            var userId = GetCurrentUserId();
-            
+        {            
             // Get the storage service from DI
-            var storageService = HttpContext.RequestServices.GetRequiredService<Normaize.Core.Interfaces.IStorageService>();
+            var storageService = HttpContext.RequestServices.GetRequiredService<IStorageService>();
             var storageType = storageService.GetType().Name;
             
             // Test file operations
