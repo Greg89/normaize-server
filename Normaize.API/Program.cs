@@ -436,4 +436,7 @@ finally
 }
 
 // Make Program class accessible for integration tests
-public static partial class Program { } 
+public static partial class Program { }
+
+// Dummy entry point for integration tests only. Not used in production.
+public class TestProgram { } 
