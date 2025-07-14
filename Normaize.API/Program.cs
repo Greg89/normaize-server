@@ -189,6 +189,7 @@ builder.Services.AddScoped<IAuditService, Normaize.Data.Services.AuditService>()
 builder.Services.AddScoped<IStructuredLoggingService, StructuredLoggingService>();
 builder.Services.AddScoped<IMigrationService, Normaize.Data.Services.MigrationService>();
 builder.Services.AddScoped<IHealthCheckService, Normaize.Data.Services.HealthCheckService>();
+builder.Services.AddSingleton<IAppConfigurationService, AppConfigurationService>();
 builder.Services.AddHttpContextAccessor();
 
 // Storage Service Registration
