@@ -25,6 +25,7 @@ public static class AppConstants
         public const string PRODUCTION = "Production";
         public const string BETA = "Beta";
         public const string TEST = "Test";
+        public const string ASPNETCORE_ENVIRONMENT = "ASPNETCORE_ENVIRONMENT";
     }
 
     /// <summary>

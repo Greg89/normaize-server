@@ -32,7 +32,7 @@ else
 }
 
 // Configure Serilog
-var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+var environment = Environment.GetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT) ?? AppConstants.Environment.DEVELOPMENT;
 var seqUrl = Environment.GetEnvironmentVariable("SEQ_URL");
 
 var loggerConfiguration = new LoggerConfiguration()
@@ -193,7 +193,7 @@ builder.Services.AddSingleton<IAppConfigurationService, AppConfigurationService>
 builder.Services.AddHttpContextAccessor();
 
 // Storage Service Registration
-var appEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+var appEnvironment = Environment.GetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT) ?? AppConstants.Environment.DEVELOPMENT;
 var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER")?.ToLowerInvariant();
 
 Log.Information("Current environment: {Environment}, Storage provider: {StorageProvider}", appEnvironment, storageProvider ?? "default");
@@ -223,26 +223,26 @@ else
             if (string.IsNullOrEmpty(awsAccessKey) || string.IsNullOrEmpty(awsSecretKey))
             {
                 Log.Warning("S3 storage requested but credentials not configured. Falling back to memory storage.");
-                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.InMemoryStorageService>();
+                builder.Services.AddScoped<IStorageService, Normaize.Data.Services.InMemoryStorageService>();
             }
             else
             {
-                builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.S3StorageService>();
+                builder.Services.AddScoped<IStorageService, Normaize.Data.Services.S3StorageService>();
                 Log.Information("Using S3 storage service");
             }
             break;
         case "memory":
         default:
-            builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.InMemoryStorageService>();
+            builder.Services.AddScoped<IStorageService, Normaize.Data.Services.InMemoryStorageService>();
             Log.Information("Using in-memory storage service for {Environment}", appEnvironment);
             break;
     }
 }
 
 // Repositories
-builder.Services.AddScoped<IDataSetRepository, Normaize.Data.Repositories.DataSetRepository>();
-builder.Services.AddScoped<IAnalysisRepository, Normaize.Data.Repositories.AnalysisRepository>();
-builder.Services.AddScoped<IDataSetRowRepository, Normaize.Data.Repositories.DataSetRowRepository>();
+builder.Services.AddScoped<IDataSetRepository, DataSetRepository>();
+builder.Services.AddScoped<IAnalysisRepository, AnalysisRepository>();
+builder.Services.AddScoped<IDataSetRowRepository, DataSetRowRepository>();
 
 // HTTP Client
 builder.Services.AddHttpClient();
@@ -259,9 +259,9 @@ var hasDatabaseConnection = !string.IsNullOrEmpty(Environment.GetEnvironmentVari
                             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLUSER")));
 
 // Also check if we're in a production-like environment and force migration attempts
-var isProductionLike = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Production", StringComparison.OrdinalIgnoreCase) == true ||
-                       Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Staging", StringComparison.OrdinalIgnoreCase) == true ||
-                       Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Beta", StringComparison.OrdinalIgnoreCase) == true;
+var isProductionLike = Environment.GetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT)?.Equals("Production", StringComparison.OrdinalIgnoreCase) == true ||
+                       Environment.GetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT)?.Equals("Staging", StringComparison.OrdinalIgnoreCase) == true ||
+                       Environment.GetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT)?.Equals("Beta", StringComparison.OrdinalIgnoreCase) == true;
 
 // Check if we're in a containerized environment (Railway, Docker, etc.)
 var isContainerized = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PORT")) ||
@@ -291,7 +291,7 @@ if (hasDatabaseConnection || isProductionLike || isContainerized)
             }
             
             // Fail fast in production
-            var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            var currentEnvironment = Environment.GetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT);
             if (currentEnvironment == AppConstants.Environment.PRODUCTION || currentEnvironment == AppConstants.Environment.STAGING)
             {
                 Log.Fatal("Database migration failed in production environment. Application will not start.");
@@ -320,7 +320,7 @@ if (hasDatabaseConnection || isProductionLike || isContainerized)
             }
             
             // Fail fast in production
-            var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            var currentEnvironment = Environment.GetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT);
             if (currentEnvironment == AppConstants.Environment.PRODUCTION || currentEnvironment == AppConstants.Environment.STAGING)
             {
                 Log.Fatal("Startup health check failed in production environment. Application will not start.");
@@ -341,7 +341,7 @@ if (hasDatabaseConnection || isProductionLike || isContainerized)
         Log.Error(ex, "Error during database setup and health verification");
         
         // Fail fast in production
-        var currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        var currentEnvironment = Environment.GetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT);
         if (currentEnvironment == AppConstants.Environment.PRODUCTION || currentEnvironment == AppConstants.Environment.STAGING)
         {
             Log.Fatal("Database setup failed in production environment. Application will not start.");
