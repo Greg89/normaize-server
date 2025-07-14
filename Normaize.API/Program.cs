@@ -9,7 +9,6 @@ using System.Text.Json.Serialization;
 using DotNetEnv;
 using Serilog;
 using Serilog.Events;
-using Microsoft.AspNetCore.HttpOverrides;
 
 // Load environment variables from .env file
 var currentDir = Directory.GetCurrentDirectory();
@@ -55,28 +54,6 @@ if (!string.IsNullOrEmpty(seqUrl) && environment != "Development")
 }
 
 Log.Logger = loggerConfiguration.CreateLogger();
-
-// Log all environment variables for debugging (excluding sensitive ones)
-Log.Information("=== Environment Variables Debug ===");
-var envVars = Environment.GetEnvironmentVariables();
-foreach (var key in envVars.Keys)
-{
-    var keyStr = key.ToString();
-    var value = envVars[key]?.ToString();
-    
-    // Skip sensitive environment variables
-    if (keyStr?.Contains("PASSWORD", StringComparison.OrdinalIgnoreCase) == true ||
-        keyStr?.Contains("SECRET", StringComparison.OrdinalIgnoreCase) == true ||
-        keyStr?.Contains("KEY", StringComparison.OrdinalIgnoreCase) == true)
-    {
-        Log.Information("  {Key}: [REDACTED]", keyStr);
-    }
-    else
-    {
-        Log.Information("  {Key}: {Value}", keyStr, value ?? "NULL");
-    }
-}
-Log.Information("=== End Environment Variables Debug ===");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -170,13 +147,6 @@ var mysqlPort = Environment.GetEnvironmentVariable("MYSQLPORT") ??
                Environment.GetEnvironmentVariable("DB_PORT") ?? 
                "3306";
 
-// Log database configuration for debugging (without password)
-Log.Information("Database configuration:");
-Log.Information("  Host: {Host}", mysqlHost ?? "NOT SET");
-Log.Information("  Database: {Database}", mysqlDatabase ?? "NOT SET");
-Log.Information("  User: {User}", mysqlUser ?? "NOT SET");
-Log.Information("  Port: {Port}", mysqlPort);
-
 var connectionString = $"Server={mysqlHost};Database={mysqlDatabase};User={mysqlUser};Password={mysqlPassword};Port={mysqlPort};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
 
 // Only add database context if connection string is available
@@ -229,7 +199,7 @@ Log.Information("Current environment: {Environment}, Storage provider: {StorageP
 // Force in-memory storage for Test environment
 if (appEnvironment.Equals("Test", StringComparison.OrdinalIgnoreCase))
 {
-    builder.Services.AddScoped<Normaize.Core.Interfaces.IStorageService, Normaize.Data.Services.InMemoryStorageService>();
+    builder.Services.AddScoped<IStorageService, Normaize.Data.Services.InMemoryStorageService>();
     Log.Information("Using in-memory storage service for Test environment");
 }
 else
@@ -286,16 +256,6 @@ var hasDatabaseConnection = !string.IsNullOrEmpty(Environment.GetEnvironmentVari
                            (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLDATABASE")) && 
                             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MYSQLUSER")));
 
-// Log environment variables for debugging (without sensitive data)
-Log.Information("Database connection detection:");
-Log.Information("  MYSQLHOST: {MYSQLHOST}", Environment.GetEnvironmentVariable("MYSQLHOST") ?? "NOT SET");
-Log.Information("  MYSQLDATABASE: {MYSQLDATABASE}", Environment.GetEnvironmentVariable("MYSQLDATABASE") ?? "NOT SET");
-Log.Information("  MYSQLUSER: {MYSQLUSER}", Environment.GetEnvironmentVariable("MYSQLUSER") ?? "NOT SET");
-Log.Information("  MYSQLPORT: {MYSQLPORT}", Environment.GetEnvironmentVariable("MYSQLPORT") ?? "NOT SET");
-Log.Information("  DATABASE_URL: {DATABASE_URL}", Environment.GetEnvironmentVariable("DATABASE_URL") ?? "NOT SET");
-Log.Information("  ASPNETCORE_ENVIRONMENT: {Environment}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "NOT SET");
-Log.Information("  Has database connection: {HasConnection}", hasDatabaseConnection);
-
 // Also check if we're in a production-like environment and force migration attempts
 var isProductionLike = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Production", StringComparison.OrdinalIgnoreCase) == true ||
                        Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Staging", StringComparison.OrdinalIgnoreCase) == true ||
@@ -305,10 +265,6 @@ var isProductionLike = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMEN
 var isContainerized = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PORT")) ||
                      File.Exists("/.dockerenv") ||
                      Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
-
-Log.Information("Environment detection:");
-Log.Information("  Is production-like: {IsProductionLike}", isProductionLike);
-Log.Information("  Is containerized: {IsContainerized}", isContainerized);
 
 if (hasDatabaseConnection || isProductionLike || isContainerized)
 {
