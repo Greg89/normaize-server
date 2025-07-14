@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Normaize.API.Services;
+using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 
 namespace Normaize.API.Controllers;
@@ -18,17 +19,19 @@ public class HealthController : ControllerBase
     }
 
     [HttpGet]
+    [ProducesResponseType(typeof(HealthResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public IActionResult Get()
     {
         _loggingService.LogUserAction("Health check requested");
         
-        return Ok(new
+        return Ok(new HealthResponseDto
         {
-            status = "healthy",
-            timestamp = DateTime.UtcNow,
-            service = "Normaize API",
-            version = "1.0.0",
-            environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown"
+            Status = "healthy",
+            Timestamp = DateTime.UtcNow,
+            Service = "Normaize API",
+            Version = "1.0.0",
+            Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown"
         });
     }
 
