@@ -36,7 +36,7 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 
 ### API Layer (Normaize.API)
 - [ ] `Normaize.API/Program.cs`
-- [ ] `Normaize.API/Controllers/DataSetsController.cs`
+- [DONE] `Normaize.API/Controllers/DataSetsController.cs`
 - [ ] `Normaize.API/Controllers/HealthController.cs`
 - [ ] `Normaize.API/Middleware/Auth0Middleware.cs`
 - [ ] `Normaize.API/Middleware/ExceptionHandlingMiddleware.cs`
