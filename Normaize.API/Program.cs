@@ -436,4 +436,4 @@ finally
 }
 
 // Make Program class accessible for integration tests
-public partial class Program { } 
+public static partial class Program { } 
