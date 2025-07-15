@@ -65,7 +65,6 @@ finally
 }
 
 // Entry point for integration tests
-// SonarQube: This class is required for ASP.NET Core integration testing
-// It is not a utility class but the application entry point
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1050:Declare types in namespaces", Justification = "Required for ASP.NET Core integration testing")]
 public partial class Program { }
  

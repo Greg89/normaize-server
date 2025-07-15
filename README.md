@@ -4,6 +4,7 @@
 [![Pull Request Check](https://github.com/Greg89/normaize-server/actions/workflows/pr-check.yml/badge.svg)](https://github.com/Greg89/normaize-server/actions/workflows/pr-check.yml)
 [![.NET](https://img.shields.io/badge/.NET-9.0-blue.svg)](https://dotnet.microsoft.com/download/dotnet/9.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Greg89_normaize-server&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Greg89_normaize-server)
 
 A comprehensive web application for normalizing, comparing, analyzing, and visualizing data from various sources.
 
