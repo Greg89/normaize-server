@@ -65,5 +65,7 @@ finally
 }
 
 // Entry point for integration tests
+// SonarQube: This class is required for ASP.NET Core integration testing
+// It is not a utility class but the application entry point
 public partial class Program { }
  

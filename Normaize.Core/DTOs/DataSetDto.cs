@@ -35,7 +35,7 @@ public class DataSetUploadResponse
 
 public class FileUploadDto
 {
-    public IFormFile File { get; set; } = null!;
+    public IFormFile? File { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
 } 
