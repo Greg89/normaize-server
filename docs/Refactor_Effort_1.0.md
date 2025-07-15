@@ -35,10 +35,10 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 ## Files to Review
 
 ### API Layer (Normaize.API)
-- [ ] `Normaize.API/Program.cs`
+- [DONE] `Normaize.API/Program.cs`
 - [DONE] `Normaize.API/Controllers/DataSetsController.cs`
-- [ ] `Normaize.API/Controllers/HealthController.cs`
-- [ ] `Normaize.API/Middleware/Auth0Middleware.cs`
+- [DONE] `Normaize.API/Controllers/HealthController.cs`
+- [DONE] `Normaize.API/Middleware/Auth0Middleware.cs`
 - [ ] `Normaize.API/Middleware/ExceptionHandlingMiddleware.cs`
 - [ ] `Normaize.API/Middleware/RequestLoggingMiddleware.cs`
 - [ ] `Normaize.API/Services/InMemoryStorageService.cs`
@@ -125,7 +125,125 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 ## Review Progress
 
 ### Completed Files
-<!-- Files will be marked as completed by crossing them out -->
+
+#### `Normaize.API/Controllers/HealthController.cs` ✅
+**Review Date**: 2025-07-14
+
+**Overview & Description**:
+- **Purpose**: Provides basic health status endpoint for the application
+- **Responsibilities**: 
+  - Returns application health status
+  - Logs health check requests
+  - Provides service information (name, version, environment)
+- **Role**: Simple status endpoint for monitoring and load balancers
+
+**Code Quality Check** ✅:
+- No compiler warnings or errors
+- Clean, readable code
+- Proper use of async/await patterns
+- Consistent naming conventions
+- Appropriate use of attributes and response types
+
+**Code Efficiency** ✅:
+- No code duplication
+- Efficient use of DTOs
+- Proper dependency injection
+- Minimal, focused implementation
+
+**Clean Architecture Compliance** ✅:
+- ✅ **Dependency Direction**: Correctly depends on Core layer (HealthResponseDto)
+- ✅ **Layer Separation**: Clear API layer boundary
+- ✅ **Interface Segregation**: Uses IStructuredLoggingService interface
+- ✅ **Single Responsibility**: Only handles basic health status
+- ✅ **Dependency Inversion**: Depends on abstractions (IStructuredLoggingService)
+- ✅ **No Circular Dependencies**: Clean dependency graph
+- ✅ **Proper Namespacing**: Correctly placed in API.Controllers namespace
+
+**Test Coverage** ✅:
+- 3 comprehensive unit tests covering all functionality
+- Tests verify response structure, data accuracy, and logging
+- All tests passing (3/3)
+- Good test coverage for a simple controller
+
+**Improvements Made**:
+- Previously had multiple responsibilities (basic health + detailed monitoring)
+- Successfully refactored to separate HealthController (basic) and HealthMonitoringController (detailed)
+- Follows Single Responsibility Principle
+- Uses proper DTOs for response structure
+
+**SonarQube Status**: ✅ No issues detected
+
+**Architecture Notes**:
+- This controller was part of a successful refactoring effort to separate concerns
+- Basic health endpoint is now separate from detailed health monitoring
+- Serves as a good example of Clean Architecture implementation
+
+---
+
+#### `Normaize.API/Middleware/Auth0Middleware.cs` ✅
+**Review Date**: 2025-07-14
+
+**Overview & Description**:
+- **Purpose**: Extracts user information from JWT tokens and makes it available to downstream middleware and controllers
+- **Responsibilities**: 
+  - Extracts user ID, email, and name from JWT claims
+  - Stores user information in HttpContext.Items for easy access
+  - Integrates with Auth0 JWT authentication
+- **Role**: User context provider for the application pipeline
+
+**Code Quality Check** ✅:
+- No compiler warnings or errors
+- Clean, focused implementation
+- Proper use of extension methods
+- Consistent naming conventions
+- Appropriate null checking and safety
+
+**Code Efficiency** ✅:
+- No code duplication
+- Efficient claim extraction
+- Minimal overhead in request pipeline
+- Proper use of HttpContext.Items for data sharing
+
+**Clean Architecture Compliance** ✅:
+- ✅ **Dependency Direction**: Correctly placed in API layer
+- ✅ **Layer Separation**: Clear middleware boundary
+- ✅ **Interface Segregation**: Uses standard ASP.NET Core interfaces
+- ✅ **Single Responsibility**: Only handles user information extraction
+- ✅ **Dependency Inversion**: Uses standard ASP.NET Core abstractions
+- ✅ **No Circular Dependencies**: Clean dependency graph
+- ✅ **Proper Namespacing**: Correctly placed in API.Middleware namespace
+
+**Test Coverage** ⚠️:
+- **No direct unit tests** for this middleware
+- **Indirectly tested** through integration tests and other middleware
+- **Recommendation**: Add unit tests for claim extraction logic
+- **Current coverage**: Relies on integration testing
+
+**Integration Points**:
+- **Used by**: RequestLoggingMiddleware (accesses UserId from context.Items)
+- **Used by**: DataSetsController (uses User.FindFirst for claims)
+- **Configuration**: Integrated in MiddlewareConfiguration.ConfigureAuthentication()
+- **Authentication**: Works with Auth0 JWT Bearer tokens
+
+**Improvements Made**:
+- Clean separation of concerns from authentication configuration
+- Proper use of extension method pattern for middleware registration
+- Efficient user information extraction and storage
+
+**SonarQube Status**: ✅ No issues detected
+
+**Architecture Notes**:
+- This middleware serves as a bridge between Auth0 authentication and application logic
+- Provides consistent user context access throughout the application
+- Follows ASP.NET Core middleware patterns correctly
+- Could benefit from unit test coverage for better reliability
+
+**Recommendations**:
+1. **Add unit tests** for claim extraction logic
+2. **Consider adding logging** for debugging authentication issues
+3. **Document expected claim types** for Auth0 integration
+
+---
 
 ### In Progress
 <!-- Currently being reviewed -->
