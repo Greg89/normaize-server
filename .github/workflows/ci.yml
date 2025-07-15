@@ -10,8 +10,10 @@ env:
 jobs:
   build-test-coverage:
     runs-on: ubuntu-latest
-    # Skip this job if commit message contains [skip ci]
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    # Skip this job if commit message contains [skip ci] or if it's a version-bump branch
+    if: |
+      !contains(github.event.head_commit.message, '[skip ci]') &&
+      !startsWith(github.ref, 'refs/heads/version-bump/')
     
     steps:
     - name: Checkout code

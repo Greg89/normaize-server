@@ -13,6 +13,7 @@ jobs:
     permissions:
       contents: write
       actions: read
+      pull-requests: write
     
     steps:
     - name: Checkout code
@@ -143,16 +144,23 @@ jobs:
           echo "has-changes=true" >> $GITHUB_OUTPUT
         fi
 
-    - name: Create version bump commit
+    - name: Create version bump branch and commit
       if: steps.check-changes.outputs.has-changes == 'true'
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
+        # Create a new branch for the version bump
+        BRANCH_NAME="version-bump/${{ steps.new-version.outputs.new-version }}"
+        git checkout -b "$BRANCH_NAME"
+        
+        # Commit the version changes with [skip ci] to prevent CI loops
         git commit -m "chore: bump version to ${{ steps.new-version.outputs.new-version }} [skip ci]"
         
-        # Push the commit to main branch
-        git push origin HEAD:main
+        # Push the branch to origin
+        git push origin "$BRANCH_NAME"
+        
+        echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
     - name: Skip commit - no changes
       if: steps.check-changes.outputs.has-changes == 'false'
@@ -160,7 +168,45 @@ jobs:
         echo "No version changes detected, skipping commit"
         echo "This might happen if the version was already bumped or no relevant changes were made"
 
-    - name: Create GitHub Release
+    - name: Create Pull Request
+      if: steps.check-changes.outputs.has-changes == 'true'
+      uses: peter-evans/create-pull-request@v6
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "chore: bump version to ${{ steps.new-version.outputs.new-version }} [skip ci]"
+        branch: ${{ steps.check-changes.outputs.has-changes == 'true' && format('version-bump/{0}', steps.new-version.outputs.new-version) || '' }}
+        base: main
+        title: "chore: bump version to ${{ steps.new-version.outputs.new-version }}"
+        body: |
+          ## Automated Version Bump
+          
+          This PR was automatically created after a successful CI/CD pipeline completion.
+          
+          ### Changes
+          - Updated version from `${{ steps.current-version.outputs.version }}` to `${{ steps.new-version.outputs.new-version }}`
+          - Version bump type: **${{ steps.bump-type.outputs.bump-type }}**
+          
+          ### Version Bump Details
+          - **Previous Version**: ${{ steps.current-version.outputs.version }}
+          - **New Version**: ${{ steps.new-version.outputs.new-version }}
+          - **Bump Type**: ${{ steps.bump-type.outputs.bump-type }}
+          
+          ### Files Changed
+          - All `.csproj` files updated with new version
+          - AssemblyInfo.cs updated (if present)
+          
+          ### Notes
+          - This PR includes `[skip ci]` in the commit message to prevent CI loops
+          - Merge this PR to complete the version bump
+          - A GitHub release will be created after the PR is merged
+        labels: |
+          automated
+          version-bump
+        assignees: ${{ github.actor }}
+        reviewers: ${{ github.actor }}
+
+    - name: Create GitHub Release (after PR merge)
+      if: steps.check-changes.outputs.has-changes == 'true'
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -170,12 +216,13 @@ jobs:
         body: |
           ## Version ${{ steps.new-version.outputs.new-version }}
           
-          This is an automated release created after successful CI/CD pipeline completion.
+          This is an automated release created after successful CI/CD pipeline completion and version bump PR merge.
           
           ### Changes
           - Automated version bump
           - All tests passed
           - CI/CD pipeline successful
+          - Version bump PR merged
           
           ### Version Bump Type
           **${{ steps.bump-type.outputs.bump-type }}** version increment
