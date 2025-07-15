@@ -39,11 +39,9 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 - [DONE] `Normaize.API/Controllers/DataSetsController.cs`
 - [DONE] `Normaize.API/Controllers/HealthController.cs`
 - [DONE] `Normaize.API/Middleware/Auth0Middleware.cs`
-- [ ] `Normaize.API/Middleware/ExceptionHandlingMiddleware.cs`
+- [DONE] `Normaize.API/Middleware/ExceptionHandlingMiddleware.cs`
 - [ ] `Normaize.API/Middleware/RequestLoggingMiddleware.cs`
 - [ ] `Normaize.API/Services/InMemoryStorageService.cs`
-- [ ] `Normaize.API/Services/LocalStorageService.cs`
-- [ ] `Normaize.API/Services/SftpStorageService.cs`
 - [ ] `Normaize.API/Services/StructuredLoggingService.cs`
 - [ ] `Normaize.API/Normaize.API.csproj`
 
