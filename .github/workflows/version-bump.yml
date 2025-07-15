@@ -37,16 +37,29 @@ jobs:
     - name: Get current version
       id: current-version
       run: |
+        echo "=== Current Version Detection Debug ==="
+        
         # Extract current version from .csproj files
+        echo "Looking for Version tags in .csproj files..."
+        find . -name "*.csproj" -exec echo "Found: {}" \;
+        
+        echo "Extracting version from Normaize.API.csproj..."
         VERSION=$(grep -o '<Version>.*</Version>' Normaize.API/Normaize.API.csproj | sed 's/<Version>\(.*\)<\/Version>/\1/' || echo "1.0.0")
+        
+        echo "Raw grep output:"
+        grep -o '<Version>.*</Version>' Normaize.API/Normaize.API.csproj || echo "No Version tag found"
+        
+        echo "Extracted version: '$VERSION'"
         
         # If no version found, default to 1.0.0
         if [ -z "$VERSION" ] || [ "$VERSION" = "" ]; then
           VERSION="1.0.0"
+          echo "Version was empty, defaulting to: $VERSION"
         fi
         
-        echo "Current version: $VERSION"
+        echo "Final current version: $VERSION"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "=== End Current Version Detection Debug ==="
 
     - name: Determine version bump type
       id: bump-type
@@ -74,14 +87,16 @@ jobs:
         CURRENT_VERSION="${{ steps.current-version.outputs.version }}"
         BUMP_TYPE="${{ steps.bump-type.outputs.bump-type }}"
         
-        echo "Current version: $CURRENT_VERSION"
-        echo "Bump type: $BUMP_TYPE"
+        echo "=== Version Calculation Debug ==="
+        echo "Current version from step: $CURRENT_VERSION"
+        echo "Bump type from step: $BUMP_TYPE"
         
         # Parse current version with fallback
         if [[ "$CURRENT_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
           MAJOR="${BASH_REMATCH[1]}"
           MINOR="${BASH_REMATCH[2]}"
           PATCH="${BASH_REMATCH[3]}"
+          echo "Successfully parsed version: $MAJOR.$MINOR.$PATCH"
         else
           echo "Invalid version format, defaulting to 1.0.0"
           MAJOR=1
@@ -89,7 +104,7 @@ jobs:
           PATCH=0
         fi
         
-        echo "Parsed version: $MAJOR.$MINOR.$PATCH"
+        echo "Parsed version components: MAJOR=$MAJOR, MINOR=$MINOR, PATCH=$PATCH"
         
         # Calculate new version based on bump type
         case $BUMP_TYPE in
@@ -97,51 +112,108 @@ jobs:
             NEW_MAJOR=$((MAJOR + 1))
             NEW_MINOR=0
             NEW_PATCH=0
+            echo "Major bump: $MAJOR.$MINOR.$PATCH -> $NEW_MAJOR.$NEW_MINOR.$NEW_PATCH"
             ;;
           "minor")
             NEW_MAJOR=$MAJOR
             NEW_MINOR=$((MINOR + 1))
             NEW_PATCH=0
+            echo "Minor bump: $MAJOR.$MINOR.$PATCH -> $NEW_MAJOR.$NEW_MINOR.$NEW_PATCH"
             ;;
           "patch")
             NEW_MAJOR=$MAJOR
             NEW_MINOR=$MINOR
             NEW_PATCH=$((PATCH + 1))
+            echo "Patch bump: $MAJOR.$MINOR.$PATCH -> $NEW_MAJOR.$NEW_MINOR.$NEW_PATCH"
             ;;
           *)
             echo "Unknown bump type, defaulting to patch"
             NEW_MAJOR=$MAJOR
             NEW_MINOR=$MINOR
             NEW_PATCH=$((PATCH + 1))
+            echo "Default patch bump: $MAJOR.$MINOR.$PATCH -> $NEW_MAJOR.$NEW_MINOR.$NEW_PATCH"
             ;;
         esac
         
         NEW_VERSION="$NEW_MAJOR.$NEW_MINOR.$NEW_PATCH"
-        echo "New version: $NEW_VERSION"
+        echo "Final new version: $NEW_VERSION"
         echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "=== End Version Calculation Debug ==="
 
     - name: Update version in project files
+      shell: pwsh
       run: |
-        NEW_VERSION="${{ steps.new-version.outputs.new-version }}"
+        $NEW_VERSION = "${{ steps.new-version.outputs.new-version }}"
+        Write-Host "Updating version to: $NEW_VERSION"
         
-        # Update all .csproj files
-        find . -name "*.csproj" -exec sed -i "s/<Version>.*<\/Version>/<Version>$NEW_VERSION<\/Version>/g" {} \;
+        # Find all .csproj files and update their version
+        $csprojFiles = Get-ChildItem -Path . -Filter "*.csproj" -Recurse
+        Write-Host "Found $($csprojFiles.Count) .csproj files"
         
-        # Update AssemblyInfo.cs if it exists
-        find . -name "AssemblyInfo.cs" -exec sed -i "s/AssemblyVersion(\".*\")/AssemblyVersion(\"$NEW_VERSION\")/g" {} \; 2>/dev/null || true
+        foreach ($file in $csprojFiles) {
+          Write-Host "Processing: $($file.FullName)"
+          
+          # Read the file content
+          $content = Get-Content $file.FullName -Raw
+          
+          # Update the version using regex
+          $updatedContent = $content -replace '<Version>.*?</Version>', "<Version>$NEW_VERSION</Version>"
+          
+          # Write back to file
+          Set-Content $file.FullName -Value $updatedContent -NoNewline
+          
+          Write-Host "Updated version in: $($file.Name)"
+        }
         
-        echo "Updated version to $NEW_VERSION in all project files"
+        # Also update AssemblyInfo.cs if it exists
+        $assemblyInfoFiles = Get-ChildItem -Path . -Filter "AssemblyInfo.cs" -Recurse
+        foreach ($file in $assemblyInfoFiles) {
+          Write-Host "Processing AssemblyInfo: $($file.FullName)"
+          
+          $content = Get-Content $file.FullName -Raw
+          $updatedContent = $content -replace 'AssemblyVersion\(".*?"\)', "AssemblyVersion(`"$NEW_VERSION`")"
+          
+          Set-Content $file.FullName -Value $updatedContent -NoNewline
+          Write-Host "Updated AssemblyVersion in: $($file.Name)"
+        }
+        
+        Write-Host "Version update completed for $NEW_VERSION"
 
     - name: Check for changes
       id: check-changes
       run: |
+        echo "Checking for changes after version update..."
+        
+        # Show current git status
+        echo "Git status:"
+        git status --porcelain
+        
+        # Show what files would be staged
+        echo "Files that would be staged:"
+        git add -A --dry-run
+        
+        # Actually stage the files
         git add -A
+        
+        # Show staged changes
+        echo "Staged changes:"
+        git diff --staged --name-only
+        
+        # Check if there are any staged changes
         if git diff --staged --quiet; then
           echo "No changes to commit"
           echo "has-changes=false" >> $GITHUB_OUTPUT
+          
+          # Show the current version in files for debugging
+          echo "Current versions in .csproj files:"
+          grep -r "<Version>" . --include="*.csproj" || echo "No Version tags found"
         else
           echo "Changes detected"
           echo "has-changes=true" >> $GITHUB_OUTPUT
+          
+          # Show what changed
+          echo "Changes that will be committed:"
+          git diff --staged
         fi
 
     - name: Create version bump branch and commit

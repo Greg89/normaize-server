@@ -65,5 +65,6 @@ finally
 }
 
 // Entry point for integration tests
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1050:Declare types in namespaces", Justification = "Required for ASP.NET Core integration testing")]
 public partial class Program { }
  
