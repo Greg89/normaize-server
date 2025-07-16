@@ -1,6 +1,5 @@
-using AutoMapper;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
@@ -12,340 +11,756 @@ using System.Text.Json;
 using System.Xml;
 using System.Xml.Linq;
 using System.Security.Cryptography;
-using System.Text;
+using System.ComponentModel.DataAnnotations;
 
 namespace Normaize.Core.Services;
 
+public class FileUploadConfiguration
+{
+    public const string SectionName = "FileUpload";
+    
+    [Range(1024, 104857600, ErrorMessage = "MaxFileSize must be between 1KB and 100MB")]
+    public int MaxFileSize { get; set; } = 10485760; // 10MB default
+    
+    [Required(ErrorMessage = "AllowedExtensions is required")]
+    [MinLength(1, ErrorMessage = "At least one file extension must be allowed")]
+    public string[] AllowedExtensions { get; set; } = [".csv", ".json", ".xlsx", ".xls", ".xml", ".parquet", ".txt"];
+    
+    [Range(100, 1000000, ErrorMessage = "MaxPreviewRows must be between 100 and 1,000,000")]
+    public int MaxPreviewRows { get; set; } = 10;
+    
+    [Range(1, 100, ErrorMessage = "MaxConcurrentUploads must be between 1 and 100")]
+    public int MaxConcurrentUploads { get; set; } = 5;
+    
+    public bool EnableCompression { get; set; } = true;
+    
+    public string[] BlockedExtensions { get; set; } = [".exe", ".bat", ".cmd", ".ps1", ".sh", ".dll", ".so", ".dylib"];
+}
+
+public class DataProcessingConfiguration
+{
+    public const string SectionName = "DataProcessing";
+    
+    [Range(1000, 1000000, ErrorMessage = "MaxRowsPerDataset must be between 1,000 and 1,000,000")]
+    public int MaxRowsPerDataset { get; set; } = 10000;
+    
+    [Range(1, 1000, ErrorMessage = "MaxColumnsPerDataset must be between 1 and 1,000")]
+    public int MaxColumnsPerDataset { get; set; } = 100;
+    
+    [Range(1, 100, ErrorMessage = "MaxPreviewRows must be between 1 and 100")]
+    public int MaxPreviewRows { get; set; } = 10;
+    
+    public bool EnableDataValidation { get; set; } = true;
+    
+    public bool EnableSchemaInference { get; set; } = true;
+    
+    [Range(1, 100, ErrorMessage = "MaxProcessingTimeSeconds must be between 1 and 100")]
+    public int MaxProcessingTimeSeconds { get; set; } = 30;
+}
+
 public class FileUploadService : IFileUploadService
 {
-    private readonly IConfiguration _configuration;
+    private readonly FileUploadConfiguration _fileUploadConfig;
+    private readonly DataProcessingConfiguration _dataProcessingConfig;
     private readonly ILogger<FileUploadService> _logger;
     private readonly IStorageService _storageService;
-    private readonly int _maxRowsForInlineStorage;
-    private readonly int _maxFileSizeForInlineStorage;
+
+    // Constants for better maintainability
+    private const int DefaultColumnIndex = 1;
+    private const int HeaderRowIndex = 1;
+    private const int DataStartRowIndex = 2;
+    private const string DefaultColumnPrefix = "Column";
+    private const string DefaultDelimiter = ",";
 
     public FileUploadService(
-        IConfiguration configuration, 
+        IOptions<FileUploadConfiguration> fileUploadConfig,
+        IOptions<DataProcessingConfiguration> dataProcessingConfig,
         ILogger<FileUploadService> logger,
         IStorageService storageService)
     {
-        _configuration = configuration;
-        _logger = logger;
-        _storageService = storageService;
-        _maxRowsForInlineStorage = configuration.GetValue<int>("DataProcessing:MaxRowsPerDataset", 10000);
-        _maxFileSizeForInlineStorage = configuration.GetValue<int>("FileUpload:MaxFileSize", 10485760); // 10MB
+        _fileUploadConfig = fileUploadConfig?.Value ?? throw new ArgumentNullException(nameof(fileUploadConfig));
+        _dataProcessingConfig = dataProcessingConfig?.Value ?? throw new ArgumentNullException(nameof(dataProcessingConfig));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _storageService = storageService ?? throw new ArgumentNullException(nameof(storageService));
+        
+        ValidateConfiguration();
+        LogConfiguration();
+    }
+
+    private void ValidateConfiguration()
+    {
+        var validationResults = new List<ValidationResult>();
+        var validationContext = new ValidationContext(_fileUploadConfig);
+        
+        if (!Validator.TryValidateObject(_fileUploadConfig, validationContext, validationResults, true))
+        {
+            var errors = string.Join(", ", validationResults.Select(r => r.ErrorMessage));
+            throw new InvalidOperationException($"FileUpload configuration validation failed: {errors}");
+        }
+        
+        validationResults.Clear();
+        validationContext = new ValidationContext(_dataProcessingConfig);
+        
+        if (!Validator.TryValidateObject(_dataProcessingConfig, validationContext, validationResults, true))
+        {
+            var errors = string.Join(", ", validationResults.Select(r => r.ErrorMessage));
+            throw new InvalidOperationException($"DataProcessing configuration validation failed: {errors}");
+        }
+        
+        // Additional cross-validation
+        if (_fileUploadConfig.AllowedExtensions.Any(ext => _fileUploadConfig.BlockedExtensions.Contains(ext)))
+        {
+            throw new InvalidOperationException("AllowedExtensions cannot contain blocked extensions");
+        }
+    }
+
+    private void LogConfiguration()
+    {
+        _logger.LogInformation("FileUploadService initialized with configuration: " +
+            "MaxFileSize={MaxFileSize}MB, MaxRowsPerDataset={MaxRowsPerDataset}, " +
+            "AllowedExtensions=[{AllowedExtensions}], BlockedExtensions=[{BlockedExtensions}]",
+            _fileUploadConfig.MaxFileSize / (1024 * 1024),
+            _dataProcessingConfig.MaxRowsPerDataset,
+            string.Join(", ", _fileUploadConfig.AllowedExtensions),
+            string.Join(", ", _fileUploadConfig.BlockedExtensions));
     }
 
     public async Task<string> SaveFileAsync(FileUploadRequest fileRequest)
     {
-        return await _storageService.SaveFileAsync(fileRequest);
+        var correlationId = GenerateCorrelationId();
+        _logger.LogInformation("Starting file upload. CorrelationId: {CorrelationId}, FileName: {FileName}, FileSize: {FileSize}", 
+            correlationId, fileRequest.FileName, fileRequest.FileSize);
+
+        try
+        {
+            // Validate file before saving
+            var isValid = await ValidateFileAsync(fileRequest);
+            if (!isValid)
+            {
+                _logger.LogWarning("File validation failed. CorrelationId: {CorrelationId}, FileName: {FileName}", 
+                    correlationId, fileRequest.FileName);
+                throw new FileValidationException($"File validation failed for {fileRequest.FileName}");
+            }
+
+            var filePath = await _storageService.SaveFileAsync(fileRequest);
+            
+            _logger.LogInformation("File uploaded successfully. CorrelationId: {CorrelationId}, FileName: {FileName}, FilePath: {FilePath}", 
+                correlationId, fileRequest.FileName, filePath);
+            
+            return filePath;
+        }
+        catch (FileValidationException)
+        {
+            // Re-throw validation exceptions as they are already logged
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving file. CorrelationId: {CorrelationId}, FileName: {FileName}, FileSize: {FileSize}", 
+                correlationId, fileRequest.FileName, fileRequest.FileSize);
+            throw new FileUploadException($"Failed to save file {fileRequest.FileName}", ex);
+        }
     }
 
     public Task<bool> ValidateFileAsync(FileUploadRequest fileRequest)
     {
-        if (fileRequest.FileStream == null || fileRequest.FileStream.Length == 0)
+        var correlationId = GenerateCorrelationId();
+        _logger.LogDebug("Validating file. CorrelationId: {CorrelationId}, FileName: {FileName}", 
+            correlationId, fileRequest.FileName);
+
+        try
+        {
+            if (!IsFileSizeValid(fileRequest.FileSize, correlationId, fileRequest.FileName))
+                return Task.FromResult(false);
+
+            var fileExtension = GetFileExtension(fileRequest.FileName);
+            
+            if (!IsFileExtensionValid(fileExtension, correlationId, fileRequest.FileName))
+                return Task.FromResult(false);
+
+            _logger.LogDebug("File validation passed. CorrelationId: {CorrelationId}, FileName: {FileName}", 
+                correlationId, fileRequest.FileName);
+            return Task.FromResult(true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during file validation. CorrelationId: {CorrelationId}, FileName: {FileName}", 
+                correlationId, fileRequest.FileName);
             return Task.FromResult(false);
-
-        var maxFileSize = _configuration.GetValue<long>("FileUpload:MaxFileSize", 100 * 1024 * 1024); // 100MB default
-        if (fileRequest.FileSize > maxFileSize)
-            return Task.FromResult(false);
-
-        var allowedExtensions = _configuration.GetSection("FileUpload:AllowedExtensions").Get<string[]>() ?? 
-                               new[] { ".csv", ".json", ".xlsx", ".xls", ".xml", ".parquet", ".txt" };
-
-        var fileExtension = Path.GetExtension(fileRequest.FileName).ToLowerInvariant();
-        if (!allowedExtensions.Contains(fileExtension))
-            return Task.FromResult(false);
-
-        return Task.FromResult(true);
+        }
     }
 
     public async Task<DataSet> ProcessFileAsync(string filePath, string fileType)
     {
-        // Get file size from storage service
-        var fileExists = await _storageService.FileExistsAsync(filePath);
-        if (!fileExists)
-        {
-            throw new FileNotFoundException($"File not found: {filePath}");
-        }
+        var correlationId = GenerateCorrelationId();
+        _logger.LogInformation("Starting file processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}, FileType: {FileType}", 
+            correlationId, filePath, fileType);
 
-        var dataSet = new DataSet
-        {
-            FileName = Path.GetFileName(filePath),
-            FilePath = filePath,
-            FileType = GetFileTypeFromExtension(fileType),
-            FileSize = 0, // Will be calculated during processing
-            UploadedAt = DateTime.UtcNow,
-            StorageProvider = GetStorageProviderFromPath(filePath)
-        };
+        // Validate file exists
+        await ValidateFileExistsAsync(filePath, correlationId);
+
+        var dataSet = CreateInitialDataSet(filePath, fileType);
 
         try
         {
-            switch (fileType.ToLowerInvariant())
-            {
-                case ".csv":
-                    await ProcessCsvFileAsync(filePath, dataSet);
-                    break;
-                case ".json":
-                    await ProcessJsonFileAsync(filePath, dataSet);
-                    break;
-                case ".xlsx":
-                case ".xls":
-                    await ProcessExcelFileAsync(filePath, dataSet);
-                    break;
-                case ".xml":
-                    await ProcessXmlFileAsync(filePath, dataSet);
-                    break;
-                case ".txt":
-                    await ProcessTextFileAsync(filePath, dataSet);
-                    break;
-                default:
-                    throw new NotSupportedException($"File type {fileType} is not supported");
-            }
+            await ProcessFileByTypeAsync(filePath, fileType, dataSet, correlationId);
+            await FinalizeDataSetAsync(filePath, dataSet);
 
-            // Generate data hash for change detection
-            dataSet.DataHash = await GenerateDataHashAsync(filePath);
-            
-            // Determine storage strategy
-            dataSet.UseSeparateTable = dataSet.RowCount > _maxRowsForInlineStorage || 
-                                      dataSet.FileSize > _maxFileSizeForInlineStorage;
-
-            dataSet.IsProcessed = true;
-            dataSet.ProcessedAt = DateTime.UtcNow;
+            _logger.LogInformation("File processed successfully. CorrelationId: {CorrelationId}, FilePath: {FilePath}, Rows: {RowCount}, Columns: {ColumnCount}, UseSeparateTable: {UseSeparateTable}", 
+                correlationId, filePath, dataSet.RowCount, dataSet.ColumnCount, dataSet.UseSeparateTable);
+        }
+        catch (UnsupportedFileTypeException)
+        {
+            // Re-throw specific exceptions
+            throw;
+        }
+        catch (FileProcessingException)
+        {
+            // Re-throw processing exceptions
+            throw;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing file {FilePath}", filePath);
-            dataSet.IsProcessed = false;
-            dataSet.ProcessingErrors = ex.Message;
+            HandleProcessingError(filePath, fileType, dataSet, correlationId, ex);
         }
 
         return dataSet;
     }
 
-    private async Task ProcessCsvFileAsync(string filePath, DataSet dataSet)
-    {
-        using var fileStream = await _storageService.GetFileAsync(filePath);
-        using var reader = new StreamReader(fileStream);
-        using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
-        {
-            HeaderValidated = null,
-            MissingFieldFound = null,
-            Delimiter = ",",
-            HasHeaderRecord = true
-        });
+    // Helper methods for better code organization
+    private static string GenerateCorrelationId() => Guid.NewGuid().ToString();
 
+    private bool IsFileSizeValid(long fileSize, string correlationId, string fileName)
+    {
+        if (fileSize <= _fileUploadConfig.MaxFileSize) return true;
+        
+        _logger.LogWarning("File size exceeds limit. CorrelationId: {CorrelationId}, FileName: {FileName}, FileSize: {FileSize}, MaxSize: {MaxSize}", 
+            correlationId, fileName, fileSize, _fileUploadConfig.MaxFileSize);
+        return false;
+    }
+
+    private static string GetFileExtension(string fileName) => 
+        Path.GetExtension(fileName).ToLowerInvariant();
+
+    private bool IsFileExtensionValid(string fileExtension, string correlationId, string fileName)
+    {
+        // Check if extension is blocked
+        if (_fileUploadConfig.BlockedExtensions.Contains(fileExtension))
+        {
+            _logger.LogWarning("File extension is blocked. CorrelationId: {CorrelationId}, FileName: {FileName}, Extension: {Extension}", 
+                correlationId, fileName, fileExtension);
+            return false;
+        }
+        
+        // Check if extension is allowed
+        if (!_fileUploadConfig.AllowedExtensions.Contains(fileExtension))
+        {
+            _logger.LogWarning("File extension not allowed. CorrelationId: {CorrelationId}, FileName: {FileName}, Extension: {Extension}, AllowedExtensions: {AllowedExtensions}", 
+                correlationId, fileName, fileExtension, string.Join(", ", _fileUploadConfig.AllowedExtensions));
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task ValidateFileExistsAsync(string filePath, string correlationId)
+    {
+        var fileExists = await _storageService.FileExistsAsync(filePath);
+        if (!fileExists)
+        {
+            var error = $"File not found: {filePath}";
+            _logger.LogError("File not found during processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+                correlationId, filePath);
+            throw new FileNotFoundException(error);
+        }
+    }
+
+    private static DataSet CreateInitialDataSet(string filePath, string fileType) => new()
+    {
+        FileName = Path.GetFileName(filePath),
+        FilePath = filePath,
+        FileType = GetFileTypeFromExtension(fileType),
+        FileSize = 0, // Will be calculated during processing
+        UploadedAt = DateTime.UtcNow,
+        StorageProvider = GetStorageProviderFromPath(filePath)
+    };
+
+    private async Task ProcessFileByTypeAsync(string filePath, string fileType, DataSet dataSet, string correlationId)
+    {
+        var processor = GetFileProcessor(fileType);
+        await processor(filePath, dataSet, correlationId);
+    }
+
+    private delegate Task FileProcessor(string filePath, DataSet dataSet, string correlationId);
+
+    private FileProcessor GetFileProcessor(string fileType) => fileType.ToLowerInvariant() switch
+    {
+        ".csv" => ProcessCsvFileAsync,
+        ".json" => ProcessJsonFileAsync,
+        ".xlsx" or ".xls" => ProcessExcelFileAsync,
+        ".xml" => ProcessXmlFileAsync,
+        ".txt" => ProcessTextFileAsync,
+        _ => throw new UnsupportedFileTypeException($"File type {fileType} is not supported")
+    };
+
+    private async Task FinalizeDataSetAsync(string filePath, DataSet dataSet)
+    {
+        // Generate data hash for change detection
+        dataSet.DataHash = await GenerateDataHashAsync(filePath);
+        
+        // Determine storage strategy
+        dataSet.UseSeparateTable = ShouldUseSeparateTable(dataSet);
+
+        dataSet.IsProcessed = true;
+        dataSet.ProcessedAt = DateTime.UtcNow;
+    }
+
+    private bool ShouldUseSeparateTable(DataSet dataSet) =>
+        dataSet.RowCount >= _dataProcessingConfig.MaxRowsPerDataset || 
+        dataSet.FileSize > _fileUploadConfig.MaxFileSize;
+
+    private void HandleProcessingError(string filePath, string fileType, DataSet dataSet, string correlationId, Exception ex)
+    {
+        var error = $"Error processing file {filePath}: {ex.Message}";
+        _logger.LogError(ex, "Unexpected error during file processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}, FileType: {FileType}", 
+            correlationId, filePath, fileType);
+        
+        dataSet.IsProcessed = false;
+        dataSet.ProcessingErrors = error;
+    }
+
+    private async Task ProcessCsvFileAsync(string filePath, DataSet dataSet, string correlationId)
+    {
+        try
+        {
+            using var fileStream = await _storageService.GetFileAsync(filePath);
+            using var reader = new StreamReader(fileStream);
+            using var csv = CreateCsvReader(reader);
+
+            var (headers, records) = await ExtractCsvDataAsync(csv, correlationId, filePath);
+            var limitedHeaders = LimitColumns(headers, correlationId, filePath);
+
+            PopulateDataSet(dataSet, limitedHeaders, records, fileStream.Length, correlationId, filePath);
+        }
+        catch (CsvHelperException ex)
+        {
+            HandleCsvProcessingError(correlationId, filePath, ex);
+        }
+        catch (JsonException ex)
+        {
+            HandleJsonSerializationError(correlationId, filePath, ex, "CSV");
+        }
+    }
+
+    private static CsvReader CreateCsvReader(StreamReader reader) => new(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
+    {
+        HeaderValidated = null,
+        MissingFieldFound = null,
+        Delimiter = DefaultDelimiter,
+        HasHeaderRecord = true
+    });
+
+    private async Task<(List<string> Headers, List<Dictionary<string, object>> Records)> ExtractCsvDataAsync(
+        CsvReader csv, string correlationId, string filePath)
+    {
         var records = new List<Dictionary<string, object>>();
         var headers = new List<string>();
 
         if (await csv.ReadAsync())
         {
             csv.ReadHeader();
-            headers = csv.HeaderRecord?.ToList() ?? new List<string>();
+            headers = csv.HeaderRecord?.ToList() ?? [];
+            
+            if (headers.Count == 0)
+            {
+                _logger.LogWarning("CSV file has no headers. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+                    correlationId, filePath);
+            }
         }
 
         var rowCount = 0;
-        var maxRows = 10000; // Limit for processing
+        var maxRows = _dataProcessingConfig.MaxRowsPerDataset;
+        
+        // Pre-allocate capacity for better performance
+        records.Capacity = Math.Min(maxRows, 1000); // Reasonable initial capacity
         
         while (await csv.ReadAsync() && rowCount < maxRows)
         {
-            var record = new Dictionary<string, object>();
+            var record = new Dictionary<string, object>(headers.Count); // Pre-allocate dictionary size
             foreach (var header in headers)
             {
-                record[header] = csv.GetField(header) ?? "";
+                var field = csv.GetField(header);
+                record[header] = field ?? string.Empty; // Avoid boxing by using string.Empty
             }
             records.Add(record);
             rowCount++;
         }
 
-        dataSet.ColumnCount = headers.Count;
-        dataSet.RowCount = rowCount;
-        dataSet.Schema = JsonSerializer.Serialize(headers);
-        
-        // Store preview data (first 10 rows)
-        dataSet.PreviewData = JsonSerializer.Serialize(records.Take(10).ToList());
-        
-        // Store full data if small enough
-        if (rowCount <= _maxRowsForInlineStorage)
-        {
-            dataSet.ProcessedData = JsonSerializer.Serialize(records);
-        }
+        return (headers, records);
     }
 
-    private async Task ProcessJsonFileAsync(string filePath, DataSet dataSet)
+    private List<string> LimitColumns(List<string> headers, string correlationId, string filePath)
     {
-        using var fileStream = await _storageService.GetFileAsync(filePath);
-        using var reader = new StreamReader(fileStream);
-        var jsonContent = await reader.ReadToEndAsync();
-        var jsonElement = JsonSerializer.Deserialize<JsonElement>(jsonContent);
+        if (headers.Count <= _dataProcessingConfig.MaxColumnsPerDataset) 
+            return headers;
 
-        var records = new List<Dictionary<string, object>>();
-        var headers = new HashSet<string>();
+        _logger.LogWarning("File has too many columns. CorrelationId: {CorrelationId}, FilePath: {FilePath}, ColumnCount: {ColumnCount}, MaxColumns: {MaxColumns}", 
+            correlationId, filePath, headers.Count, _dataProcessingConfig.MaxColumnsPerDataset);
+        return headers.Take(_dataProcessingConfig.MaxColumnsPerDataset).ToList();
+    }
 
-        if (jsonElement.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var item in jsonElement.EnumerateArray().Take(10000))
-            {
-                if (item.ValueKind == JsonValueKind.Object)
-                {
-                    var record = new Dictionary<string, object>();
-                    foreach (var property in item.EnumerateObject())
-                    {
-                        headers.Add(property.Name);
-                        record[property.Name] = property.Value.ToString();
-                    }
-                    records.Add(record);
-                }
-            }
-        }
-        else if (jsonElement.ValueKind == JsonValueKind.Object)
-        {
-            // Single object - convert to array format
-            var record = new Dictionary<string, object>();
-            foreach (var property in jsonElement.EnumerateObject())
-            {
-                headers.Add(property.Name);
-                record[property.Name] = property.Value.ToString();
-            }
-            records.Add(record);
-        }
-
+    private void PopulateDataSet(DataSet dataSet, List<string> headers, List<Dictionary<string, object>> records, 
+        long fileSize, string correlationId, string filePath)
+    {
         dataSet.ColumnCount = headers.Count;
         dataSet.RowCount = records.Count;
-        dataSet.Schema = JsonSerializer.Serialize(headers.ToList());
-        dataSet.PreviewData = JsonSerializer.Serialize(records.Take(10).ToList());
+        dataSet.FileSize = fileSize;
         
-        if (records.Count <= _maxRowsForInlineStorage)
+        // Optimize JSON serialization with reusable options
+        var jsonOptions = new JsonSerializerOptions
         {
-            dataSet.ProcessedData = JsonSerializer.Serialize(records);
+            WriteIndented = false, // Smaller output
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+        
+        dataSet.Schema = JsonSerializer.Serialize(headers, jsonOptions);
+        
+        // Only serialize preview data if needed
+        if (records.Count > 0)
+        {
+            var previewRecords = records.Take(_dataProcessingConfig.MaxPreviewRows).ToList();
+            dataSet.PreviewData = JsonSerializer.Serialize(previewRecords, jsonOptions);
+        }
+        
+        // Only serialize full data if within limits
+        if (records.Count < _dataProcessingConfig.MaxRowsPerDataset)
+        {
+            dataSet.ProcessedData = JsonSerializer.Serialize(records, jsonOptions);
+        }
+
+        _logger.LogDebug("File processing completed. CorrelationId: {CorrelationId}, FilePath: {FilePath}, Rows: {RowCount}, Columns: {ColumnCount}", 
+            correlationId, filePath, records.Count, headers.Count);
+    }
+
+    private void HandleCsvProcessingError(string correlationId, string filePath, CsvHelperException ex)
+    {
+        // Use string interpolation for better performance
+        var error = $"CSV parsing error: {ex.Message}";
+        _logger.LogError(ex, "CSV parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+            correlationId, filePath);
+        throw new FileProcessingException(error, ex);
+    }
+
+    private void HandleJsonSerializationError(string correlationId, string filePath, JsonException ex, string fileType)
+    {
+        // Use string interpolation for better performance
+        var error = $"JSON serialization error during {fileType} processing: {ex.Message}";
+        _logger.LogError(ex, "JSON serialization failed during {FileType} processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+            fileType, correlationId, filePath);
+        throw new FileProcessingException(error, ex);
+    }
+
+    private async Task ProcessJsonFileAsync(string filePath, DataSet dataSet, string correlationId)
+    {
+        try
+        {
+            using var fileStream = await _storageService.GetFileAsync(filePath);
+            using var reader = new StreamReader(fileStream);
+            var jsonContent = await reader.ReadToEndAsync();
+            var jsonElement = JsonSerializer.Deserialize<JsonElement>(jsonContent);
+
+            var (headers, records) = ExtractJsonData(jsonElement, correlationId, filePath);
+            var limitedHeaders = LimitColumns(headers.ToList(), correlationId, filePath);
+
+            PopulateDataSet(dataSet, limitedHeaders, records, fileStream.Length, correlationId, filePath);
+        }
+        catch (JsonException ex)
+        {
+            var error = $"JSON parsing error: {ex.Message}";
+            _logger.LogError(ex, "JSON parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+                correlationId, filePath);
+            throw new FileProcessingException(error, ex);
         }
     }
 
-    private async Task ProcessExcelFileAsync(string filePath, DataSet dataSet)
+    private (HashSet<string> Headers, List<Dictionary<string, object>> Records) ExtractJsonData(
+        JsonElement jsonElement, string correlationId, string filePath)
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-        using var fileStream = await _storageService.GetFileAsync(filePath);
-        using var package = new ExcelPackage(fileStream);
-        var worksheet = package.Workbook.Worksheets.FirstOrDefault() ?? 
-                       throw new InvalidOperationException("No worksheet found in Excel file");
-
-        var headers = new List<string>();
-        var records = new List<Dictionary<string, object>>();
-
-        // Read headers
-        var headerRow = worksheet.Cells[1, 1, 1, worksheet.Dimension?.Columns ?? 1];
-        foreach (var cell in headerRow)
-        {
-            headers.Add(cell.Value?.ToString() ?? $"Column{cell.Start.Column}");
-        }
-
-        // Read data
-        var rowCount = 0;
-        var maxRows = 10000;
-        for (int row = 2; row <= (worksheet.Dimension?.Rows ?? 1) && rowCount < maxRows; row++)
-        {
-            var record = new Dictionary<string, object>();
-            for (int col = 1; col <= headers.Count; col++)
-            {
-                var cellValue = worksheet.Cells[row, col].Value;
-                record[headers[col - 1]] = cellValue?.ToString() ?? "";
-            }
-            records.Add(record);
-            rowCount++;
-        }
-
-        dataSet.ColumnCount = headers.Count;
-        dataSet.RowCount = rowCount;
-        dataSet.Schema = JsonSerializer.Serialize(headers);
-        dataSet.PreviewData = JsonSerializer.Serialize(records.Take(10).ToList());
-        
-        if (rowCount <= _maxRowsForInlineStorage)
-        {
-            dataSet.ProcessedData = JsonSerializer.Serialize(records);
-        }
-    }
-
-    private async Task ProcessXmlFileAsync(string filePath, DataSet dataSet)
-    {
-        using var fileStream = await _storageService.GetFileAsync(filePath);
-        using var reader = new StreamReader(fileStream);
-        var xmlContent = await reader.ReadToEndAsync();
-        var doc = XDocument.Parse(xmlContent);
-        
         var records = new List<Dictionary<string, object>>();
         var headers = new HashSet<string>();
 
-        // Try to find repeating elements (common pattern in XML data)
-        var root = doc.Root;
-        if (root != null)
+        switch (jsonElement.ValueKind)
         {
-            var children = root.Elements().ToList();
-            if (children.Count > 0)
+            case JsonValueKind.Array:
+                ExtractJsonArrayData(jsonElement, headers, records);
+                break;
+            case JsonValueKind.Object:
+                ExtractJsonObjectData(jsonElement, headers, records);
+                break;
+            default:
+                var error = $"Unsupported JSON structure: {jsonElement.ValueKind}";
+                _logger.LogWarning("Unsupported JSON structure. CorrelationId: {CorrelationId}, FilePath: {FilePath}, ValueKind: {ValueKind}", 
+                    correlationId, filePath, jsonElement.ValueKind);
+                throw new FileProcessingException(error);
+        }
+
+        return (headers, records);
+    }
+
+    private void ExtractJsonArrayData(JsonElement jsonElement, HashSet<string> headers, List<Dictionary<string, object>> records)
+    {
+        var maxRows = _dataProcessingConfig.MaxRowsPerDataset;
+        records.Capacity = Math.Min(maxRows, 1000); // Pre-allocate capacity
+        
+        foreach (var item in jsonElement.EnumerateArray().Take(maxRows))
+        {
+            if (item.ValueKind == JsonValueKind.Object)
             {
-                // Assume first child is the template for data rows
-                var firstChild = children.First();
-                var childElements = firstChild.Elements().ToList();
-                
-                // Extract headers from first element
-                foreach (var element in childElements)
-                {
-                    headers.Add(element.Name.LocalName);
-                }
-                
-                // Process all child elements as data rows
-                foreach (var child in children.Take(10000))
-                {
-                    var record = new Dictionary<string, object>();
-                    foreach (var element in child.Elements())
-                    {
-                        record[element.Name.LocalName] = element.Value ?? "";
-                    }
-                    records.Add(record);
-                }
-            }
-            else
-            {
-                // Single object - convert attributes and elements to record
                 var record = new Dictionary<string, object>();
-                foreach (var attr in root.Attributes())
+                foreach (var property in item.EnumerateObject())
                 {
-                    headers.Add(attr.Name.LocalName);
-                    record[attr.Name.LocalName] = attr.Value ?? "";
-                }
-                foreach (var element in root.Elements())
-                {
-                    headers.Add(element.Name.LocalName);
-                    record[element.Name.LocalName] = element.Value ?? "";
+                    headers.Add(property.Name);
+                    record[property.Name] = property.Value.ToString();
                 }
                 records.Add(record);
             }
         }
+    }
 
-        dataSet.ColumnCount = headers.Count;
-        dataSet.RowCount = records.Count;
-        dataSet.Schema = JsonSerializer.Serialize(headers.ToList());
-        dataSet.PreviewData = JsonSerializer.Serialize(records.Take(10).ToList());
-        
-        if (records.Count <= _maxRowsForInlineStorage)
+    private void ExtractJsonObjectData(JsonElement jsonElement, HashSet<string> headers, List<Dictionary<string, object>> records)
+    {
+        // Single object - convert to array format
+        var record = new Dictionary<string, object>();
+        foreach (var property in jsonElement.EnumerateObject())
         {
-            dataSet.ProcessedData = JsonSerializer.Serialize(records);
+            headers.Add(property.Name);
+            record[property.Name] = property.Value.ToString();
+        }
+        records.Add(record);
+    }
+
+    private async Task ProcessExcelFileAsync(string filePath, DataSet dataSet, string correlationId)
+    {
+        try
+        {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            using var fileStream = await _storageService.GetFileAsync(filePath);
+            using var package = new ExcelPackage(fileStream);
+            var worksheet = GetWorksheet(package);
+
+            var headers = ExtractExcelHeaders(worksheet);
+            var limitedHeaders = LimitColumns(headers, correlationId, filePath);
+            var records = ExtractExcelData(worksheet, limitedHeaders);
+
+            PopulateDataSet(dataSet, limitedHeaders, records, fileStream.Length, correlationId, filePath);
+        }
+        catch (InvalidOperationException ex)
+        {
+            var error = $"Excel processing error: {ex.Message}";
+            _logger.LogError(ex, "Excel processing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+                correlationId, filePath);
+            throw new FileProcessingException(error, ex);
+        }
+        catch (JsonException ex)
+        {
+            HandleJsonSerializationError(correlationId, filePath, ex, "Excel");
         }
     }
 
-    private async Task ProcessTextFileAsync(string filePath, DataSet dataSet)
+    private static ExcelWorksheet GetWorksheet(ExcelPackage package)
     {
-        using var fileStream = await _storageService.GetFileAsync(filePath);
-        using var reader = new StreamReader(fileStream);
-        var content = await reader.ReadToEndAsync();
-        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        
-        var records = new List<Dictionary<string, object>>();
-        var headers = new List<string> { "LineNumber", "Content" };
+        var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+        if (worksheet != null) return worksheet;
 
-        for (int i = 0; i < Math.Min(lines.Length, 10000); i++)
+        var error = "No worksheet found in Excel file";
+        throw new InvalidOperationException(error);
+    }
+
+    private static List<string> ExtractExcelHeaders(ExcelWorksheet worksheet)
+    {
+        var headers = new List<string>();
+        var headerRow = worksheet.Cells[HeaderRowIndex, DefaultColumnIndex, HeaderRowIndex, worksheet.Dimension?.Columns ?? DefaultColumnIndex];
+        
+        foreach (var cell in headerRow)
         {
-            var record = new Dictionary<string, object>
+            headers.Add(cell.Value?.ToString() ?? $"{DefaultColumnPrefix}{cell.Start.Column}");
+        }
+
+        return headers;
+    }
+
+    private List<Dictionary<string, object>> ExtractExcelData(ExcelWorksheet worksheet, List<string> headers)
+    {
+        var records = new List<Dictionary<string, object>>();
+        var rowCount = 0;
+        var maxRows = _dataProcessingConfig.MaxRowsPerDataset;
+        var maxCols = headers.Count;
+        
+        // Pre-allocate capacity for better performance
+        records.Capacity = Math.Min(maxRows, 1000);
+        
+        // Optimize by reading entire range at once when possible
+        var dataRange = worksheet.Cells[DataStartRowIndex, DefaultColumnIndex, 
+            Math.Min(worksheet.Dimension?.Rows ?? DefaultColumnIndex, DataStartRowIndex + maxRows - 1), 
+            maxCols];
+        
+        var dataValues = dataRange.Value as object[,];
+        
+        if (dataValues != null)
+        {
+            // Process data as 2D array for better performance
+            for (int row = 0; row < dataValues.GetLength(0) && rowCount < maxRows; row++)
+            {
+                var record = new Dictionary<string, object>(maxCols);
+                for (int col = 0; col < maxCols; col++)
+                {
+                    var cellValue = dataValues[row, col];
+                    record[headers[col]] = cellValue?.ToString() ?? string.Empty;
+                }
+                records.Add(record);
+                rowCount++;
+            }
+        }
+        else
+        {
+            // Fallback to cell-by-cell access if range reading fails
+            for (int row = DataStartRowIndex; row <= (worksheet.Dimension?.Rows ?? DefaultColumnIndex) && rowCount < maxRows; row++)
+            {
+                var record = new Dictionary<string, object>(maxCols);
+                for (int col = DefaultColumnIndex; col <= maxCols; col++)
+                {
+                    var cellValue = worksheet.Cells[row, col].Value;
+                    record[headers[col - DefaultColumnIndex]] = cellValue?.ToString() ?? string.Empty;
+                }
+                records.Add(record);
+                rowCount++;
+            }
+        }
+
+        return records;
+    }
+
+    private async Task ProcessXmlFileAsync(string filePath, DataSet dataSet, string correlationId)
+    {
+        try
+        {
+            using var fileStream = await _storageService.GetFileAsync(filePath);
+            using var reader = new StreamReader(fileStream);
+            var xmlContent = await reader.ReadToEndAsync();
+            var doc = XDocument.Parse(xmlContent);
+            
+            var (headers, records) = ExtractXmlData(doc);
+            var limitedHeaders = LimitColumns(headers.ToList(), correlationId, filePath);
+
+            PopulateDataSet(dataSet, limitedHeaders, records, fileStream.Length, correlationId, filePath);
+        }
+        catch (XmlException ex)
+        {
+            var error = $"XML parsing error: {ex.Message}";
+            _logger.LogError(ex, "XML parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+                correlationId, filePath);
+            throw new FileProcessingException(error, ex);
+        }
+        catch (JsonException ex)
+        {
+            HandleJsonSerializationError(correlationId, filePath, ex, "XML");
+        }
+    }
+
+    private (HashSet<string> Headers, List<Dictionary<string, object>> Records) ExtractXmlData(XDocument doc)
+    {
+        var records = new List<Dictionary<string, object>>();
+        var headers = new HashSet<string>();
+
+        var root = doc.Root;
+        if (root == null) return (headers, records);
+
+        var children = root.Elements().ToList();
+        if (children.Count > 0)
+        {
+            ExtractXmlArrayData(children, headers, records);
+        }
+        else
+        {
+            ExtractXmlObjectData(root, headers, records);
+        }
+
+        return (headers, records);
+    }
+
+    private void ExtractXmlArrayData(List<XElement> children, HashSet<string> headers, List<Dictionary<string, object>> records)
+    {
+        var maxRows = _dataProcessingConfig.MaxRowsPerDataset;
+        records.Capacity = Math.Min(maxRows, 1000); // Pre-allocate capacity
+        
+        // Assume first child is the template for data rows
+        var firstChild = children.First();
+        var childElements = firstChild.Elements().ToList();
+        
+        // Extract headers from first element
+        foreach (var element in childElements)
+        {
+            headers.Add(element.Name.LocalName);
+        }
+        
+        // Process all child elements as data rows
+        foreach (var child in children.Take(maxRows))
+        {
+            var record = new Dictionary<string, object>(headers.Count);
+            foreach (var element in child.Elements())
+            {
+                record[element.Name.LocalName] = element.Value ?? string.Empty;
+            }
+            records.Add(record);
+        }
+    }
+
+    private void ExtractXmlObjectData(XElement root, HashSet<string> headers, List<Dictionary<string, object>> records)
+    {
+        // Single object - convert attributes and elements to record
+        var record = new Dictionary<string, object>();
+        foreach (var attr in root.Attributes())
+        {
+            headers.Add(attr.Name.LocalName);
+            record[attr.Name.LocalName] = attr.Value ?? string.Empty;
+        }
+        foreach (var element in root.Elements())
+        {
+            headers.Add(element.Name.LocalName);
+            record[element.Name.LocalName] = element.Value ?? string.Empty;
+        }
+        records.Add(record);
+    }
+
+    private async Task ProcessTextFileAsync(string filePath, DataSet dataSet, string correlationId)
+    {
+        try
+        {
+            using var fileStream = await _storageService.GetFileAsync(filePath);
+            using var reader = new StreamReader(fileStream);
+            var content = await reader.ReadToEndAsync();
+            var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            
+            var headers = new List<string> { "LineNumber", "Content" };
+            var records = ExtractTextData(lines);
+
+            PopulateDataSet(dataSet, headers, records, fileStream.Length, correlationId, filePath);
+        }
+        catch (JsonException ex)
+        {
+            HandleJsonSerializationError(correlationId, filePath, ex, "text");
+        }
+    }
+
+    private List<Dictionary<string, object>> ExtractTextData(string[] lines)
+    {
+        var maxRows = Math.Min(lines.Length, _dataProcessingConfig.MaxRowsPerDataset);
+        var records = new List<Dictionary<string, object>>(maxRows); // Pre-allocate capacity
+
+        for (int i = 0; i < maxRows; i++)
+        {
+            var record = new Dictionary<string, object>(2) // Pre-allocate for 2 fields
             {
                 ["LineNumber"] = i + 1,
                 ["Content"] = lines[i]
@@ -353,38 +768,46 @@ public class FileUploadService : IFileUploadService
             records.Add(record);
         }
 
-        dataSet.ColumnCount = headers.Count;
-        dataSet.RowCount = records.Count;
-        dataSet.Schema = JsonSerializer.Serialize(headers);
-        dataSet.PreviewData = JsonSerializer.Serialize(records.Take(10).ToList());
-        
-        if (records.Count <= _maxRowsForInlineStorage)
-        {
-            dataSet.ProcessedData = JsonSerializer.Serialize(records);
-        }
+        return records;
     }
 
     private async Task<string> GenerateDataHashAsync(string filePath)
     {
-        using var sha256 = SHA256.Create();
-        using var stream = await _storageService.GetFileAsync(filePath);
-        var hash = await sha256.ComputeHashAsync(stream);
-        return Convert.ToBase64String(hash);
+        try
+        {
+            using var sha256 = SHA256.Create();
+            using var stream = await _storageService.GetFileAsync(filePath);
+            var hash = await sha256.ComputeHashAsync(stream);
+            return Convert.ToBase64String(hash);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to generate data hash for file {FilePath}", filePath);
+            return string.Empty; // Return empty string instead of throwing
+        }
     }
 
     public async Task DeleteFileAsync(string filePath)
     {
+        var correlationId = GenerateCorrelationId();
+        _logger.LogInformation("Starting file deletion. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+            correlationId, filePath);
+
         try
         {
             await _storageService.DeleteFileAsync(filePath);
+            _logger.LogInformation("File deleted successfully. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+                correlationId, filePath);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting file {FilePath}", filePath);
+            _logger.LogError(ex, "Error deleting file. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+                correlationId, filePath);
+            // Don't re-throw - log and continue
         }
     }
 
-    private FileType GetFileTypeFromExtension(string fileType)
+    private static FileType GetFileTypeFromExtension(string fileType)
     {
         return fileType.ToLowerInvariant() switch
         {
@@ -398,7 +821,7 @@ public class FileUploadService : IFileUploadService
         };
     }
 
-    private StorageProvider GetStorageProviderFromPath(string filePath)
+    private static StorageProvider GetStorageProviderFromPath(string filePath)
     {
         return filePath switch
         {
@@ -408,4 +831,29 @@ public class FileUploadService : IFileUploadService
             _ => StorageProvider.Local
         };
     }
+}
+
+// Custom exception types for better error handling
+public class FileValidationException : Exception
+{
+    public FileValidationException(string message) : base(message) { }
+    public FileValidationException(string message, Exception innerException) : base(message, innerException) { }
+}
+
+public class FileUploadException : Exception
+{
+    public FileUploadException(string message) : base(message) { }
+    public FileUploadException(string message, Exception innerException) : base(message, innerException) { }
+}
+
+public class FileProcessingException : Exception
+{
+    public FileProcessingException(string message) : base(message) { }
+    public FileProcessingException(string message, Exception innerException) : base(message, innerException) { }
+}
+
+public class UnsupportedFileTypeException : Exception
+{
+    public UnsupportedFileTypeException(string message) : base(message) { }
+    public UnsupportedFileTypeException(string message, Exception innerException) : base(message, innerException) { }
 } 
