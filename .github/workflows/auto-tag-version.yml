@@ -21,7 +21,7 @@ jobs:
       id: last_commit
       run: |
         message=$(git log -1 --pretty=%B)
-        echo "commit_message=$message" >> $GITHUB_OUTPUT
+        echo "commit_message=${message}" >> $GITHUB_OUTPUT
 
     - name: Get version from csproj
       id: version
@@ -30,10 +30,10 @@ jobs:
         if [ -z "$version" ]; then
           version="1.0.0"
         fi
-        echo "version=$version" >> $GITHUB_OUTPUT
+        echo "version=${version}" >> $GITHUB_OUTPUT
 
     - name: Create and push tag for new version
-      if: ${{ startsWith(steps.last_commit.outputs.commit_message, 'chore: bump version to') }}
+      if: ${{ contains(steps.last_commit.outputs.commit_message, 'chore: bump version to') }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
