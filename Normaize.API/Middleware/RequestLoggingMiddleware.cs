@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Http;
-using Normaize.API.Services;
+using Normaize.Core.Interfaces;
 using System.Diagnostics;
 
 namespace Normaize.API.Middleware;

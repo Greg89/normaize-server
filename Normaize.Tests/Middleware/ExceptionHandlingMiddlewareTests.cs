@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Http;
 using Moq;
 using Normaize.API.Middleware;
-using Normaize.API.Services;
 using System.Net;
 using System.Text.Json;
 using Xunit;
 using FluentAssertions;
+using Normaize.Core.Interfaces;
 
 namespace Normaize.Tests.Middleware;
 

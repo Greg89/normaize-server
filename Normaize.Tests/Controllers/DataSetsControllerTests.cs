@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Normaize.API.Controllers;
-using Normaize.API.Services;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using FluentAssertions;

@@ -1,4 +1,4 @@
-using Normaize.API.Services;
+using Normaize.Core.Interfaces;
 using System.Net;
 using System.Text.Json;
 

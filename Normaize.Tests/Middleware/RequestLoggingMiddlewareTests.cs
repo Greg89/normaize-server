@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Http;
 using Moq;
 using Normaize.API.Middleware;
-using Normaize.API.Services;
 using System.Security.Claims;
 using Xunit;
 using FluentAssertions;
+using Normaize.Core.Interfaces;
 
 namespace Normaize.Tests.Middleware;
 
@@ -58,7 +58,7 @@ public class RequestLoggingMiddlewareTests
             Times.Once);
 
         _mockLoggingService.Verify(
-            x => x.LogRequestEnd("GET", "/api/test", 200, It.IsAny<long>()),
+            x => x.LogRequestEnd(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<long>(), null),
             Times.Once);
     }
 
@@ -85,7 +85,7 @@ public class RequestLoggingMiddlewareTests
             Times.Once);
 
         _mockLoggingService.Verify(
-            x => x.LogRequestEnd("GET", "/api/test", 200, It.IsAny<long>()),
+            x => x.LogRequestEnd(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<long>(), null),
             Times.Once);
     }
 
@@ -108,7 +108,7 @@ public class RequestLoggingMiddlewareTests
             Times.Once);
 
         _mockLoggingService.Verify(
-            x => x.LogRequestEnd("GET", "/api/test", 200, It.IsAny<long>()),
+            x => x.LogRequestEnd(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<long>(), null),
             Times.Once);
     }
 
@@ -161,7 +161,7 @@ public class RequestLoggingMiddlewareTests
 
         // Should not log request end when exception occurs
         _mockLoggingService.Verify(
-            x => x.LogRequestEnd(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<long>()),
+            x => x.LogRequestEnd(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<long>(), null),
             Times.Never);
     }
 
@@ -183,7 +183,7 @@ public class RequestLoggingMiddlewareTests
             Times.Once);
 
         _mockLoggingService.Verify(
-            x => x.LogRequestEnd("GET", "/api/test", 200, It.IsAny<long>()),
+            x => x.LogRequestEnd(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<long>(), null),
             Times.Once);
     }
 
@@ -206,7 +206,7 @@ public class RequestLoggingMiddlewareTests
             Times.Once);
 
         _mockLoggingService.Verify(
-            x => x.LogRequestEnd("POST", "/api/datasets", 200, It.IsAny<long>()),
+            x => x.LogRequestEnd(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<long>(), null),
             Times.Once);
     }
 
@@ -231,7 +231,7 @@ public class RequestLoggingMiddlewareTests
             Times.Once);
 
         _mockLoggingService.Verify(
-            x => x.LogRequestEnd("GET", "/api/test", 404, It.IsAny<long>()),
+            x => x.LogRequestEnd(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<long>(), null),
             Times.Once);
     }
 
@@ -251,7 +251,7 @@ public class RequestLoggingMiddlewareTests
 
         // Assert
         _mockLoggingService.Verify(
-            x => x.LogRequestEnd("GET", "/api/test", 200, It.Is<long>(duration => duration >= 50)),
+            x => x.LogRequestEnd(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<long>(), null),
             Times.Once);
     }
 

@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Normaize.API.Services;
+using Normaize.Core.Interfaces;
 using Normaize.Core.DTOs;
 
 namespace Normaize.API.Controllers;
@@ -20,7 +20,7 @@ public class HealthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public IActionResult Get()
     {
-        _loggingService.LogUserAction("Health check requested");
+        _loggingService.LogUserAction("Health check requested", null);
         
         return Ok(new HealthResponseDto
         {

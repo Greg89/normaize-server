@@ -1,6 +1,6 @@
 using Normaize.Core.Interfaces;
 
-namespace Normaize.API.Services;
+namespace Normaize.Data.Services;
 
 public class AppConfigurationService : IAppConfigurationService
 {

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
-using Normaize.API.Services;
 
 namespace Normaize.API.Controllers;
 

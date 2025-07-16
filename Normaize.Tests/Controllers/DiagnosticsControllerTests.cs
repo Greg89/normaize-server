@@ -1,14 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Moq;
-using Normaize.API.Controllers;
 using Normaize.Core.Interfaces;
 using Normaize.Core.DTOs;
 using Xunit;
 using FluentAssertions;
-using System.Threading.Tasks;
-using System;
-using Normaize.API.Services;
+using Normaize.API.Controllers;
 
 namespace Normaize.Tests.Controllers;
 
