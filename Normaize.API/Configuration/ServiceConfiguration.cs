@@ -1,11 +1,15 @@
 using Microsoft.EntityFrameworkCore;
-using Normaize.Core.Interfaces;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Normaize.Core.Configuration;
 using Normaize.Core.Constants;
+using Normaize.Core.Interfaces;
 using Normaize.Data;
 using Normaize.Data.Repositories;
 using Normaize.Data.Services;
 using Normaize.Core.Services;
 using Normaize.API.Configuration;
+using System.ComponentModel.DataAnnotations;
 
 namespace Normaize.API.Configuration;
 
@@ -13,18 +17,49 @@ public static class ServiceConfiguration
 {
     public static void ConfigureServices(WebApplicationBuilder builder)
     {
-        ConfigureControllers(builder);
-        ConfigureSwagger(builder);
-        ConfigureHealthChecks(builder);
-        ConfigureAuthentication(builder);
-        ConfigureForwardedHeaders(builder);
-        ConfigureDatabase(builder);
-        ConfigureCors(builder);
-        ConfigureAutoMapper(builder);
-        ConfigureApplicationServices(builder);
-        ConfigureStorageService(builder);
-        ConfigureRepositories(builder);
-        ConfigureHttpClient(builder);
+        var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<object>>();
+        
+        try
+        {
+            logger.LogInformation("Starting service configuration...");
+            
+            ConfigureConfigurationValidation(builder);
+            ConfigureControllers(builder);
+            ConfigureSwagger(builder);
+            ConfigureHealthChecks(builder);
+            ConfigureAuthentication(builder);
+            ConfigureForwardedHeaders(builder);
+            ConfigureDatabase(builder);
+            ConfigureCors(builder);
+            ConfigureAutoMapper(builder);
+            ConfigureApplicationServices(builder);
+            ConfigureStorageService(builder);
+            ConfigureRepositories(builder);
+            ConfigureHttpClient(builder);
+            ConfigureCaching(builder);
+            ConfigurePerformance(builder);
+            
+            logger.LogInformation("Service configuration completed successfully");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error during service configuration");
+            throw;
+        }
+    }
+
+    private static void ConfigureConfigurationValidation(WebApplicationBuilder builder)
+    {
+        // Configure and validate service configuration options
+        builder.Services.Configure<ServiceConfigurationOptions>(
+            builder.Configuration.GetSection(ServiceConfigurationOptions.SectionName));
+
+        // Configure health check settings
+        builder.Services.Configure<HealthCheckConfiguration>(
+            builder.Configuration.GetSection(HealthCheckConfiguration.SectionName));
+
+        // Register configuration validation service
+        builder.Services.AddScoped<IConfigurationValidationService, ConfigurationValidationService>();
     }
 
     private static void ConfigureControllers(WebApplicationBuilder builder)
@@ -79,19 +114,37 @@ public static class ServiceConfiguration
 
     private static void ConfigureAuthentication(WebApplicationBuilder builder)
     {
-        builder.Services.AddAuthentication(AppConstants.Auth.BEARER)
-            .AddJwtBearer(AppConstants.Auth.BEARER, options =>
+        var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<object>>();
+        
+        try
+        {
+            var issuer = Environment.GetEnvironmentVariable("AUTH0_ISSUER");
+            var audience = Environment.GetEnvironmentVariable("AUTH0_AUDIENCE");
+
+            if (string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(audience))
             {
-                options.Authority = Environment.GetEnvironmentVariable("AUTH0_ISSUER");
-                options.Audience = Environment.GetEnvironmentVariable("AUTH0_AUDIENCE");
-                options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                logger.LogWarning("AUTH0_ISSUER or AUTH0_AUDIENCE environment variables not found. JWT authentication may not work correctly.");
+            }
+
+            builder.Services.AddAuthentication(AppConstants.Auth.BEARER)
+                .AddJwtBearer(AppConstants.Auth.BEARER, options =>
                 {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true
-                };
-            });
+                    options.Authority = issuer;
+                    options.Audience = audience;
+                    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true
+                    };
+                });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error configuring authentication");
+            throw;
+        }
     }
 
     private static void ConfigureForwardedHeaders(WebApplicationBuilder builder)
@@ -107,32 +160,80 @@ public static class ServiceConfiguration
 
     private static void ConfigureDatabase(WebApplicationBuilder builder)
     {
-        var dbConfig = AppConfiguration.GetDatabaseConfig();
+        var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<object>>();
         
-        if (AppConfiguration.HasDatabaseConnection())
+        try
         {
-            builder.Services.AddDbContext<NormaizeContext>(options =>
-                options.UseMySql(dbConfig.ToConnectionString(), new MySqlServerVersion(new Version(8, 0, 0))));
+            var dbConfig = AppConfiguration.GetDatabaseConfig();
+            
+            if (AppConfiguration.HasDatabaseConnection())
+            {
+                logger.LogInformation("Configuring MySQL database connection");
+                builder.Services.AddDbContext<NormaizeContext>(options =>
+                {
+                    options.UseMySql(dbConfig.ToConnectionString(), new MySqlServerVersion(new Version(8, 0, 0)));
+                    
+                    // Configure based on environment
+                    var environment = AppConfiguration.GetEnvironment();
+                    if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
+                    {
+                        options.EnableSensitiveDataLogging();
+                        options.EnableDetailedErrors();
+                    }
+                });
+            }
+            else
+            {
+                logger.LogInformation("No database connection detected, using in-memory database");
+                builder.Services.AddDbContext<NormaizeContext>(options =>
+                    options.UseInMemoryDatabase("TestDatabase"));
+            }
         }
-        else
+        catch (Exception ex)
         {
-            // Use in-memory database for testing/CI environments
-            builder.Services.AddDbContext<NormaizeContext>(options =>
-                options.UseInMemoryDatabase("TestDatabase"));
+            logger.LogError(ex, "Error configuring database");
+            throw;
         }
     }
 
     private static void ConfigureCors(WebApplicationBuilder builder)
     {
-        builder.Services.AddCors(options =>
+        var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<object>>();
+        
+        try
         {
-            options.AddPolicy("AllowAll", policy =>
+            var environment = AppConfiguration.GetEnvironment();
+            
+            builder.Services.AddCors(options =>
             {
-                policy.AllowAnyOrigin()
-                      .AllowAnyMethod()
-                      .AllowAnyHeader();
+                if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
+                {
+                    logger.LogInformation("Configuring permissive CORS for development environment");
+                    options.AddPolicy("Development", policy =>
+                    {
+                        policy.AllowAnyOrigin()
+                              .AllowAnyMethod()
+                              .AllowAnyHeader();
+                    });
+                }
+                else
+                {
+                    logger.LogInformation("Configuring restrictive CORS for production environment");
+                    options.AddPolicy("Production", policy =>
+                    {
+                        policy.WithOrigins("https://yourdomain.com") // Replace with actual domains
+                              .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                              .WithHeaders("Content-Type", "Authorization", "X-Requested-With")
+                              .AllowCredentials();
+                    });
+                }
             });
-        });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error configuring CORS");
+            throw;
+        }
     }
 
     private static void ConfigureAutoMapper(WebApplicationBuilder builder)
@@ -142,61 +243,88 @@ public static class ServiceConfiguration
 
     private static void ConfigureApplicationServices(WebApplicationBuilder builder)
     {
-        // Add memory cache
-        builder.Services.AddMemoryCache();
+        var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<object>>();
         
-        // Configure health check settings
-        builder.Services.Configure<Normaize.Core.Configuration.HealthCheckConfiguration>(
-            builder.Configuration.GetSection(Normaize.Core.Configuration.HealthCheckConfiguration.SectionName));
-        
-        builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
-        builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();
-        builder.Services.AddScoped<IDataVisualizationService, DataVisualizationService>();
-        builder.Services.AddScoped<IFileUploadService, FileUploadService>();
-        builder.Services.AddScoped<IAuditService, AuditService>();
-        builder.Services.AddScoped<Normaize.Core.Interfaces.IStructuredLoggingService, Normaize.Data.Services.StructuredLoggingService>();
-        builder.Services.AddScoped<IMigrationService, MigrationService>();
-        builder.Services.AddScoped<IHealthCheckService, HealthCheckService>();
-        builder.Services.AddSingleton<IAppConfigurationService, Normaize.Data.Services.AppConfigurationService>();
-        builder.Services.AddHttpContextAccessor();
+        try
+        {
+            logger.LogInformation("Configuring application services");
+            
+            // Add memory cache
+            builder.Services.AddMemoryCache();
+            
+            builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
+            builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();
+            builder.Services.AddScoped<IDataVisualizationService, DataVisualizationService>();
+            builder.Services.AddScoped<IFileUploadService, FileUploadService>();
+            builder.Services.AddScoped<IAuditService, AuditService>();
+            builder.Services.AddScoped<Normaize.Core.Interfaces.IStructuredLoggingService, Normaize.Data.Services.StructuredLoggingService>();
+            builder.Services.AddScoped<IMigrationService, MigrationService>();
+            builder.Services.AddScoped<IHealthCheckService, HealthCheckService>();
+            builder.Services.AddSingleton<IAppConfigurationService, Normaize.Data.Services.AppConfigurationService>();
+            builder.Services.AddHttpContextAccessor();
+            
+            logger.LogInformation("Application services configured successfully");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error configuring application services");
+            throw;
+        }
     }
 
     private static void ConfigureStorageService(WebApplicationBuilder builder)
     {
-        var appEnvironment = AppConfiguration.GetEnvironment();
-        var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER")?.ToLowerInvariant();
-
-        // Force in-memory storage for Test environment
-        if (appEnvironment.Equals("Test", StringComparison.OrdinalIgnoreCase))
+        var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<object>>();
+        
+        try
         {
-            builder.Services.AddScoped<IStorageService, InMemoryStorageService>();
-        }
-        else
-        {
-            // Environment-aware storage selection
-            if (string.IsNullOrEmpty(storageProvider))
-            {
-                storageProvider = "memory";
-            }
+            var appEnvironment = AppConfiguration.GetEnvironment();
+            var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER")?.ToLowerInvariant();
 
-            if (storageProvider == "s3")
+            logger.LogInformation("Configuring storage service. Environment: {Environment}, Provider: {Provider}", 
+                appEnvironment, storageProvider ?? "default");
+
+            // Force in-memory storage for Test environment
+            if (appEnvironment.Equals("Test", StringComparison.OrdinalIgnoreCase))
             {
-                var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
-                var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
-                
-                if (string.IsNullOrEmpty(awsAccessKey) || string.IsNullOrEmpty(awsSecretKey))
-                {
-                    builder.Services.AddScoped<IStorageService, InMemoryStorageService>();
-                }
-                else
-                {
-                    builder.Services.AddScoped<IStorageService, S3StorageService>();
-                }
+                logger.LogInformation("Using in-memory storage for test environment");
+                builder.Services.AddScoped<IStorageService, InMemoryStorageService>();
             }
             else
             {
-                builder.Services.AddScoped<IStorageService, InMemoryStorageService>();
+                // Environment-aware storage selection
+                if (string.IsNullOrEmpty(storageProvider))
+                {
+                    storageProvider = "memory";
+                }
+
+                if (storageProvider == "s3")
+                {
+                    var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+                    var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+                    
+                    if (string.IsNullOrEmpty(awsAccessKey) || string.IsNullOrEmpty(awsSecretKey))
+                    {
+                        logger.LogWarning("S3 storage provider selected but AWS credentials not found. Falling back to in-memory storage.");
+                        builder.Services.AddScoped<IStorageService, InMemoryStorageService>();
+                    }
+                    else
+                    {
+                        logger.LogInformation("Configuring S3 storage service");
+                        builder.Services.AddScoped<IStorageService, S3StorageService>();
+                    }
+                }
+                else
+                {
+                    logger.LogInformation("Using in-memory storage service");
+                    builder.Services.AddScoped<IStorageService, InMemoryStorageService>();
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error configuring storage service");
+            throw;
         }
     }
 
@@ -210,5 +338,62 @@ public static class ServiceConfiguration
     private static void ConfigureHttpClient(WebApplicationBuilder builder)
     {
         builder.Services.AddHttpClient();
+    }
+
+    private static void ConfigureCaching(WebApplicationBuilder builder)
+    {
+        var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<object>>();
+        
+        try
+        {
+            logger.LogInformation("Configuring caching services");
+            
+            // Memory cache is already configured in ConfigureApplicationServices
+            
+            // Note: Redis distributed cache configuration removed due to missing package
+            // To enable Redis, add: Microsoft.Extensions.Caching.StackExchangeRedis package
+            var redisConnectionString = Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING");
+            if (!string.IsNullOrEmpty(redisConnectionString))
+            {
+                logger.LogInformation("Redis connection string found but Redis package not available. Using in-memory cache only.");
+            }
+            else
+            {
+                logger.LogInformation("No Redis connection string found, using in-memory cache only");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error configuring caching services");
+            throw;
+        }
+    }
+
+    private static void ConfigurePerformance(WebApplicationBuilder builder)
+    {
+        var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<object>>();
+        
+        try
+        {
+            logger.LogInformation("Configuring performance optimizations");
+            
+            // Configure response compression
+            builder.Services.AddResponseCompression(options =>
+            {
+                options.EnableForHttps = true;
+                options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+                options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+            });
+            
+            // Configure response caching
+            builder.Services.AddResponseCaching();
+            
+            logger.LogInformation("Performance optimizations configured successfully");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error configuring performance optimizations");
+            throw;
+        }
     }
 } 
