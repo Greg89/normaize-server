@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.Json;
 using Xunit;
 using Microsoft.Extensions.Configuration.Memory;
+using Normaize.Core.Configuration;
 
 namespace Normaize.Tests.Services;
 
