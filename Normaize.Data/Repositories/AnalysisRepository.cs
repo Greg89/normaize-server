@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
+using Normaize.Core.DTOs;
 using Normaize.Data;
 
 namespace Normaize.Data.Repositories;
@@ -105,7 +106,7 @@ public class AnalysisRepository : IAnalysisRepository
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<Analysis>> GetByStatusAsync(string status)
+    public async Task<IEnumerable<Analysis>> GetByStatusAsync(AnalysisStatus status)
     {
         return await _context.Analyses
             .Include(a => a.DataSet)
@@ -115,7 +116,7 @@ public class AnalysisRepository : IAnalysisRepository
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<Analysis>> GetByTypeAsync(string type)
+    public async Task<IEnumerable<Analysis>> GetByTypeAsync(AnalysisType type)
     {
         return await _context.Analyses
             .Include(a => a.DataSet)

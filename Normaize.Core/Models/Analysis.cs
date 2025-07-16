@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Normaize.Core.DTOs;
 
 namespace Normaize.Core.Models;
 
@@ -14,13 +15,13 @@ public class Analysis
     public string? Description { get; set; }
     
     [Required]
-    public string Type { get; set; } = string.Empty; // Normalization, Comparison, Statistical, etc.
+    public AnalysisType Type { get; set; }
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     
     public DateTime? CompletedAt { get; set; }
     
-    public string Status { get; set; } = "Pending"; // Pending, Processing, Completed, Failed
+    public AnalysisStatus Status { get; set; } = AnalysisStatus.Pending;
     
     public string? Configuration { get; set; } // JSON configuration
     

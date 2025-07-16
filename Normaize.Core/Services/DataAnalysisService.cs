@@ -69,13 +69,13 @@ public class DataAnalysisService : IDataAnalysisService
 
         try
         {
-            analysis.Status = "Processing";
+            analysis.Status = AnalysisStatus.Processing;
             await _analysisRepository.UpdateAsync(analysis);
 
             // TODO: Implement actual analysis logic based on type
             await Task.Delay(1000); // Simulate processing time
 
-            analysis.Status = "Completed";
+            analysis.Status = AnalysisStatus.Completed;
             analysis.CompletedAt = DateTime.UtcNow;
             analysis.Results = "{\"message\": \"Analysis completed successfully\"}";
             
@@ -84,7 +84,7 @@ public class DataAnalysisService : IDataAnalysisService
         }
         catch (Exception ex)
         {
-            analysis.Status = "Failed";
+            analysis.Status = AnalysisStatus.Failed;
             analysis.ErrorMessage = ex.Message;
             await _analysisRepository.UpdateAsync(analysis);
             throw;
