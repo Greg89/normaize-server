@@ -2,7 +2,7 @@ namespace Normaize.Core.Interfaces;
 
 public interface IDatabaseHealthService
 {
-    Task<DatabaseHealthResult> CheckHealthAsync();
+    Task<DatabaseHealthResult> CheckHealthAsync(CancellationToken cancellationToken = default);
 }
 
 public class DatabaseHealthResult
