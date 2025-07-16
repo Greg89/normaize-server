@@ -32,8 +32,18 @@ jobs:
         fi
         echo "version=${version}" >> $GITHUB_OUTPUT
 
+    - name: Should tag commit?
+      id: should_tag
+      run: |
+        # Use bash pattern matching for "starts with"
+        commit_message="${{ steps.last_commit.outputs.commit_message }}"
+        if [[ "$commit_message" == chore:\ bump\ version\ to* ]]; then
+          echo "tag_commit=true" >> $GITHUB_OUTPUT
+        else
+          echo "tag_commit=false" >> $GITHUB_OUTPUT
+
     - name: Create and push tag for new version
-      if: ${{ contains(steps.last_commit.outputs.commit_message, 'chore: bump version to') }}
+      if: ${{ steps.should_tag.outputs.tag_commit == 'true' }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
