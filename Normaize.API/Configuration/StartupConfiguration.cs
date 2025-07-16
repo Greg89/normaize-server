@@ -73,7 +73,7 @@ public static class StartupConfiguration
     private static async Task PerformHealthCheck(IServiceScope scope)
     {
         var healthCheckService = scope.ServiceProvider.GetRequiredService<IHealthCheckService>();
-        var healthResult = await healthCheckService.CheckReadinessAsync();
+        var healthResult = await healthCheckService.CheckReadinessAsync(CancellationToken.None);
         
         if (!healthResult.IsHealthy)
         {

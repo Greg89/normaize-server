@@ -63,23 +63,18 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 - [DONE] `Normaize.Core/Services/DataAnalysisService.cs`
 - [DONE] `Normaize.Core/Services/DataProcessingService.cs`
 - [DONE] `Normaize.Core/Services/DataVisualizationService.cs`
-- [ ] `Normaize.Core/Services/FileUploadService.cs`
-- [ ] `Normaize.Core/Normaize.Core.csproj`
+- [DONE] `Normaize.Core/Services/FileUploadService.cs`
+- [NA] `Normaize.Core/Normaize.Core.csproj`
 
 ### Data Layer (Normaize.Data)
-- [ ] `Normaize.Data/Migrations/20250706230302_InitialCreate.cs`
-- [ ] `Normaize.Data/Migrations/20250706230302_InitialCreate.Designer.cs`
-- [ ] `Normaize.Data/Migrations/20250708012107_AddUserIdToDataSet.cs`
-- [ ] `Normaize.Data/Migrations/20250708012107_AddUserIdToDataSet.Designer.cs`
-- [ ] `Normaize.Data/Migrations/NormaizeContextModelSnapshot.cs`
 - [ ] `Normaize.Data/NormaizeContext.cs`
 - [ ] `Normaize.Data/NormaizeContextFactory.cs`
 - [ ] `Normaize.Data/Repositories/AnalysisRepository.cs`
 - [ ] `Normaize.Data/Repositories/DataSetRepository.cs`
 - [ ] `Normaize.Data/Repositories/DataSetRowRepository.cs`
 - [ ] `Normaize.Data/Repositories/IDataSetRowRepository.cs`
-- [ ] `Normaize.Data/Services/DatabaseHealthService.cs`
-- [ ] `Normaize.Data/Services/HealthCheckService.cs`
+- [DONE] `Normaize.Data/Services/DatabaseHealthService.cs`
+- [DONE] `Normaize.Data/Services/HealthCheckService.cs`
 - [ ] `Normaize.Data/Services/MigrationService.cs`
 - [ ] `Normaize.Data/Normaize.Data.csproj`
 
