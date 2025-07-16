@@ -17,9 +17,9 @@ public class HealthMonitoringController : ControllerBase
     [HttpGet("health")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
-    public async Task<IActionResult> GetHealth()
+    public async Task<IActionResult> GetHealth(CancellationToken cancellationToken)
     {
-        var result = await _healthCheckService.CheckHealthAsync();
+        var result = await _healthCheckService.CheckHealthAsync(cancellationToken);
         
         if (!result.IsHealthy)
         {
@@ -46,9 +46,9 @@ public class HealthMonitoringController : ControllerBase
     [HttpGet("liveness")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
-    public async Task<IActionResult> GetLiveness()
+    public async Task<IActionResult> GetLiveness(CancellationToken cancellationToken)
     {
-        var result = await _healthCheckService.CheckLivenessAsync();
+        var result = await _healthCheckService.CheckLivenessAsync(cancellationToken);
         
         if (!result.IsHealthy)
         {
@@ -73,9 +73,9 @@ public class HealthMonitoringController : ControllerBase
     [HttpGet("readiness")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
-    public async Task<IActionResult> GetReadiness()
+    public async Task<IActionResult> GetReadiness(CancellationToken cancellationToken)
     {
-        var result = await _healthCheckService.CheckReadinessAsync();
+        var result = await _healthCheckService.CheckReadinessAsync(cancellationToken);
         
         if (!result.IsHealthy)
         {

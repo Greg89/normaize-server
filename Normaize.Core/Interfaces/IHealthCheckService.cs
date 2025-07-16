@@ -2,9 +2,9 @@ namespace Normaize.Core.Interfaces;
 
 public interface IHealthCheckService
 {
-    Task<HealthCheckResult> CheckHealthAsync();
-    Task<HealthCheckResult> CheckLivenessAsync();
-    Task<HealthCheckResult> CheckReadinessAsync();
+    Task<HealthCheckResult> CheckHealthAsync(CancellationToken cancellationToken = default);
+    Task<HealthCheckResult> CheckLivenessAsync(CancellationToken cancellationToken = default);
+    Task<HealthCheckResult> CheckReadinessAsync(CancellationToken cancellationToken = default);
 }
 
 public class HealthCheckResult

@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Normaize.Core.Configuration;
 using Normaize.Core.Interfaces;
 using Normaize.Data;
 using System.Diagnostics;
@@ -10,199 +12,243 @@ public class HealthCheckService : IHealthCheckService
 {
     private readonly NormaizeContext _context;
     private readonly ILogger<HealthCheckService> _logger;
+    private readonly HealthCheckConfiguration _config;
 
     public HealthCheckService(
         NormaizeContext context,
-        ILogger<HealthCheckService> logger)
+        ILogger<HealthCheckService> logger,
+        IOptions<HealthCheckConfiguration> config)
     {
         _context = context;
         _logger = logger;
+        _config = config.Value;
     }
 
-    public async Task<HealthCheckResult> CheckHealthAsync()
+    public async Task<HealthCheckResult> CheckHealthAsync(CancellationToken cancellationToken = default)
     {
+        var correlationId = Guid.NewGuid().ToString();
         var stopwatch = Stopwatch.StartNew();
-        var result = new HealthCheckResult();
+        
+        _logger.LogInformation("Starting comprehensive health check. CorrelationId: {CorrelationId}", correlationId);
 
         try
         {
-            _logger.LogInformation("Starting health check...");
-
-            // Check all components
-            var components = new Dictionary<string, ComponentHealth>();
-
-            // 1. Database Health
-            var dbHealth = await CheckDatabaseHealthAsync();
-            components["database"] = dbHealth;
-
-            // 2. Application Health
-            var appHealth = await CheckApplicationHealthAsync();
-            components["application"] = appHealth;
-
-            // Determine overall health
-            result.IsHealthy = components.All(c => c.Value.IsHealthy);
-            result.Status = result.IsHealthy ? "healthy" : "unhealthy";
-            result.Components = components;
-            result.Issues = components.Where(c => !c.Value.IsHealthy)
-                                    .Select(c => $"{c.Key}: {c.Value.ErrorMessage}")
-                                    .ToList();
-
-            stopwatch.Stop();
+            var components = await CheckAllComponentsAsync(correlationId, cancellationToken);
+            
+            var result = CreateHealthResult(components, "healthy", "unhealthy", correlationId);
             result.Duration = stopwatch.Elapsed;
 
-            if (result.IsHealthy)
-            {
-                _logger.LogInformation("Health check completed successfully in {Duration}ms", result.Duration.TotalMilliseconds);
-            }
-            else
-            {
-                _logger.LogWarning("Health check failed with {IssueCount} issues in {Duration}ms", result.Issues.Count, result.Duration.TotalMilliseconds);
-            }
-
+            LogHealthCheckResult(result, correlationId);
             return result;
+        }
+        catch (OperationCanceledException)
+        {
+            stopwatch.Stop();
+            _logger.LogWarning("Health check was cancelled. CorrelationId: {CorrelationId}", correlationId);
+            
+            return CreateErrorResult("Health check was cancelled", stopwatch.Elapsed, correlationId);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Error during health check");
+            _logger.LogError(ex, "Unexpected error during health check. CorrelationId: {CorrelationId}", correlationId);
             
-            result.IsHealthy = false;
-            result.Status = "error";
-            result.Issues.Add($"Health check error: {ex.Message}");
-            result.Duration = stopwatch.Elapsed;
-            
-            return result;
+            return CreateErrorResult(
+                _config.IncludeDetailedErrors ? ex.Message : "An unexpected error occurred during health check",
+                stopwatch.Elapsed,
+                correlationId);
         }
     }
 
-    public async Task<HealthCheckResult> CheckLivenessAsync()
+    public async Task<HealthCheckResult> CheckLivenessAsync(CancellationToken cancellationToken = default)
     {
+        var correlationId = Guid.NewGuid().ToString();
         var stopwatch = Stopwatch.StartNew();
-        var result = new HealthCheckResult();
+        
+        _logger.LogInformation("Starting liveness check. CorrelationId: {CorrelationId}", correlationId);
 
         try
         {
-            // Liveness check - just verify the application is responsive
-            var appHealth = await CheckApplicationHealthAsync();
+            var appHealth = await CheckApplicationHealthAsync(correlationId, cancellationToken);
             
-            result.IsHealthy = appHealth.IsHealthy;
-            result.Status = appHealth.IsHealthy ? "alive" : "not_alive";
-            result.Components = new Dictionary<string, ComponentHealth>
+            var result = new HealthCheckResult
             {
-                ["application"] = appHealth
+                IsHealthy = appHealth.IsHealthy,
+                Status = appHealth.IsHealthy ? "alive" : "not_alive",
+                Components = new Dictionary<string, ComponentHealth>
+                {
+                    [_config.ComponentNames.Application] = appHealth
+                },
+                Duration = stopwatch.Elapsed
             };
-            
+
             if (!appHealth.IsHealthy)
             {
-                result.Issues.Add($"Application: {appHealth.ErrorMessage}");
+                result.Issues.Add($"{_config.ComponentNames.Application}: {appHealth.ErrorMessage}");
             }
 
-            stopwatch.Stop();
-            result.Duration = stopwatch.Elapsed;
-
+            LogHealthCheckResult(result, correlationId);
             return result;
+        }
+        catch (OperationCanceledException)
+        {
+            stopwatch.Stop();
+            _logger.LogWarning("Liveness check was cancelled. CorrelationId: {CorrelationId}", correlationId);
+            
+            return CreateErrorResult("Liveness check was cancelled", stopwatch.Elapsed, correlationId);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            result.IsHealthy = false;
-            result.Status = "error";
-            result.Issues.Add($"Liveness check error: {ex.Message}");
-            result.Duration = stopwatch.Elapsed;
-            return result;
+            _logger.LogError(ex, "Unexpected error during liveness check. CorrelationId: {CorrelationId}", correlationId);
+            
+            return CreateErrorResult(
+                _config.IncludeDetailedErrors ? ex.Message : "An unexpected error occurred during liveness check",
+                stopwatch.Elapsed,
+                correlationId);
         }
     }
 
-    public async Task<HealthCheckResult> CheckReadinessAsync()
+    public async Task<HealthCheckResult> CheckReadinessAsync(CancellationToken cancellationToken = default)
     {
+        var correlationId = Guid.NewGuid().ToString();
         var stopwatch = Stopwatch.StartNew();
-        var result = new HealthCheckResult();
+        
+        _logger.LogInformation("Starting readiness check. CorrelationId: {CorrelationId}", correlationId);
 
         try
         {
-            // Readiness check - verify the app is ready to serve traffic
             var components = new Dictionary<string, ComponentHealth>();
 
-            // Database connectivity
-            var dbHealth = await CheckDatabaseHealthAsync();
-            components["database"] = dbHealth;
+            if (!_config.SkipDatabaseCheck)
+            {
+                var dbHealth = await CheckDatabaseHealthAsync(correlationId, cancellationToken);
+                components[_config.ComponentNames.Database] = dbHealth;
+            }
 
-            // Application health
-            var appHealth = await CheckApplicationHealthAsync();
-            components["application"] = appHealth;
+            var appHealth = await CheckApplicationHealthAsync(correlationId, cancellationToken);
+            components[_config.ComponentNames.Application] = appHealth;
 
-            var issues = new List<string>();
-            if (!dbHealth.IsHealthy) issues.Add($"Database: {dbHealth.ErrorMessage}");
-            if (!appHealth.IsHealthy) issues.Add($"Application: {appHealth.ErrorMessage}");
-
-            result.IsHealthy = components.All(c => c.Value.IsHealthy);
-            result.Status = result.IsHealthy ? "ready" : "not_ready";
-            result.Components = components;
-            result.Issues = issues;
-
-            stopwatch.Stop();
+            var result = CreateHealthResult(components, "ready", "not_ready", correlationId);
             result.Duration = stopwatch.Elapsed;
 
+            LogHealthCheckResult(result, correlationId);
             return result;
+        }
+        catch (OperationCanceledException)
+        {
+            stopwatch.Stop();
+            _logger.LogWarning("Readiness check was cancelled. CorrelationId: {CorrelationId}", correlationId);
+            
+            return CreateErrorResult("Readiness check was cancelled", stopwatch.Elapsed, correlationId);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            result.IsHealthy = false;
-            result.Status = "error";
-            result.Issues.Add($"Readiness check error: {ex.Message}");
-            result.Duration = stopwatch.Elapsed;
-            return result;
+            _logger.LogError(ex, "Unexpected error during readiness check. CorrelationId: {CorrelationId}", correlationId);
+            
+            return CreateErrorResult(
+                _config.IncludeDetailedErrors ? ex.Message : "An unexpected error occurred during readiness check",
+                stopwatch.Elapsed,
+                correlationId);
         }
     }
 
-    private async Task<ComponentHealth> CheckDatabaseHealthAsync()
+    private async Task<Dictionary<string, ComponentHealth>> CheckAllComponentsAsync(string correlationId, CancellationToken cancellationToken)
+    {
+        var components = new Dictionary<string, ComponentHealth>();
+
+        if (!_config.SkipDatabaseCheck)
+        {
+            var dbHealth = await CheckDatabaseHealthAsync(correlationId, cancellationToken);
+            components[_config.ComponentNames.Database] = dbHealth;
+        }
+
+        var appHealth = await CheckApplicationHealthAsync(correlationId, cancellationToken);
+        components[_config.ComponentNames.Application] = appHealth;
+
+        return components;
+    }
+
+    private async Task<ComponentHealth> CheckDatabaseHealthAsync(string correlationId, CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
         
+        _logger.LogDebug("Checking database health. CorrelationId: {CorrelationId}", correlationId);
+        
         try
         {
-            // Check database connectivity
-            var canConnect = await _context.Database.CanConnectAsync();
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(_config.DatabaseTimeoutSeconds));
+
+            var canConnect = await _context.Database.CanConnectAsync(cts.Token);
             
             stopwatch.Stop();
             
-            return new ComponentHealth
+            var health = new ComponentHealth
             {
                 IsHealthy = canConnect,
                 Status = canConnect ? "healthy" : "unhealthy",
                 ErrorMessage = canConnect ? null : "Cannot connect to database",
                 Details = new Dictionary<string, object>
                 {
-                    ["canConnect"] = canConnect
+                    ["canConnect"] = canConnect,
+                    ["timeoutSeconds"] = _config.DatabaseTimeoutSeconds
                 },
+                Duration = stopwatch.Elapsed
+            };
+
+            _logger.LogDebug("Database health check completed. IsHealthy: {IsHealthy}, Duration: {Duration}ms. CorrelationId: {CorrelationId}", 
+                health.IsHealthy, health.Duration.TotalMilliseconds, correlationId);
+
+            return health;
+        }
+        catch (OperationCanceledException)
+        {
+            stopwatch.Stop();
+            _logger.LogWarning("Database health check timed out after {TimeoutSeconds}s. CorrelationId: {CorrelationId}", 
+                _config.DatabaseTimeoutSeconds, correlationId);
+            
+            return new ComponentHealth
+            {
+                IsHealthy = false,
+                Status = "timeout",
+                ErrorMessage = $"Database health check timed out after {_config.DatabaseTimeoutSeconds} seconds",
                 Duration = stopwatch.Elapsed
             };
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
+            _logger.LogError(ex, "Error during database health check. CorrelationId: {CorrelationId}", correlationId);
+            
             return new ComponentHealth
             {
                 IsHealthy = false,
                 Status = "error",
-                ErrorMessage = ex.Message,
+                ErrorMessage = _config.IncludeDetailedErrors ? ex.Message : "Database health check failed",
                 Duration = stopwatch.Elapsed
             };
         }
     }
 
-    private async Task<ComponentHealth> CheckApplicationHealthAsync()
+    private async Task<ComponentHealth> CheckApplicationHealthAsync(string correlationId, CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
+        
+        _logger.LogDebug("Checking application health. CorrelationId: {CorrelationId}", correlationId);
+        
         try
         {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(_config.ApplicationTimeoutSeconds));
+
             // If using in-memory provider, skip relational checks and always return healthy
             var providerName = _context.Database.ProviderName;
             if (providerName != null && providerName.Contains("InMemory", StringComparison.OrdinalIgnoreCase))
             {
                 stopwatch.Stop();
-                return new ComponentHealth
+                var health = new ComponentHealth
                 {
                     IsHealthy = true,
                     Status = "healthy",
@@ -214,39 +260,121 @@ public class HealthCheckService : IHealthCheckService
                     },
                     Duration = stopwatch.Elapsed
                 };
+
+                _logger.LogDebug("Application health check completed (in-memory). IsHealthy: {IsHealthy}, Duration: {Duration}ms. CorrelationId: {CorrelationId}", 
+                    health.IsHealthy, health.Duration.TotalMilliseconds, correlationId);
+
+                return health;
             }
 
             // Check if application is responsive
-            var canConnect = await _context.Database.CanConnectAsync();
-            // Check for pending migrations
-            var pendingMigrations = _context.Database.GetPendingMigrations().ToList();
+            var canConnect = await _context.Database.CanConnectAsync(cts.Token);
+            
+            // Check for pending migrations (only if not skipped)
+            var pendingMigrations = new List<string>();
+            if (!_config.SkipMigrationsCheck)
+            {
+                pendingMigrations = _context.Database.GetPendingMigrations().ToList();
+            }
+
             stopwatch.Stop();
+            
             var isHealthy = canConnect && !pendingMigrations.Any();
-            return new ComponentHealth
+            var errorMessage = !canConnect ? "Cannot connect to database" : 
+                              pendingMigrations.Any() ? $"Pending migrations: {string.Join(", ", pendingMigrations)}" : null;
+
+            var appHealth = new ComponentHealth
             {
                 IsHealthy = isHealthy,
                 Status = isHealthy ? "healthy" : "unhealthy",
-                ErrorMessage = !canConnect ? "Cannot connect to database" : 
-                              pendingMigrations.Any() ? $"Pending migrations: {string.Join(", ", pendingMigrations)}" : null,
+                ErrorMessage = errorMessage,
                 Details = new Dictionary<string, object>
                 {
                     ["pendingMigrations"] = pendingMigrations,
                     ["canConnect"] = canConnect,
-                    ["environment"] = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown"
+                    ["skipMigrationsCheck"] = _config.SkipMigrationsCheck,
+                    ["environment"] = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown",
+                    ["timeoutSeconds"] = _config.ApplicationTimeoutSeconds
                 },
+                Duration = stopwatch.Elapsed
+            };
+
+            _logger.LogDebug("Application health check completed. IsHealthy: {IsHealthy}, Duration: {Duration}ms. CorrelationId: {CorrelationId}", 
+                appHealth.IsHealthy, appHealth.Duration.TotalMilliseconds, correlationId);
+
+            return appHealth;
+        }
+        catch (OperationCanceledException)
+        {
+            stopwatch.Stop();
+            _logger.LogWarning("Application health check timed out after {TimeoutSeconds}s. CorrelationId: {CorrelationId}", 
+                _config.ApplicationTimeoutSeconds, correlationId);
+            
+            return new ComponentHealth
+            {
+                IsHealthy = false,
+                Status = "timeout",
+                ErrorMessage = $"Application health check timed out after {_config.ApplicationTimeoutSeconds} seconds",
                 Duration = stopwatch.Elapsed
             };
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
+            _logger.LogError(ex, "Error during application health check. CorrelationId: {CorrelationId}", correlationId);
+            
             return new ComponentHealth
             {
                 IsHealthy = false,
                 Status = "error",
-                ErrorMessage = ex.Message,
+                ErrorMessage = _config.IncludeDetailedErrors ? ex.Message : "Application health check failed",
                 Duration = stopwatch.Elapsed
             };
+        }
+    }
+
+    private static HealthCheckResult CreateHealthResult(
+        Dictionary<string, ComponentHealth> components, 
+        string healthyStatus, 
+        string unhealthyStatus,
+        string correlationId)
+    {
+        var isHealthy = components.All(c => c.Value.IsHealthy);
+        var issues = components.Where(c => !c.Value.IsHealthy)
+                              .Select(c => $"{c.Key}: {c.Value.ErrorMessage}")
+                              .ToList();
+
+        return new HealthCheckResult
+        {
+            IsHealthy = isHealthy,
+            Status = isHealthy ? healthyStatus : unhealthyStatus,
+            Components = components,
+            Issues = issues
+        };
+    }
+
+    private static HealthCheckResult CreateErrorResult(string errorMessage, TimeSpan duration, string correlationId)
+    {
+        return new HealthCheckResult
+        {
+            IsHealthy = false,
+            Status = "error",
+            Issues = new List<string> { errorMessage },
+            Duration = duration
+        };
+    }
+
+    private void LogHealthCheckResult(HealthCheckResult result, string correlationId)
+    {
+        if (result.IsHealthy)
+        {
+            _logger.LogInformation("Health check completed successfully. Status: {Status}, Duration: {Duration}ms, CorrelationId: {CorrelationId}", 
+                result.Status, result.Duration.TotalMilliseconds, correlationId);
+        }
+        else
+        {
+            _logger.LogWarning("Health check failed. Status: {Status}, Issues: {IssueCount}, Duration: {Duration}ms, CorrelationId: {CorrelationId}", 
+                result.Status, result.Issues.Count, result.Duration.TotalMilliseconds, correlationId);
         }
     }
 } 

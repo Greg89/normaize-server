@@ -39,11 +39,11 @@ public class HealthMonitoringControllerTests
             }
         };
 
-        _mockHealthCheckService.Setup(x => x.CheckLivenessAsync())
+        _mockHealthCheckService.Setup(x => x.CheckLivenessAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(healthyResult);
 
         // Act
-        var result = await _controller.GetLiveness();
+        var result = await _controller.GetLiveness(CancellationToken.None);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -77,11 +77,11 @@ public class HealthMonitoringControllerTests
             Issues = new List<string> { "Application not responding" }
         };
 
-        _mockHealthCheckService.Setup(x => x.CheckLivenessAsync())
+        _mockHealthCheckService.Setup(x => x.CheckLivenessAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(unhealthyResult);
 
         // Act
-        var result = await _controller.GetLiveness();
+        var result = await _controller.GetLiveness(CancellationToken.None);
 
         // Assert
         result.Should().BeOfType<ObjectResult>();
@@ -130,11 +130,11 @@ public class HealthMonitoringControllerTests
             }
         };
 
-        _mockHealthCheckService.Setup(x => x.CheckReadinessAsync())
+        _mockHealthCheckService.Setup(x => x.CheckReadinessAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(healthyResult);
 
         // Act
-        var result = await _controller.GetReadiness();
+        var result = await _controller.GetReadiness(CancellationToken.None);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -182,11 +182,11 @@ public class HealthMonitoringControllerTests
             Issues = new List<string> { "Database is not ready" }
         };
 
-        _mockHealthCheckService.Setup(x => x.CheckReadinessAsync())
+        _mockHealthCheckService.Setup(x => x.CheckReadinessAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(unhealthyResult);
 
         // Act
-        var result = await _controller.GetReadiness();
+        var result = await _controller.GetReadiness(CancellationToken.None);
 
         // Assert
         result.Should().BeOfType<ObjectResult>();
@@ -242,11 +242,11 @@ public class HealthMonitoringControllerTests
             }
         };
 
-        _mockHealthCheckService.Setup(x => x.CheckHealthAsync())
+        _mockHealthCheckService.Setup(x => x.CheckHealthAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(healthyResult);
 
         // Act
-        var result = await _controller.GetHealth();
+        var result = await _controller.GetHealth(CancellationToken.None);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -301,11 +301,11 @@ public class HealthMonitoringControllerTests
             Issues = new List<string> { "Database is not responding", "External services are down" }
         };
 
-        _mockHealthCheckService.Setup(x => x.CheckHealthAsync())
+        _mockHealthCheckService.Setup(x => x.CheckHealthAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(unhealthyResult);
 
         // Act
-        var result = await _controller.GetHealth();
+        var result = await _controller.GetHealth(CancellationToken.None);
 
         // Assert
         result.Should().BeOfType<ObjectResult>();
@@ -326,44 +326,44 @@ public class HealthMonitoringControllerTests
     public async Task GetLiveness_ShouldCallHealthCheckService()
     {
         // Arrange
-        var healthyResult = new HealthCheckResult { IsHealthy = true, Status = "alive" };
-        _mockHealthCheckService.Setup(x => x.CheckLivenessAsync())
-            .ReturnsAsync(healthyResult);
+        var expectedResult = new HealthCheckResult { IsHealthy = true, Status = "alive" };
+        _mockHealthCheckService.Setup(x => x.CheckLivenessAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
 
         // Act
-        await _controller.GetLiveness();
+        await _controller.GetLiveness(CancellationToken.None);
 
         // Assert
-        _mockHealthCheckService.Verify(x => x.CheckLivenessAsync(), Times.Once);
+        _mockHealthCheckService.Verify(x => x.CheckLivenessAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task GetReadiness_ShouldCallHealthCheckService()
     {
         // Arrange
-        var healthyResult = new HealthCheckResult { IsHealthy = true, Status = "ready" };
-        _mockHealthCheckService.Setup(x => x.CheckReadinessAsync())
-            .ReturnsAsync(healthyResult);
+        var expectedResult = new HealthCheckResult { IsHealthy = true, Status = "ready" };
+        _mockHealthCheckService.Setup(x => x.CheckReadinessAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
 
         // Act
-        await _controller.GetReadiness();
+        await _controller.GetReadiness(CancellationToken.None);
 
         // Assert
-        _mockHealthCheckService.Verify(x => x.CheckReadinessAsync(), Times.Once);
+        _mockHealthCheckService.Verify(x => x.CheckReadinessAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task GetHealth_ShouldCallHealthCheckService()
     {
         // Arrange
-        var healthyResult = new HealthCheckResult { IsHealthy = true, Status = "healthy" };
-        _mockHealthCheckService.Setup(x => x.CheckHealthAsync())
-            .ReturnsAsync(healthyResult);
+        var expectedResult = new HealthCheckResult { IsHealthy = true, Status = "healthy" };
+        _mockHealthCheckService.Setup(x => x.CheckHealthAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
 
         // Act
-        await _controller.GetHealth();
+        await _controller.GetHealth(CancellationToken.None);
 
         // Assert
-        _mockHealthCheckService.Verify(x => x.CheckHealthAsync(), Times.Once);
+        _mockHealthCheckService.Verify(x => x.CheckHealthAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 } 

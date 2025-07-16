@@ -145,6 +145,10 @@ public static class ServiceConfiguration
         // Add memory cache
         builder.Services.AddMemoryCache();
         
+        // Configure health check settings
+        builder.Services.Configure<Normaize.Core.Configuration.HealthCheckConfiguration>(
+            builder.Configuration.GetSection(Normaize.Core.Configuration.HealthCheckConfiguration.SectionName));
+        
         builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
         builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();
         builder.Services.AddScoped<IDataVisualizationService, DataVisualizationService>();
