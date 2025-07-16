@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Constants;
-using Normaize.API.Services;
 using Normaize.Data;
 using Normaize.Data.Repositories;
 using Normaize.Data.Services;
@@ -143,15 +142,18 @@ public static class ServiceConfiguration
 
     private static void ConfigureApplicationServices(WebApplicationBuilder builder)
     {
+        // Add memory cache
+        builder.Services.AddMemoryCache();
+        
         builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
         builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();
         builder.Services.AddScoped<IDataVisualizationService, DataVisualizationService>();
         builder.Services.AddScoped<IFileUploadService, FileUploadService>();
         builder.Services.AddScoped<IAuditService, AuditService>();
-        builder.Services.AddScoped<IStructuredLoggingService, StructuredLoggingService>();
+        builder.Services.AddScoped<Normaize.Core.Interfaces.IStructuredLoggingService, Normaize.Data.Services.StructuredLoggingService>();
         builder.Services.AddScoped<IMigrationService, MigrationService>();
         builder.Services.AddScoped<IHealthCheckService, HealthCheckService>();
-        builder.Services.AddSingleton<IAppConfigurationService, AppConfigurationService>();
+        builder.Services.AddSingleton<IAppConfigurationService, Normaize.Data.Services.AppConfigurationService>();
         builder.Services.AddHttpContextAccessor();
     }
 

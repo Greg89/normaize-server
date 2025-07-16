@@ -5,7 +5,6 @@ using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using Normaize.Core.DTOs;
 using Normaize.Core.Constants;
-using Normaize.API.Services;
 
 namespace Normaize.API.Controllers;
 
@@ -28,12 +27,20 @@ public class DiagnosticsController : ControllerBase
     {
         try
         {
-            var storageProvider = _configService.Get("STORAGE_PROVIDER") ?? "default";
+            var storageProviderConfig = _configService.Get("STORAGE_PROVIDER") ?? "default";
             var s3Bucket = _configService.Get("AWS_S3_BUCKET");
             var s3AccessKey = _configService.Get("AWS_ACCESS_KEY_ID");
             var s3SecretKey = _configService.Get("AWS_SECRET_ACCESS_KEY");
             var s3ServiceUrl = _configService.Get("AWS_SERVICE_URL");
             var environment = _configService.Get("ASPNETCORE_ENVIRONMENT") ?? AppConstants.ConfigStatus.NOT_SET;
+            
+            var storageProvider = storageProviderConfig.ToLowerInvariant() switch
+            {
+                "s3" => StorageProvider.S3,
+                "azure" => StorageProvider.Azure,
+                "memory" => StorageProvider.Memory,
+                _ => StorageProvider.Local
+            };
             
             var diagnostics = new StorageDiagnosticsDto
             {

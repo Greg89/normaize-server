@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Normaize.API.Services;
 using FluentAssertions;
 using System.Security.Claims;
 using Xunit;
+using Normaize.Core.Interfaces;
+using Normaize.Data.Services;
 
 namespace Normaize.Tests.Services;
 
@@ -40,13 +41,9 @@ public class StructuredLoggingServiceTests
         // Arrange
         var action = "Test Action";
         var data = new { testProperty = "testValue" };
-        // Always use ClaimsPrincipal with ClaimsIdentity
         var principal = new ClaimsPrincipal(new ClaimsIdentity());
         _mockHttpContext.Setup(x => x.User).Returns(principal);
         _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
-        // Debug output
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         _loggingService.LogUserAction(action, data);
@@ -78,9 +75,6 @@ public class StructuredLoggingServiceTests
         var principal = new ClaimsPrincipal(new ClaimsIdentity());
         _mockHttpContext.Setup(x => x.User).Returns(principal);
         _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
-        // Debug output
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         _loggingService.LogUserAction(action);
@@ -97,6 +91,47 @@ public class StructuredLoggingServiceTests
     }
 
     [Fact]
+    public void LogUserAction_WithCustomLogLevel_ShouldUseSpecifiedLevel()
+    {
+        // Arrange
+        var action = "Test Action";
+        var principal = new ClaimsPrincipal(new ClaimsIdentity());
+        _mockHttpContext.Setup(x => x.User).Returns(principal);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+
+        // Act
+        _loggingService.LogUserAction(action, null, level: LogLevel.Warning);
+
+        // Assert
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("User Action: Test Action")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void LogUserAction_WithNullAction_ShouldThrowException()
+    {
+        // Act & Assert
+        var action = () => _loggingService.LogUserAction(null!);
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*cannot be null or empty*");
+    }
+
+    [Fact]
+    public void LogUserAction_WithEmptyAction_ShouldThrowException()
+    {
+        // Act & Assert
+        var action = () => _loggingService.LogUserAction("");
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*cannot be null or empty*");
+    }
+
+    [Fact]
     public void LogException_WithValidException_ShouldLogError()
     {
         // Arrange
@@ -105,9 +140,6 @@ public class StructuredLoggingServiceTests
         var principal = new ClaimsPrincipal(new ClaimsIdentity());
         _mockHttpContext.Setup(x => x.User).Returns(principal);
         _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
-        // Debug output
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         _loggingService.LogException(exception, context);
@@ -116,6 +148,39 @@ public class StructuredLoggingServiceTests
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("Exception in Test Context")),
+                exception,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void LogException_WithNullException_ShouldThrowException()
+    {
+        // Act & Assert
+        var action = () => _loggingService.LogException(null!);
+        action.Should().Throw<ArgumentNullException>()
+            .WithParameterName("exception");
+    }
+
+    [Fact]
+    public void LogException_WithCustomLogLevel_ShouldUseSpecifiedLevel()
+    {
+        // Arrange
+        var exception = new InvalidOperationException("Test exception");
+        var context = "Test Context";
+        var principal = new ClaimsPrincipal(new ClaimsIdentity());
+        _mockHttpContext.Setup(x => x.User).Returns(principal);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+
+        // Act
+        _loggingService.LogException(exception, context, LogLevel.Critical);
+
+        // Assert
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Critical,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("Exception in Test Context")),
                 exception,
@@ -133,9 +198,6 @@ public class StructuredLoggingServiceTests
         var principal = new ClaimsPrincipal(new ClaimsIdentity());
         _mockHttpContext.Setup(x => x.User).Returns(principal);
         _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
-        // Debug output
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         _loggingService.LogRequestStart(method, path, userId);
@@ -152,6 +214,24 @@ public class StructuredLoggingServiceTests
     }
 
     [Fact]
+    public void LogRequestStart_WithNullMethod_ShouldThrowException()
+    {
+        // Act & Assert
+        var action = () => _loggingService.LogRequestStart(null!, "/api/test");
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*cannot be null or empty*");
+    }
+
+    [Fact]
+    public void LogRequestStart_WithNullPath_ShouldThrowException()
+    {
+        // Act & Assert
+        var action = () => _loggingService.LogRequestStart("GET", null!);
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*cannot be null or empty*");
+    }
+
+    [Fact]
     public void LogRequestEnd_WithValidParameters_ShouldLogInformation()
     {
         // Arrange
@@ -162,9 +242,6 @@ public class StructuredLoggingServiceTests
         var principal = new ClaimsPrincipal(new ClaimsIdentity());
         _mockHttpContext.Setup(x => x.User).Returns(principal);
         _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
-        // Debug output
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         _loggingService.LogRequestEnd(method, path, statusCode, durationMs);
@@ -181,6 +258,126 @@ public class StructuredLoggingServiceTests
     }
 
     [Fact]
+    public void LogRequestEnd_WithErrorStatusCode_ShouldLogWarning()
+    {
+        // Arrange
+        var method = "POST";
+        var path = "/api/test";
+        var statusCode = 404;
+        var durationMs = 150L;
+        var principal = new ClaimsPrincipal(new ClaimsIdentity());
+        _mockHttpContext.Setup(x => x.User).Returns(principal);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+
+        // Act
+        _loggingService.LogRequestEnd(method, path, statusCode, durationMs);
+
+        // Assert
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("Request Completed: POST /api/test - Status: 404")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void LogRequestEnd_WithInvalidStatusCode_ShouldThrowException()
+    {
+        // Act & Assert
+        var action = () => _loggingService.LogRequestEnd("GET", "/api/test", 999, 100);
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*Status code must be between 100 and 599*");
+    }
+
+    [Fact]
+    public void LogRequestEnd_WithNegativeDuration_ShouldThrowException()
+    {
+        // Act & Assert
+        var action = () => _loggingService.LogRequestEnd("GET", "/api/test", 200, -100);
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*Duration cannot be negative*");
+    }
+
+    [Fact]
+    public void LogPerformance_WithValidParameters_ShouldLogInformation()
+    {
+        // Arrange
+        var operation = "Database Query";
+        var durationMs = 150L;
+        var metadata = new { TableName = "Users", QueryType = "SELECT" };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity());
+        _mockHttpContext.Setup(x => x.User).Returns(principal);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+
+        // Act
+        _loggingService.LogPerformance(operation, durationMs, metadata);
+
+        // Assert
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("Performance: Database Query completed in 150ms")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+        
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("Performance Metadata")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void LogPerformance_WithNullMetadata_ShouldLogOnlyPerformance()
+    {
+        // Arrange
+        var operation = "Database Query";
+        var durationMs = 150L;
+        var principal = new ClaimsPrincipal(new ClaimsIdentity());
+        _mockHttpContext.Setup(x => x.User).Returns(principal);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+
+        // Act
+        _loggingService.LogPerformance(operation, durationMs);
+
+        // Assert
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("Performance: Database Query completed in 150ms")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void LogPerformance_WithNullOperation_ShouldThrowException()
+    {
+        // Act & Assert
+        var action = () => _loggingService.LogPerformance(null!, 100);
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*cannot be null or empty*");
+    }
+
+    [Fact]
+    public void LogPerformance_WithNegativeDuration_ShouldThrowException()
+    {
+        // Act & Assert
+        var action = () => _loggingService.LogPerformance("Test", -100);
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*Duration cannot be negative*");
+    }
+
+    [Fact]
     public void CreateUserScope_WithValidUser_ShouldReturnDisposable()
     {
         // Arrange
@@ -189,9 +386,6 @@ public class StructuredLoggingServiceTests
         var principal = new ClaimsPrincipal(new ClaimsIdentity());
         _mockHttpContext.Setup(x => x.User).Returns(principal);
         _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
-        // Debug output
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContext.Object.User: {_mockHttpContext.Object.User}");
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] _mockHttpContextAccessor.Object.HttpContext?.User: {_mockHttpContextAccessor.Object.HttpContext?.User}");
 
         // Act
         using var scope = _loggingService.CreateUserScope(userId, userEmail);

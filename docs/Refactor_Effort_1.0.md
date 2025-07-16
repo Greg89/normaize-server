@@ -39,17 +39,15 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 - [DONE] `Normaize.API/Controllers/DataSetsController.cs`
 - [DONE] `Normaize.API/Controllers/HealthController.cs`
 - [DONE] `Normaize.API/Middleware/Auth0Middleware.cs`
-- [ ] `Normaize.API/Middleware/ExceptionHandlingMiddleware.cs`
-- [ ] `Normaize.API/Middleware/RequestLoggingMiddleware.cs`
-- [ ] `Normaize.API/Services/InMemoryStorageService.cs`
-- [ ] `Normaize.API/Services/LocalStorageService.cs`
-- [ ] `Normaize.API/Services/SftpStorageService.cs`
-- [ ] `Normaize.API/Services/StructuredLoggingService.cs`
-- [ ] `Normaize.API/Normaize.API.csproj`
+- [DONE] `Normaize.API/Middleware/ExceptionHandlingMiddleware.cs`
+- [DONE] `Normaize.API/Middleware/RequestLoggingMiddleware.cs`
+- [DONE] `Normaize.API/Services/InMemoryStorageService.cs`
+- [DONE] `Normaize.API/Services/StructuredLoggingService.cs`
+- [NA] `Normaize.API/Normaize.API.csproj`
 
 ### Core Layer (Normaize.Core)
-- [ ] `Normaize.Core/DTOs/AnalysisDto.cs`
-- [ ] `Normaize.Core/DTOs/DataSetDto.cs`
+- [DONE] `Normaize.Core/DTOs/AnalysisDto.cs`
+- [DOME] `Normaize.Core/DTOs/DataSetDto.cs`
 - [ ] `Normaize.Core/Interfaces/IAnalysisRepository.cs`
 - [ ] `Normaize.Core/Interfaces/IDataAnalysisService.cs`
 - [ ] `Normaize.Core/Interfaces/IDataProcessingService.cs`
@@ -62,9 +60,9 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 - [ ] `Normaize.Core/Models/Analysis.cs`
 - [ ] `Normaize.Core/Models/DataSet.cs`
 - [ ] `Normaize.Core/Models/FileUploadRequest.cs`
-- [ ] `Normaize.Core/Services/DataAnalysisService.cs`
-- [ ] `Normaize.Core/Services/DataProcessingService.cs`
-- [ ] `Normaize.Core/Services/DataVisualizationService.cs`
+- [DONE] `Normaize.Core/Services/DataAnalysisService.cs`
+- [DONE] `Normaize.Core/Services/DataProcessingService.cs`
+- [DONE] `Normaize.Core/Services/DataVisualizationService.cs`
 - [ ] `Normaize.Core/Services/FileUploadService.cs`
 - [ ] `Normaize.Core/Normaize.Core.csproj`
 

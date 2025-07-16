@@ -1,13 +1,12 @@
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Normaize.API.Services;
+using Normaize.Core.Interfaces;
 using FluentAssertions;
 using System.Net;
 using Xunit;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
-using Normaize.Core.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Normaize.Data;
 using Normaize.Tests; // <-- Add this

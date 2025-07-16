@@ -1,4 +1,4 @@
-using Normaize.API.Services;
+using Normaize.Core.Interfaces;
 using System.Net;
 using System.Text.Json;
 
@@ -7,6 +7,10 @@ namespace Normaize.API.Middleware;
 public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
 
     public ExceptionHandlingMiddleware(RequestDelegate next)
     {
@@ -24,50 +28,65 @@ public class ExceptionHandlingMiddleware
             // Get logging service from service provider
             var loggingService = context.RequestServices.GetRequiredService<IStructuredLoggingService>();
             
-            // Log the exception with full context
-            loggingService.LogException(ex, "Global exception handler");
+            // Generate correlation ID for request tracking
+            var correlationId = context.TraceIdentifier ?? Guid.NewGuid().ToString();
             
-            await HandleExceptionAsync(context, ex);
+            // Log the exception with full context
+            loggingService.LogException(ex, $"Global exception handler - {context.Request.Method} {context.Request.Path} [CorrelationId: {correlationId}]");
+            
+            await HandleExceptionAsync(context, ex, correlationId);
         }
     }
 
-    private static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
-    private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private static async Task HandleExceptionAsync(HttpContext context, Exception exception, string correlationId)
     {
         context.Response.ContentType = "application/json";
         
         var response = new
         {
-            error = new
+            Error = new
             {
-                message = "An error occurred while processing your request.",
-                type = exception.GetType().Name,
-                details = exception.Message
+                Message = GetUserFriendlyMessage(exception),
+                Type = exception.GetType().Name,
+                Details = exception.Message,
+                CorrelationId = correlationId,
+                RequestPath = context.Request.Path.ToString(),
+                RequestMethod = context.Request.Method,
+                Timestamp = DateTime.UtcNow
             }
         };
 
-        switch (exception)
-        {
-            case ArgumentException:
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                break;
-            case UnauthorizedAccessException:
-                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                break;
-            case InvalidOperationException:
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                break;
-            default:
-                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                break;
-        }
+        context.Response.StatusCode = GetHttpStatusCode(exception);
 
-        var jsonResponse = JsonSerializer.Serialize(response, _jsonOptions);
-
+        var jsonResponse = JsonSerializer.Serialize(response, JsonOptions);
         await context.Response.WriteAsync(jsonResponse);
+    }
+
+    private static string GetUserFriendlyMessage(Exception exception)
+    {
+        return exception switch
+        {
+            ArgumentException => "Invalid request parameters provided.",
+            UnauthorizedAccessException => "You are not authorized to perform this action.",
+            InvalidOperationException => "The requested operation cannot be completed.",
+            KeyNotFoundException => "The requested resource was not found.",
+            NotSupportedException => "This operation is not supported.",
+            TimeoutException => "The operation timed out. Please try again.",
+            _ => "An unexpected error occurred while processing your request."
+        };
+    }
+
+    private static int GetHttpStatusCode(Exception exception)
+    {
+        return exception switch
+        {
+            ArgumentException => (int)HttpStatusCode.BadRequest,
+            UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
+            InvalidOperationException => (int)HttpStatusCode.BadRequest,
+            KeyNotFoundException => (int)HttpStatusCode.NotFound,
+            NotSupportedException => (int)HttpStatusCode.MethodNotAllowed,
+            TimeoutException => (int)HttpStatusCode.RequestTimeout,
+            _ => (int)HttpStatusCode.InternalServerError
+        };
     }
 } 

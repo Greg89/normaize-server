@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
+using Normaize.Core.DTOs;
 using Normaize.Data;
 using System.Text.Json;
 
@@ -142,7 +143,7 @@ public class DataSetRepository : IDataSetRepository
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<DataSet>> GetByFileTypeAsync(string fileType, string userId)
+    public async Task<IEnumerable<DataSet>> GetByFileTypeAsync(FileType fileType, string userId)
     {
         return await _context.DataSets
             .Where(d => d.UserId == userId && !d.IsDeleted && d.FileType == fileType)

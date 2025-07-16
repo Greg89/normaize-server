@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Normaize.Core.Models;
+using Normaize.Core.DTOs;
 
 namespace Normaize.Data;
 
@@ -25,9 +26,9 @@ public class NormaizeContext : DbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.FileName).IsRequired().HasMaxLength(255);
-            entity.Property(e => e.FileType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.FileType).IsRequired().HasConversion<string>().HasMaxLength(50);
             entity.Property(e => e.FilePath).IsRequired().HasMaxLength(500);
-            entity.Property(e => e.StorageProvider).HasMaxLength(50).HasDefaultValue("Local");
+            entity.Property(e => e.StorageProvider).HasConversion<string>().HasMaxLength(50).HasDefaultValue(StorageProvider.Local);
             entity.Property(e => e.UploadedAt);
             entity.Property(e => e.IsProcessed).HasDefaultValue(false);
             entity.Property(e => e.UseSeparateTable).HasDefaultValue(false);
@@ -81,8 +82,8 @@ public class NormaizeContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
             entity.Property(e => e.Description).HasMaxLength(1000);
-            entity.Property(e => e.Type).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Pending");
+            entity.Property(e => e.Type).IsRequired().HasConversion<string>().HasMaxLength(100);
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(50).HasDefaultValue(AnalysisStatus.Pending);
             entity.Property(e => e.CreatedAt);
             
             // Soft delete properties

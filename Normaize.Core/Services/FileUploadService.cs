@@ -73,12 +73,10 @@ public class FileUploadService : IFileUploadService
         {
             FileName = Path.GetFileName(filePath),
             FilePath = filePath,
-            FileType = fileType,
+            FileType = GetFileTypeFromExtension(fileType),
             FileSize = 0, // Will be calculated during processing
             UploadedAt = DateTime.UtcNow,
-            StorageProvider = filePath.StartsWith("sftp://") ? "SFTP" : 
-                             filePath.StartsWith("minio://") ? "MinIO" :
-                             filePath.StartsWith("s3://") ? "S3" : "Local"
+            StorageProvider = GetStorageProviderFromPath(filePath)
         };
 
         try
@@ -384,5 +382,30 @@ public class FileUploadService : IFileUploadService
         {
             _logger.LogError(ex, "Error deleting file {FilePath}", filePath);
         }
+    }
+
+    private FileType GetFileTypeFromExtension(string fileType)
+    {
+        return fileType.ToLowerInvariant() switch
+        {
+            ".csv" => FileType.CSV,
+            ".json" => FileType.JSON,
+            ".xlsx" or ".xls" => FileType.Excel,
+            ".xml" => FileType.XML,
+            ".txt" => FileType.TXT,
+            ".parquet" => FileType.Parquet,
+            _ => FileType.Custom
+        };
+    }
+
+    private StorageProvider GetStorageProviderFromPath(string filePath)
+    {
+        return filePath switch
+        {
+            var path when path.StartsWith("s3://") => StorageProvider.S3,
+            var path when path.StartsWith("azure://") => StorageProvider.Azure,
+            var path when path.StartsWith("memory://") => StorageProvider.Memory,
+            _ => StorageProvider.Local
+        };
     }
 } 

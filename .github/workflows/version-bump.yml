@@ -277,8 +277,22 @@ jobs:
         assignees: ${{ github.actor }}
         reviewers: ${{ github.actor }}
 
+    - name: Check if tag already exists
+      id: check-tag
+      run: |
+        TAG_NAME="v${{ steps.new-version.outputs.new-version }}"
+        echo "Checking if tag $TAG_NAME already exists..."
+        
+        if git tag -l "$TAG_NAME" | grep -q "$TAG_NAME"; then
+          echo "Tag $TAG_NAME already exists"
+          echo "tag-exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "Tag $TAG_NAME does not exist"
+          echo "tag-exists=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Create GitHub Release (after PR merge)
-      if: steps.check-changes.outputs.has-changes == 'true'
+      if: steps.check-changes.outputs.has-changes == 'true' && steps.check-tag.outputs.tag-exists == 'false'
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -302,4 +316,10 @@ jobs:
           Previous version: ${{ steps.current-version.outputs.version }}
           New version: ${{ steps.new-version.outputs.new-version }}
         draft: false
-        prerelease: false 
+        prerelease: false
+
+    - name: Skip release - tag already exists
+      if: steps.check-changes.outputs.has-changes == 'true' && steps.check-tag.outputs.tag-exists == 'true'
+      run: |
+        echo "Tag v${{ steps.new-version.outputs.new-version }} already exists, skipping release creation"
+        echo "This might happen if the version bump workflow ran multiple times or the release was created manually" 

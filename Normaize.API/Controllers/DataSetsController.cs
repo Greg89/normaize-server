@@ -5,7 +5,6 @@ using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using Normaize.Core.Constants;
-using Normaize.API.Services;
 using System.Security.Claims;
 
 namespace Normaize.API.Controllers;
@@ -40,7 +39,7 @@ public class DataSetsController : ControllerBase
         {
             var userId = GetCurrentUserId();
             var dataSets = await _dataProcessingService.GetDataSetsByUserAsync(userId);
-            return Ok(dataSets);
+            return Ok(dataSets?.ToList());
         }
         catch (UnauthorizedAccessException)
         {
@@ -241,7 +240,7 @@ public class DataSetsController : ControllerBase
         {
             var userId = GetCurrentUserId();
             var dataSets = await _dataProcessingService.GetDeletedDataSetsAsync(userId);
-            return Ok(dataSets);
+            return Ok(dataSets?.ToList());
         }
         catch (UnauthorizedAccessException)
         {
@@ -255,7 +254,10 @@ public class DataSetsController : ControllerBase
     }
 
     [HttpGet("search")]
-    public async Task<ActionResult<IEnumerable<DataSetDto>>> SearchDataSets([FromQuery] string q)
+    public async Task<ActionResult<IEnumerable<DataSetDto>>> SearchDataSets(
+        [FromQuery] string q, 
+        [FromQuery] int page = 1, 
+        [FromQuery] int pageSize = 20)
     {
         try
         {
@@ -263,8 +265,8 @@ public class DataSetsController : ControllerBase
                 return BadRequest("Search query is required");
 
             var userId = GetCurrentUserId();
-            var dataSets = await _dataProcessingService.SearchDataSetsAsync(q, userId);
-            return Ok(dataSets);
+            var dataSets = await _dataProcessingService.SearchDataSetsAsync(q, userId, page, pageSize);
+            return Ok(dataSets?.ToList());
         }
         catch (UnauthorizedAccessException)
         {
@@ -278,13 +280,16 @@ public class DataSetsController : ControllerBase
     }
 
     [HttpGet("filetype/{fileType}")]
-    public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDataSetsByFileType(string fileType)
+    public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDataSetsByFileType(
+        FileType fileType,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
         try
         {
             var userId = GetCurrentUserId();
-            var dataSets = await _dataProcessingService.GetDataSetsByFileTypeAsync(fileType, userId);
-            return Ok(dataSets);
+            var dataSets = await _dataProcessingService.GetDataSetsByFileTypeAsync(fileType, userId, page, pageSize);
+            return Ok(dataSets?.ToList());
         }
         catch (UnauthorizedAccessException)
         {
@@ -300,13 +305,15 @@ public class DataSetsController : ControllerBase
     [HttpGet("date-range")]
     public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDataSetsByDateRange(
         [FromQuery] DateTime startDate, 
-        [FromQuery] DateTime endDate)
+        [FromQuery] DateTime endDate,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
         try
         {
             var userId = GetCurrentUserId();
-            var dataSets = await _dataProcessingService.GetDataSetsByDateRangeAsync(startDate, endDate, userId);
-            return Ok(dataSets);
+            var dataSets = await _dataProcessingService.GetDataSetsByDateRangeAsync(startDate, endDate, userId, page, pageSize);
+            return Ok(dataSets?.ToList());
         }
         catch (UnauthorizedAccessException)
         {

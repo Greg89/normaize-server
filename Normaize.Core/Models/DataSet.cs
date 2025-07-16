@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Normaize.Core.DTOs;
 
 namespace Normaize.Core.Models;
 
@@ -17,7 +18,7 @@ public class DataSet
     public string FileName { get; set; } = string.Empty;
     
     [Required]
-    public string FileType { get; set; } = string.Empty;
+    public FileType FileType { get; set; }
     
     public long FileSize { get; set; }
     
@@ -42,7 +43,7 @@ public class DataSet
     // Enhanced file storage properties
     public string FilePath { get; set; } = string.Empty;
     
-    public string StorageProvider { get; set; } = "Local"; // Local, S3, Azure, etc.
+    public StorageProvider StorageProvider { get; set; } = StorageProvider.Local;
     
     // For small datasets, store processed data directly
     public string? ProcessedData { get; set; } // JSON serialized data

@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Http;
-using Normaize.API.Services;
+using Normaize.Core.Interfaces;
 using System.Diagnostics;
 
 namespace Normaize.API.Middleware;
@@ -17,11 +17,10 @@ public class RequestLoggingMiddleware
     {
         var stopwatch = Stopwatch.StartNew();
         var method = context.Request.Method;
-        var path = context.Request.Path;
+        var path = context.Request.Path.ToString(); // Convert PathString to string
         
-        // Get user info from Auth0 middleware
-        var userId = context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            ?? context.Items["UserId"]?.ToString();
+        // Get user info from Auth0 middleware with null safety
+        var userId = GetUserId(context);
 
         // Get logging service from service provider
         var loggingService = context.RequestServices.GetRequiredService<IStructuredLoggingService>();
@@ -48,5 +47,19 @@ public class RequestLoggingMiddleware
             // Re-throw to let the global exception handler deal with it
             throw;
         }
+    }
+
+    private static string? GetUserId(HttpContext context)
+    {
+        // Try to get from claims first (Auth0)
+        var userIdFromClaims = context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrEmpty(userIdFromClaims))
+            return userIdFromClaims;
+        
+        // Try to get from Items (fallback)
+        if (context.Items.TryGetValue("UserId", out var userIdFromItems))
+            return userIdFromItems?.ToString();
+        
+        return null;
     }
 } 

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Normaize.API.Controllers;
-using Normaize.API.Services;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using FluentAssertions;
@@ -46,7 +45,7 @@ public class DataSetsControllerTests
         };
 
         _mockDataProcessingService
-            .Setup(x => x.GetDataSetsByUserAsync(It.IsAny<string>()))
+            .Setup(x => x.GetDataSetsByUserAsync(It.IsAny<string>(), 1, 20))
             .ReturnsAsync(expectedDataSets);
 
         // Act
@@ -66,7 +65,7 @@ public class DataSetsControllerTests
         // Arrange
         var exception = new InvalidOperationException("Database connection failed");
         _mockDataProcessingService
-            .Setup(x => x.GetDataSetsByUserAsync(It.IsAny<string>()))
+            .Setup(x => x.GetDataSetsByUserAsync(It.IsAny<string>(), 1, 20))
             .ThrowsAsync(exception);
 
         // Act
@@ -481,7 +480,7 @@ public class DataSetsControllerTests
         };
 
         _mockDataProcessingService
-            .Setup(x => x.GetDeletedDataSetsAsync(It.IsAny<string>()))
+            .Setup(x => x.GetDeletedDataSetsAsync(It.IsAny<string>(), 1, 20))
             .ReturnsAsync(expectedDataSets);
 
         // Act
@@ -501,7 +500,7 @@ public class DataSetsControllerTests
         // Arrange
         var exception = new InvalidOperationException("Database connection failed");
         _mockDataProcessingService
-            .Setup(x => x.GetDeletedDataSetsAsync(It.IsAny<string>()))
+            .Setup(x => x.GetDeletedDataSetsAsync(It.IsAny<string>(), 1, 20))
             .ThrowsAsync(exception);
 
         // Act
@@ -529,11 +528,11 @@ public class DataSetsControllerTests
         };
 
         _mockDataProcessingService
-            .Setup(x => x.SearchDataSetsAsync(searchQuery, It.IsAny<string>()))
+            .Setup(x => x.SearchDataSetsAsync(searchQuery, It.IsAny<string>(), 1, 10))
             .ReturnsAsync(expectedDataSets);
 
         // Act
-        var result = await _controller.SearchDataSets(searchQuery);
+        var result = await _controller.SearchDataSets(searchQuery, 1, 10);
 
         // Assert
         result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
@@ -550,11 +549,11 @@ public class DataSetsControllerTests
         var searchQuery = "test";
         var exception = new InvalidOperationException("Search failed");
         _mockDataProcessingService
-            .Setup(x => x.SearchDataSetsAsync(searchQuery, It.IsAny<string>()))
+            .Setup(x => x.SearchDataSetsAsync(searchQuery, It.IsAny<string>(), 1, 10))
             .ThrowsAsync(exception);
 
         // Act
-        var result = await _controller.SearchDataSets(searchQuery);
+        var result = await _controller.SearchDataSets(searchQuery, 1, 10);
 
         // Assert
         result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
@@ -570,19 +569,19 @@ public class DataSetsControllerTests
     public async Task GetDataSetsByFileType_WithValidFileType_ShouldReturnOkResult()
     {
         // Arrange
-        var fileType = "csv";
+        var fileType = FileType.CSV;
         var expectedDataSets = new List<DataSetDto>
         {
-            new() { Id = 1, Name = "CSV Dataset 1", Description = "CSV Description 1" },
-            new() { Id = 2, Name = "CSV Dataset 2", Description = "CSV Description 2" }
+            new() { Id = 1, Name = "CSV Dataset 1", Description = "CSV Description 1", FileType = fileType },
+            new() { Id = 2, Name = "CSV Dataset 2", Description = "CSV Description 2", FileType = fileType }
         };
 
         _mockDataProcessingService
-            .Setup(x => x.GetDataSetsByFileTypeAsync(fileType, It.IsAny<string>()))
+            .Setup(x => x.GetDataSetsByFileTypeAsync(fileType, It.IsAny<string>(), 1, 10))
             .ReturnsAsync(expectedDataSets);
 
         // Act
-        var result = await _controller.GetDataSetsByFileType(fileType);
+        var result = await _controller.GetDataSetsByFileType(fileType, 1, 10);
 
         // Assert
         result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
@@ -596,14 +595,14 @@ public class DataSetsControllerTests
     public async Task GetDataSetsByFileType_WhenServiceThrowsException_ShouldLogExceptionAndReturn500()
     {
         // Arrange
-        var fileType = "csv";
+        var fileType = FileType.CSV;
         var exception = new InvalidOperationException("File type filter failed");
         _mockDataProcessingService
-            .Setup(x => x.GetDataSetsByFileTypeAsync(fileType, It.IsAny<string>()))
+            .Setup(x => x.GetDataSetsByFileTypeAsync(fileType, It.IsAny<string>(), 1, 10))
             .ThrowsAsync(exception);
 
         // Act
-        var result = await _controller.GetDataSetsByFileType(fileType);
+        var result = await _controller.GetDataSetsByFileType(fileType, 1, 10);
 
         // Assert
         result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
@@ -628,11 +627,11 @@ public class DataSetsControllerTests
         };
 
         _mockDataProcessingService
-            .Setup(x => x.GetDataSetsByDateRangeAsync(startDate, endDate, It.IsAny<string>()))
+            .Setup(x => x.GetDataSetsByDateRangeAsync(startDate, endDate, It.IsAny<string>(), 1, 10))
             .ReturnsAsync(expectedDataSets);
 
         // Act
-        var result = await _controller.GetDataSetsByDateRange(startDate, endDate);
+        var result = await _controller.GetDataSetsByDateRange(startDate, endDate, 1, 10);
 
         // Assert
         result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
@@ -650,11 +649,11 @@ public class DataSetsControllerTests
         var endDate = DateTime.Now;
         var exception = new InvalidOperationException("Date range filter failed");
         _mockDataProcessingService
-            .Setup(x => x.GetDataSetsByDateRangeAsync(startDate, endDate, It.IsAny<string>()))
+            .Setup(x => x.GetDataSetsByDateRangeAsync(startDate, endDate, It.IsAny<string>(), 1, 10))
             .ThrowsAsync(exception);
 
         // Act
-        var result = await _controller.GetDataSetsByDateRange(startDate, endDate);
+        var result = await _controller.GetDataSetsByDateRange(startDate, endDate, 1, 10);
 
         // Assert
         result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
