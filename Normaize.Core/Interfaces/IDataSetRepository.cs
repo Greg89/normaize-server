@@ -1,4 +1,5 @@
 using Normaize.Core.Models;
+using Normaize.Core.DTOs;
 
 namespace Normaize.Core.Interfaces;
 
@@ -16,7 +17,7 @@ public interface IDataSetRepository
     Task<bool> ExistsAsync(int id);
     Task<IEnumerable<DataSet>> GetDeletedAsync();
     Task<IEnumerable<DataSet>> SearchAsync(string searchTerm, string userId);
-    Task<IEnumerable<DataSet>> GetByFileTypeAsync(string fileType, string userId);
+    Task<IEnumerable<DataSet>> GetByFileTypeAsync(FileType fileType, string userId);
     Task<IEnumerable<DataSet>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, string userId);
     Task<long> GetTotalSizeAsync(string userId);
     Task<int> GetTotalCountAsync(string userId);

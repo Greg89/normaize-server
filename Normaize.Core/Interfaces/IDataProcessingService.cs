@@ -15,7 +15,7 @@ public interface IDataProcessingService
     Task<object?> GetDataSetSchemaAsync(int id, string userId);
     Task<IEnumerable<DataSetDto>> GetDeletedDataSetsAsync(string userId);
     Task<IEnumerable<DataSetDto>> SearchDataSetsAsync(string searchTerm, string userId);
-    Task<IEnumerable<DataSetDto>> GetDataSetsByFileTypeAsync(string fileType, string userId);
+    Task<IEnumerable<DataSetDto>> GetDataSetsByFileTypeAsync(FileType fileType, string userId);
     Task<IEnumerable<DataSetDto>> GetDataSetsByDateRangeAsync(DateTime startDate, DateTime endDate, string userId);
     Task<DataSetStatisticsDto> GetDataSetStatisticsAsync(string userId);
 } 

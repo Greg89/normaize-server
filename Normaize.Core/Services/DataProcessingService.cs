@@ -238,7 +238,7 @@ public class DataProcessingService : IDataProcessingService
         return _mapper.Map<IEnumerable<DataSetDto>>(dataSets);
     }
 
-    public async Task<IEnumerable<DataSetDto>> GetDataSetsByFileTypeAsync(string fileType, string userId)
+    public async Task<IEnumerable<DataSetDto>> GetDataSetsByFileTypeAsync(FileType fileType, string userId)
     {
         var dataSets = await _dataSetRepository.GetByFileTypeAsync(fileType, userId);
         return _mapper.Map<IEnumerable<DataSetDto>>(dataSets);

@@ -41,7 +41,7 @@ public class DiagnosticsControllerTests
         ok.Should().NotBeNull();
         var diagnostics = ok!.Value as StorageDiagnosticsDto;
         diagnostics.Should().NotBeNull();
-        diagnostics!.StorageProvider.Should().Be("S3");
+        diagnostics!.StorageProvider.Should().Be(StorageProvider.S3);
         diagnostics.S3Configured.Should().BeTrue();
         diagnostics.S3Bucket.Should().Be("SET");
         diagnostics.S3AccessKey.Should().Be("SET");
@@ -133,7 +133,7 @@ public class DiagnosticsControllerTests
         ok.Should().NotBeNull();
         var diagnostics = ok!.Value as StorageDiagnosticsDto;
         diagnostics.Should().NotBeNull();
-        diagnostics!.StorageProvider.Should().Be("default");
+        diagnostics!.StorageProvider.Should().Be(StorageProvider.Local);
         diagnostics.S3Configured.Should().BeFalse();
         diagnostics.S3Bucket.Should().Be("NOT SET");
         diagnostics.S3AccessKey.Should().Be("NOT SET");

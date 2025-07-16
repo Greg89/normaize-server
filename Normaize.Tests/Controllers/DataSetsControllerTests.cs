@@ -569,11 +569,11 @@ public class DataSetsControllerTests
     public async Task GetDataSetsByFileType_WithValidFileType_ShouldReturnOkResult()
     {
         // Arrange
-        var fileType = "csv";
+        var fileType = FileType.CSV;
         var expectedDataSets = new List<DataSetDto>
         {
-            new() { Id = 1, Name = "CSV Dataset 1", Description = "CSV Description 1" },
-            new() { Id = 2, Name = "CSV Dataset 2", Description = "CSV Description 2" }
+            new() { Id = 1, Name = "CSV Dataset 1", Description = "CSV Description 1", FileType = fileType },
+            new() { Id = 2, Name = "CSV Dataset 2", Description = "CSV Description 2", FileType = fileType }
         };
 
         _mockDataProcessingService
@@ -595,7 +595,7 @@ public class DataSetsControllerTests
     public async Task GetDataSetsByFileType_WhenServiceThrowsException_ShouldLogExceptionAndReturn500()
     {
         // Arrange
-        var fileType = "csv";
+        var fileType = FileType.CSV;
         var exception = new InvalidOperationException("File type filter failed");
         _mockDataProcessingService
             .Setup(x => x.GetDataSetsByFileTypeAsync(fileType, It.IsAny<string>()))

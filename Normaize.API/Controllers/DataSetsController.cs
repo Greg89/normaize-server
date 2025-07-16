@@ -277,7 +277,7 @@ public class DataSetsController : ControllerBase
     }
 
     [HttpGet("filetype/{fileType}")]
-    public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDataSetsByFileType(string fileType)
+    public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDataSetsByFileType(FileType fileType)
     {
         try
         {

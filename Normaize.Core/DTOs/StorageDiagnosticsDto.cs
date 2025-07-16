@@ -2,7 +2,7 @@ namespace Normaize.Core.DTOs;
 
 public class StorageDiagnosticsDto
 {
-    public string StorageProvider { get; set; } = string.Empty;
+    public StorageProvider StorageProvider { get; set; }
     public bool S3Configured { get; set; }
     public string S3Bucket { get; set; } = string.Empty;
     public string S3AccessKey { get; set; } = string.Empty;
