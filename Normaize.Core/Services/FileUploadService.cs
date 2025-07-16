@@ -27,7 +27,7 @@ public class FileUploadConfiguration
     public string[] AllowedExtensions { get; set; } = [".csv", ".json", ".xlsx", ".xls", ".xml", ".parquet", ".txt"];
     
     [Range(100, 1000000, ErrorMessage = "MaxPreviewRows must be between 100 and 1,000,000")]
-    public int MaxPreviewRows { get; set; } = 10;
+    public int MaxPreviewRows { get; set; } = 100;
     
     [Range(1, 100, ErrorMessage = "MaxConcurrentUploads must be between 1 and 100")]
     public int MaxConcurrentUploads { get; set; } = 5;

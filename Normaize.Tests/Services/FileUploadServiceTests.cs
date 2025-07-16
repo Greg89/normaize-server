@@ -31,7 +31,7 @@ public class FileUploadServiceTests
         {
             MaxFileSize = 10485760, // 10MB
             AllowedExtensions = new[] { ".csv", ".json", ".xlsx", ".xls", ".xml", ".parquet", ".txt" },
-            MaxPreviewRows = 100, // Must be at least 100
+            MaxPreviewRows = 100, // Must be at least 100 (matches new default)
             MaxConcurrentUploads = 5,
             EnableCompression = true,
             BlockedExtensions = new[] { ".exe", ".bat", ".cmd", ".ps1", ".sh", ".dll", ".so", ".dylib" }
