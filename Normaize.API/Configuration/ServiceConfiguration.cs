@@ -142,6 +142,9 @@ public static class ServiceConfiguration
 
     private static void ConfigureApplicationServices(WebApplicationBuilder builder)
     {
+        // Add memory cache
+        builder.Services.AddMemoryCache();
+        
         builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
         builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();
         builder.Services.AddScoped<IDataVisualizationService, DataVisualizationService>();
