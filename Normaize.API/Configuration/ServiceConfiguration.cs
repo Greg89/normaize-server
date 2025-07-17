@@ -207,7 +207,8 @@ public static class ServiceConfiguration
         
         try
         {
-            var environment = AppConfiguration.GetEnvironment();
+            var appConfigService = builder.Services.BuildServiceProvider().GetRequiredService<IAppConfigurationService>();
+            var environment = appConfigService.GetEnvironment();
             
             builder.Services.AddCors(options =>
             {

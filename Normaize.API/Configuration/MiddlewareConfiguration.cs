@@ -42,7 +42,8 @@ public static class MiddlewareConfiguration
         {
             // In production (Railway), HTTPS is handled by the load balancer
             // Only redirect if we're not behind a proxy and have HTTPS configured
-            var httpsPort = AppConfiguration.GetHttpsPort();
+            var appConfigService = app.Services.GetService<Normaize.Core.Interfaces.IAppConfigurationService>();
+            var httpsPort = appConfigService?.GetHttpsPort();
             if (!string.IsNullOrEmpty(httpsPort) && int.TryParse(httpsPort, out _))
             {
                 app.UseHttpsRedirection();

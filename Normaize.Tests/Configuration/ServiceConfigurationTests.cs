@@ -222,6 +222,7 @@ public class ServiceConfigurationTests
         Environment.SetEnvironmentVariable("STORAGE_PROVIDER", "s3");
         Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", "test-key");
         Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", "test-secret");
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
 
         // Debug: Check environment variables
         Console.WriteLine($"STORAGE_PROVIDER: {Environment.GetEnvironmentVariable("STORAGE_PROVIDER")}");
@@ -255,6 +256,7 @@ public class ServiceConfigurationTests
         Environment.SetEnvironmentVariable("STORAGE_PROVIDER", null);
         Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", null);
         Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", null);
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", null);
     }
 
     [Fact]
