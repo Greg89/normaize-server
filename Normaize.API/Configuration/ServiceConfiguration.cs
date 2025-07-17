@@ -227,9 +227,9 @@ public static class ServiceConfiguration
                 else
                 {
                     logger.LogInformation("Configuring restrictive CORS for {Environment} environment", environment);
-                    options.AddPolicy("AllowAll", policy =>
+                    options.AddPolicy("Restrictive", policy =>
                     {
-                        policy.WithOrigins("https://yourdomain.com") // Replace with actual domains
+                        policy.WithOrigins("https://app.normaize.com")
                               .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                               .WithHeaders("Content-Type", "Authorization", "X-Requested-With")
                               .AllowCredentials();
