@@ -283,7 +283,8 @@ public static class ServiceConfiguration
         
         try
         {
-            var appEnvironment = AppConfiguration.GetEnvironment();
+            var appConfigService = builder.Services.BuildServiceProvider().GetRequiredService<IAppConfigurationService>();
+            var appEnvironment = appConfigService.GetEnvironment();
             var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER")?.ToLowerInvariant();
 
             logger.LogInformation("Configuring storage service. Environment: {Environment}, Provider: {Provider}", 
