@@ -409,8 +409,18 @@ public class ServiceConfigurationTests
 
     private void SetupTestConfiguration()
     {
-        // Note: WebApplicationBuilder.Configuration is read-only, so we can't replace it
-        // The configuration will use the default test configuration
-        // In a real scenario, you would configure this through environment variables or appsettings.json
+        // Register a mock IAppConfigurationService to satisfy the dependency
+        var mockAppConfigService = new Mock<IAppConfigurationService>();
+        mockAppConfigService.Setup(x => x.GetEnvironment()).Returns("Development");
+        mockAppConfigService.Setup(x => x.HasDatabaseConnection()).Returns(false);
+        mockAppConfigService.Setup(x => x.GetDatabaseConfig()).Returns(new Normaize.Core.Interfaces.DatabaseConfig());
+        mockAppConfigService.Setup(x => x.GetPort()).Returns("5000");
+        mockAppConfigService.Setup(x => x.GetHttpsPort()).Returns((string?)null);
+        mockAppConfigService.Setup(x => x.GetSeqUrl()).Returns((string?)null);
+        mockAppConfigService.Setup(x => x.GetSeqApiKey()).Returns((string?)null);
+        mockAppConfigService.Setup(x => x.IsProductionLike()).Returns(false);
+        mockAppConfigService.Setup(x => x.IsContainerized()).Returns(false);
+        
+        _builder.Services.AddSingleton(mockAppConfigService.Object);
     }
 } 

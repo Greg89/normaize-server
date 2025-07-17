@@ -32,7 +32,7 @@ public class DataVisualizationService : IDataVisualizationService
         try
         {
             ValidateInputs(dataSetId, userId);
-            await ValidateChartConfigurationAsync(chartType, configuration);
+            ValidateChartConfiguration(chartType, configuration);
 
             var cacheKey = $"chart_{dataSetId}_{chartType}_{JsonSerializer.Serialize(configuration)}";
             
@@ -45,7 +45,7 @@ public class DataVisualizationService : IDataVisualizationService
             _logger.LogInformation("Generating chart for dataset {DataSetId}, type {ChartType}, user {UserId}", dataSetId, chartType, userId);
 
             var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId);
-            var data = await ExtractDataSetDataAsync(dataSet);
+            var data = ExtractDataSetData(dataSet);
             
             var chartData = GenerateChartData(dataSet, data, chartType, configuration);
             chartData.ProcessingTime = stopwatch.Elapsed;
@@ -72,7 +72,7 @@ public class DataVisualizationService : IDataVisualizationService
         try
         {
             ValidateComparisonInputs(dataSetId1, dataSetId2, userId);
-            await ValidateChartConfigurationAsync(chartType, configuration);
+            ValidateChartConfiguration(chartType, configuration);
 
             var cacheKey = $"comparison_{dataSetId1}_{dataSetId2}_{chartType}_{JsonSerializer.Serialize(configuration)}";
             
@@ -88,8 +88,8 @@ public class DataVisualizationService : IDataVisualizationService
             var dataSet1 = await GetAndValidateDataSetAsync(dataSetId1, userId);
             var dataSet2 = await GetAndValidateDataSetAsync(dataSetId2, userId);
             
-            var data1 = await ExtractDataSetDataAsync(dataSet1);
-            var data2 = await ExtractDataSetDataAsync(dataSet2);
+            var data1 = ExtractDataSetData(dataSet1);
+            var data2 = ExtractDataSetData(dataSet2);
 
             var comparisonChart = GenerateComparisonChartData(dataSet1, dataSet2, data1, data2, chartType, configuration);
             comparisonChart.ProcessingTime = stopwatch.Elapsed;
@@ -128,7 +128,7 @@ public class DataVisualizationService : IDataVisualizationService
             _logger.LogInformation("Generating data summary for dataset {DataSetId}, user {UserId}", dataSetId, userId);
 
             var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId);
-            var data = await ExtractDataSetDataAsync(dataSet);
+            var data = ExtractDataSetData(dataSet);
             
             var summary = GenerateDataSummary(dataSet, data);
             summary.ProcessingTime = stopwatch.Elapsed;
@@ -166,7 +166,7 @@ public class DataVisualizationService : IDataVisualizationService
             _logger.LogInformation("Generating statistical summary for dataset {DataSetId}, user {UserId}", dataSetId, userId);
 
             var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId);
-            var data = await ExtractDataSetDataAsync(dataSet);
+            var data = ExtractDataSetData(dataSet);
             
             var stats = GenerateStatisticalSummary(dataSet, data);
             stats.ProcessingTime = stopwatch.Elapsed;
@@ -190,7 +190,7 @@ public class DataVisualizationService : IDataVisualizationService
         return Task.FromResult<IEnumerable<ChartType>>(Enum.GetValues<ChartType>());
     }
 
-    public async Task<bool> ValidateChartConfigurationAsync(ChartType chartType, ChartConfigurationDto? configuration)
+    public bool ValidateChartConfiguration(ChartType chartType, ChartConfigurationDto? configuration)
     {
         try
         {
@@ -269,7 +269,7 @@ public class DataVisualizationService : IDataVisualizationService
         return dataSet;
     }
 
-    private async Task<List<Dictionary<string, object>>> ExtractDataSetDataAsync(DataSet dataSet)
+    private List<Dictionary<string, object>> ExtractDataSetData(DataSet dataSet)
     {
         try
         {

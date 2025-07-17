@@ -26,12 +26,12 @@ public class DiagnosticsControllerTests
     public void GetStorageDiagnostics_ReturnsExpectedConfigStatus()
     {
         // Arrange
-        _mockConfigService.Setup(x => x.Get("STORAGE_PROVIDER")).Returns("S3");
-        _mockConfigService.Setup(x => x.Get("AWS_S3_BUCKET")).Returns("bucket");
-        _mockConfigService.Setup(x => x.Get("AWS_ACCESS_KEY_ID")).Returns("key");
-        _mockConfigService.Setup(x => x.Get("AWS_SECRET_ACCESS_KEY")).Returns("secret");
-        _mockConfigService.Setup(x => x.Get("AWS_SERVICE_URL")).Returns("url");
-        _mockConfigService.Setup(x => x.Get("ASPNETCORE_ENVIRONMENT")).Returns("Production");
+        Environment.SetEnvironmentVariable("STORAGE_PROVIDER", "S3");
+        Environment.SetEnvironmentVariable("AWS_S3_BUCKET", "bucket");
+        Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", "key");
+        Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", "secret");
+        Environment.SetEnvironmentVariable("AWS_SERVICE_URL", "url");
+        _mockConfigService.Setup(x => x.GetEnvironment()).Returns("Production");
 
         // Act
         var result = _controller.GetStorageDiagnostics();
@@ -54,8 +54,7 @@ public class DiagnosticsControllerTests
     public void GetStorageDiagnostics_WhenException_LogsAndReturns500()
     {
         // Arrange
-        var ex = new Exception("fail");
-        _mockConfigService.Setup(x => x.Get(It.IsAny<string>())).Throws(ex);
+        _mockConfigService.Setup(x => x.GetEnvironment()).Throws(new Exception("fail"));
 
         // Act
         var result = _controller.GetStorageDiagnostics();
@@ -64,7 +63,7 @@ public class DiagnosticsControllerTests
         var obj = result.Result as ObjectResult;
         obj.Should().NotBeNull();
         obj!.StatusCode.Should().Be(500);
-        _mockLoggingService.Verify(x => x.LogException(ex, "GetStorageDiagnostics"), Times.Once);
+        _mockLoggingService.Verify(x => x.LogException(It.IsAny<Exception>(), "GetStorageDiagnostics"), Times.Once);
     }
 
     // TestStorage endpoint is more of an integration test, but we can check error handling
@@ -98,32 +97,15 @@ public class DiagnosticsControllerTests
     }
 
     [Fact]
-    public void GetStorageDiagnostics_WhenConfigServiceThrowsException_LogsAndReturns500()
-    {
-        // Arrange
-        var ex = new Exception("Configuration service failed");
-        _mockConfigService.Setup(x => x.Get(It.IsAny<string>())).Throws(ex);
-
-        // Act
-        var result = _controller.GetStorageDiagnostics();
-
-        // Assert
-        var obj = result.Result as ObjectResult;
-        obj.Should().NotBeNull();
-        obj!.StatusCode.Should().Be(500);
-        _mockLoggingService.Verify(x => x.LogException(ex, "GetStorageDiagnostics"), Times.Once);
-    }
-
-    [Fact]
     public void GetStorageDiagnostics_WithMissingConfig_ReturnsNotSetStatus()
     {
         // Arrange
-        _mockConfigService.Setup(x => x.Get("STORAGE_PROVIDER")).Returns((string?)null);
-        _mockConfigService.Setup(x => x.Get("AWS_S3_BUCKET")).Returns((string?)null);
-        _mockConfigService.Setup(x => x.Get("AWS_ACCESS_KEY_ID")).Returns((string?)null);
-        _mockConfigService.Setup(x => x.Get("AWS_SECRET_ACCESS_KEY")).Returns((string?)null);
-        _mockConfigService.Setup(x => x.Get("AWS_SERVICE_URL")).Returns((string?)null);
-        _mockConfigService.Setup(x => x.Get("ASPNETCORE_ENVIRONMENT")).Returns((string?)null);
+        Environment.SetEnvironmentVariable("STORAGE_PROVIDER", null);
+        Environment.SetEnvironmentVariable("AWS_S3_BUCKET", null);
+        Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", null);
+        Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", null);
+        Environment.SetEnvironmentVariable("AWS_SERVICE_URL", null);
+        _mockConfigService.Setup(x => x.GetEnvironment()).Returns(string.Empty);
 
         // Act
         var result = _controller.GetStorageDiagnostics();

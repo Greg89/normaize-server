@@ -1,13 +1,21 @@
 using Normaize.API.Configuration;
+using Normaize.Core.Interfaces;
 using Serilog;
 using Serilog.Events;
 
+// Create a basic logger for initial configuration
+var initialLogger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateLogger();
+
 // Load environment variables from .env file
-AppConfiguration.LoadEnvironmentVariables();
+var appConfigService = new Normaize.Data.Services.AppConfigurationService(
+    new Microsoft.Extensions.Logging.LoggerFactory().CreateLogger<Normaize.Data.Services.AppConfigurationService>());
+appConfigService.LoadEnvironmentVariables();
 
 // Configure Serilog
-var environment = AppConfiguration.GetEnvironment();
-var seqUrl = AppConfiguration.GetSeqUrl();
+var environment = appConfigService.GetEnvironment();
+var seqUrl = appConfigService.GetSeqUrl();
 
 var loggerConfiguration = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -25,7 +33,7 @@ if (!string.IsNullOrEmpty(seqUrl) && environment != "Development")
 {
     loggerConfiguration.WriteTo.Seq(seqUrl, 
         restrictedToMinimumLevel: LogEventLevel.Information,
-        apiKey: AppConfiguration.GetSeqApiKey());
+        apiKey: appConfigService.GetSeqApiKey());
 }
 
 Log.Logger = loggerConfiguration.CreateLogger();
@@ -41,13 +49,14 @@ ServiceConfiguration.ConfigureServices(builder);
 var app = builder.Build();
 
 // Configure startup (migrations, health checks)
-await StartupConfiguration.ConfigureStartup(app);
+var startupService = app.Services.GetRequiredService<IStartupService>();
+await startupService.ConfigureStartupAsync();
 
 // Configure middleware pipeline
 MiddlewareConfiguration.ConfigureMiddleware(app);
 
 // Use PORT environment variable if set (for Railway)
-var port = AppConfiguration.GetPort();
+var port = appConfigService.GetPort();
 app.Urls.Add($"http://*:{port}");
 
 try

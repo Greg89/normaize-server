@@ -1,6 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Normaize.Core.Configuration;
 using Normaize.Core.Constants;
 using Normaize.Core.Interfaces;
@@ -8,8 +6,6 @@ using Normaize.Data;
 using Normaize.Data.Repositories;
 using Normaize.Data.Services;
 using Normaize.Core.Services;
-using Normaize.API.Configuration;
-using System.ComponentModel.DataAnnotations;
 
 namespace Normaize.API.Configuration;
 
@@ -58,8 +54,15 @@ public static class ServiceConfiguration
         builder.Services.Configure<HealthCheckConfiguration>(
             builder.Configuration.GetSection(HealthCheckConfiguration.SectionName));
 
+        // Configure startup settings
+        builder.Services.Configure<StartupConfigurationOptions>(
+            builder.Configuration.GetSection(StartupConfigurationOptions.SectionName));
+
         // Register configuration validation service
         builder.Services.AddScoped<IConfigurationValidationService, ConfigurationValidationService>();
+        
+        // Register IAppConfigurationService early so it's available for other configuration methods
+        builder.Services.AddSingleton<IAppConfigurationService, Normaize.Data.Services.AppConfigurationService>();
     }
 
     private static void ConfigureControllers(WebApplicationBuilder builder)
@@ -164,9 +167,11 @@ public static class ServiceConfiguration
         
         try
         {
-            var dbConfig = AppConfiguration.GetDatabaseConfig();
+            // Get the app configuration service to check database connection
+            var appConfigService = builder.Services.BuildServiceProvider().GetRequiredService<IAppConfigurationService>();
+            var dbConfig = appConfigService.GetDatabaseConfig();
             
-            if (AppConfiguration.HasDatabaseConnection())
+            if (appConfigService.HasDatabaseConnection())
             {
                 logger.LogInformation("Configuring MySQL database connection");
                 builder.Services.AddDbContext<NormaizeContext>(options =>
@@ -174,7 +179,7 @@ public static class ServiceConfiguration
                     options.UseMySql(dbConfig.ToConnectionString(), new MySqlServerVersion(new Version(8, 0, 0)));
                     
                     // Configure based on environment
-                    var environment = AppConfiguration.GetEnvironment();
+                    var environment = appConfigService.GetEnvironment();
                     if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
                     {
                         options.EnableSensitiveDataLogging();
@@ -260,7 +265,7 @@ public static class ServiceConfiguration
             builder.Services.AddScoped<Normaize.Core.Interfaces.IStructuredLoggingService, Normaize.Data.Services.StructuredLoggingService>();
             builder.Services.AddScoped<IMigrationService, MigrationService>();
             builder.Services.AddScoped<IHealthCheckService, HealthCheckService>();
-            builder.Services.AddSingleton<IAppConfigurationService, Normaize.Data.Services.AppConfigurationService>();
+            builder.Services.AddScoped<IStartupService, StartupService>();
             builder.Services.AddHttpContextAccessor();
             
             logger.LogInformation("Application services configured successfully");

@@ -85,8 +85,8 @@ public class DatabaseHealthService : IDatabaseHealthService
                 using (var command = _context.Database.GetDbConnection().CreateCommand())
                 {
                     command.CommandText = sql;
-                    if (command.Connection.State != System.Data.ConnectionState.Open)
-                        await command.Connection.OpenAsync(cancellationToken);
+                    if (command.Connection?.State != System.Data.ConnectionState.Open)
+                        await command.Connection!.OpenAsync(cancellationToken);
                     using var reader = await command.ExecuteReaderAsync(cancellationToken);
                     while (await reader.ReadAsync(cancellationToken))
                     {
@@ -106,8 +106,8 @@ public class DatabaseHealthService : IDatabaseHealthService
                 using (var command = _context.Database.GetDbConnection().CreateCommand())
                 {
                     command.CommandText = sql;
-                    if (command.Connection.State != System.Data.ConnectionState.Open)
-                        await command.Connection.OpenAsync(cancellationToken);
+                    if (command.Connection?.State != System.Data.ConnectionState.Open)
+                        await command.Connection!.OpenAsync(cancellationToken);
                     using var reader = await command.ExecuteReaderAsync(cancellationToken);
                     while (await reader.ReadAsync(cancellationToken))
                     {

@@ -9,5 +9,5 @@ public interface IDataVisualizationService
     Task<DataSummaryDto> GetDataSummaryAsync(int dataSetId, string userId);
     Task<StatisticalSummaryDto> GetStatisticalSummaryAsync(int dataSetId, string userId);
     Task<IEnumerable<ChartType>> GetSupportedChartTypesAsync();
-    Task<bool> ValidateChartConfigurationAsync(ChartType chartType, ChartConfigurationDto? configuration);
+    bool ValidateChartConfiguration(ChartType chartType, ChartConfigurationDto? configuration);
 } 

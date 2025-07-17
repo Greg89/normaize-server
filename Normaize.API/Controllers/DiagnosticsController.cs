@@ -27,12 +27,12 @@ public class DiagnosticsController : ControllerBase
     {
         try
         {
-            var storageProviderConfig = _configService.Get("STORAGE_PROVIDER") ?? "default";
-            var s3Bucket = _configService.Get("AWS_S3_BUCKET");
-            var s3AccessKey = _configService.Get("AWS_ACCESS_KEY_ID");
-            var s3SecretKey = _configService.Get("AWS_SECRET_ACCESS_KEY");
-            var s3ServiceUrl = _configService.Get("AWS_SERVICE_URL");
-            var environment = _configService.Get("ASPNETCORE_ENVIRONMENT") ?? AppConstants.ConfigStatus.NOT_SET;
+            var storageProviderConfig = Environment.GetEnvironmentVariable("STORAGE_PROVIDER") ?? "default";
+            var s3Bucket = Environment.GetEnvironmentVariable("AWS_S3_BUCKET");
+            var s3AccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+            var s3SecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+            var s3ServiceUrl = Environment.GetEnvironmentVariable("AWS_SERVICE_URL");
+            var environment = _configService.GetEnvironment();
             
             var storageProvider = storageProviderConfig.ToLowerInvariant() switch
             {
@@ -50,7 +50,7 @@ public class DiagnosticsController : ControllerBase
                 S3AccessKey = !string.IsNullOrEmpty(s3AccessKey) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
                 S3SecretKey = !string.IsNullOrEmpty(s3SecretKey) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
                 S3ServiceUrl = !string.IsNullOrEmpty(s3ServiceUrl) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
-                Environment = environment
+                Environment = !string.IsNullOrEmpty(environment) ? environment : AppConstants.ConfigStatus.NOT_SET
             };
             
             return Ok(diagnostics);

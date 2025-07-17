@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Normaize.Data;
 using Normaize.Tests; // <-- Add this
+using Moq;
 
 namespace Normaize.Tests.Integration;
 
@@ -86,5 +87,22 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         
         // Set test environment
         builder.UseEnvironment("Test");
+        
+        // Register mock IAppConfigurationService
+        builder.ConfigureServices(services =>
+        {
+            var mockAppConfigService = new Mock<IAppConfigurationService>();
+            mockAppConfigService.Setup(x => x.GetEnvironment()).Returns("Test");
+            mockAppConfigService.Setup(x => x.HasDatabaseConnection()).Returns(false);
+            mockAppConfigService.Setup(x => x.GetDatabaseConfig()).Returns(new Normaize.Core.Interfaces.DatabaseConfig());
+            mockAppConfigService.Setup(x => x.GetPort()).Returns("5000");
+            mockAppConfigService.Setup(x => x.GetHttpsPort()).Returns((string?)null);
+            mockAppConfigService.Setup(x => x.GetSeqUrl()).Returns((string?)null);
+            mockAppConfigService.Setup(x => x.GetSeqApiKey()).Returns((string?)null);
+            mockAppConfigService.Setup(x => x.IsProductionLike()).Returns(false);
+            mockAppConfigService.Setup(x => x.IsContainerized()).Returns(false);
+            
+            services.AddSingleton(mockAppConfigService.Object);
+        });
     }
 } 

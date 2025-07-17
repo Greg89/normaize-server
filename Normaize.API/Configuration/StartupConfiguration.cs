@@ -1,6 +1,5 @@
 using Normaize.Core.Interfaces;
 using Normaize.Core.Constants;
-using Normaize.API.Configuration;
 using Serilog;
 
 namespace Normaize.API.Configuration;

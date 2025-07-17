@@ -245,26 +245,26 @@ public class DataVisualizationServiceTests
     }
 
     [Fact]
-    public async Task ValidateChartConfigurationAsync_ReturnsTrue_WhenValid()
+    public void ValidateChartConfiguration_ReturnsTrue_WhenValid()
     {
         // Arrange
         var config = new ChartConfigurationDto { MaxDataPoints = 5 };
         
         // Act
-        var result = await _service.ValidateChartConfigurationAsync(ChartType.Bar, config);
+        var result = _service.ValidateChartConfiguration(ChartType.Bar, config);
         
         // Assert
         Assert.True(result);
     }
 
     [Fact]
-    public async Task ValidateChartConfigurationAsync_Throws_WhenInvalid()
+    public void ValidateChartConfiguration_Throws_WhenInvalid()
     {
         // Arrange
         var config = new ChartConfigurationDto { MaxDataPoints = 0 };
         
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.ValidateChartConfigurationAsync(ChartType.Bar, config));
+        Assert.Throws<ArgumentException>(() => _service.ValidateChartConfiguration(ChartType.Bar, config));
     }
 
     [Fact]
