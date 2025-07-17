@@ -3,11 +3,6 @@ using Normaize.Core.Interfaces;
 using Serilog;
 using Serilog.Events;
 
-// Create a basic logger for initial configuration
-var initialLogger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .CreateLogger();
-
 // Load environment variables from .env file
 var appConfigService = new Normaize.Data.Services.AppConfigurationService(
     new Microsoft.Extensions.Logging.LoggerFactory().CreateLogger<Normaize.Data.Services.AppConfigurationService>());
