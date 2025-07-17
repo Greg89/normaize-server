@@ -32,14 +32,15 @@ public class ConfigurationValidationService : IConfigurationValidationService
 
         try
         {
-            var results = new List<ConfigurationValidationResult>();
-
-            // Validate all configuration sections
-            results.Add(ValidateDatabaseConfiguration(cancellationToken));
-            results.Add(ValidateSecurityConfiguration(cancellationToken));
-            results.Add(ValidateStorageConfiguration(cancellationToken));
-            results.Add(ValidateCachingConfiguration(cancellationToken));
-            results.Add(ValidatePerformanceConfiguration(cancellationToken));
+            var results = new List<ConfigurationValidationResult>
+            {
+                // Validate all configuration sections
+                ValidateDatabaseConfiguration(cancellationToken),
+                ValidateSecurityConfiguration(cancellationToken),
+                ValidateStorageConfiguration(cancellationToken),
+                ValidateCachingConfiguration(cancellationToken),
+                ValidatePerformanceConfiguration(cancellationToken)
+            };
 
             stopwatch.Stop();
 
