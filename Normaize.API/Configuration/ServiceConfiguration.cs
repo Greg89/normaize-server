@@ -212,10 +212,12 @@ public static class ServiceConfiguration
             
             builder.Services.AddCors(options =>
             {
-                if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
+                // Use permissive CORS for development and beta environments
+                if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase) || 
+                    environment.Equals("Beta", StringComparison.OrdinalIgnoreCase))
                 {
-                    logger.LogInformation("Configuring permissive CORS for development environment");
-                    options.AddPolicy("Development", policy =>
+                    logger.LogInformation("Configuring permissive CORS for {Environment} environment", environment);
+                    options.AddPolicy("AllowAll", policy =>
                     {
                         policy.AllowAnyOrigin()
                               .AllowAnyMethod()
@@ -224,8 +226,8 @@ public static class ServiceConfiguration
                 }
                 else
                 {
-                    logger.LogInformation("Configuring restrictive CORS for production environment");
-                    options.AddPolicy("Production", policy =>
+                    logger.LogInformation("Configuring restrictive CORS for {Environment} environment", environment);
+                    options.AddPolicy("AllowAll", policy =>
                     {
                         policy.WithOrigins("https://yourdomain.com") // Replace with actual domains
                               .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
