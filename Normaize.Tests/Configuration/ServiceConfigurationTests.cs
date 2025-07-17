@@ -223,8 +223,22 @@ public class ServiceConfigurationTests
         Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", "test-key");
         Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", "test-secret");
 
+        // Debug: Check environment variables
+        Console.WriteLine($"STORAGE_PROVIDER: {Environment.GetEnvironmentVariable("STORAGE_PROVIDER")}");
+        Console.WriteLine($"AWS_ACCESS_KEY_ID: {Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID")}");
+        Console.WriteLine($"AWS_SECRET_ACCESS_KEY: {Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY")}");
+
         // Act
         ServiceConfiguration.ConfigureServices(_builder);
+
+        // Debug: Check what services are registered
+        var storageServices = _builder.Services.Where(s => s.ServiceType == typeof(IStorageService)).ToList();
+        Console.WriteLine($"Found {storageServices.Count} IStorageService registrations:");
+        foreach (var service in storageServices)
+        {
+            Console.WriteLine($"  - ImplementationType: {service.ImplementationType?.Name ?? "null"}");
+            Console.WriteLine($"  - Lifetime: {service.Lifetime}");
+        }
 
         // Assert
         var services = _builder.Services.BuildServiceProvider();
