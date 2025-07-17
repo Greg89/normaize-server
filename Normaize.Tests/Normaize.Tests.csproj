@@ -7,6 +7,7 @@
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <ProjectGuid>{D4E5F6G7-H8I9-0123-DEFG-456789012345}</ProjectGuid>
   </PropertyGroup>
 
   <ItemGroup>
