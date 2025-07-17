@@ -143,11 +143,15 @@ public static class MiddlewareConfiguration
                 // Continue with default environment
             }
             
-            if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase) || 
-                environment.Equals("Beta", StringComparison.OrdinalIgnoreCase))
+            if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
             {
-                app.UseCors("AllowAll");
-                loggingService?.LogUserAction("CORS configured with AllowAll policy", new { Environment = environment, Policy = "AllowAll" });
+                app.UseCors("Development");
+                loggingService?.LogUserAction("CORS configured with Development policy", new { Environment = environment, Policy = "Development" });
+            }
+            else if (environment.Equals("Beta", StringComparison.OrdinalIgnoreCase))
+            {
+                app.UseCors("Beta");
+                loggingService?.LogUserAction("CORS configured with Beta policy", new { Environment = environment, Policy = "Beta" });
             }
             else
             {

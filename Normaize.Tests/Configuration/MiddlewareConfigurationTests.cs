@@ -30,7 +30,16 @@ public class MiddlewareConfigurationTests
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            options.AddPolicy("Development", policy => 
+                policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
+            options.AddPolicy("Beta", policy => 
+                policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
             options.AddPolicy("Restrictive", policy => policy.WithOrigins("https://example.com").AllowAnyMethod().AllowAnyHeader());
         });
         builder.Services.AddHealthChecks();
@@ -60,7 +69,16 @@ public class MiddlewareConfigurationTests
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            options.AddPolicy("Development", policy => 
+                policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
+            options.AddPolicy("Beta", policy => 
+                policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
             options.AddPolicy("Restrictive", policy => policy.WithOrigins("https://example.com").AllowAnyMethod().AllowAnyHeader());
         });
         builder.Services.AddHealthChecks();
@@ -100,7 +118,16 @@ public class MiddlewareConfigurationTests
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            options.AddPolicy("Development", policy => 
+                policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
+            options.AddPolicy("Beta", policy => 
+                policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
             options.AddPolicy("Restrictive", policy => policy.WithOrigins("https://example.com").AllowAnyMethod().AllowAnyHeader());
         });
         builder.Services.AddHealthChecks();
@@ -139,7 +166,16 @@ public class MiddlewareConfigurationTests
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            options.AddPolicy("Development", policy => 
+                policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
+            options.AddPolicy("Beta", policy => 
+                policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
             options.AddPolicy("Restrictive", policy => policy.WithOrigins("https://example.com").AllowAnyMethod().AllowAnyHeader());
         });
         builder.Services.AddHealthChecks();
@@ -179,7 +215,16 @@ public class MiddlewareConfigurationTests
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            options.AddPolicy("Development", policy => 
+                policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
+            options.AddPolicy("Beta", policy => 
+                policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
             options.AddPolicy("Restrictive", policy => policy.WithOrigins("https://example.com").AllowAnyMethod().AllowAnyHeader());
         });
         builder.Services.AddHealthChecks();
@@ -218,7 +263,16 @@ public class MiddlewareConfigurationTests
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            options.AddPolicy("Development", policy => 
+                policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
+            options.AddPolicy("Beta", policy => 
+                policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
             options.AddPolicy("Restrictive", policy => policy.WithOrigins("https://example.com").AllowAnyMethod().AllowAnyHeader());
         });
         builder.Services.AddHealthChecks();
@@ -254,7 +308,16 @@ public class MiddlewareConfigurationTests
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            options.AddPolicy("Development", policy => 
+                policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
+            options.AddPolicy("Beta", policy => 
+                policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
             options.AddPolicy("Restrictive", policy => policy.WithOrigins("https://example.com").AllowAnyMethod().AllowAnyHeader());
         });
         builder.Services.AddHealthChecks();
@@ -292,7 +355,16 @@ public class MiddlewareConfigurationTests
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            options.AddPolicy("Development", policy => 
+                policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
+            options.AddPolicy("Beta", policy => 
+                policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
             options.AddPolicy("Restrictive", policy => policy.WithOrigins("https://example.com").AllowAnyMethod().AllowAnyHeader());
         });
         builder.Services.AddHealthChecks();
@@ -330,7 +402,16 @@ public class MiddlewareConfigurationTests
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            options.AddPolicy("Development", policy => 
+                policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
+            options.AddPolicy("Beta", policy => 
+                policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
             options.AddPolicy("Restrictive", policy => policy.WithOrigins("https://example.com").AllowAnyMethod().AllowAnyHeader());
         });
         builder.Services.AddHealthChecks();
@@ -366,7 +447,16 @@ public class MiddlewareConfigurationTests
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            options.AddPolicy("Development", policy => 
+                policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
+            options.AddPolicy("Beta", policy => 
+                policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
             options.AddPolicy("Restrictive", policy => policy.WithOrigins("https://example.com").AllowAnyMethod().AllowAnyHeader());
         });
         builder.Services.AddHealthChecks();
@@ -384,7 +474,7 @@ public class MiddlewareConfigurationTests
         mockLoggingService.Verify(x => x.LogUserAction("Middleware configuration started", It.IsAny<object>()), Times.Once);
         mockLoggingService.Verify(x => x.LogUserAction("Middleware configuration completed successfully", It.IsAny<object>()), Times.Once);
         mockLoggingService.Verify(x => x.LogUserAction("Swagger configured", It.IsAny<object>()), Times.Once);
-        mockLoggingService.Verify(x => x.LogUserAction("CORS configured with AllowAll policy", It.IsAny<object>()), Times.Once);
+        mockLoggingService.Verify(x => x.LogUserAction("CORS configured with Development policy", It.IsAny<object>()), Times.Once);
         mockLoggingService.Verify(x => x.LogUserAction("HTTPS redirection configured for development", It.IsAny<object>()), Times.Once);
     }
 
@@ -407,7 +497,16 @@ public class MiddlewareConfigurationTests
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            options.AddPolicy("Development", policy => 
+                policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
+            options.AddPolicy("Beta", policy => 
+                policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
             options.AddPolicy("Restrictive", policy => policy.WithOrigins("https://example.com").AllowAnyMethod().AllowAnyHeader());
         });
         builder.Services.AddHealthChecks();
@@ -418,5 +517,50 @@ public class MiddlewareConfigurationTests
         // Act & Assert
         var action = () => MiddlewareConfiguration.ConfigureMiddleware(app);
         action.Should().NotThrow();
+    }
+
+    [Fact]
+    public void ConfigureMiddleware_ShouldUseBetaPolicy_WhenEnvironmentIsBeta()
+    {
+        // Arrange
+        var builder = WebApplication.CreateBuilder();
+        var mockAppConfigService = new Mock<IAppConfigurationService>();
+        var mockLoggingService = new Mock<IStructuredLoggingService>();
+        
+        mockAppConfigService.Setup(x => x.GetEnvironment()).Returns("Beta");
+        mockAppConfigService.Setup(x => x.GetHttpsPort()).Returns((string?)null);
+        
+        builder.Services.AddSingleton(mockAppConfigService.Object);
+        builder.Services.AddSingleton(mockLoggingService.Object);
+        
+        // Add all required services
+        builder.Services.AddControllers();
+        builder.Services.AddAuthentication();
+        builder.Services.AddAuthorization();
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("Development", policy => 
+                policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
+            options.AddPolicy("Beta", policy => 
+                policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
+                      .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                      .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                      .AllowCredentials());
+            options.AddPolicy("Restrictive", policy => policy.WithOrigins("https://example.com").AllowAnyMethod().AllowAnyHeader());
+        });
+        builder.Services.AddHealthChecks();
+        builder.Services.AddSwaggerGen();
+        
+        var app = builder.Build();
+
+        // Act
+        MiddlewareConfiguration.ConfigureMiddleware(app);
+
+        // Assert - Verify Beta policy was used
+        mockLoggingService.Verify(x => x.LogUserAction("CORS configured with Beta policy", It.Is<object>(o => 
+            o.ToString().Contains("Environment") && o.ToString().Contains("Beta") && o.ToString().Contains("Policy") && o.ToString().Contains("Beta"))), Times.Once);
     }
 } 

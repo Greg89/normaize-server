@@ -219,16 +219,48 @@ public static class ServiceConfiguration
             
             builder.Services.AddCors(options =>
             {
-                // Use permissive CORS for development and beta environments
-                if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase) || 
-                    environment.Equals("Beta", StringComparison.OrdinalIgnoreCase))
+                // Use environment-specific CORS configuration
+                if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
                 {
-                    logger.LogInformation("Configuring permissive CORS for {Environment} environment", environment);
-                    options.AddPolicy("AllowAll", policy =>
+                    logger.LogInformation("Configuring development CORS for {Environment} environment", environment);
+                    
+                    // Development policy - localhost only for local development
+                    options.AddPolicy("Development", policy =>
                     {
-                        policy.AllowAnyOrigin()
-                              .AllowAnyMethod()
-                              .AllowAnyHeader();
+                        policy.WithOrigins(
+                                "http://localhost:3000",    // React default
+                                "http://localhost:4200",    // Angular default
+                                "http://localhost:8080",    // Vue default
+                                "http://127.0.0.1:3000",
+                                "http://127.0.0.1:4200",
+                                "http://127.0.0.1:8080"
+                            )
+                            .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                            .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                            .AllowCredentials()
+                            .SetIsOriginAllowedToAllowWildcardSubdomains();
+                    });
+                }
+                else if (environment.Equals("Beta", StringComparison.OrdinalIgnoreCase))
+                {
+                    logger.LogInformation("Configuring beta CORS for {Environment} environment", environment);
+                    
+                    // Beta policy - allows beta.normaize.com and localhost for testing
+                    options.AddPolicy("Beta", policy =>
+                    {
+                        policy.WithOrigins(
+                                "https://beta.normaize.com",    // Beta production site
+                                "http://localhost:3000",        // Local development
+                                "http://localhost:4200",        // Local development
+                                "http://localhost:8080",        // Local development
+                                "http://127.0.0.1:3000",
+                                "http://127.0.0.1:4200",
+                                "http://127.0.0.1:8080"
+                            )
+                            .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                            .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                            .AllowCredentials()
+                            .SetIsOriginAllowedToAllowWildcardSubdomains();
                     });
                 }
                 else
