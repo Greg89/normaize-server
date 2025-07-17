@@ -58,11 +58,18 @@ public static class ServiceConfiguration
         builder.Services.Configure<StartupConfigurationOptions>(
             builder.Configuration.GetSection(StartupConfigurationOptions.SectionName));
 
+        // Configure storage settings
+        builder.Services.Configure<StorageConfiguration>(
+            builder.Configuration.GetSection("Storage"));
+
         // Register configuration validation service
         builder.Services.AddScoped<IConfigurationValidationService, ConfigurationValidationService>();
         
         // Register IAppConfigurationService early so it's available for other configuration methods
         builder.Services.AddSingleton<IAppConfigurationService, Normaize.Data.Services.AppConfigurationService>();
+        
+        // Register storage configuration service
+        builder.Services.AddScoped<IStorageConfigurationService, StorageConfigurationService>();
     }
 
     private static void ConfigureControllers(WebApplicationBuilder builder)
