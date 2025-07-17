@@ -229,23 +229,13 @@ public class ServiceConfigurationTests
         // Assert
         var services = _builder.Services.BuildServiceProvider();
         
-        // The service should be registered, but may throw when instantiated due to missing configuration
-        // This is expected behavior as the S3StorageService requires proper AWS configuration
-        var action = () => services.GetService<IStorageService>();
+        // Check that S3vice is registered in the service collection
+        var serviceDescriptor = _builder.Services.FirstOrDefault(s => 
+            s.ServiceType == typeof(IStorageService) && 
+            s.ImplementationType == typeof(S3StorageService));
         
-        // The service should either be available or throw an exception during instantiation
-        // Both are valid behaviors depending on the configuration
-        try
-        {
-            var storageService = action();
-            storageService.Should().NotBeNull();
-            storageService.Should().BeOfType<S3StorageService>();
-        }
-        catch (ArgumentException ex) when (ex.Message.Contains("AWS_ACCESS_KEY_ID"))
-        {
-            // This is expected when AWS credentials are not properly configured
-            // The service registration should still work, but instantiation fails
-        }
+        serviceDescriptor.Should().NotBeNull();
+        serviceDescriptor!.ImplementationType.Should().Be(typeof(S3StorageService));
 
         // Cleanup
         Environment.SetEnvironmentVariable("STORAGE_PROVIDER", null);
