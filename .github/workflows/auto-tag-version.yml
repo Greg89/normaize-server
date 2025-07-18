@@ -41,6 +41,7 @@ jobs:
           echo "tag_commit=true" >> $GITHUB_OUTPUT
         else
           echo "tag_commit=false" >> $GITHUB_OUTPUT
+        fi
 
     - name: Create and push tag for new version
       if: ${{ steps.should_tag.outputs.tag_commit == 'true' }}

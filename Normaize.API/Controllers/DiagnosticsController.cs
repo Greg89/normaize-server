@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.DependencyInjection;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using Normaize.Core.DTOs;
@@ -14,44 +13,30 @@ namespace Normaize.API.Controllers;
 public class DiagnosticsController : ControllerBase
 {
     private readonly IStructuredLoggingService _loggingService;
-    private readonly IAppConfigurationService _configService;
+    private readonly IStorageConfigurationService _storageConfigService;
 
-    public DiagnosticsController(IStructuredLoggingService loggingService, IAppConfigurationService configService)
+    public DiagnosticsController(
+        IStructuredLoggingService loggingService, 
+        IStorageConfigurationService storageConfigService)
     {
         _loggingService = loggingService;
-        _configService = configService;
+        _storageConfigService = storageConfigService;
     }
 
     [HttpGet("storage")]
-    public ActionResult<StorageDiagnosticsDto> GetStorageDiagnostics()
+    public ActionResult<StorageDiagnosticsDto> GetStorageDiagnostics(CancellationToken cancellationToken = default)
     {
         try
         {
-            var storageProviderConfig = _configService.Get("STORAGE_PROVIDER") ?? "default";
-            var s3Bucket = _configService.Get("AWS_S3_BUCKET");
-            var s3AccessKey = _configService.Get("AWS_ACCESS_KEY_ID");
-            var s3SecretKey = _configService.Get("AWS_SECRET_ACCESS_KEY");
-            var s3ServiceUrl = _configService.Get("AWS_SERVICE_URL");
-            var environment = _configService.Get("ASPNETCORE_ENVIRONMENT") ?? AppConstants.ConfigStatus.NOT_SET;
+            _loggingService.LogUserAction("Storage diagnostics requested", new { UserId = User.Identity?.Name });
             
-            var storageProvider = storageProviderConfig.ToLowerInvariant() switch
-            {
-                "s3" => StorageProvider.S3,
-                "azure" => StorageProvider.Azure,
-                "memory" => StorageProvider.Memory,
-                _ => StorageProvider.Local
-            };
+            var diagnostics = _storageConfigService.GetDiagnostics();
             
-            var diagnostics = new StorageDiagnosticsDto
-            {
-                StorageProvider = storageProvider,
-                S3Configured = !string.IsNullOrEmpty(s3Bucket) && !string.IsNullOrEmpty(s3AccessKey) && !string.IsNullOrEmpty(s3SecretKey),
-                S3Bucket = !string.IsNullOrEmpty(s3Bucket) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
-                S3AccessKey = !string.IsNullOrEmpty(s3AccessKey) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
-                S3SecretKey = !string.IsNullOrEmpty(s3SecretKey) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
-                S3ServiceUrl = !string.IsNullOrEmpty(s3ServiceUrl) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET,
-                Environment = environment
-            };
+            _loggingService.LogUserAction("Storage diagnostics retrieved successfully", new { 
+                StorageProvider = diagnostics.StorageProvider,
+                S3Configured = diagnostics.S3Configured,
+                Environment = diagnostics.Environment
+            });
             
             return Ok(diagnostics);
         }
@@ -63,10 +48,12 @@ public class DiagnosticsController : ControllerBase
     }
 
     [HttpPost("test-storage")]
-    public async Task<ActionResult<StorageTestResultDto>> TestStorage()
+    public async Task<ActionResult<StorageTestResultDto>> TestStorage(CancellationToken cancellationToken = default)
     {
         try
-        {            
+        {
+            _loggingService.LogUserAction("Storage test requested", new { UserId = User.Identity?.Name });
+            
             // Get the storage service from DI
             var storageService = HttpContext.RequestServices.GetRequiredService<IStorageService>();
             var storageType = storageService.GetType().Name;
@@ -74,7 +61,8 @@ public class DiagnosticsController : ControllerBase
             // Test file operations
             var testFileName = $"test_{Guid.NewGuid()}.txt";
             var testContent = "This is a test file to verify storage connectivity.";
-            var testStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testContent));
+            
+            using var testStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testContent));
             
             var fileRequest = new FileUploadRequest
             {
@@ -95,12 +83,12 @@ public class DiagnosticsController : ControllerBase
                 // Test get
                 using var retrievedStream = await storageService.GetFileAsync(filePath);
                 using var reader = new StreamReader(retrievedStream);
-                var retrievedContent = await reader.ReadToEndAsync();
+                var retrievedContent = await reader.ReadToEndAsync(cancellationToken);
                 
                 // Test delete
                 await storageService.DeleteFileAsync(filePath);
                 
-                return Ok(new StorageTestResultDto
+                var result = new StorageTestResultDto
                 {
                     StorageType = storageType,
                     TestResult = "SUCCESS",
@@ -108,17 +96,29 @@ public class DiagnosticsController : ControllerBase
                     Exists = exists,
                     ContentMatch = retrievedContent == testContent,
                     Message = "Storage service is working correctly"
+                };
+                
+                _loggingService.LogUserAction("Storage test completed successfully", new { 
+                    StorageType = storageType,
+                    FilePath = filePath,
+                    ContentMatch = result.ContentMatch
                 });
+                
+                return Ok(result);
             }
             catch (Exception ex)
             {
-                return Ok(new StorageTestResultDto
+                var result = new StorageTestResultDto
                 {
                     StorageType = storageType,
                     TestResult = "FAILED",
                     Error = ex.Message,
                     Message = "Storage service test failed"
-                });
+                };
+                
+                _loggingService.LogException(ex, "Storage test failed");
+                
+                return Ok(result);
             }
         }
         catch (Exception ex)

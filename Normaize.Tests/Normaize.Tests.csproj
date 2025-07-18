@@ -2,11 +2,13 @@
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>Normaize.Tests</AssemblyName>
+    <OutputType>Library</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <ProjectGuid>{79118d8d-a151-4eff-9e53-c8760ceff37f}</ProjectGuid>
   </PropertyGroup>
 
   <ItemGroup>

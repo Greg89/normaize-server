@@ -23,7 +23,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
         _healthConfig = healthConfig.Value;
     }
 
-    public async Task<ConfigurationValidationResult> ValidateConfigurationAsync(CancellationToken cancellationToken = default)
+    public ConfigurationValidationResult ValidateConfiguration(CancellationToken cancellationToken = default)
     {
         var correlationId = Guid.NewGuid().ToString();
         var stopwatch = Stopwatch.StartNew();
@@ -32,14 +32,15 @@ public class ConfigurationValidationService : IConfigurationValidationService
 
         try
         {
-            var results = new List<ConfigurationValidationResult>();
-
-            // Validate all configuration sections
-            results.Add(await ValidateDatabaseConfigurationAsync(cancellationToken));
-            results.Add(await ValidateSecurityConfigurationAsync(cancellationToken));
-            results.Add(await ValidateStorageConfigurationAsync(cancellationToken));
-            results.Add(await ValidateCachingConfigurationAsync(cancellationToken));
-            results.Add(await ValidatePerformanceConfigurationAsync(cancellationToken));
+            var results = new List<ConfigurationValidationResult>
+            {
+                // Validate all configuration sections
+                ValidateDatabaseConfiguration(cancellationToken),
+                ValidateSecurityConfiguration(cancellationToken),
+                ValidateStorageConfiguration(cancellationToken),
+                ValidateCachingConfiguration(cancellationToken),
+                ValidatePerformanceConfiguration(cancellationToken)
+            };
 
             stopwatch.Stop();
 
@@ -90,7 +91,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
         }
     }
 
-    public async Task<ConfigurationValidationResult> ValidateDatabaseConfigurationAsync(CancellationToken cancellationToken = default)
+    public ConfigurationValidationResult ValidateDatabaseConfiguration(CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new ConfigurationValidationResult();
@@ -137,7 +138,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
         }
     }
 
-    public async Task<ConfigurationValidationResult> ValidateSecurityConfigurationAsync(CancellationToken cancellationToken = default)
+    public ConfigurationValidationResult ValidateSecurityConfiguration(CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new ConfigurationValidationResult();
@@ -154,12 +155,12 @@ public class ConfigurationValidationService : IConfigurationValidationService
             }
 
             // Validate CORS configuration
-            var corsValidation = await ValidateCorsConfigurationAsync(securityConfig.Cors, cancellationToken);
+            var corsValidation = ValidateCorsConfiguration(securityConfig.Cors, cancellationToken);
             result.Errors.AddRange(corsValidation.Errors);
             result.Warnings.AddRange(corsValidation.Warnings);
 
             // Validate JWT configuration
-            var jwtValidation = await ValidateJwtConfigurationAsync(securityConfig.Jwt, cancellationToken);
+            var jwtValidation = ValidateJwtConfiguration(securityConfig.Jwt, cancellationToken);
             result.Errors.AddRange(jwtValidation.Errors);
             result.Warnings.AddRange(jwtValidation.Warnings);
 
@@ -190,7 +191,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
         }
     }
 
-    public async Task<ConfigurationValidationResult> ValidateStorageConfigurationAsync(CancellationToken cancellationToken = default)
+    public ConfigurationValidationResult ValidateStorageConfiguration(CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new ConfigurationValidationResult();
@@ -209,7 +210,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
             // Validate S3 configuration if provider is S3
             if (storageConfig.Provider.Equals("S3", StringComparison.OrdinalIgnoreCase))
             {
-                var s3Validation = await ValidateS3ConfigurationAsync(storageConfig, cancellationToken);
+                var s3Validation = ValidateS3Configuration(storageConfig, cancellationToken);
                 result.Errors.AddRange(s3Validation.Errors);
                 result.Warnings.AddRange(s3Validation.Warnings);
             }
@@ -236,7 +237,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
         }
     }
 
-    public async Task<ConfigurationValidationResult> ValidateCachingConfigurationAsync(CancellationToken cancellationToken = default)
+    public ConfigurationValidationResult ValidateCachingConfiguration(CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new ConfigurationValidationResult();
@@ -274,7 +275,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
         }
     }
 
-    public async Task<ConfigurationValidationResult> ValidatePerformanceConfigurationAsync(CancellationToken cancellationToken = default)
+    public ConfigurationValidationResult ValidatePerformanceConfiguration(CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new ConfigurationValidationResult();
@@ -317,7 +318,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
         }
     }
 
-    private async Task<ConfigurationValidationResult> ValidateCorsConfigurationAsync(CorsConfiguration corsConfig, CancellationToken cancellationToken)
+    private ConfigurationValidationResult ValidateCorsConfiguration(CorsConfiguration corsConfig, CancellationToken cancellationToken)
     {
         var result = new ConfigurationValidationResult();
         var validationContext = new ValidationContext(corsConfig);
@@ -331,7 +332,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
         return result;
     }
 
-    private async Task<ConfigurationValidationResult> ValidateJwtConfigurationAsync(JwtConfiguration jwtConfig, CancellationToken cancellationToken)
+    private ConfigurationValidationResult ValidateJwtConfiguration(JwtConfiguration jwtConfig, CancellationToken cancellationToken)
     {
         var result = new ConfigurationValidationResult();
         var validationContext = new ValidationContext(jwtConfig);
@@ -356,7 +357,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
         return result;
     }
 
-    private async Task<ConfigurationValidationResult> ValidateS3ConfigurationAsync(StorageConfiguration storageConfig, CancellationToken cancellationToken)
+    private ConfigurationValidationResult ValidateS3Configuration(StorageConfiguration storageConfig, CancellationToken cancellationToken)
     {
         var result = new ConfigurationValidationResult();
 

@@ -222,35 +222,41 @@ public class ServiceConfigurationTests
         Environment.SetEnvironmentVariable("STORAGE_PROVIDER", "s3");
         Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", "test-key");
         Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", "test-secret");
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+
+        // Debug: Check environment variables
+        Console.WriteLine($"STORAGE_PROVIDER: {Environment.GetEnvironmentVariable("STORAGE_PROVIDER")}");
+        Console.WriteLine($"AWS_ACCESS_KEY_ID: {Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID")}");
+        Console.WriteLine($"AWS_SECRET_ACCESS_KEY: {Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY")}");
 
         // Act
         ServiceConfiguration.ConfigureServices(_builder);
 
+        // Debug: Check what services are registered
+        var storageServices = _builder.Services.Where(s => s.ServiceType == typeof(IStorageService)).ToList();
+        Console.WriteLine($"Found {storageServices.Count} IStorageService registrations:");
+        foreach (var service in storageServices)
+        {
+            Console.WriteLine($"  - ImplementationType: {service.ImplementationType?.Name ?? "null"}");
+            Console.WriteLine($"  - Lifetime: {service.Lifetime}");
+        }
+
         // Assert
         var services = _builder.Services.BuildServiceProvider();
         
-        // The service should be registered, but may throw when instantiated due to missing configuration
-        // This is expected behavior as the S3StorageService requires proper AWS configuration
-        var action = () => services.GetService<IStorageService>();
+        // Check that S3vice is registered in the service collection
+        var serviceDescriptor = _builder.Services.FirstOrDefault(s => 
+            s.ServiceType == typeof(IStorageService) && 
+            s.ImplementationType == typeof(S3StorageService));
         
-        // The service should either be available or throw an exception during instantiation
-        // Both are valid behaviors depending on the configuration
-        try
-        {
-            var storageService = action();
-            storageService.Should().NotBeNull();
-            storageService.Should().BeOfType<S3StorageService>();
-        }
-        catch (ArgumentException ex) when (ex.Message.Contains("AWS_ACCESS_KEY_ID"))
-        {
-            // This is expected when AWS credentials are not properly configured
-            // The service registration should still work, but instantiation fails
-        }
+        serviceDescriptor.Should().NotBeNull();
+        serviceDescriptor!.ImplementationType.Should().Be(typeof(S3StorageService));
 
         // Cleanup
         Environment.SetEnvironmentVariable("STORAGE_PROVIDER", null);
         Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", null);
         Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", null);
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", null);
     }
 
     [Fact]
@@ -409,8 +415,18 @@ public class ServiceConfigurationTests
 
     private void SetupTestConfiguration()
     {
-        // Note: WebApplicationBuilder.Configuration is read-only, so we can't replace it
-        // The configuration will use the default test configuration
-        // In a real scenario, you would configure this through environment variables or appsettings.json
+        // Register a mock IAppConfigurationService to satisfy the dependency
+        var mockAppConfigService = new Mock<IAppConfigurationService>();
+        mockAppConfigService.Setup(x => x.GetEnvironment()).Returns("Development");
+        mockAppConfigService.Setup(x => x.HasDatabaseConnection()).Returns(false);
+        mockAppConfigService.Setup(x => x.GetDatabaseConfig()).Returns(new Normaize.Core.Interfaces.DatabaseConfig());
+        mockAppConfigService.Setup(x => x.GetPort()).Returns("5000");
+        mockAppConfigService.Setup(x => x.GetHttpsPort()).Returns((string?)null);
+        mockAppConfigService.Setup(x => x.GetSeqUrl()).Returns((string?)null);
+        mockAppConfigService.Setup(x => x.GetSeqApiKey()).Returns((string?)null);
+        mockAppConfigService.Setup(x => x.IsProductionLike()).Returns(false);
+        mockAppConfigService.Setup(x => x.IsContainerized()).Returns(false);
+        
+        _builder.Services.AddSingleton(mockAppConfigService.Object);
     }
 } 

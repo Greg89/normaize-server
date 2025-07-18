@@ -2,9 +2,12 @@
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>Normaize.Data</AssemblyName>
+    <OutputType>Library</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Version>1.0.0</Version>
+    <ProjectGuid>{1a43e83a-cbee-4128-afc6-a9dd58eb9f8e}</ProjectGuid>
   </PropertyGroup>
 
   <ItemGroup>

@@ -4,12 +4,12 @@ namespace Normaize.Core.Interfaces;
 
 public interface IConfigurationValidationService
 {
-    Task<ConfigurationValidationResult> ValidateConfigurationAsync(CancellationToken cancellationToken = default);
-    Task<ConfigurationValidationResult> ValidateDatabaseConfigurationAsync(CancellationToken cancellationToken = default);
-    Task<ConfigurationValidationResult> ValidateSecurityConfigurationAsync(CancellationToken cancellationToken = default);
-    Task<ConfigurationValidationResult> ValidateStorageConfigurationAsync(CancellationToken cancellationToken = default);
-    Task<ConfigurationValidationResult> ValidateCachingConfigurationAsync(CancellationToken cancellationToken = default);
-    Task<ConfigurationValidationResult> ValidatePerformanceConfigurationAsync(CancellationToken cancellationToken = default);
+    ConfigurationValidationResult ValidateConfiguration(CancellationToken cancellationToken = default);
+    ConfigurationValidationResult ValidateDatabaseConfiguration(CancellationToken cancellationToken = default);
+    ConfigurationValidationResult ValidateSecurityConfiguration(CancellationToken cancellationToken = default);
+    ConfigurationValidationResult ValidateStorageConfiguration(CancellationToken cancellationToken = default);
+    ConfigurationValidationResult ValidateCachingConfiguration(CancellationToken cancellationToken = default);
+    ConfigurationValidationResult ValidatePerformanceConfiguration(CancellationToken cancellationToken = default);
 }
 
 public class ConfigurationValidationResult
