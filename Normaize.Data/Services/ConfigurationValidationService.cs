@@ -11,16 +11,13 @@ public class ConfigurationValidationService : IConfigurationValidationService
 {
     private readonly ILogger<ConfigurationValidationService> _logger;
     private readonly ServiceConfigurationOptions _config;
-    private readonly HealthCheckConfiguration _healthConfig;
 
     public ConfigurationValidationService(
         ILogger<ConfigurationValidationService> logger,
-        IOptions<ServiceConfigurationOptions> config,
-        IOptions<HealthCheckConfiguration> healthConfig)
+        IOptions<ServiceConfigurationOptions> config)
     {
         _logger = logger;
         _config = config.Value;
-        _healthConfig = healthConfig.Value;
     }
 
     public ConfigurationValidationResult ValidateConfiguration(CancellationToken cancellationToken = default)

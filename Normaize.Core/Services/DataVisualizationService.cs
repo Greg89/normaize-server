@@ -1,10 +1,12 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using Normaize.Core.Interfaces;
 using Normaize.Core.DTOs;
 using Normaize.Core.Models;
 using System.Text.Json;
 using System.Diagnostics;
+using System.Security.Cryptography;
 
 namespace Normaize.Core.Services;
 
@@ -13,174 +15,129 @@ public class DataVisualizationService : IDataVisualizationService
     private readonly ILogger<DataVisualizationService> _logger;
     private readonly IDataSetRepository _dataSetRepository;
     private readonly IMemoryCache _cache;
-    private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(30);
+    private readonly DataVisualizationOptions _options;
+    private readonly Random _chaosRandom;
 
     public DataVisualizationService(
         ILogger<DataVisualizationService> logger,
         IDataSetRepository dataSetRepository,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        IOptions<DataVisualizationOptions> options)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _dataSetRepository = dataSetRepository ?? throw new ArgumentNullException(nameof(dataSetRepository));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+        _chaosRandom = new Random();
+        
+        _logger.LogInformation("DataVisualizationService initialized with configuration: CacheExpiration={CacheExpiration}, MaxDataPoints={MaxDataPoints}, ChaosProcessingDelayProbability={ChaosProcessingDelayProbability}",
+            _options.CacheExpiration, _options.MaxDataPoints, _options.ChaosProcessingDelayProbability);
     }
 
     public async Task<ChartDataDto> GenerateChartAsync(int dataSetId, ChartType chartType, ChartConfigurationDto? configuration, string userId)
     {
-        var stopwatch = Stopwatch.StartNew();
+        var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
+        var operationName = "GenerateChartAsync";
         
+        _logger.LogInformation("Starting chart generation. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}, UserId: {UserId}",
+            correlationId, dataSetId, chartType, userId);
+
         try
         {
-            ValidateInputs(dataSetId, userId);
-            ValidateChartConfiguration(chartType, configuration);
+            // Validate inputs first (before try-catch so exceptions are thrown)
+            ValidateGenerateChartInputs(dataSetId, chartType, configuration, userId);
 
-            var cacheKey = $"chart_{dataSetId}_{chartType}_{JsonSerializer.Serialize(configuration)}";
-            
-            if (_cache.TryGetValue(cacheKey, out ChartDataDto? cachedChart))
-            {
-                _logger.LogDebug("Retrieved chart from cache for dataset {DataSetId}, type {ChartType}", dataSetId, chartType);
-                return cachedChart!;
-            }
-
-            _logger.LogInformation("Generating chart for dataset {DataSetId}, type {ChartType}, user {UserId}", dataSetId, chartType, userId);
-
-            var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId);
-            var data = ExtractDataSetData(dataSet);
-            
-            var chartData = GenerateChartData(dataSet, data, chartType, configuration);
-            chartData.ProcessingTime = stopwatch.Elapsed;
-
-            _cache.Set(cacheKey, chartData, _cacheExpiration);
-
-            _logger.LogInformation("Generated chart for dataset {DataSetId}, type {ChartType} in {ProcessingTime}ms", 
-                dataSetId, chartType, stopwatch.ElapsedMilliseconds);
-
-            return chartData;
+            return await ExecuteWithTimeoutAsync(
+                async () => await GenerateChartInternalAsync(dataSetId, chartType, configuration, userId, correlationId),
+                _options.ChartGenerationTimeout,
+                correlationId,
+                operationName);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ArgumentException && ex is not ArgumentNullException)
         {
-            _logger.LogError(ex, "Error generating chart for dataset {DataSetId}, type {ChartType}, user {UserId}", 
-                dataSetId, chartType, userId);
+            _logger.LogError(ex, "Failed to generate chart. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}, UserId: {UserId}",
+                correlationId, dataSetId, chartType, userId);
             throw;
         }
     }
 
     public async Task<ComparisonChartDto> GenerateComparisonChartAsync(int dataSetId1, int dataSetId2, ChartType chartType, ChartConfigurationDto? configuration, string userId)
     {
-        var stopwatch = Stopwatch.StartNew();
+        var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
+        var operationName = "GenerateComparisonChartAsync";
         
+        _logger.LogInformation("Starting comparison chart generation. CorrelationId: {CorrelationId}, DataSetId1: {DataSetId1}, DataSetId2: {DataSetId2}, ChartType: {ChartType}, UserId: {UserId}",
+            correlationId, dataSetId1, dataSetId2, chartType, userId);
+
         try
         {
-            ValidateComparisonInputs(dataSetId1, dataSetId2, userId);
-            ValidateChartConfiguration(chartType, configuration);
+            // Validate inputs first
+            ValidateComparisonChartInputs(dataSetId1, dataSetId2, chartType, configuration, userId);
 
-            var cacheKey = $"comparison_{dataSetId1}_{dataSetId2}_{chartType}_{JsonSerializer.Serialize(configuration)}";
-            
-            if (_cache.TryGetValue(cacheKey, out ComparisonChartDto? cachedChart))
-            {
-                _logger.LogDebug("Retrieved comparison chart from cache for datasets {DataSetId1}, {DataSetId2}", dataSetId1, dataSetId2);
-                return cachedChart!;
-            }
-
-            _logger.LogInformation("Generating comparison chart for datasets {DataSetId1}, {DataSetId2}, type {ChartType}, user {UserId}", 
-                dataSetId1, dataSetId2, chartType, userId);
-
-            var dataSet1 = await GetAndValidateDataSetAsync(dataSetId1, userId);
-            var dataSet2 = await GetAndValidateDataSetAsync(dataSetId2, userId);
-            
-            var data1 = ExtractDataSetData(dataSet1);
-            var data2 = ExtractDataSetData(dataSet2);
-
-            var comparisonChart = GenerateComparisonChartData(dataSet1, dataSet2, data1, data2, chartType, configuration);
-            comparisonChart.ProcessingTime = stopwatch.Elapsed;
-
-            _cache.Set(cacheKey, comparisonChart, _cacheExpiration);
-
-            _logger.LogInformation("Generated comparison chart for datasets {DataSetId1}, {DataSetId2} in {ProcessingTime}ms", 
-                dataSetId1, dataSetId2, stopwatch.ElapsedMilliseconds);
-
-            return comparisonChart;
+            return await ExecuteWithTimeoutAsync(
+                async () => await GenerateComparisonChartInternalAsync(dataSetId1, dataSetId2, chartType, configuration, userId, correlationId),
+                _options.ComparisonChartTimeout,
+                correlationId,
+                operationName);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ArgumentException && ex is not ArgumentNullException)
         {
-            _logger.LogError(ex, "Error generating comparison chart for datasets {DataSetId1}, {DataSetId2}, user {UserId}", 
-                dataSetId1, dataSetId2, userId);
+            _logger.LogError(ex, "Failed to generate comparison chart. CorrelationId: {CorrelationId}, DataSetId1: {DataSetId1}, DataSetId2: {DataSetId2}, UserId: {UserId}",
+                correlationId, dataSetId1, dataSetId2, userId);
             throw;
         }
     }
 
     public async Task<DataSummaryDto> GetDataSummaryAsync(int dataSetId, string userId)
     {
-        var stopwatch = Stopwatch.StartNew();
+        var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
+        var operationName = "GetDataSummaryAsync";
         
+        _logger.LogInformation("Starting data summary generation. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
+            correlationId, dataSetId, userId);
+
         try
         {
-            ValidateInputs(dataSetId, userId);
+            // Validate inputs first
+            ValidateDataSummaryInputs(dataSetId, userId);
 
-            var cacheKey = $"summary_{dataSetId}";
-            
-            if (_cache.TryGetValue(cacheKey, out DataSummaryDto? cachedSummary))
-            {
-                _logger.LogDebug("Retrieved data summary from cache for dataset {DataSetId}", dataSetId);
-                return cachedSummary!;
-            }
-
-            _logger.LogInformation("Generating data summary for dataset {DataSetId}, user {UserId}", dataSetId, userId);
-
-            var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId);
-            var data = ExtractDataSetData(dataSet);
-            
-            var summary = GenerateDataSummary(dataSet, data);
-            summary.ProcessingTime = stopwatch.Elapsed;
-
-            _cache.Set(cacheKey, summary, _cacheExpiration);
-
-            _logger.LogInformation("Generated data summary for dataset {DataSetId} in {ProcessingTime}ms", 
-                dataSetId, stopwatch.ElapsedMilliseconds);
-
-            return summary;
+            return await ExecuteWithTimeoutAsync(
+                async () => await GetDataSummaryInternalAsync(dataSetId, userId, correlationId),
+                _options.SummaryGenerationTimeout,
+                correlationId,
+                operationName);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ArgumentException && ex is not ArgumentNullException)
         {
-            _logger.LogError(ex, "Error generating data summary for dataset {DataSetId}, user {UserId}", dataSetId, userId);
+            _logger.LogError(ex, "Failed to generate data summary. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
+                correlationId, dataSetId, userId);
             throw;
         }
     }
 
     public async Task<StatisticalSummaryDto> GetStatisticalSummaryAsync(int dataSetId, string userId)
     {
-        var stopwatch = Stopwatch.StartNew();
+        var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
+        var operationName = "GetStatisticalSummaryAsync";
         
+        _logger.LogInformation("Starting statistical summary generation. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
+            correlationId, dataSetId, userId);
+
         try
         {
-            ValidateInputs(dataSetId, userId);
+            // Validate inputs first
+            ValidateStatisticalSummaryInputs(dataSetId, userId);
 
-            var cacheKey = $"stats_{dataSetId}";
-            
-            if (_cache.TryGetValue(cacheKey, out StatisticalSummaryDto? cachedStats))
-            {
-                _logger.LogDebug("Retrieved statistical summary from cache for dataset {DataSetId}", dataSetId);
-                return cachedStats!;
-            }
-
-            _logger.LogInformation("Generating statistical summary for dataset {DataSetId}, user {UserId}", dataSetId, userId);
-
-            var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId);
-            var data = ExtractDataSetData(dataSet);
-            
-            var stats = GenerateStatisticalSummary(dataSet, data);
-            stats.ProcessingTime = stopwatch.Elapsed;
-
-            _cache.Set(cacheKey, stats, _cacheExpiration);
-
-            _logger.LogInformation("Generated statistical summary for dataset {DataSetId} in {ProcessingTime}ms", 
-                dataSetId, stopwatch.ElapsedMilliseconds);
-
-            return stats;
+            return await ExecuteWithTimeoutAsync(
+                async () => await GetStatisticalSummaryInternalAsync(dataSetId, userId, correlationId),
+                _options.StatisticalSummaryTimeout,
+                correlationId,
+                operationName);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ArgumentException && ex is not ArgumentNullException)
         {
-            _logger.LogError(ex, "Error generating statistical summary for dataset {DataSetId}, user {UserId}", dataSetId, userId);
+            _logger.LogError(ex, "Failed to generate statistical summary. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
+                correlationId, dataSetId, userId);
             throw;
         }
     }
@@ -192,48 +149,240 @@ public class DataVisualizationService : IDataVisualizationService
 
     public bool ValidateChartConfiguration(ChartType chartType, ChartConfigurationDto? configuration)
     {
-        try
+        return ValidateChartConfigurationInternal(chartType, configuration);
+    }
+
+    private static bool ValidateChartConfigurationInternal(ChartType chartType, ChartConfigurationDto? configuration)
+    {
+        if (configuration == null) return true;
+
+        // Validate max data points
+        if (configuration.MaxDataPoints.HasValue && configuration.MaxDataPoints.Value <= 0)
         {
-            if (configuration == null) return true;
-
-            // Validate max data points
-            if (configuration.MaxDataPoints.HasValue && configuration.MaxDataPoints.Value <= 0)
-            {
-                throw new ArgumentException("MaxDataPoints must be greater than 0");
-            }
-
-            // Validate chart-specific configurations
-            switch (chartType)
-            {
-                case ChartType.Pie:
-                case ChartType.Donut:
-                    if (!string.IsNullOrEmpty(configuration.XAxisLabel) || !string.IsNullOrEmpty(configuration.YAxisLabel))
-                    {
-                        _logger.LogWarning("X/Y axis labels are not applicable for {ChartType} charts", chartType);
-                    }
-                    break;
-                    
-                case ChartType.Scatter:
-                case ChartType.Bubble:
-                    if (string.IsNullOrEmpty(configuration.XAxisLabel) || string.IsNullOrEmpty(configuration.YAxisLabel))
-                    {
-                        _logger.LogWarning("X and Y axis labels are recommended for {ChartType} charts", chartType);
-                    }
-                    break;
-            }
-
-            return true;
+            throw new ArgumentException("MaxDataPoints must be greater than 0", nameof(configuration));
         }
-        catch (Exception ex)
+
+        // Validate chart-specific configurations
+        switch (chartType)
         {
-            _logger.LogError(ex, "Error validating chart configuration for type {ChartType}", chartType);
-            throw;
+            case ChartType.Pie:
+            case ChartType.Donut:
+                if (!string.IsNullOrEmpty(configuration.XAxisLabel) || !string.IsNullOrEmpty(configuration.YAxisLabel))
+                {
+                    // Log warning but don't throw - this is a validation warning, not an error
+                }
+                break;
+                
+            case ChartType.Scatter:
+            case ChartType.Bubble:
+                if (string.IsNullOrEmpty(configuration.XAxisLabel) || string.IsNullOrEmpty(configuration.YAxisLabel))
+                {
+                    // Log warning but don't throw - this is a validation warning, not an error
+                }
+                break;
         }
+
+        return true;
     }
 
     #region Private Methods
 
-    private void ValidateInputs(int dataSetId, string userId)
+    private async Task<ChartDataDto> GenerateChartInternalAsync(int dataSetId, ChartType chartType, ChartConfigurationDto? configuration, string userId, string correlationId)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        
+        // Chaos engineering: Simulate processing delay
+        if (_chaosRandom.NextDouble() < _options.ChaosProcessingDelayProbability)
+        {
+            _logger.LogWarning("Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}", correlationId);
+            await Task.Delay(_chaosRandom.Next(1000, 5000)); // 1-5 second delay
+        }
+
+        var cacheKey = GenerateCacheKey($"chart_{dataSetId}_{chartType}", configuration);
+        
+        if (_cache.TryGetValue(cacheKey, out ChartDataDto? cachedChart))
+        {
+            _logger.LogDebug("Retrieved chart from cache. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}",
+                correlationId, dataSetId, chartType);
+            return cachedChart!;
+        }
+
+        _logger.LogDebug("Cache miss, generating new chart. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}",
+            correlationId, dataSetId, chartType);
+
+        var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, correlationId);
+        var data = ExtractDataSetData(dataSet, correlationId);
+        
+        var chartData = GenerateChartData(dataSet, data, chartType, configuration, correlationId);
+        chartData.ProcessingTime = stopwatch.Elapsed;
+
+        _cache.Set(cacheKey, chartData, _options.CacheExpiration);
+
+        _logger.LogInformation("Generated chart successfully. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}, ProcessingTime: {ProcessingTime}ms",
+            correlationId, dataSetId, chartType, stopwatch.ElapsedMilliseconds);
+
+        return chartData;
+    }
+
+    private async Task<ComparisonChartDto> GenerateComparisonChartInternalAsync(int dataSetId1, int dataSetId2, ChartType chartType, ChartConfigurationDto? configuration, string userId, string correlationId)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        
+        // Chaos engineering: Simulate processing delay
+        if (_chaosRandom.NextDouble() < _options.ChaosProcessingDelayProbability)
+        {
+            _logger.LogWarning("Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}", correlationId);
+            await Task.Delay(_chaosRandom.Next(1000, 5000)); // 1-5 second delay
+        }
+
+        var cacheKey = GenerateCacheKey($"comparison_{dataSetId1}_{dataSetId2}_{chartType}", configuration);
+        
+        if (_cache.TryGetValue(cacheKey, out ComparisonChartDto? cachedChart))
+        {
+            _logger.LogDebug("Retrieved comparison chart from cache. CorrelationId: {CorrelationId}, DataSetId1: {DataSetId1}, DataSetId2: {DataSetId2}",
+                correlationId, dataSetId1, dataSetId2);
+            return cachedChart!;
+        }
+
+        _logger.LogDebug("Cache miss, generating new comparison chart. CorrelationId: {CorrelationId}, DataSetId1: {DataSetId1}, DataSetId2: {DataSetId2}",
+            correlationId, dataSetId1, dataSetId2);
+
+        var dataSet1 = await GetAndValidateDataSetAsync(dataSetId1, userId, correlationId);
+        var dataSet2 = await GetAndValidateDataSetAsync(dataSetId2, userId, correlationId);
+        
+        var data1 = ExtractDataSetData(dataSet1, correlationId);
+        var data2 = ExtractDataSetData(dataSet2, correlationId);
+
+        var comparisonChart = GenerateComparisonChartData(dataSet1, dataSet2, data1, data2, chartType, configuration, correlationId);
+        comparisonChart.ProcessingTime = stopwatch.Elapsed;
+
+        _cache.Set(cacheKey, comparisonChart, _options.CacheExpiration);
+
+        _logger.LogInformation("Generated comparison chart successfully. CorrelationId: {CorrelationId}, DataSetId1: {DataSetId1}, DataSetId2: {DataSetId2}, ProcessingTime: {ProcessingTime}ms",
+            correlationId, dataSetId1, dataSetId2, stopwatch.ElapsedMilliseconds);
+
+        return comparisonChart;
+    }
+
+    private async Task<DataSummaryDto> GetDataSummaryInternalAsync(int dataSetId, string userId, string correlationId)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        
+        // Chaos engineering: Simulate processing delay
+        if (_chaosRandom.NextDouble() < _options.ChaosProcessingDelayProbability)
+        {
+            _logger.LogWarning("Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}", correlationId);
+            await Task.Delay(_chaosRandom.Next(500, 2000)); // 0.5-2 second delay
+        }
+
+        var cacheKey = $"summary_{dataSetId}";
+        
+        if (_cache.TryGetValue(cacheKey, out DataSummaryDto? cachedSummary))
+        {
+            _logger.LogDebug("Retrieved data summary from cache. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
+                correlationId, dataSetId);
+            return cachedSummary!;
+        }
+
+        _logger.LogDebug("Cache miss, generating new data summary. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
+            correlationId, dataSetId);
+
+        var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, correlationId);
+        var data = ExtractDataSetData(dataSet, correlationId);
+        
+        var summary = GenerateDataSummary(dataSet, data, correlationId);
+        summary.ProcessingTime = stopwatch.Elapsed;
+
+        _cache.Set(cacheKey, summary, _options.CacheExpiration);
+
+        _logger.LogInformation("Generated data summary successfully. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ProcessingTime: {ProcessingTime}ms",
+            correlationId, dataSetId, stopwatch.ElapsedMilliseconds);
+
+        return summary;
+    }
+
+    private async Task<StatisticalSummaryDto> GetStatisticalSummaryInternalAsync(int dataSetId, string userId, string correlationId)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        
+        // Chaos engineering: Simulate processing delay
+        if (_chaosRandom.NextDouble() < _options.ChaosProcessingDelayProbability)
+        {
+            _logger.LogWarning("Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}", correlationId);
+            await Task.Delay(_chaosRandom.Next(1000, 3000)); // 1-3 second delay
+        }
+
+        var cacheKey = $"stats_{dataSetId}";
+        
+        if (_cache.TryGetValue(cacheKey, out StatisticalSummaryDto? cachedStats))
+        {
+            _logger.LogDebug("Retrieved statistical summary from cache. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
+                correlationId, dataSetId);
+            return cachedStats!;
+        }
+
+        _logger.LogDebug("Cache miss, generating new statistical summary. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
+            correlationId, dataSetId);
+
+        var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, correlationId);
+        var data = ExtractDataSetData(dataSet, correlationId);
+        
+        var stats = GenerateStatisticalSummary(dataSet, data, correlationId);
+        stats.ProcessingTime = stopwatch.Elapsed;
+
+        _cache.Set(cacheKey, stats, _options.CacheExpiration);
+
+        _logger.LogInformation("Generated statistical summary successfully. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ProcessingTime: {ProcessingTime}ms",
+            correlationId, dataSetId, stopwatch.ElapsedMilliseconds);
+
+        return stats;
+    }
+
+    private async Task<T> ExecuteWithTimeoutAsync<T>(Func<Task<T>> operation, TimeSpan timeout, string correlationId, string operationName)
+    {
+        using var cts = new CancellationTokenSource(timeout);
+        
+        try
+        {
+            return await operation().WaitAsync(cts.Token);
+        }
+        catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+        {
+            _logger.LogError("Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
+                operationName, timeout, correlationId);
+            throw new TimeoutException($"Operation {operationName} timed out after {timeout}");
+        }
+    }
+
+    private static void ValidateGenerateChartInputs(int dataSetId, ChartType chartType, ChartConfigurationDto? configuration, string? userId)
+    {
+        if (dataSetId <= 0)
+            throw new ArgumentException("Dataset ID must be greater than 0", nameof(dataSetId));
+        
+        if (string.IsNullOrWhiteSpace(userId))
+            throw new ArgumentException("User ID is required", nameof(userId));
+        
+        ValidateChartConfigurationInternal(chartType, configuration);
+    }
+
+    private static void ValidateComparisonChartInputs(int dataSetId1, int dataSetId2, ChartType chartType, ChartConfigurationDto? configuration, string? userId)
+    {
+        if (dataSetId1 <= 0)
+            throw new ArgumentException("First dataset ID must be greater than 0", nameof(dataSetId1));
+        
+        if (dataSetId2 <= 0)
+            throw new ArgumentException("Second dataset ID must be greater than 0", nameof(dataSetId2));
+        
+        if (dataSetId1 == dataSetId2)
+            throw new ArgumentException("Dataset IDs must be different for comparison", nameof(dataSetId2));
+        
+        if (string.IsNullOrWhiteSpace(userId))
+            throw new ArgumentException("User ID is required", nameof(userId));
+        
+        ValidateChartConfigurationInternal(chartType, configuration);
+    }
+
+    private static void ValidateDataSummaryInputs(int dataSetId, string? userId)
     {
         if (dataSetId <= 0)
             throw new ArgumentException("Dataset ID must be greater than 0", nameof(dataSetId));
@@ -242,341 +391,394 @@ public class DataVisualizationService : IDataVisualizationService
             throw new ArgumentException("User ID is required", nameof(userId));
     }
 
-    private void ValidateComparisonInputs(int dataSetId1, int dataSetId2, string userId)
+    private static void ValidateStatisticalSummaryInputs(int dataSetId, string? userId)
     {
-        ValidateInputs(dataSetId1, userId);
+        if (dataSetId <= 0)
+            throw new ArgumentException("Dataset ID must be greater than 0", nameof(dataSetId));
         
-        if (dataSetId2 <= 0)
-            throw new ArgumentException("Second dataset ID must be greater than 0", nameof(dataSetId2));
-        
-        if (dataSetId1 == dataSetId2)
-            throw new ArgumentException("Cannot compare dataset with itself");
+        if (string.IsNullOrWhiteSpace(userId))
+            throw new ArgumentException("User ID is required", nameof(userId));
     }
 
-    private async Task<DataSet> GetAndValidateDataSetAsync(int dataSetId, string userId)
+    private async Task<DataSet> GetAndValidateDataSetAsync(int dataSetId, string userId, string correlationId)
     {
         var dataSet = await _dataSetRepository.GetByIdAsync(dataSetId);
         
         if (dataSet == null)
-            throw new ArgumentException($"Dataset with ID {dataSetId} not found");
-        
+        {
+            _logger.LogWarning("Dataset not found. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
+                correlationId, dataSetId, userId);
+            throw new ArgumentException($"Dataset with ID {dataSetId} not found", nameof(dataSetId));
+        }
+
         if (dataSet.UserId != userId)
-            throw new UnauthorizedAccessException($"Access denied to dataset {dataSetId}");
-        
+        {
+            _logger.LogWarning("Unauthorized access attempt. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, RequestedUserId: {RequestedUserId}, ActualUserId: {ActualUserId}",
+                correlationId, dataSetId, userId, dataSet.UserId);
+            throw new UnauthorizedAccessException($"User {userId} is not authorized to access dataset {dataSetId}");
+        }
+
         if (dataSet.IsDeleted)
-            throw new ArgumentException($"Dataset {dataSetId} has been deleted");
-        
+        {
+            _logger.LogWarning("Attempted to access deleted dataset. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
+                correlationId, dataSetId, userId);
+            throw new ArgumentException($"Dataset {dataSetId} has been deleted", nameof(dataSetId));
+        }
+
         return dataSet;
     }
 
-    private List<Dictionary<string, object>> ExtractDataSetData(DataSet dataSet)
+    private List<Dictionary<string, object>> ExtractDataSetData(DataSet dataSet, string correlationId)
     {
         try
         {
-            if (!dataSet.UseSeparateTable && !string.IsNullOrEmpty(dataSet.ProcessedData))
+            if (string.IsNullOrWhiteSpace(dataSet.ProcessedData))
             {
-                var data = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(dataSet.ProcessedData);
-                return data ?? new List<Dictionary<string, object>>();
-            }
-            else
-            {
-                // For large datasets, we would fetch from separate table
-                // This is a placeholder for the actual implementation
-                _logger.LogWarning("Large dataset processing not yet implemented for dataset {DataSetId}", dataSet.Id);
+                _logger.LogWarning("Dataset has no processed data. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
+                    correlationId, dataSet.Id);
                 return new List<Dictionary<string, object>>();
             }
+
+            var data = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(dataSet.ProcessedData);
+            
+            if (data == null)
+            {
+                _logger.LogWarning("Failed to deserialize dataset JSON data. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
+                    correlationId, dataSet.Id);
+                return new List<Dictionary<string, object>>();
+            }
+
+            _logger.LogDebug("Extracted {RowCount} rows from dataset. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
+                data.Count, correlationId, dataSet.Id);
+
+            return data;
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Error deserializing data for dataset {DataSetId}", dataSet.Id);
-            throw new InvalidOperationException($"Invalid data format for dataset {dataSet.Id}");
+            _logger.LogError(ex, "Failed to parse dataset JSON data. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
+                correlationId, dataSet.Id);
+            throw new InvalidOperationException($"Failed to parse dataset {dataSet.Id} data: {ex.Message}", ex);
         }
     }
 
-    private double ExtractDouble(object? value, double fallback = 0)
+    private static double ExtractDouble(object? value, double fallback = 0)
     {
-        if (value is System.Text.Json.JsonElement je)
-        {
-            if (je.ValueKind == System.Text.Json.JsonValueKind.Number && je.TryGetDouble(out var d))
-                return d;
-            if (je.ValueKind == System.Text.Json.JsonValueKind.String && double.TryParse(je.GetString(), out var s))
-                return s;
-        }
-        if (value is IConvertible conv)
-            return Convert.ToDouble(conv);
-        return fallback;
-    }
-
-    private ChartDataDto GenerateChartData(DataSet dataSet, List<Dictionary<string, object>> data, ChartType chartType, ChartConfigurationDto? configuration)
-    {
-        var chartData = new ChartDataDto
-        {
-            DataSetId = dataSet.Id,
-            ChartType = chartType,
-            Configuration = configuration
-        };
-
-        if (!data.Any())
-        {
-            _logger.LogWarning("No data available for chart generation in dataset {DataSetId}", dataSet.Id);
-            return chartData;
-        }
-
-        // Extract column names
-        var columns = data.First().Keys.ToList();
+        if (value == null) return fallback;
         
-        // Generate sample data based on chart type
+        return value switch
+        {
+            double d => d,
+            int i => i,
+            long l => l,
+            float f => f,
+            decimal dec => (double)dec,
+            string s when double.TryParse(s, out var result) => result,
+            _ => fallback
+        };
+    }
+
+    private ChartDataDto GenerateChartData(DataSet dataSet, List<Dictionary<string, object>> data, ChartType chartType, ChartConfigurationDto? configuration, string correlationId)
+    {
+        if (data.Count == 0)
+        {
+            _logger.LogWarning("No data available for chart generation. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}",
+                correlationId, dataSet.Id, chartType);
+            return new ChartDataDto
+            {
+                DataSetId = dataSet.Id,
+                ChartType = chartType,
+                Labels = new List<string>(),
+                Series = new List<ChartSeriesDto>(),
+                Configuration = configuration
+            };
+        }
+
+        var maxDataPoints = configuration?.MaxDataPoints ?? _options.MaxDataPoints;
+        var limitedData = data.Take(maxDataPoints).ToList();
+
+        var labels = new List<string>();
+        var series = new List<ChartSeriesDto>();
+
         switch (chartType)
         {
             case ChartType.Bar:
-            case ChartType.Column:
-                chartData.Series.Add(new ChartSeriesDto
-                {
-                    Name = "Values",
-                    Data = data.Take(configuration?.MaxDataPoints ?? 10).Select((row, index) => (object)ExtractDouble(row.Values.FirstOrDefault(), index)).ToList(),
-                    Color = "#3498db"
-                });
-                chartData.Labels = data.Take(configuration?.MaxDataPoints ?? 10).Select((row, index) => $"Item {index + 1}").ToList();
-                break;
-
             case ChartType.Line:
             case ChartType.Area:
-                chartData.Series.Add(new ChartSeriesDto
-                {
-                    Name = "Trend",
-                    Data = data.Take(configuration?.MaxDataPoints ?? 20).Select((row, index) => (object)ExtractDouble(row.Values.FirstOrDefault(), index)).ToList(),
-                    Color = "#2ecc71"
-                });
-                chartData.Labels = data.Take(configuration?.MaxDataPoints ?? 20).Select((row, index) => $"Point {index + 1}").ToList();
+                GenerateBarLineAreaChart(limitedData, labels, series, correlationId);
                 break;
-
+                
             case ChartType.Pie:
             case ChartType.Donut:
-                var pieData = data.Take(configuration?.MaxDataPoints ?? 5).ToList();
-                chartData.Series.Add(new ChartSeriesDto
-                {
-                    Name = "Distribution",
-                    Data = pieData.Select(row => (object)ExtractDouble(row.Values.FirstOrDefault(), 1)).ToList(),
-                    Color = "#e74c3c"
-                });
-                chartData.Labels = pieData.Select((row, index) => $"Category {index + 1}").ToList();
+                GeneratePieDonutChart(limitedData, labels, series, correlationId);
                 break;
-
+                
+            case ChartType.Scatter:
+            case ChartType.Bubble:
+                GenerateScatterBubbleChart(limitedData, labels, series, correlationId);
+                break;
+                
             default:
-                // Default to bar chart for unsupported types
-                chartData.ChartType = ChartType.Bar;
-                chartData.Series.Add(new ChartSeriesDto
-                {
-                    Name = "Values",
-                    Data = data.Take(10).Select((row, index) => (object)ExtractDouble(row.Values.FirstOrDefault(), index)).ToList(),
-                    Color = "#9b59b6"
-                });
-                chartData.Labels = data.Take(10).Select((row, index) => $"Item {index + 1}").ToList();
+                _logger.LogWarning("Unsupported chart type. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}",
+                    correlationId, dataSet.Id, chartType);
                 break;
         }
 
-        return chartData;
+        return new ChartDataDto
+        {
+            DataSetId = dataSet.Id,
+            ChartType = chartType,
+            Labels = labels,
+            Series = series,
+            Configuration = configuration
+        };
     }
 
-    private ComparisonChartDto GenerateComparisonChartData(DataSet dataSet1, DataSet dataSet2, List<Dictionary<string, object>> data1, List<Dictionary<string, object>> data2, ChartType chartType, ChartConfigurationDto? configuration)
+    private void GenerateBarLineAreaChart(List<Dictionary<string, object>> data, List<string> labels, List<ChartSeriesDto> series, string correlationId)
     {
-        var comparisonChart = new ComparisonChartDto
+        if (data.Count == 0) return;
+
+        var columns = data[0].Keys.ToList();
+        var numericColumns = columns.Where(col => IsNumericColumn(data.Select(row => row.GetValueOrDefault(col)).ToList())).ToList();
+
+        if (numericColumns.Count == 0)
+        {
+            _logger.LogWarning("No numeric columns found for chart. Using fallback data. CorrelationId: {CorrelationId}", correlationId);
+            
+            // Fallback: use row indices as labels and data
+            labels.AddRange(data.Select((_, index) => $"Row {index + 1}"));
+            series.Add(new ChartSeriesDto
+            {
+                Name = "Count",
+                Data = data.Select((_, index) => (object)(index + 1)).ToList()
+            });
+            return;
+        }
+
+        // Use first numeric column for values
+        var valueColumn = numericColumns[0];
+        var labelColumn = columns.FirstOrDefault(col => col != valueColumn) ?? valueColumn;
+
+        labels.AddRange(data.Select(row => row.GetValueOrDefault(labelColumn)?.ToString() ?? "Unknown"));
+        
+        series.Add(new ChartSeriesDto
+        {
+            Name = valueColumn,
+            Data = data.Select(row => ExtractDouble(row.GetValueOrDefault(valueColumn))).Cast<object>().ToList()
+        });
+    }
+
+    private void GeneratePieDonutChart(List<Dictionary<string, object>> data, List<string> labels, List<ChartSeriesDto> series, string correlationId)
+    {
+        if (data.Count == 0) return;
+
+        var columns = data[0].Keys.ToList();
+        var numericColumns = columns.Where(col => IsNumericColumn(data.Select(row => row.GetValueOrDefault(col)).ToList())).ToList();
+
+        if (numericColumns.Count == 0)
+        {
+            _logger.LogWarning("No numeric columns found for pie chart. Using fallback data. CorrelationId: {CorrelationId}", correlationId);
+            
+            // Fallback: use row indices as labels and data
+            labels.AddRange(data.Select((_, index) => $"Row {index + 1}"));
+            series.Add(new ChartSeriesDto
+            {
+                Name = "Count",
+                Data = data.Select((_, index) => (object)(index + 1)).ToList()
+            });
+            return;
+        }
+
+        var valueColumn = numericColumns[0];
+        var labelColumn = columns.FirstOrDefault(col => col != valueColumn) ?? valueColumn;
+
+        labels.AddRange(data.Select(row => row.GetValueOrDefault(labelColumn)?.ToString() ?? "Unknown"));
+        
+        series.Add(new ChartSeriesDto
+        {
+            Name = valueColumn,
+            Data = data.Select(row => ExtractDouble(row.GetValueOrDefault(valueColumn))).Cast<object>().ToList()
+        });
+    }
+
+    private void GenerateScatterBubbleChart(List<Dictionary<string, object>> data, List<string> labels, List<ChartSeriesDto> series, string correlationId)
+    {
+        if (data.Count == 0) return;
+
+        var columns = data[0].Keys.ToList();
+        var numericColumns = columns.Where(col => IsNumericColumn(data.Select(row => row.GetValueOrDefault(col)).ToList())).ToList();
+
+        if (numericColumns.Count < 2)
+        {
+            _logger.LogWarning("Insufficient numeric columns for scatter chart. Using fallback data. CorrelationId: {CorrelationId}", correlationId);
+            
+            // Fallback: use row indices as X and Y coordinates
+            labels.AddRange(data.Select((_, index) => $"Point {index + 1}"));
+            series.Add(new ChartSeriesDto
+            {
+                Name = "Data Points",
+                Data = data.Select((_, index) => new { X = index, Y = index + 1 }).Cast<object>().ToList()
+            });
+            return;
+        }
+
+        var xColumn = numericColumns[0];
+        var yColumn = numericColumns[1];
+
+        labels.AddRange(data.Select(row => row.GetValueOrDefault(xColumn)?.ToString() ?? "Unknown"));
+        
+        series.Add(new ChartSeriesDto
+        {
+            Name = $"{xColumn} vs {yColumn}",
+            Data = data.Select(row => new { X = ExtractDouble(row.GetValueOrDefault(xColumn)), Y = ExtractDouble(row.GetValueOrDefault(yColumn)) }).Cast<object>().ToList()
+        });
+    }
+
+    private ComparisonChartDto GenerateComparisonChartData(DataSet dataSet1, DataSet dataSet2, List<Dictionary<string, object>> data1, List<Dictionary<string, object>> data2, ChartType chartType, ChartConfigurationDto? configuration, string correlationId)
+    {
+        var chart1 = GenerateChartData(dataSet1, data1, chartType, configuration, correlationId);
+        var chart2 = GenerateChartData(dataSet2, data2, chartType, configuration, correlationId);
+
+        return new ComparisonChartDto
         {
             DataSetId1 = dataSet1.Id,
             DataSetId2 = dataSet2.Id,
             ChartType = chartType,
+            Series = chart1.Series.Concat(chart2.Series).ToList(),
+            Labels = chart1.Labels,
             Configuration = configuration
         };
-
-        if (!data1.Any() || !data2.Any())
-        {
-            _logger.LogWarning("Insufficient data for comparison chart between datasets {DataSetId1}, {DataSetId2}", dataSet1.Id, dataSet2.Id);
-            return comparisonChart;
-        }
-
-        // Calculate similarity score
-        var columns1 = data1.First().Keys.ToList();
-        var columns2 = data2.First().Keys.ToList();
-        
-        comparisonChart.CommonColumns = columns1.Intersect(columns2).ToList();
-        comparisonChart.Differences = columns1.Union(columns2).Except(comparisonChart.CommonColumns).ToList();
-        
-        comparisonChart.SimilarityScore = comparisonChart.CommonColumns.Count / (double)Math.Max(columns1.Count, columns2.Count);
-
-        // Generate comparison series
-        var maxPoints = configuration?.MaxDataPoints ?? 10;
-        
-        comparisonChart.Series.Add(new ChartSeriesDto
-        {
-            Name = $"Dataset {dataSet1.Id}",
-            Data = data1.Take(maxPoints).Select((row, index) => (object)ExtractDouble(row.Values.FirstOrDefault(), index)).ToList(),
-            Color = "#3498db"
-        });
-
-        comparisonChart.Series.Add(new ChartSeriesDto
-        {
-            Name = $"Dataset {dataSet2.Id}",
-            Data = data2.Take(maxPoints).Select((row, index) => (object)ExtractDouble(row.Values.FirstOrDefault(), index)).ToList(),
-            Color = "#e74c3c"
-        });
-
-        comparisonChart.Labels = Enumerable.Range(1, maxPoints).Select(i => $"Point {i}").ToList();
-
-        return comparisonChart;
     }
 
-    private DataSummaryDto GenerateDataSummary(DataSet dataSet, List<Dictionary<string, object>> data)
+    private DataSummaryDto GenerateDataSummary(DataSet dataSet, List<Dictionary<string, object>> data, string correlationId)
     {
-        var summary = new DataSummaryDto
+        if (data.Count == 0)
+        {
+            _logger.LogWarning("No data available for summary generation. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
+                correlationId, dataSet.Id);
+            return new DataSummaryDto
+            {
+                DataSetId = dataSet.Id,
+                TotalRows = 0,
+                TotalColumns = 0,
+                ColumnSummaries = new Dictionary<string, ColumnSummaryDto>()
+            };
+        }
+
+        var columns = data[0].Keys.ToList();
+        var columnSummaries = new Dictionary<string, ColumnSummaryDto>();
+
+        foreach (var column in columns)
+        {
+            var columnData = data.Select(row => row.GetValueOrDefault(column)).ToList();
+            var dataType = DetermineDataType(columnData);
+            var uniqueValues = columnData.Distinct().Count();
+            var nullCount = columnData.Count(x => x == null);
+
+            columnSummaries.Add(column, new ColumnSummaryDto
+            {
+                ColumnName = column,
+                DataType = dataType,
+                NonNullCount = columnData.Count - nullCount,
+                NullCount = nullCount,
+                UniqueCount = uniqueValues,
+                SampleValues = columnData.Take(5).Select(x => x?.ToString() ?? "null").Cast<object>().ToList()
+            });
+        }
+
+        return new DataSummaryDto
         {
             DataSetId = dataSet.Id,
             TotalRows = data.Count,
-            TotalColumns = data.Any() ? data.First().Count : 0
+            TotalColumns = columns.Count,
+            ColumnSummaries = columnSummaries
         };
+    }
 
-        if (!data.Any()) return summary;
+    private StatisticalSummaryDto GenerateStatisticalSummary(DataSet dataSet, List<Dictionary<string, object>> data, string correlationId)
+    {
+        if (data.Count == 0)
+        {
+            _logger.LogWarning("No data available for statistical summary. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
+                correlationId, dataSet.Id);
+            return new StatisticalSummaryDto
+            {
+                DataSetId = dataSet.Id,
+                ColumnStatistics = new Dictionary<string, ColumnStatisticsDto>()
+            };
+        }
 
-        // Calculate missing values and duplicates
-        summary.MissingValues = data.Sum(row => row.Values.Count(v => v == null));
-        
-        var uniqueRows = data.Select(row => JsonSerializer.Serialize(row)).Distinct().Count();
-        summary.DuplicateRows = data.Count - uniqueRows;
+        var columns = data[0].Keys.ToList();
+        var columnStatistics = new Dictionary<string, ColumnStatisticsDto>();
 
-        // Generate column summaries
-        var columns = data.First().Keys.ToList();
         foreach (var column in columns)
         {
-            var columnData = data.Select(row => row.ContainsKey(column) ? row[column] : null).ToList();
-            var nonNullData = columnData.Where(v => v != null).ToList();
+            var columnData = data.Select(row => row.GetValueOrDefault(column)).ToList();
             
-            var columnSummary = new ColumnSummaryDto
-            {
-                ColumnName = column,
-                DataType = DetermineDataType(columnData),
-                NonNullCount = nonNullData.Count,
-                NullCount = columnData.Count - nonNullData.Count,
-                UniqueCount = nonNullData.Distinct().Count(),
-                SampleValues = nonNullData.Take(5).Cast<object>().ToList()
-            };
-
-            // Calculate numeric statistics if applicable
             if (IsNumericColumn(columnData))
             {
-                var numericData = nonNullData.Select(v => ExtractDouble(v)).ToList();
-                columnSummary.MinValue = numericData.Min();
-                columnSummary.MaxValue = numericData.Max();
-                columnSummary.Mean = numericData.Average();
-                columnSummary.Median = CalculateMedian(numericData);
-                columnSummary.StandardDeviation = CalculateStandardDeviation(numericData);
-            }
-
-            summary.ColumnSummaries[column] = columnSummary;
-        }
-
-        return summary;
-    }
-
-    private StatisticalSummaryDto GenerateStatisticalSummary(DataSet dataSet, List<Dictionary<string, object>> data)
-    {
-        var stats = new StatisticalSummaryDto
-        {
-            DataSetId = dataSet.Id
-        };
-
-        if (!data.Any()) return stats;
-
-        var columns = data.First().Keys.ToList();
-        
-        foreach (var column in columns)
-        {
-            var columnData = data.Select(row => row.ContainsKey(column) ? row[column] : null)
-                                .Where(v => v != null && IsNumeric(v))
-                                .Select(v => ExtractDouble(v))
-                                .ToList();
-
-            if (columnData.Any())
-            {
-                var columnStats = new ColumnStatisticsDto
-                {
-                    ColumnName = column,
-                    Mean = columnData.Average(),
-                    Median = CalculateMedian(columnData),
-                    StandardDeviation = CalculateStandardDeviation(columnData),
-                    Min = columnData.Min(),
-                    Max = columnData.Max(),
-                    Q1 = CalculateQuartile(columnData, 0.25),
-                    Q2 = CalculateQuartile(columnData, 0.5),
-                    Q3 = CalculateQuartile(columnData, 0.75),
-                    Skewness = CalculateSkewness(columnData),
-                    Kurtosis = CalculateKurtosis(columnData)
-                };
-
-                // Detect outliers using IQR method
-                var iqr = columnStats.Q3 - columnStats.Q1;
-                var lowerBound = columnStats.Q1 - 1.5 * iqr;
-                var upperBound = columnStats.Q3 + 1.5 * iqr;
+                var numericData = columnData.Select(x => ExtractDouble(x)).Where(x => !double.IsNaN(x)).ToList();
                 
-                columnStats.OutlierCount = columnData.Count(v => v < lowerBound || v > upperBound);
-                
-                if (columnStats.OutlierCount > 0)
+                if (numericData.Count > 0)
                 {
-                    stats.OutlierColumns.Add(column);
+                    columnStatistics.Add(column, new ColumnStatisticsDto
+                    {
+                        ColumnName = column,
+                        Mean = numericData.Average(),
+                        Median = CalculateMedian(numericData),
+                        StandardDeviation = CalculateStandardDeviation(numericData),
+                        Min = numericData.Min(),
+                        Max = numericData.Max(),
+                        Q1 = CalculateQuartile(numericData, 0.25),
+                        Q2 = CalculateQuartile(numericData, 0.5),
+                        Q3 = CalculateQuartile(numericData, 0.75),
+                        Skewness = CalculateSkewness(numericData),
+                        Kurtosis = CalculateKurtosis(numericData)
+                    });
                 }
-
-                stats.ColumnStatistics[column] = columnStats;
             }
         }
 
-        // Calculate correlation matrix for numeric columns
-        var numericColumns = stats.ColumnStatistics.Keys.ToList();
-        for (int i = 0; i < numericColumns.Count; i++)
+        return new StatisticalSummaryDto
         {
-            for (int j = i + 1; j < numericColumns.Count; j++)
-            {
-                var col1 = numericColumns[i];
-                var col2 = numericColumns[j];
-                
-                var data1 = data.Select(row => ExtractDouble(row[col1])).ToList();
-                var data2 = data.Select(row => ExtractDouble(row[col2])).ToList();
-                
-                var correlation = CalculateCorrelation(data1, data2);
-                stats.CorrelationMatrix[$"{col1}_{col2}"] = correlation;
-            }
-        }
-
-        return stats;
+            DataSetId = dataSet.Id,
+            ColumnStatistics = columnStatistics
+        };
     }
 
-    #endregion
-
-    #region Statistical Helper Methods
-
-    private string DetermineDataType(List<object?> data)
+    private static string DetermineDataType(List<object?> data)
     {
-        var nonNullData = data.Where(v => v != null).ToList();
-        if (!nonNullData.Any()) return "Unknown";
-
-        var firstValue = nonNullData.First();
+        var nonNullData = data.Where(x => x != null).ToList();
         
-        if (IsNumeric(firstValue)) return "Numeric";
-        if (firstValue is DateTime) return "DateTime";
-        if (firstValue is bool) return "Boolean";
+        if (nonNullData.Count == 0) return "Unknown";
+        
+        var allNumeric = nonNullData.All(x => IsNumeric(x));
+        if (allNumeric) return "Numeric";
+        
+        var allDates = nonNullData.All(x => x is DateTime || (x is string s && DateTime.TryParse(s, out _)));
+        if (allDates) return "DateTime";
+        
         return "String";
     }
 
-    private bool IsNumeric(object? value)
+    private static bool IsNumeric(object? value)
     {
-        return value is int || value is long || value is float || value is double || value is decimal;
+        return value switch
+        {
+            double or int or long or float or decimal => true,
+            string s => double.TryParse(s, out _),
+            _ => false
+        };
     }
 
-    private bool IsNumericColumn(List<object?> data)
+    private static bool IsNumericColumn(List<object?> data)
     {
-        return data.Where(v => v != null).All(IsNumeric);
+        var nonNullData = data.Where(x => x != null).ToList();
+        return nonNullData.Count > 0 && nonNullData.All(x => IsNumeric(x));
     }
 
-    private double CalculateMedian(List<double> data)
+    private static double CalculateMedian(List<double> data)
     {
-        if (!data.Any()) return 0;
+        if (data.Count == 0) return 0;
         
         var sorted = data.OrderBy(x => x).ToList();
         var count = sorted.Count;
@@ -587,63 +789,88 @@ public class DataVisualizationService : IDataVisualizationService
             return sorted[count / 2];
     }
 
-    private double CalculateStandardDeviation(List<double> data)
+    private static double CalculateStandardDeviation(List<double> data)
     {
-        if (!data.Any()) return 0;
+        if (data.Count <= 1) return 0;
         
         var mean = data.Average();
-        var variance = data.Select(x => Math.Pow(x - mean, 2)).Average();
-        return Math.Sqrt(variance);
+        var sumSquaredDifferences = data.Sum(x => Math.Pow(x - mean, 2));
+        return Math.Sqrt(sumSquaredDifferences / (data.Count - 1));
     }
 
-    private double CalculateQuartile(List<double> data, double percentile)
+    private static double CalculateQuartile(List<double> data, double percentile)
     {
-        if (!data.Any()) return 0;
+        if (data.Count == 0) return 0;
         
         var sorted = data.OrderBy(x => x).ToList();
-        var index = (int)Math.Ceiling(percentile * (sorted.Count - 1));
-        return sorted[index];
+        var index = (percentile * (sorted.Count - 1));
+        var lowerIndex = (int)Math.Floor(index);
+        var upperIndex = (int)Math.Ceiling(index);
+        
+        if (lowerIndex == upperIndex) return sorted[lowerIndex];
+        
+        var weight = index - lowerIndex;
+        return sorted[lowerIndex] * (1 - weight) + sorted[upperIndex] * weight;
     }
 
-    private double CalculateSkewness(List<double> data)
+    private static double CalculateSkewness(List<double> data)
     {
         if (data.Count < 3) return 0;
         
         var mean = data.Average();
         var stdDev = CalculateStandardDeviation(data);
+        
         if (stdDev == 0) return 0;
         
-        var skewness = data.Select(x => Math.Pow((x - mean) / stdDev, 3)).Average();
-        return skewness * Math.Sqrt(data.Count * (data.Count - 1)) / (data.Count - 2);
+        var sumCubedDifferences = data.Sum(x => Math.Pow((x - mean) / stdDev, 3));
+        return (sumCubedDifferences * data.Count) / ((data.Count - 1) * (data.Count - 2));
     }
 
-    private double CalculateKurtosis(List<double> data)
+    private static double CalculateKurtosis(List<double> data)
     {
         if (data.Count < 4) return 0;
         
         var mean = data.Average();
         var stdDev = CalculateStandardDeviation(data);
+        
         if (stdDev == 0) return 0;
         
-        var kurtosis = data.Select(x => Math.Pow((x - mean) / stdDev, 4)).Average();
-        return kurtosis - 3; // Excess kurtosis
+        var sumFourthDifferences = data.Sum(x => Math.Pow((x - mean) / stdDev, 4));
+        return (sumFourthDifferences * data.Count * (data.Count + 1)) / ((data.Count - 1) * (data.Count - 2) * (data.Count - 3)) - (3 * Math.Pow(data.Count - 1, 2)) / ((data.Count - 2) * (data.Count - 3));
     }
 
-    private double CalculateCorrelation(List<double> data1, List<double> data2)
+    private static double CalculateCorrelation(List<double> data1, List<double> data2)
     {
         if (data1.Count != data2.Count || data1.Count < 2) return 0;
         
         var mean1 = data1.Average();
         var mean2 = data2.Average();
         
-        var numerator = data1.Zip(data2, (x, y) => (x - mean1) * (y - mean2)).Sum();
-        var denominator1 = data1.Select(x => Math.Pow(x - mean1, 2)).Sum();
-        var denominator2 = data2.Select(x => Math.Pow(x - mean2, 2)).Sum();
+        var sumProduct = data1.Zip(data2, (x, y) => (x - mean1) * (y - mean2)).Sum();
+        var sumSquared1 = data1.Sum(x => Math.Pow(x - mean1, 2));
+        var sumSquared2 = data2.Sum(x => Math.Pow(x - mean2, 2));
         
-        if (denominator1 == 0 || denominator2 == 0) return 0;
+        if (sumSquared1 == 0 || sumSquared2 == 0) return 0;
         
-        return numerator / Math.Sqrt(denominator1 * denominator2);
+        return sumProduct / Math.Sqrt(sumSquared1 * sumSquared2);
+    }
+
+    private static string GenerateCacheKey(string baseKey, ChartConfigurationDto? configuration)
+    {
+        var configJson = configuration != null ? JsonSerializer.Serialize(configuration) : "null";
+        return $"{baseKey}_{configJson}";
     }
 
     #endregion
+}
+
+public class DataVisualizationOptions
+{
+    public TimeSpan CacheExpiration { get; set; } = TimeSpan.FromMinutes(30);
+    public int MaxDataPoints { get; set; } = 1000;
+    public TimeSpan ChartGenerationTimeout { get; set; } = TimeSpan.FromMinutes(2);
+    public TimeSpan ComparisonChartTimeout { get; set; } = TimeSpan.FromMinutes(3);
+    public TimeSpan SummaryGenerationTimeout { get; set; } = TimeSpan.FromMinutes(1);
+    public TimeSpan StatisticalSummaryTimeout { get; set; } = TimeSpan.FromMinutes(2);
+    public double ChaosProcessingDelayProbability { get; set; } = 0.001; // 0.1%
 } 

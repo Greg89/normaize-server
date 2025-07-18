@@ -561,6 +561,6 @@ public class MiddlewareConfigurationTests
 
         // Assert - Verify Beta policy was used
         mockLoggingService.Verify(x => x.LogUserAction("CORS configured with Beta policy", It.Is<object>(o => 
-            o.ToString().Contains("Environment") && o.ToString().Contains("Beta") && o.ToString().Contains("Policy") && o.ToString().Contains("Beta"))), Times.Once);
+            o != null && o.ToString() != null && o.ToString()!.Contains("Environment") && o.ToString()!.Contains("Beta") && o.ToString()!.Contains("Policy") && o.ToString()!.Contains("Beta"))), Times.Once);
     }
 } 

@@ -8,11 +8,6 @@ using Normaize.Core.Models;
 using Normaize.Core.Services;
 using Xunit;
 using FluentAssertions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.IO;
 
 namespace Normaize.Tests.Services;
 
@@ -149,7 +144,7 @@ public class DataProcessingServiceTests
             FileName = "test.csv",
             ContentType = "text/csv",
             FileSize = 1024,
-            FileStream = new MemoryStream(new byte[] { 1, 2, 3 })
+            FileStream = new MemoryStream([1, 2, 3])
         };
 
         var createDto = new CreateDataSetDto
@@ -217,7 +212,7 @@ public class DataProcessingServiceTests
             FileName = "test.csv",
             ContentType = "text/csv",
             FileSize = 1024,
-            FileStream = new MemoryStream(new byte[] { 1, 2, 3 })
+            FileStream = new MemoryStream([1, 2, 3])
         };
 
         // Act & Assert
@@ -231,15 +226,15 @@ public class DataProcessingServiceTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public async Task UploadDataSetAsync_WithInvalidFileName_ShouldThrowArgumentException(string fileName)
+    public async Task UploadDataSetAsync_WithInvalidFileName_ShouldThrowArgumentException(string? fileName)
     {
         // Arrange
         var fileRequest = new FileUploadRequest
         {
-            FileName = fileName,
+            FileName = fileName!,
             ContentType = "text/csv",
             FileSize = 1024,
-            FileStream = new MemoryStream(new byte[] { 1, 2, 3 })
+            FileStream = new MemoryStream([1, 2, 3])
         };
 
         var createDto = new CreateDataSetDto
@@ -259,7 +254,7 @@ public class DataProcessingServiceTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public async Task UploadDataSetAsync_WithInvalidDatasetName_ShouldThrowArgumentException(string datasetName)
+    public async Task UploadDataSetAsync_WithInvalidDatasetName_ShouldThrowArgumentException(string? datasetName)
     {
         // Arrange
         var fileRequest = new FileUploadRequest
@@ -267,12 +262,12 @@ public class DataProcessingServiceTests
             FileName = "test.csv",
             ContentType = "text/csv",
             FileSize = 1024,
-            FileStream = new MemoryStream(new byte[] { 1, 2, 3 })
+            FileStream = new MemoryStream([1, 2, 3])
         };
 
         var createDto = new CreateDataSetDto
         {
-            Name = datasetName,
+            Name = datasetName!,
             UserId = "user123"
         };
 
@@ -287,7 +282,7 @@ public class DataProcessingServiceTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public async Task UploadDataSetAsync_WithInvalidUserId_ShouldThrowArgumentException(string userId)
+    public async Task UploadDataSetAsync_WithInvalidUserId_ShouldThrowArgumentException(string? userId)
     {
         // Arrange
         var fileRequest = new FileUploadRequest
@@ -295,13 +290,13 @@ public class DataProcessingServiceTests
             FileName = "test.csv",
             ContentType = "text/csv",
             FileSize = 1024,
-            FileStream = new MemoryStream(new byte[] { 1, 2, 3 })
+            FileStream = new MemoryStream([1, 2, 3])
         };
 
         var createDto = new CreateDataSetDto
         {
             Name = "Test Dataset",
-            UserId = userId
+            UserId = userId!
         };
 
         // Act & Assert
@@ -323,7 +318,7 @@ public class DataProcessingServiceTests
             FileName = fileName,
             ContentType = "text/csv",
             FileSize = 1024,
-            FileStream = new MemoryStream(new byte[] { 1, 2, 3 })
+            FileStream = new MemoryStream([1, 2, 3])
         };
 
         var createDto = new CreateDataSetDto
@@ -348,7 +343,7 @@ public class DataProcessingServiceTests
             FileName = "test.csv",
             ContentType = "text/csv",
             FileSize = 1024,
-            FileStream = new MemoryStream(new byte[] { 1, 2, 3 })
+            FileStream = new MemoryStream([1, 2, 3])
         };
 
         var createDto = new CreateDataSetDto
@@ -452,16 +447,16 @@ public class DataProcessingServiceTests
         // Arrange
         var dataSets = new List<DataSet>
         {
-            new DataSet { Id = 1, Name = "Dataset 1", UserId = "user123" },
-            new DataSet { Id = 2, Name = "Dataset 2", UserId = "user123" },
-            new DataSet { Id = 3, Name = "Dataset 3", UserId = "user123" }
+            new() { Id = 1, Name = "Dataset 1", UserId = "user123" },
+            new() { Id = 2, Name = "Dataset 2", UserId = "user123" },
+            new() { Id = 3, Name = "Dataset 3", UserId = "user123" }
         };
 
         var dataSetDtos = new List<DataSetDto>
         {
-            new DataSetDto { Id = 1, Name = "Dataset 1" },
-            new DataSetDto { Id = 2, Name = "Dataset 2" },
-            new DataSetDto { Id = 3, Name = "Dataset 3" }
+            new() { Id = 1, Name = "Dataset 1" },
+            new() { Id = 2, Name = "Dataset 2" },
+            new() { Id = 3, Name = "Dataset 3" }
         };
 
         _mockRepository.Setup(r => r.GetByUserIdAsync("user123", false)).ReturnsAsync(dataSets);
@@ -585,14 +580,14 @@ public class DataProcessingServiceTests
 
         var recentlyModified = new List<DataSet>
         {
-            new DataSet { Id = 1, Name = "Recent 1" },
-            new DataSet { Id = 2, Name = "Recent 2" }
+            new() { Id = 1, Name = "Recent 1" },
+            new() { Id = 2, Name = "Recent 2" }
         };
 
         var dataSetDtos = new List<DataSetDto>
         {
-            new DataSetDto { Id = 1, Name = "Recent 1" },
-            new DataSetDto { Id = 2, Name = "Recent 2" }
+            new() { Id = 1, Name = "Recent 1" },
+            new() { Id = 2, Name = "Recent 2" }
         };
 
         _mockRepository.Setup(r => r.GetTotalCountAsync("user123")).ReturnsAsync(3);
@@ -631,11 +626,11 @@ public class DataProcessingServiceTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public async Task GetDataSetAsync_WithInvalidUserId_ShouldThrowArgumentException(string userId)
+    public async Task GetDataSetAsync_WithInvalidUserId_ShouldThrowArgumentException(string? userId)
     {
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
-            _service.GetDataSetAsync(1, userId));
+            _service.GetDataSetAsync(1, userId!));
         
         exception.Message.Should().Contain("User ID is required");
     }

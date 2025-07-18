@@ -106,12 +106,12 @@ public class DataAnalysisServiceTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public async Task CreateAnalysisAsync_WithInvalidName_ShouldThrowArgumentException(string name)
+    public async Task CreateAnalysisAsync_WithInvalidName_ShouldThrowArgumentException(string? name)
     {
         // Arrange
         var createDto = new CreateAnalysisDto
         {
-            Name = name,
+            Name = name!,
             Type = AnalysisType.Statistical,
             DataSetId = 1
         };
@@ -203,14 +203,14 @@ public class DataAnalysisServiceTests
         // Arrange
         var analyses = new List<Analysis>
         {
-            new Analysis { Id = 1, Name = "Analysis 1" },
-            new Analysis { Id = 2, Name = "Analysis 2" }
+            new() { Id = 1, Name = "Analysis 1" },
+            new() { Id = 2, Name = "Analysis 2" }
         };
 
         var analysisDtos = new List<AnalysisDto>
         {
-            new AnalysisDto { Id = 1, Name = "Analysis 1" },
-            new AnalysisDto { Id = 2, Name = "Analysis 2" }
+            new() { Id = 1, Name = "Analysis 1" },
+            new() { Id = 2, Name = "Analysis 2" }
         };
 
         _mockRepository.Setup(r => r.GetByDataSetIdAsync(1)).ReturnsAsync(analyses);
