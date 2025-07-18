@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 namespace Normaize.Core.Services;
@@ -264,22 +263,21 @@ public class DataAnalysisService : IDataAnalysisService
         }
     }
 
-    private void ValidateCreateAnalysisDto(CreateAnalysisDto createDto)
+    private static void ValidateCreateAnalysisDto(CreateAnalysisDto createDto)
     {
-        if (createDto == null)
-            throw new ArgumentNullException(nameof(createDto));
+        ArgumentNullException.ThrowIfNull(createDto);
 
         if (string.IsNullOrWhiteSpace(createDto.Name))
-            throw new ArgumentException("Analysis name is required", nameof(createDto.Name));
+            throw new ArgumentException("Analysis name is required", nameof(createDto));
 
         if (createDto.Name.Length > 255)
-            throw new ArgumentException("Analysis name cannot exceed 255 characters", nameof(createDto.Name));
+            throw new ArgumentException("Analysis name cannot exceed 255 characters", nameof(createDto));
 
         if (createDto.Description?.Length > 1000)
-            throw new ArgumentException("Analysis description cannot exceed 1000 characters", nameof(createDto.Description));
+            throw new ArgumentException("Analysis description cannot exceed 1000 characters", nameof(createDto));
 
         if (createDto.DataSetId <= 0)
-            throw new ArgumentException("Valid dataset ID is required", nameof(createDto.DataSetId));
+            throw new ArgumentException("Valid dataset ID is required", nameof(createDto));
     }
 
     private async Task<object> ExecuteAnalysisByTypeAsync(Analysis analysis)
