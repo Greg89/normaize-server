@@ -23,6 +23,7 @@ public class DataProcessingService : IDataProcessingService
     private readonly IMapper _mapper;
     private readonly ILogger<DataProcessingService> _logger;
     private readonly IMemoryCache _cache;
+    private readonly Random _chaosRandom;
     private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(5);
     private readonly TimeSpan _defaultTimeout = TimeSpan.FromMinutes(10);
     private readonly TimeSpan _quickTimeout = TimeSpan.FromSeconds(30);
@@ -41,6 +42,7 @@ public class DataProcessingService : IDataProcessingService
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _chaosRandom = new Random();
     }
 
     public async Task<DataSetUploadResponse> UploadDataSetAsync(FileUploadRequest fileRequest, CreateDataSetDto createDto)
@@ -48,7 +50,7 @@ public class DataProcessingService : IDataProcessingService
         var correlationId = GetCorrelationId();
         var operationName = nameof(UploadDataSetAsync);
         
-        _logger.LogInformation("Starting {Operation} for file {FileName} by user {UserId}. CorrelationId: {CorrelationId}", 
+        _logger.LogInformation(AppConstants.LogMessages.STARTING_OPERATION_WITH_FILE,
             operationName, fileRequest?.FileName, createDto?.UserId, correlationId);
 
         // Validate inputs first (before try-catch so exceptions are thrown)
@@ -56,6 +58,12 @@ public class DataProcessingService : IDataProcessingService
         
         try
         {
+            // Chaos engineering: Simulate processing delay
+            if (_chaosRandom.NextDouble() < 0.001) // 0.1% probability
+            {
+                _logger.LogWarning("Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}", correlationId);
+                await Task.Delay(_chaosRandom.Next(1000, 5000)); // 1-5 second delay
+            }
 
             // Validate file
             _logger.LogInformation("Validating file {FileName}. CorrelationId: {CorrelationId}", fileRequest!.FileName, correlationId);
@@ -144,7 +152,7 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for file {FileName} by user {UserId}. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                 operationName, fileRequest?.FileName, createDto?.UserId, correlationId);
             return new DataSetUploadResponse
             {
@@ -195,7 +203,7 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                 operationName, id, userId, correlationId);
             throw;
         }
@@ -206,7 +214,7 @@ public class DataProcessingService : IDataProcessingService
         var correlationId = GetCorrelationId();
         var operationName = nameof(GetDataSetsByUserAsync);
         
-        _logger.LogDebug("Starting {Operation} for user: {UserId}, page: {Page}, pageSize: {PageSize}. CorrelationId: {CorrelationId}", 
+        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_PAGINATION,
             operationName, userId, page, pageSize, correlationId);
 
         try
@@ -214,7 +222,7 @@ public class DataProcessingService : IDataProcessingService
             ValidatePaginationInputs(page, pageSize);
             ValidateUserId(userId);
 
-            var dataSets = await ExecuteWithTimeoutAsync<IEnumerable<DataSet>>(
+            var dataSets = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByUserIdAsync(userId, false),
                 _quickTimeout,
                 correlationId,
@@ -252,7 +260,14 @@ public class DataProcessingService : IDataProcessingService
         {
             ValidateDeleteInputs(id, userId);
 
-            var dataSet = await ExecuteWithTimeoutAsync<DataSet?>(
+            // Chaos engineering: Simulate deletion failure
+            if (_chaosRandom.NextDouble() < 0.0003) // 0.03% probability
+            {
+                _logger.LogWarning("Chaos engineering: Simulating deletion failure. CorrelationId: {CorrelationId}", correlationId);
+                throw new InvalidOperationException("Simulated deletion failure (chaos engineering)");
+            }
+
+            var dataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByIdAsync(id),
                 _quickTimeout,
                 correlationId,
@@ -285,7 +300,7 @@ public class DataProcessingService : IDataProcessingService
                 }
             }
 
-            var result = await ExecuteWithTimeoutAsync<bool>(
+            var result = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.DeleteAsync(id),
                 _quickTimeout,
                 correlationId,
@@ -316,7 +331,7 @@ public class DataProcessingService : IDataProcessingService
             }
             else
             {
-                _logger.LogWarning("Failed to complete {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
+                _logger.LogWarning(AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                     operationName, id, userId, correlationId);
             }
 
@@ -324,7 +339,7 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                 operationName, id, userId, correlationId);
             throw;
         }
@@ -342,7 +357,7 @@ public class DataProcessingService : IDataProcessingService
         {
             ValidateRestoreInputs(id, userId);
 
-            var dataSet = await ExecuteWithTimeoutAsync<DataSet?>(
+            var dataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByIdAsync(id),
                 _quickTimeout,
                 correlationId,
@@ -355,7 +370,7 @@ public class DataProcessingService : IDataProcessingService
                 return false;
             }
 
-            var result = await ExecuteWithTimeoutAsync<bool>(
+            var result = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.RestoreAsync(id),
                 _quickTimeout,
                 correlationId,
@@ -378,7 +393,7 @@ public class DataProcessingService : IDataProcessingService
             }
             else
             {
-                _logger.LogWarning("Failed to complete {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
+                _logger.LogWarning(AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                     operationName, id, userId, correlationId);
             }
 
@@ -386,7 +401,7 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                 operationName, id, userId, correlationId);
             throw;
         }
@@ -468,7 +483,7 @@ public class DataProcessingService : IDataProcessingService
             }
             else
             {
-                _logger.LogWarning("Failed to complete {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
+                _logger.LogWarning(AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                     operationName, id, userId, correlationId);
             }
 
@@ -476,7 +491,7 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                 operationName, id, userId, correlationId);
             throw;
         }
@@ -521,7 +536,7 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                 operationName, id, userId, correlationId);
             throw;
         }
@@ -561,7 +576,7 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                 operationName, id, userId, correlationId);
             throw;
         }
@@ -572,7 +587,7 @@ public class DataProcessingService : IDataProcessingService
         var correlationId = GetCorrelationId();
         var operationName = nameof(GetDeletedDataSetsAsync);
         
-        _logger.LogDebug("Starting {Operation} for user: {UserId}, page: {Page}, pageSize: {PageSize}. CorrelationId: {CorrelationId}", 
+        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_PAGINATION,
             operationName, userId, page, pageSize, correlationId);
 
         try
@@ -612,7 +627,7 @@ public class DataProcessingService : IDataProcessingService
         var correlationId = GetCorrelationId();
         var operationName = nameof(SearchDataSetsAsync);
         
-        _logger.LogDebug("Starting {Operation} for user: {UserId}, term: '{SearchTerm}', page: {Page}, pageSize: {PageSize}. CorrelationId: {CorrelationId}", 
+        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_SEARCH,
             operationName, userId, searchTerm, page, pageSize, correlationId);
 
         try
@@ -650,7 +665,7 @@ public class DataProcessingService : IDataProcessingService
         var correlationId = GetCorrelationId();
         var operationName = nameof(GetDataSetsByFileTypeAsync);
         
-        _logger.LogDebug("Starting {Operation} for file type {FileType}, user: {UserId}, page: {Page}, pageSize: {PageSize}. CorrelationId: {CorrelationId}", 
+        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_FILETYPE,
             operationName, fileType, userId, page, pageSize, correlationId);
 
         try
@@ -689,7 +704,7 @@ public class DataProcessingService : IDataProcessingService
         var correlationId = GetCorrelationId();
         var operationName = nameof(GetDataSetsByDateRangeAsync);
         
-        _logger.LogDebug("Starting {Operation} for date range {StartDate} to {EndDate}, user: {UserId}, page: {Page}, pageSize: {PageSize}. CorrelationId: {CorrelationId}", 
+        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_DATERANGE,
             operationName, startDate, endDate, userId, page, pageSize, correlationId);
 
         try
@@ -727,12 +742,19 @@ public class DataProcessingService : IDataProcessingService
         var correlationId = GetCorrelationId();
         var operationName = nameof(GetDataSetStatisticsAsync);
         
-        _logger.LogDebug("Starting {Operation} for user: {UserId}. CorrelationId: {CorrelationId}", 
+        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_FOR_STATISTICS,
             operationName, userId, correlationId);
 
         try
         {
             ValidateUserId(userId);
+
+            // Chaos engineering: Simulate cache corruption
+            if (_chaosRandom.NextDouble() < 0.0005) // 0.05% probability
+            {
+                _logger.LogWarning("Chaos engineering: Simulating cache corruption. CorrelationId: {CorrelationId}", correlationId);
+                _cache.Remove($"stats_{userId}");
+            }
 
             var cacheKey = $"stats_{userId}";
             
