@@ -346,9 +346,9 @@ public class DataVisualizationService : IDataVisualizationService
         {
             return await operation().WaitAsync(cts.Token);
         }
-        catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _logger.LogError("Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
                 operationName, timeout, correlationId);
             throw new TimeoutException($"Operation {operationName} timed out after {timeout}");
         }

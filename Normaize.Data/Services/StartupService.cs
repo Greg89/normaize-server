@@ -106,9 +106,9 @@ public class StartupService : IStartupService
 
             _logger.LogInformation("Database migrations applied successfully. CorrelationId: {CorrelationId}", correlationId);
         }
-        catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _logger.LogError("Database migration timed out after {Timeout} seconds. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, "Database migration timed out after {Timeout} seconds. CorrelationId: {CorrelationId}", 
                 _startupConfig.Database.MigrationTimeoutSeconds, correlationId);
             throw new TimeoutException($"Database migration timed out after {_startupConfig.Database.MigrationTimeoutSeconds} seconds");
         }
@@ -149,9 +149,9 @@ public class StartupService : IStartupService
 
             _logger.LogInformation("Health checks passed successfully. CorrelationId: {CorrelationId}", correlationId);
         }
-        catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _logger.LogError("Health check timed out after {Timeout} seconds. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, "Health check timed out after {Timeout} seconds. CorrelationId: {CorrelationId}", 
                 _startupConfig.HealthCheck.HealthCheckTimeoutSeconds, correlationId);
             throw new TimeoutException($"Health check timed out after {_startupConfig.HealthCheck.HealthCheckTimeoutSeconds} seconds");
         }
