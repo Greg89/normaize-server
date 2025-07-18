@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.Extensions.Logging;
+using Normaize.Core.Constants;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
@@ -68,7 +69,7 @@ public class DataAnalysisService : IDataAnalysisService
         var correlationId = GetCorrelationId();
         var operationName = nameof(GetAnalysisAsync);
         
-        _logger.LogDebug("Starting {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION,
             operationName, id, correlationId);
 
         try
@@ -199,7 +200,7 @@ public class DataAnalysisService : IDataAnalysisService
         var correlationId = GetCorrelationId();
         var operationName = nameof(GetAnalysisResultAsync);
         
-        _logger.LogDebug("Starting {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION,
             operationName, analysisId, correlationId);
 
         try
@@ -245,7 +246,7 @@ public class DataAnalysisService : IDataAnalysisService
         var correlationId = GetCorrelationId();
         var operationName = nameof(DeleteAnalysisAsync);
         
-        _logger.LogInformation("Starting {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                _logger.LogInformation(AppConstants.LogMessages.STARTING_OPERATION,
             operationName, id, correlationId);
 
         try
@@ -282,7 +283,7 @@ public class DataAnalysisService : IDataAnalysisService
         var correlationId = GetCorrelationId();
         var operationName = nameof(RunAnalysisAsync);
         
-        _logger.LogInformation("Starting {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                _logger.LogInformation(AppConstants.LogMessages.STARTING_OPERATION,
             operationName, analysisId, correlationId);
 
         try

@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.Extensions.Logging;
+using Normaize.Core.Constants;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
@@ -158,7 +159,7 @@ public class DataProcessingService : IDataProcessingService
         var correlationId = GetCorrelationId();
         var operationName = nameof(GetDataSetAsync);
         
-        _logger.LogDebug("Starting {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
+        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_USER,
             operationName, id, userId, correlationId);
 
         try
@@ -244,7 +245,7 @@ public class DataProcessingService : IDataProcessingService
         var correlationId = GetCorrelationId();
         var operationName = nameof(DeleteDataSetAsync);
         
-        _logger.LogInformation("Starting {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
+        _logger.LogInformation(AppConstants.LogMessages.STARTING_OPERATION_WITH_USER,
             operationName, id, userId, correlationId);
 
         try
@@ -334,7 +335,7 @@ public class DataProcessingService : IDataProcessingService
         var correlationId = GetCorrelationId();
         var operationName = nameof(RestoreDataSetAsync);
         
-        _logger.LogInformation("Starting {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
+        _logger.LogInformation(AppConstants.LogMessages.STARTING_OPERATION_WITH_USER,
             operationName, id, userId, correlationId);
 
         try
@@ -396,7 +397,7 @@ public class DataProcessingService : IDataProcessingService
         var correlationId = GetCorrelationId();
         var operationName = nameof(HardDeleteDataSetAsync);
         
-        _logger.LogInformation("Starting {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
+        _logger.LogInformation(AppConstants.LogMessages.STARTING_OPERATION_WITH_USER,
             operationName, id, userId, correlationId);
 
         try
@@ -486,7 +487,7 @@ public class DataProcessingService : IDataProcessingService
         var correlationId = GetCorrelationId();
         var operationName = nameof(GetDataSetPreviewAsync);
         
-        _logger.LogDebug("Starting {Operation} for ID: {DataSetId}, rows: {Rows}, user: {UserId}. CorrelationId: {CorrelationId}", 
+        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_ROWS,
             operationName, id, rows, userId, correlationId);
 
         try
@@ -531,7 +532,7 @@ public class DataProcessingService : IDataProcessingService
         var correlationId = GetCorrelationId();
         var operationName = nameof(GetDataSetSchemaAsync);
         
-        _logger.LogDebug("Starting {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
+        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_USER,
             operationName, id, userId, correlationId);
 
         try

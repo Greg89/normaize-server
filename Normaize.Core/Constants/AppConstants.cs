@@ -59,4 +59,16 @@ public static class AppConstants
         public const string JWT_SCHEME = "Bearer";
         public const string AnonymousUser = "anonymous";
     }
+
+    /// <summary>
+    /// Logging message templates
+    /// </summary>
+    public static class LogMessages
+    {
+        public const string STARTING_OPERATION = "Starting {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}";
+        public const string STARTING_OPERATION_WITH_USER = "Starting {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}";
+        public const string STARTING_OPERATION_WITH_ROWS = "Starting {Operation} for ID: {DataSetId}, rows: {Rows}, user: {UserId}. CorrelationId: {CorrelationId}";
+        public const string OPERATION_COMPLETED = "Operation {Operation} completed successfully. CorrelationId: {CorrelationId}";
+        public const string OPERATION_FAILED = "Operation {Operation} failed. CorrelationId: {CorrelationId}";
+    }
 } 
