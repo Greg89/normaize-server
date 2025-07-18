@@ -3,265 +3,331 @@ using Microsoft.Extensions.Logging;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace Normaize.Core.Services;
 
+/// <summary>
+/// Service for managing data analysis operations with chaos engineering resilience.
+/// Implements industry-standard error handling and distributed tracing.
+/// </summary>
 public class DataAnalysisService : IDataAnalysisService
 {
     private readonly IAnalysisRepository _analysisRepository;
     private readonly IMapper _mapper;
     private readonly ILogger<DataAnalysisService> _logger;
+    private readonly TimeSpan _defaultTimeout = TimeSpan.FromMinutes(5);
 
     public DataAnalysisService(
         IAnalysisRepository analysisRepository,
         IMapper mapper,
         ILogger<DataAnalysisService> logger)
     {
-        _analysisRepository = analysisRepository;
-        _mapper = mapper;
-        _logger = logger;
+        _analysisRepository = analysisRepository ?? throw new ArgumentNullException(nameof(analysisRepository));
+        _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<AnalysisDto> CreateAnalysisAsync(CreateAnalysisDto createDto)
     {
+        var correlationId = GetCorrelationId();
+        var operationName = nameof(CreateAnalysisAsync);
+        
+        _logger.LogInformation("Starting {Operation} for analysis: {AnalysisName} of type {AnalysisType}. CorrelationId: {CorrelationId}", 
+            operationName, createDto?.Name, createDto?.Type, correlationId);
+
         try
         {
-            _logger.LogInformation("Creating new analysis: {AnalysisName} of type {AnalysisType}", 
-                createDto.Name, createDto.Type);
-
-            // Validate input
             ValidateCreateAnalysisDto(createDto);
 
             var analysis = _mapper.Map<Analysis>(createDto);
-            var savedAnalysis = await _analysisRepository.AddAsync(analysis);
+            var savedAnalysis = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.AddAsync(analysis),
+                _defaultTimeout,
+                correlationId,
+                operationName);
             
-            _logger.LogInformation("Successfully created analysis with ID: {AnalysisId}", savedAnalysis.Id);
-            return _mapper.Map<AnalysisDto>(savedAnalysis);
+            var result = _mapper.Map<AnalysisDto>(savedAnalysis);
+            
+            _logger.LogInformation("Successfully completed {Operation} with ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                operationName, result.Id, correlationId);
+            
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating analysis: {AnalysisName}", createDto.Name);
+            _logger.LogError(ex, "Failed to complete {Operation} for analysis: {AnalysisName}. CorrelationId: {CorrelationId}", 
+                operationName, createDto?.Name, correlationId);
             throw;
         }
     }
 
     public async Task<AnalysisDto?> GetAnalysisAsync(int id)
     {
+        var correlationId = GetCorrelationId();
+        var operationName = nameof(GetAnalysisAsync);
+        
+        _logger.LogDebug("Starting {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+            operationName, id, correlationId);
+
         try
         {
-            _logger.LogDebug("Retrieving analysis with ID: {AnalysisId}", id);
-            
-            var analysis = await _analysisRepository.GetByIdAsync(id);
+            var analysis = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.GetByIdAsync(id),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                operationName);
+
             if (analysis == null)
             {
-                _logger.LogWarning("Analysis with ID {AnalysisId} not found", id);
+                _logger.LogWarning("Analysis with ID {AnalysisId} not found. CorrelationId: {CorrelationId}", 
+                    id, correlationId);
                 return null;
             }
 
-            return _mapper.Map<AnalysisDto>(analysis);
+            var result = _mapper.Map<AnalysisDto>(analysis);
+            
+            _logger.LogDebug("Successfully completed {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                operationName, id, correlationId);
+            
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving analysis with ID: {AnalysisId}", id);
+            _logger.LogError(ex, "Failed to complete {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                operationName, id, correlationId);
             throw;
         }
     }
 
     public async Task<IEnumerable<AnalysisDto>> GetAnalysesByDataSetAsync(int dataSetId)
     {
+        var correlationId = GetCorrelationId();
+        var operationName = nameof(GetAnalysesByDataSetAsync);
+        
+        _logger.LogDebug("Starting {Operation} for dataset ID: {DataSetId}. CorrelationId: {CorrelationId}", 
+            operationName, dataSetId, correlationId);
+
         try
         {
-            _logger.LogDebug("Retrieving analyses for dataset ID: {DataSetId}", dataSetId);
+            var analyses = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.GetByDataSetIdAsync(dataSetId),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                operationName);
+
+            var result = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
             
-            var analyses = await _analysisRepository.GetByDataSetIdAsync(dataSetId);
-            var analysisDtos = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
+            _logger.LogDebug("Successfully completed {Operation} for dataset ID: {DataSetId}, retrieved {Count} analyses. CorrelationId: {CorrelationId}", 
+                operationName, dataSetId, result.Count(), correlationId);
             
-            _logger.LogDebug("Retrieved {Count} analyses for dataset ID: {DataSetId}", 
-                analysisDtos.Count(), dataSetId);
-            
-            return analysisDtos;
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving analyses for dataset ID: {DataSetId}", dataSetId);
+            _logger.LogError(ex, "Failed to complete {Operation} for dataset ID: {DataSetId}. CorrelationId: {CorrelationId}", 
+                operationName, dataSetId, correlationId);
             throw;
         }
     }
 
     public async Task<IEnumerable<AnalysisDto>> GetAnalysesByStatusAsync(AnalysisStatus status)
     {
+        var correlationId = GetCorrelationId();
+        var operationName = nameof(GetAnalysesByStatusAsync);
+        
+        _logger.LogDebug("Starting {Operation} for status: {Status}. CorrelationId: {CorrelationId}", 
+            operationName, status, correlationId);
+
         try
         {
-            _logger.LogDebug("Retrieving analyses with status: {Status}", status);
+            var analyses = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.GetByStatusAsync(status),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                operationName);
+
+            var result = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
             
-            var analyses = await _analysisRepository.GetByStatusAsync(status);
-            var analysisDtos = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
+            _logger.LogDebug("Successfully completed {Operation} for status: {Status}, retrieved {Count} analyses. CorrelationId: {CorrelationId}", 
+                operationName, status, result.Count(), correlationId);
             
-            _logger.LogDebug("Retrieved {Count} analyses with status: {Status}", 
-                analysisDtos.Count(), status);
-            
-            return analysisDtos;
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving analyses with status: {Status}", status);
+            _logger.LogError(ex, "Failed to complete {Operation} for status: {Status}. CorrelationId: {CorrelationId}", 
+                operationName, status, correlationId);
             throw;
         }
     }
 
     public async Task<IEnumerable<AnalysisDto>> GetAnalysesByTypeAsync(AnalysisType type)
     {
+        var correlationId = GetCorrelationId();
+        var operationName = nameof(GetAnalysesByTypeAsync);
+        
+        _logger.LogDebug("Starting {Operation} for type: {Type}. CorrelationId: {CorrelationId}", 
+            operationName, type, correlationId);
+
         try
         {
-            _logger.LogDebug("Retrieving analyses with type: {Type}", type);
+            var analyses = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.GetByTypeAsync(type),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                operationName);
+
+            var result = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
             
-            var analyses = await _analysisRepository.GetByTypeAsync(type);
-            var analysisDtos = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
+            _logger.LogDebug("Successfully completed {Operation} for type: {Type}, retrieved {Count} analyses. CorrelationId: {CorrelationId}", 
+                operationName, type, result.Count(), correlationId);
             
-            _logger.LogDebug("Retrieved {Count} analyses with type: {Type}", 
-                analysisDtos.Count(), type);
-            
-            return analysisDtos;
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving analyses with type: {Type}", type);
+            _logger.LogError(ex, "Failed to complete {Operation} for type: {Type}. CorrelationId: {CorrelationId}", 
+                operationName, type, correlationId);
             throw;
         }
     }
 
     public async Task<AnalysisResultDto> GetAnalysisResultAsync(int analysisId)
     {
+        var correlationId = GetCorrelationId();
+        var operationName = nameof(GetAnalysisResultAsync);
+        
+        _logger.LogDebug("Starting {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+            operationName, analysisId, correlationId);
+
         try
         {
-            _logger.LogDebug("Retrieving analysis result for ID: {AnalysisId}", analysisId);
-            
-            var analysis = await _analysisRepository.GetByIdAsync(analysisId);
+            var analysis = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.GetByIdAsync(analysisId),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                operationName);
+
             if (analysis == null)
             {
-                _logger.LogWarning("Analysis with ID {AnalysisId} not found", analysisId);
-                throw new ArgumentException($"Analysis with ID {analysisId} not found");
+                _logger.LogWarning("Analysis with ID {AnalysisId} not found. CorrelationId: {CorrelationId}", 
+                    analysisId, correlationId);
+                throw new ArgumentException($"Analysis with ID {analysisId} not found", nameof(analysisId));
             }
 
-            object? deserializedResults = null;
-            if (!string.IsNullOrEmpty(analysis.Results))
-            {
-                try
-                {
-                    deserializedResults = JsonSerializer.Deserialize<object>(analysis.Results);
-                }
-                catch (JsonException jsonEx)
-                {
-                    _logger.LogWarning(jsonEx, "Failed to deserialize results for analysis ID: {AnalysisId}", analysisId);
-                    // Continue with null results rather than failing the entire request
-                }
-            }
+            var deserializedResults = await DeserializeResultsSafelyAsync(analysis.Results, analysisId, correlationId);
 
-            return new AnalysisResultDto
+            var result = new AnalysisResultDto
             {
                 AnalysisId = analysisId,
                 Status = analysis.Status,
                 Results = deserializedResults,
                 ErrorMessage = analysis.ErrorMessage
             };
+            
+            _logger.LogDebug("Successfully completed {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                operationName, analysisId, correlationId);
+            
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving analysis result for ID: {AnalysisId}", analysisId);
+            _logger.LogError(ex, "Failed to complete {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                operationName, analysisId, correlationId);
             throw;
         }
     }
 
     public async Task<bool> DeleteAnalysisAsync(int id)
     {
+        var correlationId = GetCorrelationId();
+        var operationName = nameof(DeleteAnalysisAsync);
+        
+        _logger.LogInformation("Starting {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+            operationName, id, correlationId);
+
         try
         {
-            _logger.LogInformation("Deleting analysis with ID: {AnalysisId}", id);
-            
-            var result = await _analysisRepository.DeleteAsync(id);
+            var result = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.DeleteAsync(id),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                operationName);
             
             if (result)
             {
-                _logger.LogInformation("Successfully deleted analysis with ID: {AnalysisId}", id);
+                _logger.LogInformation("Successfully completed {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                    operationName, id, correlationId);
             }
             else
             {
-                _logger.LogWarning("Failed to delete analysis with ID: {AnalysisId} - not found or already deleted", id);
+                _logger.LogWarning("Failed to complete {Operation} for ID: {AnalysisId} - not found or already deleted. CorrelationId: {CorrelationId}", 
+                    operationName, id, correlationId);
             }
             
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting analysis with ID: {AnalysisId}", id);
+            _logger.LogError(ex, "Failed to complete {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                operationName, id, correlationId);
             throw;
         }
     }
 
     public async Task<AnalysisDto> RunAnalysisAsync(int analysisId)
     {
+        var correlationId = GetCorrelationId();
+        var operationName = nameof(RunAnalysisAsync);
+        
+        _logger.LogInformation("Starting {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+            operationName, analysisId, correlationId);
+
         try
         {
-            _logger.LogInformation("Starting analysis execution for ID: {AnalysisId}", analysisId);
-            
-            var analysis = await _analysisRepository.GetByIdAsync(analysisId);
+            var analysis = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.GetByIdAsync(analysisId),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                $"{operationName}_GetAnalysis");
+
             if (analysis == null)
             {
-                _logger.LogWarning("Analysis with ID {AnalysisId} not found", analysisId);
-                throw new ArgumentException($"Analysis with ID {analysisId} not found");
+                _logger.LogWarning("Analysis with ID {AnalysisId} not found. CorrelationId: {CorrelationId}", 
+                    analysisId, correlationId);
+                throw new ArgumentException($"Analysis with ID {analysisId} not found", nameof(analysisId));
             }
 
-            // Check if analysis is already in progress or completed
-            if (analysis.Status == AnalysisStatus.Processing)
-            {
-                _logger.LogWarning("Analysis with ID {AnalysisId} is already in progress", analysisId);
-                throw new InvalidOperationException($"Analysis with ID {analysisId} is already in progress");
-            }
+            // Validate analysis state
+            ValidateAnalysisState(analysis, analysisId, correlationId);
 
+            // If already completed, return existing result
             if (analysis.Status == AnalysisStatus.Completed)
             {
-                _logger.LogInformation("Analysis with ID {AnalysisId} is already completed", analysisId);
+                _logger.LogInformation("Analysis with ID {AnalysisId} is already completed. CorrelationId: {CorrelationId}", 
+                    analysisId, correlationId);
                 return _mapper.Map<AnalysisDto>(analysis);
             }
 
-            try
-            {
-                analysis.Status = AnalysisStatus.Processing;
-                await _analysisRepository.UpdateAsync(analysis);
-
-                _logger.LogInformation("Executing analysis of type {AnalysisType} for ID: {AnalysisId}", 
-                    analysis.Type, analysisId);
-
-                // Execute analysis based on type
-                var results = await ExecuteAnalysisByTypeAsync(analysis);
-
-                analysis.Status = AnalysisStatus.Completed;
-                analysis.CompletedAt = DateTime.UtcNow;
-                analysis.Results = JsonSerializer.Serialize(results);
-                analysis.ErrorMessage = null; // Clear any previous errors
-                
-                var updatedAnalysis = await _analysisRepository.UpdateAsync(analysis);
-                
-                _logger.LogInformation("Successfully completed analysis with ID: {AnalysisId}", analysisId);
-                return _mapper.Map<AnalysisDto>(updatedAnalysis);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error executing analysis with ID: {AnalysisId}", analysisId);
-                
-                analysis.Status = AnalysisStatus.Failed;
-                analysis.ErrorMessage = ex.Message;
-                await _analysisRepository.UpdateAsync(analysis);
-                throw;
-            }
+            // Execute analysis with state management
+            var result = await ExecuteAnalysisWithStateManagementAsync(analysis, correlationId);
+            
+            _logger.LogInformation("Successfully completed {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                operationName, analysisId, correlationId);
+            
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in RunAnalysisAsync for ID: {AnalysisId}", analysisId);
+            _logger.LogError(ex, "Failed to complete {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                operationName, analysisId, correlationId);
             throw;
         }
     }
+
+    #region Private Methods
 
     private static void ValidateCreateAnalysisDto(CreateAnalysisDto createDto)
     {
@@ -280,6 +346,99 @@ public class DataAnalysisService : IDataAnalysisService
             throw new ArgumentException("Valid dataset ID is required", nameof(createDto));
     }
 
+    private static void ValidateAnalysisState(Analysis analysis, int analysisId, string correlationId)
+    {
+        if (analysis.Status == AnalysisStatus.Processing)
+        {
+            throw new InvalidOperationException($"Analysis with ID {analysisId} is already in progress");
+        }
+    }
+
+    private async Task<AnalysisDto> ExecuteAnalysisWithStateManagementAsync(Analysis analysis, string correlationId)
+    {
+        // Set processing state
+        analysis.Status = AnalysisStatus.Processing;
+        await ExecuteWithTimeoutAsync(
+            () => _analysisRepository.UpdateAsync(analysis),
+            TimeSpan.FromSeconds(30),
+            correlationId,
+            "UpdateAnalysisStatus");
+
+        try
+        {
+            _logger.LogInformation("Executing analysis of type {AnalysisType} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                analysis.Type, analysis.Id, correlationId);
+
+            // Execute analysis with timeout
+            var results = await ExecuteWithTimeoutAsync(
+                () => ExecuteAnalysisByTypeAsync(analysis),
+                _defaultTimeout,
+                correlationId,
+                "ExecuteAnalysis");
+
+            // Update with success state
+            analysis.Status = AnalysisStatus.Completed;
+            analysis.CompletedAt = DateTime.UtcNow;
+            analysis.Results = JsonSerializer.Serialize(results);
+            analysis.ErrorMessage = null;
+
+            var updatedAnalysis = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.UpdateAsync(analysis),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                "UpdateAnalysisSuccess");
+
+            return _mapper.Map<AnalysisDto>(updatedAnalysis);
+        }
+        catch (Exception ex)
+        {
+            // Update with failure state
+            analysis.Status = AnalysisStatus.Failed;
+            analysis.ErrorMessage = ex.Message;
+            
+            await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.UpdateAsync(analysis),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                "UpdateAnalysisFailure");
+            
+            throw;
+        }
+    }
+
+    private async Task<T> ExecuteWithTimeoutAsync<T>(Func<Task<T>> operation, TimeSpan timeout, string correlationId, string operationName)
+    {
+        using var cts = new CancellationTokenSource(timeout);
+        
+        try
+        {
+            return await operation().WaitAsync(cts.Token);
+        }
+        catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+        {
+            _logger.LogError("Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
+                operationName, timeout, correlationId);
+            throw new TimeoutException($"Operation {operationName} timed out after {timeout}");
+        }
+    }
+
+    private async Task<object?> DeserializeResultsSafelyAsync(string? results, int analysisId, string correlationId)
+    {
+        if (string.IsNullOrEmpty(results))
+            return null;
+
+        try
+        {
+            return await Task.Run(() => JsonSerializer.Deserialize<object>(results));
+        }
+        catch (JsonException jsonEx)
+        {
+            _logger.LogWarning(jsonEx, "Failed to deserialize results for analysis ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                analysisId, correlationId);
+            return null;
+        }
+    }
+
     private async Task<object> ExecuteAnalysisByTypeAsync(Analysis analysis)
     {
         return analysis.Type switch
@@ -295,6 +454,12 @@ public class DataAnalysisService : IDataAnalysisService
             _ => throw new NotSupportedException($"Analysis type {analysis.Type} is not supported")
         };
     }
+
+    private static string GetCorrelationId() => Activity.Current?.Id ?? Guid.NewGuid().ToString();
+
+    #endregion
+
+    #region Analysis Execution Methods
 
     private async Task<object> ExecuteNormalizationAnalysisAsync(Analysis analysis)
     {
@@ -438,4 +603,6 @@ public class DataAnalysisService : IDataAnalysisService
             CustomConfiguration = analysis.Configuration
         };
     }
+
+    #endregion
 } 
