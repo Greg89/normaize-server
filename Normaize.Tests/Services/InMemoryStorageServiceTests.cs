@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Normaize.Core.Models;
 using Normaize.Data.Services;
@@ -10,12 +11,18 @@ namespace Normaize.Tests.Services;
 public class InMemoryStorageServiceTests
 {
     private readonly Mock<ILogger<InMemoryStorageService>> _mockLogger;
+    private readonly Mock<IOptions<InMemoryStorageOptions>> _mockOptions;
     private readonly InMemoryStorageService _service;
 
     public InMemoryStorageServiceTests()
     {
         _mockLogger = new Mock<ILogger<InMemoryStorageService>>();
-        _service = new InMemoryStorageService(_mockLogger.Object);
+        _mockOptions = new Mock<IOptions<InMemoryStorageOptions>>();
+        
+        var options = new InMemoryStorageOptions();
+        _mockOptions.Setup(x => x.Value).Returns(options);
+        
+        _service = new InMemoryStorageService(_mockLogger.Object, _mockOptions.Object);
     }
 
     [Fact]
