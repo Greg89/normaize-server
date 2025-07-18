@@ -315,7 +315,7 @@ public static class ServiceConfiguration
     {
         logger.LogDebug("Configuring AutoMapper. CorrelationId: {CorrelationId}", correlationId);
         
-        builder.Services.AddAutoMapper(typeof(Program), typeof(Normaize.Core.Mapping.MappingProfile));
+        builder.Services.AddAutoMapper(typeof(Program), typeof(Core.Mapping.MappingProfile));
     }
 
     private static void ConfigureStorageService(WebApplicationBuilder builder, ILogger logger, string correlationId)
@@ -392,7 +392,7 @@ public static class ServiceConfiguration
         builder.Services.AddScoped<IDataVisualizationService, DataVisualizationService>();
         builder.Services.AddScoped<IFileUploadService, FileUploadService>();
         builder.Services.AddScoped<IAuditService, AuditService>();
-        builder.Services.AddScoped<Normaize.Core.Interfaces.IStructuredLoggingService, Normaize.Data.Services.StructuredLoggingService>();
+        builder.Services.AddScoped<IStructuredLoggingService, StructuredLoggingService>();
         builder.Services.AddScoped<IMigrationService, MigrationService>();
         builder.Services.AddScoped<IHealthCheckService, HealthCheckService>();
         builder.Services.AddScoped<IStartupService, StartupService>();
@@ -410,7 +410,7 @@ public static class ServiceConfiguration
         logger.LogInformation("Configuring performance and monitoring services. CorrelationId: {CorrelationId}", correlationId);
         
         ConfigureHttpClient(builder, logger, correlationId);
-        ConfigureCaching(builder, logger, correlationId);
+        ConfigureCaching(logger, correlationId);
         ConfigurePerformance(builder, logger, correlationId);
     }
 
@@ -421,7 +421,7 @@ public static class ServiceConfiguration
         builder.Services.AddHttpClient();
     }
 
-    private static void ConfigureCaching(WebApplicationBuilder builder, ILogger logger, string correlationId)
+    private static void ConfigureCaching(ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring caching services. CorrelationId: {CorrelationId}", correlationId);
         
