@@ -105,11 +105,11 @@ public static class MiddlewareConfiguration
     {
         // Get the environment to determine which CORS policy to use
         var appConfigService = app.Services.GetService<IAppConfigurationService>();
-        string environment = "Development"; // Default fallback
+        string environment = AppConstants.Environment.DEVELOPMENT; // Default fallback
         
         try
         {
-            environment = appConfigService?.GetEnvironment() ?? "Development";
+            environment = appConfigService?.GetEnvironment() ?? AppConstants.Environment.DEVELOPMENT;
         }
         catch (Exception ex)
         {
@@ -117,15 +117,15 @@ public static class MiddlewareConfiguration
             // Continue with default environment
         }
         
-        if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
+        if (environment.Equals(AppConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
         {
-            app.UseCors("Development");
-            loggingService?.LogUserAction("CORS configured with Development policy", new { Environment = environment, Policy = "Development" });
+            app.UseCors(AppConstants.Environment.DEVELOPMENT);
+            loggingService?.LogUserAction("CORS configured with Development policy", new { Environment = environment, Policy = AppConstants.Environment.DEVELOPMENT });
         }
-        else if (environment.Equals("Beta", StringComparison.OrdinalIgnoreCase))
+        else if (environment.Equals(AppConstants.Environment.BETA, StringComparison.OrdinalIgnoreCase))
         {
-            app.UseCors("Beta");
-            loggingService?.LogUserAction("CORS configured with Beta policy", new { Environment = environment, Policy = "Beta" });
+            app.UseCors(AppConstants.Environment.BETA);
+            loggingService?.LogUserAction("CORS configured with Beta policy", new { Environment = environment, Policy = AppConstants.Environment.BETA });
         }
         else
         {
