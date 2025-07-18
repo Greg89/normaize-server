@@ -39,7 +39,7 @@ public class DataAnalysisService : IDataAnalysisService
 
         try
         {
-            ValidateCreateAnalysisDto(createDto);
+            ValidateCreateAnalysisDto(createDto!);
 
             var analysis = _mapper.Map<Analysis>(createDto);
             var savedAnalysis = await ExecuteWithTimeoutAsync(
