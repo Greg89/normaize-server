@@ -803,7 +803,7 @@ public class DataVisualizationService : IDataVisualizationService
         if (data.Count == 0) return 0;
         
         var sorted = data.OrderBy(x => x).ToList();
-        var index = (percentile * (sorted.Count - 1));
+        var index = percentile * (sorted.Count - 1);
         var lowerIndex = (int)Math.Floor(index);
         var upperIndex = (int)Math.Ceiling(index);
         
@@ -820,10 +820,11 @@ public class DataVisualizationService : IDataVisualizationService
         var mean = data.Average();
         var stdDev = CalculateStandardDeviation(data);
         
-        if (stdDev == 0) return 0;
+        const double epsilon = 1e-10;
+        if (Math.Abs(stdDev) < epsilon) return 0;
         
         var sumCubedDifferences = data.Sum(x => Math.Pow((x - mean) / stdDev, 3));
-        return (sumCubedDifferences * data.Count) / ((data.Count - 1) * (data.Count - 2));
+        return sumCubedDifferences * data.Count / ((data.Count - 1) * (data.Count - 2));
     }
 
     private static double CalculateKurtosis(List<double> data)
@@ -833,7 +834,8 @@ public class DataVisualizationService : IDataVisualizationService
         var mean = data.Average();
         var stdDev = CalculateStandardDeviation(data);
         
-        if (stdDev == 0) return 0;
+        const double epsilon = 1e-10;
+        if (Math.Abs(stdDev) < epsilon) return 0;
         
         var sumFourthDifferences = data.Sum(x => Math.Pow((x - mean) / stdDev, 4));
         return (sumFourthDifferences * data.Count * (data.Count + 1)) / ((data.Count - 1) * (data.Count - 2) * (data.Count - 3)) - (3 * Math.Pow(data.Count - 1, 2)) / ((data.Count - 2) * (data.Count - 3));
@@ -850,7 +852,8 @@ public class DataVisualizationService : IDataVisualizationService
         var sumSquared1 = data1.Sum(x => Math.Pow(x - mean1, 2));
         var sumSquared2 = data2.Sum(x => Math.Pow(x - mean2, 2));
         
-        if (sumSquared1 == 0 || sumSquared2 == 0) return 0;
+        const double epsilon = 1e-10;
+        if (Math.Abs(sumSquared1) < epsilon || Math.Abs(sumSquared2) < epsilon) return 0;
         
         return sumProduct / Math.Sqrt(sumSquared1 * sumSquared2);
     }

@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Normaize.Core.Configuration;
-using Normaize.Core.Constants;
 using Normaize.Core.Interfaces;
 using System.ComponentModel.DataAnnotations;
 
