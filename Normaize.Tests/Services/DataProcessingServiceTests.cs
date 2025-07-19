@@ -2,6 +2,7 @@ using AutoMapper;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Normaize.Core.Constants;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
@@ -621,7 +622,7 @@ public class DataProcessingServiceTests
         
         exception.Message.Should().Contain("Failed to complete GetDataSetAsync for dataset ID");
         exception.InnerException.Should().BeOfType<ArgumentException>();
-        exception.InnerException!.Message.Should().Contain("Dataset ID must be positive");
+        exception.InnerException!.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
     }
 
     [Theory]

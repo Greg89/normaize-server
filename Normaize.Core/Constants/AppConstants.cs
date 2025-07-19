@@ -80,4 +80,12 @@ public static class AppConstants
         public const string OPERATION_FAILED_WITH_ANALYSIS = "Failed to complete {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}";
         public const string OPERATION_FAILED_WITH_USER = "Failed to complete {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}";
     }
+
+    /// <summary>
+    /// Validation error messages
+    /// </summary>
+    public static class ValidationMessages
+    {
+        public const string DATASET_ID_MUST_BE_POSITIVE = "Dataset ID must be positive";
+    }
 } 

@@ -885,7 +885,7 @@ public class DataProcessingService : IDataProcessingService
     private static void ValidateGetDataSetInputs(int id, string userId)
     {
         if (id <= 0)
-            throw new ArgumentException("Dataset ID must be positive", nameof(id));
+            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
         
         ValidateUserId(userId);
     }
@@ -893,7 +893,7 @@ public class DataProcessingService : IDataProcessingService
     private static void ValidateDeleteInputs(int id, string userId)
     {
         if (id <= 0)
-            throw new ArgumentException("Dataset ID must be positive", nameof(id));
+            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
         
         ValidateUserId(userId);
     }
@@ -901,7 +901,7 @@ public class DataProcessingService : IDataProcessingService
     private static void ValidateRestoreInputs(int id, string userId)
     {
         if (id <= 0)
-            throw new ArgumentException("Dataset ID must be positive", nameof(id));
+            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
         
         ValidateUserId(userId);
     }
@@ -909,7 +909,7 @@ public class DataProcessingService : IDataProcessingService
     private static void ValidateHardDeleteInputs(int id, string userId)
     {
         if (id <= 0)
-            throw new ArgumentException("Dataset ID must be positive", nameof(id));
+            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
         
         ValidateUserId(userId);
     }
@@ -917,7 +917,7 @@ public class DataProcessingService : IDataProcessingService
     private static void ValidatePreviewInputs(int id, int rows, string userId)
     {
         if (id <= 0)
-            throw new ArgumentException("Dataset ID must be positive", nameof(id));
+            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
         
         if (rows <= 0 || rows > 1000)
             throw new ArgumentException("Rows must be between 1 and 1000", nameof(rows));
@@ -928,7 +928,7 @@ public class DataProcessingService : IDataProcessingService
     private static void ValidateSchemaInputs(int id, string userId)
     {
         if (id <= 0)
-            throw new ArgumentException("Dataset ID must be positive", nameof(id));
+            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
         
         ValidateUserId(userId);
     }
