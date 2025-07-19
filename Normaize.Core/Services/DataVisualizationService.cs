@@ -57,7 +57,7 @@ public class DataVisualizationService : IDataVisualizationService
         {
             _logger.LogError(ex, "Failed to generate chart. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}, UserId: {UserId}",
                 correlationId, dataSetId, chartType, userId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {dataSetId}", ex);
         }
     }
 
@@ -84,7 +84,7 @@ public class DataVisualizationService : IDataVisualizationService
         {
             _logger.LogError(ex, "Failed to generate comparison chart. CorrelationId: {CorrelationId}, DataSetId1: {DataSetId1}, DataSetId2: {DataSetId2}, UserId: {UserId}",
                 correlationId, dataSetId1, dataSetId2, userId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for dataset IDs {dataSetId1} and {dataSetId2}", ex);
         }
     }
 
@@ -111,7 +111,7 @@ public class DataVisualizationService : IDataVisualizationService
         {
             _logger.LogError(ex, "Failed to generate data summary. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
                 correlationId, dataSetId, userId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {dataSetId}", ex);
         }
     }
 
@@ -138,7 +138,7 @@ public class DataVisualizationService : IDataVisualizationService
         {
             _logger.LogError(ex, "Failed to generate statistical summary. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
                 correlationId, dataSetId, userId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {dataSetId}", ex);
         }
     }
 
@@ -436,7 +436,7 @@ public class DataVisualizationService : IDataVisualizationService
             {
                 _logger.LogWarning("Dataset has no processed data. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
                     correlationId, dataSet.Id);
-                return new List<Dictionary<string, object>>();
+                return [];
             }
 
             var data = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(dataSet.ProcessedData);
@@ -445,7 +445,7 @@ public class DataVisualizationService : IDataVisualizationService
             {
                 _logger.LogWarning("Failed to deserialize dataset JSON data. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
                     correlationId, dataSet.Id);
-                return new List<Dictionary<string, object>>();
+                return [];
             }
 
             _logger.LogDebug("Extracted {RowCount} rows from dataset. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
@@ -487,8 +487,8 @@ public class DataVisualizationService : IDataVisualizationService
             {
                 DataSetId = dataSet.Id,
                 ChartType = chartType,
-                Labels = new List<string>(),
-                Series = new List<ChartSeriesDto>(),
+                Labels = [],
+                Series = [],
                 Configuration = configuration
             };
         }
@@ -703,7 +703,7 @@ public class DataVisualizationService : IDataVisualizationService
             return new StatisticalSummaryDto
             {
                 DataSetId = dataSet.Id,
-                ColumnStatistics = new Dictionary<string, ColumnStatisticsDto>()
+                ColumnStatistics = []
             };
         }
 

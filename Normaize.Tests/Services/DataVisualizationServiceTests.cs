@@ -7,6 +7,7 @@ using Normaize.Core.Services;
 using Normaize.Core.Interfaces;
 using Normaize.Core.DTOs;
 using Normaize.Core.Models;
+using FluentAssertions;
 
 namespace Normaize.Tests.Services;
 
@@ -90,7 +91,10 @@ public class DataVisualizationServiceTests
         _mockRepo.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
         
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _service.GenerateChartAsync(dataSetId, ChartType.Bar, null, userId));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateChartAsync(dataSetId, ChartType.Bar, null, userId));
+        exception.Message.Should().Contain("Failed to complete GenerateChartAsync for dataset ID");
+        exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
+        exception.InnerException!.Message.Should().Contain("User user3 is not authorized to access dataset 3");
     }
 
     [Fact]
@@ -161,7 +165,10 @@ public class DataVisualizationServiceTests
         _mockRepo.Setup(r => r.GetByIdAsync(id2)).ReturnsAsync(ds2);
         
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _service.GenerateComparisonChartAsync(id1, id2, ChartType.Bar, null, userId));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateComparisonChartAsync(id1, id2, ChartType.Bar, null, userId));
+        exception.Message.Should().Contain("Failed to complete GenerateComparisonChartAsync for dataset IDs");
+        exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
+        exception.InnerException!.Message.Should().Contain("User user13 is not authorized to access dataset 13");
     }
 
     [Fact]
@@ -202,7 +209,10 @@ public class DataVisualizationServiceTests
         _mockRepo.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
         
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _service.GetDataSummaryAsync(dataSetId, userId));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetDataSummaryAsync(dataSetId, userId));
+        exception.Message.Should().Contain("Failed to complete GetDataSummaryAsync for dataset ID");
+        exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
+        exception.InnerException!.Message.Should().Contain("User user21 is not authorized to access dataset 21");
     }
 
     [Fact]
@@ -243,7 +253,10 @@ public class DataVisualizationServiceTests
         _mockRepo.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
         
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _service.GetStatisticalSummaryAsync(dataSetId, userId));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetStatisticalSummaryAsync(dataSetId, userId));
+        exception.Message.Should().Contain("Failed to complete GetStatisticalSummaryAsync for dataset ID");
+        exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
+        exception.InnerException!.Message.Should().Contain("User user31 is not authorized to access dataset 31");
     }
 
     [Fact]
