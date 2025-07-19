@@ -616,10 +616,12 @@ public class DataProcessingServiceTests
     public async Task GetDataSetAsync_WithInvalidId_ShouldThrowArgumentException(int id)
     {
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.GetDataSetAsync(id, "user123"));
         
-        exception.Message.Should().Contain("Dataset ID must be positive");
+        exception.Message.Should().Contain("Failed to complete GetDataSetAsync for dataset ID");
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("Dataset ID must be positive");
     }
 
     [Theory]
@@ -629,10 +631,12 @@ public class DataProcessingServiceTests
     public async Task GetDataSetAsync_WithInvalidUserId_ShouldThrowArgumentException(string? userId)
     {
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.GetDataSetAsync(1, userId!));
         
-        exception.Message.Should().Contain("User ID is required");
+        exception.Message.Should().Contain("Failed to complete GetDataSetAsync for dataset ID 1");
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("User ID is required");
     }
 
     [Theory]
@@ -641,10 +645,12 @@ public class DataProcessingServiceTests
     public async Task GetDataSetsByUserAsync_WithInvalidPage_ShouldThrowArgumentException(int page)
     {
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.GetDataSetsByUserAsync("user123", page));
         
-        exception.Message.Should().Contain("Page must be positive");
+        exception.Message.Should().Contain("Failed to complete GetDataSetsByUserAsync for user user123");
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("Page must be positive");
     }
 
     [Theory]
@@ -654,9 +660,11 @@ public class DataProcessingServiceTests
     public async Task GetDataSetsByUserAsync_WithInvalidPageSize_ShouldThrowArgumentException(int pageSize)
     {
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.GetDataSetsByUserAsync("user123", 1, pageSize));
         
-        exception.Message.Should().Contain("Page size must be between 1 and 100");
+        exception.Message.Should().Contain("Failed to complete GetDataSetsByUserAsync for user user123");
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("Page size must be between 1 and 100");
     }
 } 

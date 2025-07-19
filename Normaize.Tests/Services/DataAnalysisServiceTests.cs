@@ -260,11 +260,12 @@ public class DataAnalysisServiceTests
         _mockRepository.Setup(r => r.GetByIdAsync(999)).ReturnsAsync((Analysis?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.GetAnalysisResultAsync(999));
         
-        exception.Message.Should().Contain("Analysis with ID 999 not found");
-        exception.ParamName.Should().Be("analysisId");
+        exception.Message.Should().Contain("Failed to complete GetAnalysisResultAsync for analysis ID 999");
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("Analysis with ID 999 not found");
     }
 
     [Fact]
@@ -304,11 +305,12 @@ public class DataAnalysisServiceTests
         _mockRepository.Setup(r => r.GetByIdAsync(999)).ReturnsAsync((Analysis?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.RunAnalysisAsync(999));
         
-        exception.Message.Should().Contain("Analysis with ID 999 not found");
-        exception.ParamName.Should().Be("analysisId");
+        exception.Message.Should().Contain("Failed to complete RunAnalysisAsync for analysis ID 999");
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("Analysis with ID 999 not found");
     }
 
     [Fact]
@@ -328,7 +330,9 @@ public class DataAnalysisServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.RunAnalysisAsync(1));
         
-        exception.Message.Should().Contain("Analysis with ID 1 is already in progress");
+        exception.Message.Should().Contain("Failed to complete RunAnalysisAsync for analysis ID 1");
+        exception.InnerException.Should().BeOfType<InvalidOperationException>();
+        exception.InnerException!.Message.Should().Contain("Analysis with ID 1 is already in progress");
     }
 
     [Fact]
@@ -460,7 +464,9 @@ public class DataAnalysisServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.RunAnalysisAsync(1));
         
-        exception.Message.Should().Be("Database error");
+        exception.Message.Should().Contain("Failed to complete RunAnalysisAsync for analysis ID 1");
+        exception.InnerException.Should().BeOfType<InvalidOperationException>();
+        exception.InnerException!.Message.Should().Be("Database error");
         
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<Analysis>()), Times.AtLeastOnce);
     }

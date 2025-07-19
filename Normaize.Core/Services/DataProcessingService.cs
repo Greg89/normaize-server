@@ -6,7 +6,6 @@ using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 
 namespace Normaize.Core.Services;
@@ -67,7 +66,7 @@ public class DataProcessingService : IDataProcessingService
 
             // Validate file
             _logger.LogInformation("Validating file {FileName}. CorrelationId: {CorrelationId}", fileRequest!.FileName, correlationId);
-            if (!await ExecuteWithTimeoutAsync<bool>(
+            if (!await ExecuteWithTimeoutAsync(
                 () => _fileUploadService.ValidateFileAsync(fileRequest),
                 _quickTimeout,
                 correlationId,
@@ -87,7 +86,7 @@ public class DataProcessingService : IDataProcessingService
             // Save file
             _logger.LogInformation("Saving file {FileName} to storage. CorrelationId: {CorrelationId}", 
                 fileRequest.FileName, correlationId);
-            var filePath = await ExecuteWithTimeoutAsync<string>(
+            var filePath = await ExecuteWithTimeoutAsync(
                 () => _fileUploadService.SaveFileAsync(fileRequest),
                 _defaultTimeout,
                 correlationId,
@@ -174,7 +173,7 @@ public class DataProcessingService : IDataProcessingService
         {
             ValidateGetDataSetInputs(id, userId);
 
-            var dataSet = await ExecuteWithTimeoutAsync<DataSet?>(
+            var dataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByIdAsync(id),
                 _quickTimeout,
                 correlationId,
@@ -205,7 +204,7 @@ public class DataProcessingService : IDataProcessingService
         {
             _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                 operationName, id, userId, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {id}", ex);
         }
     }
 
@@ -244,7 +243,7 @@ public class DataProcessingService : IDataProcessingService
         {
             _logger.LogError(ex, "Failed to complete {Operation} for user {UserId}. CorrelationId: {CorrelationId}", 
                 operationName, userId, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for user {userId}", ex);
         }
     }
 
@@ -341,7 +340,7 @@ public class DataProcessingService : IDataProcessingService
         {
             _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                 operationName, id, userId, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {id}", ex);
         }
     }
 
@@ -403,7 +402,7 @@ public class DataProcessingService : IDataProcessingService
         {
             _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                 operationName, id, userId, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {id}", ex);
         }
     }
 
@@ -419,7 +418,7 @@ public class DataProcessingService : IDataProcessingService
         {
             ValidateHardDeleteInputs(id, userId);
 
-            var dataSet = await ExecuteWithTimeoutAsync<DataSet?>(
+            var dataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByIdAsync(id),
                 _quickTimeout,
                 correlationId,
@@ -452,7 +451,7 @@ public class DataProcessingService : IDataProcessingService
                 }
             }
 
-            var result = await ExecuteWithTimeoutAsync<bool>(
+            var result = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.HardDeleteAsync(id),
                 _quickTimeout,
                 correlationId,
@@ -493,7 +492,7 @@ public class DataProcessingService : IDataProcessingService
         {
             _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                 operationName, id, userId, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {id}", ex);
         }
     }
 
@@ -538,7 +537,7 @@ public class DataProcessingService : IDataProcessingService
         {
             _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                 operationName, id, userId, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {id}", ex);
         }
     }
 
@@ -578,7 +577,7 @@ public class DataProcessingService : IDataProcessingService
         {
             _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
                 operationName, id, userId, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {id}", ex);
         }
     }
 
@@ -618,7 +617,7 @@ public class DataProcessingService : IDataProcessingService
         {
             _logger.LogError(ex, "Failed to complete {Operation} for user {UserId}. CorrelationId: {CorrelationId}", 
                 operationName, userId, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for user {userId}", ex);
         }
     }
 
@@ -656,7 +655,7 @@ public class DataProcessingService : IDataProcessingService
         {
             _logger.LogError(ex, "Failed to complete {Operation} for user {UserId} with term '{SearchTerm}'. CorrelationId: {CorrelationId}", 
                 operationName, userId, searchTerm, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for user {userId} with search term '{searchTerm}'", ex);
         }
     }
 
@@ -695,7 +694,7 @@ public class DataProcessingService : IDataProcessingService
         {
             _logger.LogError(ex, "Failed to complete {Operation} for file type {FileType}, user {UserId}. CorrelationId: {CorrelationId}", 
                 operationName, fileType, userId, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for file type {fileType}, user {userId}", ex);
         }
     }
 
@@ -733,7 +732,7 @@ public class DataProcessingService : IDataProcessingService
         {
             _logger.LogError(ex, "Failed to complete {Operation} for date range, user {UserId}. CorrelationId: {CorrelationId}", 
                 operationName, userId, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for date range, user {userId}", ex);
         }
     }
 
@@ -806,7 +805,7 @@ public class DataProcessingService : IDataProcessingService
         {
             _logger.LogError(ex, "Failed to complete {Operation} for user {UserId}. CorrelationId: {CorrelationId}", 
                 operationName, userId, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for user {userId}", ex);
         }
     }
 
