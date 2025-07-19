@@ -278,7 +278,7 @@ public class HealthCheckService : IHealthCheckService
             var pendingMigrations = new List<string>();
             if (!_config.SkipMigrationsCheck)
             {
-                pendingMigrations = [.. _context.Database.GetPendingMigrations()];
+                pendingMigrations = [.. await _context.Database.GetPendingMigrationsAsync(cts.Token)];
             }
 
             stopwatch.Stop();
