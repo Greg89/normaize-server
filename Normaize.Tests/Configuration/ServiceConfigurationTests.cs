@@ -1,11 +1,8 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.ResponseCompression;
-using Microsoft.AspNetCore.ResponseCaching;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Normaize.API.Configuration;
 using Normaize.Core.Interfaces;
 using Normaize.Data;
@@ -13,8 +10,6 @@ using Normaize.Data.Repositories;
 using Normaize.Data.Services;
 using Xunit;
 using FluentAssertions;
-using System;
-using System.Linq;
 
 namespace Normaize.Tests.Configuration;
 
@@ -248,7 +243,8 @@ public class ServiceConfigurationTests
         var app = _builder.Build();
 
         // Assert
-        var healthCheckService = app.Services.GetService<IHealthCheckService>();
+        using var scope = app.Services.CreateScope();
+        var healthCheckService = scope.ServiceProvider.GetService<IHealthCheckService>();
         healthCheckService.Should().NotBeNull();
     }
 
