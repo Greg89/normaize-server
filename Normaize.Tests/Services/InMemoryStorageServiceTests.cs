@@ -114,8 +114,10 @@ public class InMemoryStorageServiceTests
 
         // Act & Assert
         var action = () => _service.GetFileAsync(nonExistentPath);
-        await action.Should().ThrowAsync<FileNotFoundException>()
-            .WithMessage($"File not found in memory: {nonExistentPath}");
+        var exception = await action.Should().ThrowAsync<InvalidOperationException>();
+        exception.Which.Message.Should().Contain("Failed to complete GetFileAsync for file path");
+        exception.Which.InnerException.Should().BeOfType<FileNotFoundException>();
+        exception.Which.InnerException!.Message.Should().Contain($"File not found in memory: {nonExistentPath}");
     }
 
     [Fact]
@@ -263,7 +265,9 @@ public class InMemoryStorageServiceTests
 
         // Act & Assert
         var action = () => _service.GetFileAsync(savedPath);
-        await action.Should().ThrowAsync<FileNotFoundException>();
+        var exception = await action.Should().ThrowAsync<InvalidOperationException>();
+        exception.Which.Message.Should().Contain("Failed to complete GetFileAsync for file path");
+        exception.Which.InnerException.Should().BeOfType<FileNotFoundException>();
     }
 
     [Fact]
@@ -387,8 +391,10 @@ public class InMemoryStorageServiceTests
 
         // Act & Assert
         var action = () => _service.SaveFileAsync(fileRequest);
-        await action.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*exceeds maximum allowed size*");
+        var exception = await action.Should().ThrowAsync<InvalidOperationException>();
+        exception.Which.Message.Should().Contain("Failed to complete SaveFileAsync for file");
+        exception.Which.InnerException.Should().BeOfType<InvalidOperationException>();
+        exception.Which.InnerException!.Message.Should().Contain("exceeds maximum allowed size");
     }
 
     [Fact]

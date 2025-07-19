@@ -59,7 +59,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
         {
             _logger.LogError(ex, "Failed to save file. CorrelationId: {CorrelationId}, FileName: {FileName}",
                 correlationId, fileRequest?.FileName);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for file '{fileRequest?.FileName}'", ex);
         }
     }
 
@@ -88,7 +88,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
         {
             _logger.LogError(ex, "Failed to retrieve file. CorrelationId: {CorrelationId}, FilePath: {FilePath}",
                 correlationId, filePath);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for file path '{filePath}'", ex);
         }
     }
 
@@ -117,7 +117,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
         {
             _logger.LogError(ex, "Failed to delete file. CorrelationId: {CorrelationId}, FilePath: {FilePath}",
                 correlationId, filePath);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for file path '{filePath}'", ex);
         }
     }
 
@@ -146,7 +146,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
         {
             _logger.LogError(ex, "Failed to check file existence. CorrelationId: {CorrelationId}, FilePath: {FilePath}",
                 correlationId, filePath);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for file path '{filePath}'", ex);
         }
     }
 
