@@ -29,7 +29,8 @@ public class HealthMonitoringController : ControllerBase
                 components = result.Components,
                 issues = result.Issues,
                 timestamp = result.Timestamp,
-                duration = result.Duration.TotalMilliseconds
+                duration = result.Duration.TotalMilliseconds,
+                correlationId = result.CorrelationId
             });
         }
 
@@ -39,7 +40,8 @@ public class HealthMonitoringController : ControllerBase
             components = result.Components,
             timestamp = result.Timestamp,
             duration = result.Duration.TotalMilliseconds,
-            message = "All systems healthy"
+            message = "All systems healthy",
+            correlationId = result.CorrelationId
         });
     }
 
@@ -57,7 +59,8 @@ public class HealthMonitoringController : ControllerBase
                 status = result.Status,
                 issues = result.Issues,
                 timestamp = result.Timestamp,
-                duration = result.Duration.TotalMilliseconds
+                duration = result.Duration.TotalMilliseconds,
+                correlationId = result.CorrelationId
             });
         }
 
@@ -66,7 +69,8 @@ public class HealthMonitoringController : ControllerBase
             status = result.Status,
             timestamp = result.Timestamp,
             duration = result.Duration.TotalMilliseconds,
-            message = "Application is alive"
+            message = "Application is alive",
+            correlationId = result.CorrelationId
         });
     }
 
@@ -85,7 +89,8 @@ public class HealthMonitoringController : ControllerBase
                 components = result.Components,
                 issues = result.Issues,
                 timestamp = result.Timestamp,
-                duration = result.Duration.TotalMilliseconds
+                duration = result.Duration.TotalMilliseconds,
+                correlationId = result.CorrelationId
             });
         }
 
@@ -95,7 +100,8 @@ public class HealthMonitoringController : ControllerBase
             components = result.Components,
             timestamp = result.Timestamp,
             duration = result.Duration.TotalMilliseconds,
-            message = "Application is ready to serve traffic"
+            message = "Application is ready to serve traffic",
+            correlationId = result.CorrelationId
         });
     }
 } 

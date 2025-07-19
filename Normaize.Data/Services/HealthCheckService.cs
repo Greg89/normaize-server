@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Normaize.Core.Configuration;
 using Normaize.Core.Interfaces;
-using Normaize.Data;
 using System.Diagnostics;
 
 namespace Normaize.Data.Services;
@@ -79,7 +78,8 @@ public class HealthCheckService : IHealthCheckService
                 {
                     [_config.ComponentNames.Application] = appHealth
                 },
-                Duration = stopwatch.Elapsed
+                Duration = stopwatch.Elapsed,
+                CorrelationId = correlationId
             };
 
             if (!appHealth.IsHealthy)
@@ -195,7 +195,8 @@ public class HealthCheckService : IHealthCheckService
                     ["canConnect"] = canConnect,
                     ["timeoutSeconds"] = _config.DatabaseTimeoutSeconds
                 },
-                Duration = stopwatch.Elapsed
+                Duration = stopwatch.Elapsed,
+                CorrelationId = correlationId
             };
 
             _logger.LogDebug("Database health check completed. IsHealthy: {IsHealthy}, Duration: {Duration}ms. CorrelationId: {CorrelationId}", 
@@ -214,7 +215,8 @@ public class HealthCheckService : IHealthCheckService
                 IsHealthy = false,
                 Status = "timeout",
                 ErrorMessage = $"Database health check timed out after {_config.DatabaseTimeoutSeconds} seconds",
-                Duration = stopwatch.Elapsed
+                Duration = stopwatch.Elapsed,
+                CorrelationId = correlationId
             };
         }
         catch (Exception ex)
@@ -227,7 +229,8 @@ public class HealthCheckService : IHealthCheckService
                 IsHealthy = false,
                 Status = "error",
                 ErrorMessage = _config.IncludeDetailedErrors ? ex.Message : "Database health check failed",
-                Duration = stopwatch.Elapsed
+                Duration = stopwatch.Elapsed,
+                CorrelationId = correlationId
             };
         }
     }
@@ -258,7 +261,8 @@ public class HealthCheckService : IHealthCheckService
                         ["provider"] = providerName,
                         ["note"] = "In-memory provider: skipping relational checks"
                     },
-                    Duration = stopwatch.Elapsed
+                    Duration = stopwatch.Elapsed,
+                    CorrelationId = correlationId
                 };
 
                 _logger.LogDebug("Application health check completed (in-memory). IsHealthy: {IsHealthy}, Duration: {Duration}ms. CorrelationId: {CorrelationId}", 
@@ -274,14 +278,14 @@ public class HealthCheckService : IHealthCheckService
             var pendingMigrations = new List<string>();
             if (!_config.SkipMigrationsCheck)
             {
-                pendingMigrations = _context.Database.GetPendingMigrations().ToList();
+                pendingMigrations = [.. _context.Database.GetPendingMigrations()];
             }
 
             stopwatch.Stop();
             
-            var isHealthy = canConnect && !pendingMigrations.Any();
+            var isHealthy = canConnect && pendingMigrations.Count == 0;
             var errorMessage = !canConnect ? "Cannot connect to database" : 
-                              pendingMigrations.Any() ? $"Pending migrations: {string.Join(", ", pendingMigrations)}" : null;
+                              pendingMigrations.Count > 0 ? $"Pending migrations: {string.Join(", ", pendingMigrations)}" : null;
 
             var appHealth = new ComponentHealth
             {
@@ -296,7 +300,8 @@ public class HealthCheckService : IHealthCheckService
                     ["environment"] = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown",
                     ["timeoutSeconds"] = _config.ApplicationTimeoutSeconds
                 },
-                Duration = stopwatch.Elapsed
+                Duration = stopwatch.Elapsed,
+                CorrelationId = correlationId
             };
 
             _logger.LogDebug("Application health check completed. IsHealthy: {IsHealthy}, Duration: {Duration}ms. CorrelationId: {CorrelationId}", 
@@ -315,7 +320,8 @@ public class HealthCheckService : IHealthCheckService
                 IsHealthy = false,
                 Status = "timeout",
                 ErrorMessage = $"Application health check timed out after {_config.ApplicationTimeoutSeconds} seconds",
-                Duration = stopwatch.Elapsed
+                Duration = stopwatch.Elapsed,
+                CorrelationId = correlationId
             };
         }
         catch (Exception ex)
@@ -328,7 +334,8 @@ public class HealthCheckService : IHealthCheckService
                 IsHealthy = false,
                 Status = "error",
                 ErrorMessage = _config.IncludeDetailedErrors ? ex.Message : "Application health check failed",
-                Duration = stopwatch.Elapsed
+                Duration = stopwatch.Elapsed,
+                CorrelationId = correlationId
             };
         }
     }
@@ -349,7 +356,8 @@ public class HealthCheckService : IHealthCheckService
             IsHealthy = isHealthy,
             Status = isHealthy ? healthyStatus : unhealthyStatus,
             Components = components,
-            Issues = issues
+            Issues = issues,
+            CorrelationId = correlationId
         };
     }
 
@@ -359,8 +367,9 @@ public class HealthCheckService : IHealthCheckService
         {
             IsHealthy = false,
             Status = "error",
-            Issues = new List<string> { errorMessage },
-            Duration = duration
+            Issues = [errorMessage],
+            Duration = duration,
+            CorrelationId = correlationId
         };
     }
 

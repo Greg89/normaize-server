@@ -12,9 +12,10 @@ public class HealthCheckResult
     public bool IsHealthy { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-    public Dictionary<string, ComponentHealth> Components { get; set; } = new();
-    public List<string> Issues { get; set; } = new();
+    public Dictionary<string, ComponentHealth> Components { get; set; } = [];
+    public List<string> Issues { get; set; } = [];
     public TimeSpan Duration { get; set; }
+    public string? CorrelationId { get; set; }
 }
 
 public class ComponentHealth
@@ -24,4 +25,5 @@ public class ComponentHealth
     public string? ErrorMessage { get; set; }
     public Dictionary<string, object>? Details { get; set; }
     public TimeSpan Duration { get; set; }
+    public string? CorrelationId { get; set; }
 } 
