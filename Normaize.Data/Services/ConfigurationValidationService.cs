@@ -120,7 +120,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
             }
 
             stopwatch.Stop();
-            result.IsValid = !result.Errors.Any();
+            result.IsValid = result.Errors.Count == 0;
             result.ValidationDuration = stopwatch.Elapsed;
 
             return result;
@@ -173,7 +173,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
             }
 
             stopwatch.Stop();
-            result.IsValid = !result.Errors.Any();
+            result.IsValid = result.Errors.Count == 0;
             result.ValidationDuration = stopwatch.Elapsed;
 
             return result;
@@ -219,7 +219,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
             }
 
             stopwatch.Stop();
-            result.IsValid = !result.Errors.Any();
+            result.IsValid = result.Errors.Count == 0;
             result.ValidationDuration = stopwatch.Elapsed;
 
             return result;
@@ -257,7 +257,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
             }
 
             stopwatch.Stop();
-            result.IsValid = !result.Errors.Any();
+            result.IsValid = result.Errors.Count == 0;
             result.ValidationDuration = stopwatch.Elapsed;
 
             return result;
@@ -300,7 +300,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
             }
 
             stopwatch.Stop();
-            result.IsValid = !result.Errors.Any();
+            result.IsValid = result.Errors.Count == 0;
             result.ValidationDuration = stopwatch.Elapsed;
 
             return result;
