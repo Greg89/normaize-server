@@ -485,7 +485,7 @@ public class FileUploadService : IFileUploadService
         }
     }
 
-    private void ExtractJsonObjectData(JsonElement jsonElement, HashSet<string> headers, List<Dictionary<string, object>> records)
+    private static void ExtractJsonObjectData(JsonElement jsonElement, HashSet<string> headers, List<Dictionary<string, object>> records)
     {
         // Single object - convert to array format
         var record = new Dictionary<string, object>();

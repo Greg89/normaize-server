@@ -838,7 +838,7 @@ public class DataVisualizationService : IDataVisualizationService
         if (Math.Abs(stdDev) < epsilon) return 0;
         
         var sumFourthDifferences = data.Sum(x => Math.Pow((x - mean) / stdDev, 4));
-        return (sumFourthDifferences * data.Count * (data.Count + 1)) / ((data.Count - 1) * (data.Count - 2) * (data.Count - 3)) - (3 * Math.Pow(data.Count - 1, 2)) / ((data.Count - 2) * (data.Count - 3));
+        return sumFourthDifferences * data.Count * (data.Count + 1) / ((data.Count - 1) * (data.Count - 2) * (data.Count - 3)) - (3 * Math.Pow(data.Count - 1, 2)) / ((data.Count - 2) * (data.Count - 3));
     }
 
     private static double CalculateCorrelation(List<double> data1, List<double> data2)
