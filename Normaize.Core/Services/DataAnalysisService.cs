@@ -98,7 +98,7 @@ public class DataAnalysisService : IDataAnalysisService
         {
             _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_ANALYSIS, 
                 operationName, id, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for analysis ID {id}", ex);
         }
     }
 
@@ -237,7 +237,7 @@ public class DataAnalysisService : IDataAnalysisService
         {
             _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_ANALYSIS, 
                 operationName, analysisId, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for analysis ID {analysisId}", ex);
         }
     }
 
@@ -274,7 +274,7 @@ public class DataAnalysisService : IDataAnalysisService
         {
             _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_ANALYSIS, 
                 operationName, id, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for analysis ID {id}", ex);
         }
     }
 
@@ -324,7 +324,7 @@ public class DataAnalysisService : IDataAnalysisService
         {
             _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_ANALYSIS, 
                 operationName, analysisId, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for analysis ID {analysisId}", ex);
         }
     }
 
