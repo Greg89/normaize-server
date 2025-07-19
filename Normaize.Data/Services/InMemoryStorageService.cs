@@ -382,8 +382,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
 
     private static string CalculateFileHash(byte[] data)
     {
-        using var sha256 = SHA256.Create();
-        var hashBytes = sha256.ComputeHash(data);
+        var hashBytes = SHA256.HashData(data);
         return Convert.ToBase64String(hashBytes);
     }
 

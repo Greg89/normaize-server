@@ -733,9 +733,8 @@ public class FileUploadService : IFileUploadService
     {
         try
         {
-            using var sha256 = SHA256.Create();
             using var stream = await _storageService.GetFileAsync(filePath);
-            var hash = await sha256.ComputeHashAsync(stream);
+            var hash = await SHA256.HashDataAsync(stream);
             return Convert.ToBase64String(hash);
         }
         catch (Exception ex)
