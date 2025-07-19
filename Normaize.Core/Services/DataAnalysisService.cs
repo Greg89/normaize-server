@@ -96,7 +96,7 @@ public class DataAnalysisService : IDataAnalysisService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_ANALYSIS, 
                 operationName, id, correlationId);
             throw;
         }
@@ -235,7 +235,7 @@ public class DataAnalysisService : IDataAnalysisService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_ANALYSIS, 
                 operationName, analysisId, correlationId);
             throw;
         }
@@ -272,7 +272,7 @@ public class DataAnalysisService : IDataAnalysisService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_ANALYSIS, 
                 operationName, id, correlationId);
             throw;
         }
@@ -322,7 +322,7 @@ public class DataAnalysisService : IDataAnalysisService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_ANALYSIS, 
                 operationName, analysisId, correlationId);
             throw;
         }
