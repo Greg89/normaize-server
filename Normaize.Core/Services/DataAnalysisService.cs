@@ -51,7 +51,7 @@ public class DataAnalysisService : IDataAnalysisService
             
             var result = _mapper.Map<AnalysisDto>(savedAnalysis);
             
-            _logger.LogInformation("Successfully completed {Operation} with ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+            _logger.LogInformation(AppConstants.LogMessages.OPERATION_COMPLETED_WITH_ANALYSIS, 
                 operationName, result.Id, correlationId);
             
             return result;
@@ -89,7 +89,7 @@ public class DataAnalysisService : IDataAnalysisService
 
             var result = _mapper.Map<AnalysisDto>(analysis);
             
-            _logger.LogDebug("Successfully completed {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+            _logger.LogDebug(AppConstants.LogMessages.OPERATION_COMPLETED_WITH_ANALYSIS, 
                 operationName, id, correlationId);
             
             return result;
@@ -228,7 +228,7 @@ public class DataAnalysisService : IDataAnalysisService
                 ErrorMessage = analysis.ErrorMessage
             };
             
-            _logger.LogDebug("Successfully completed {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+            _logger.LogDebug(AppConstants.LogMessages.OPERATION_COMPLETED_WITH_ANALYSIS, 
                 operationName, analysisId, correlationId);
             
             return result;
@@ -259,7 +259,7 @@ public class DataAnalysisService : IDataAnalysisService
             
             if (result)
             {
-                _logger.LogInformation("Successfully completed {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                _logger.LogInformation(AppConstants.LogMessages.OPERATION_COMPLETED_WITH_ANALYSIS, 
                     operationName, id, correlationId);
             }
             else
@@ -315,7 +315,7 @@ public class DataAnalysisService : IDataAnalysisService
             // Execute analysis with state management
             var result = await ExecuteAnalysisWithStateManagementAsync(analysis, correlationId);
             
-            _logger.LogInformation("Successfully completed {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+            _logger.LogInformation(AppConstants.LogMessages.OPERATION_COMPLETED_WITH_ANALYSIS, 
                 operationName, analysisId, correlationId);
             
             return result;
