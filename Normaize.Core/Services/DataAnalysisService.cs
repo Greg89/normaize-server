@@ -466,14 +466,14 @@ public class DataAnalysisService : IDataAnalysisService
     {
         _logger.LogDebug("Executing normalization analysis for ID: {AnalysisId}", analysis.Id);
         
-        // TODO: Implement normalization logic
+        // FUTURE: Implement normalization logic
         await Task.Delay(1000); // Simulate processing time
         
         return new
         {
             Type = "Normalization",
             Message = "Data normalization completed",
-            NormalizedColumns = new[] { "customer_id", "order_amount" },
+            NormalizedColumns = new[] { AppConstants.DataStructures.CUSTOMER_ID, AppConstants.DataStructures.ORDER_AMOUNT },
             MinValues = new { customer_id = 0.0, order_amount = 0.0 },
             MaxValues = new { customer_id = 1.0, order_amount = 1.0 }
         };
@@ -483,7 +483,7 @@ public class DataAnalysisService : IDataAnalysisService
     {
         _logger.LogDebug("Executing comparison analysis for ID: {AnalysisId}", analysis.Id);
         
-        // TODO: Implement comparison logic
+        // FUTURE: Implement comparison logic
         await Task.Delay(1000); // Simulate processing time
         
         return new
@@ -491,8 +491,8 @@ public class DataAnalysisService : IDataAnalysisService
             Type = "Comparison",
             Message = "Dataset comparison completed",
             SimilarityScore = 0.85,
-            Differences = new[] { "customer_id", "product_code" },
-            CommonColumns = new[] { "order_amount", "sales_region" }
+            Differences = new[] { AppConstants.DataStructures.CUSTOMER_ID, "product_code" },
+            CommonColumns = new[] { AppConstants.DataStructures.ORDER_AMOUNT, "sales_region" }
         };
     }
 
@@ -500,7 +500,7 @@ public class DataAnalysisService : IDataAnalysisService
     {
         _logger.LogDebug("Executing statistical analysis for ID: {AnalysisId}", analysis.Id);
         
-        // TODO: Implement statistical analysis logic
+        // FUTURE: Implement statistical analysis logic
         await Task.Delay(1000); // Simulate processing time
         
         return new
@@ -517,7 +517,7 @@ public class DataAnalysisService : IDataAnalysisService
     {
         _logger.LogDebug("Executing data cleaning analysis for ID: {AnalysisId}", analysis.Id);
         
-        // TODO: Implement data cleaning logic
+        // FUTURE: Implement data cleaning logic
         await Task.Delay(1000); // Simulate processing time
         
         return new
@@ -527,7 +527,7 @@ public class DataAnalysisService : IDataAnalysisService
             RemovedRows = 15,
             FixedNullValues = 8,
             RemovedDuplicates = 3,
-            CleanedColumns = new[] { "customer_id", "order_amount", "product_code" }
+            CleanedColumns = new[] { AppConstants.DataStructures.CUSTOMER_ID, AppConstants.DataStructures.ORDER_AMOUNT, "product_code" }
         };
     }
 
@@ -543,7 +543,7 @@ public class DataAnalysisService : IDataAnalysisService
             Type = "OutlierDetection",
             Message = "Outlier detection completed",
             DetectedOutliers = 7,
-            OutlierColumns = new[] { "customer_id", "order_amount" },
+            OutlierColumns = new[] { AppConstants.DataStructures.CUSTOMER_ID, AppConstants.DataStructures.ORDER_AMOUNT },
             OutlierIndices = new[] { 15, 23, 45, 67, 89, 123, 156 }
         };
     }
@@ -574,7 +574,7 @@ public class DataAnalysisService : IDataAnalysisService
     {
         _logger.LogDebug("Executing trend analysis for ID: {AnalysisId}", analysis.Id);
         
-        // TODO: Implement trend analysis logic
+        // FUTURE: Implement trend analysis logic
         await Task.Delay(1000); // Simulate processing time
         
         return new

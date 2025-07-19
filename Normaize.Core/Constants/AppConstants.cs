@@ -88,4 +88,13 @@ public static class AppConstants
     {
         public const string DATASET_ID_MUST_BE_POSITIVE = "Dataset ID must be positive";
     }
+
+    /// <summary>
+    /// Validation error messages
+    /// </summary>
+    public static class DataStructures
+    {
+        public const string CUSTOMER_ID = "customer_id";
+        public const string ORDER_AMOUNT = "order_amount";
+    }
 } 
