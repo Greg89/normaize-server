@@ -36,6 +36,8 @@ public class InMemoryStorageService : IStorageService, IDisposable
 
     public async Task<string> SaveFileAsync(FileUploadRequest fileRequest)
     {
+        ThrowIfDisposed();
+        
         var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
         var operationName = "SaveFileAsync";
         
@@ -63,6 +65,8 @@ public class InMemoryStorageService : IStorageService, IDisposable
 
     public async Task<Stream> GetFileAsync(string filePath)
     {
+        ThrowIfDisposed();
+        
         var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
         var operationName = "GetFileAsync";
         
@@ -90,6 +94,8 @@ public class InMemoryStorageService : IStorageService, IDisposable
 
     public async Task DeleteFileAsync(string filePath)
     {
+        ThrowIfDisposed();
+        
         var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
         var operationName = "DeleteFileAsync";
         
@@ -117,6 +123,8 @@ public class InMemoryStorageService : IStorageService, IDisposable
 
     public async Task<bool> FileExistsAsync(string filePath)
     {
+        ThrowIfDisposed();
+        
         var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
         var operationName = "FileExistsAsync";
         
@@ -441,12 +449,16 @@ public class InMemoryStorageService : IStorageService, IDisposable
 
     public (int FileCount, long TotalSizeBytes) GetStorageStatistics()
     {
+        ThrowIfDisposed();
+        
         var totalSize = _fileStorage.Values.Sum(metadata => metadata.Data.Length);
         return (_fileStorage.Count, totalSize);
     }
 
     public void ClearAllFiles()
     {
+        ThrowIfDisposed();
+        
         var fileCount = _fileStorage.Count;
         var totalSize = _fileStorage.Values.Sum(metadata => metadata.Data.Length);
         
@@ -458,11 +470,37 @@ public class InMemoryStorageService : IStorageService, IDisposable
 
     public void Dispose()
     {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
         if (_disposed) return;
         
-        _cleanupTimer?.Dispose();
-        _storageSemaphore?.Dispose();
+        if (disposing)
+        {
+            // Dispose managed resources
+            _cleanupTimer?.Dispose();
+            _storageSemaphore?.Dispose();
+        }
+        
+        // Dispose unmanaged resources (none in this case)
+        
         _disposed = true;
+    }
+
+    ~InMemoryStorageService()
+    {
+        Dispose(false);
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (_disposed)
+        {
+            throw new ObjectDisposedException(nameof(InMemoryStorageService));
+        }
     }
 
     private class FileMetadata
