@@ -387,6 +387,11 @@ public static class ServiceConfiguration
         // Add memory cache
         builder.Services.AddMemoryCache();
         
+        // Configure chaos engineering
+        builder.Services.Configure<ChaosEngineeringOptions>(
+            builder.Configuration.GetSection(ChaosEngineeringOptions.SectionName));
+        builder.Services.AddSingleton<IChaosEngineeringService, ChaosEngineeringService>();
+        
         builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
         builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();
         builder.Services.AddScoped<IDataVisualizationService, DataVisualizationService>();

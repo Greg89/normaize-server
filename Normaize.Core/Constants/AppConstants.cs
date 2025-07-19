@@ -108,5 +108,8 @@ public static class AppConstants
         public const string CUSTOMER_ID = "customer_id";
         public const string ORDER_AMOUNT = "order_amount";
         public const string DATASET_ID = "dataset_id";
+        public const string ACTUAL_USER_ID = "ActualUserId";
+        public const string EXPECTED_USER_ID = "ExpectedUserId";
+        public const string DATASET_FOUND = "DataSetFound";
     }
 } 

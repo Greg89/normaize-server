@@ -23,7 +23,7 @@ public class DataProcessingService : IDataProcessingService
     private readonly ILogger<DataProcessingService> _logger;
     private readonly IMemoryCache _cache;
     private readonly IStructuredLoggingService _structuredLogging;
-    private readonly Random _chaosRandom;
+    private readonly IChaosEngineeringService _chaosEngineering;
     private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(5);
     private readonly TimeSpan _defaultTimeout = TimeSpan.FromMinutes(10);
     private readonly TimeSpan _quickTimeout = TimeSpan.FromSeconds(30);
@@ -37,7 +37,8 @@ public class DataProcessingService : IDataProcessingService
         IMapper mapper,
         ILogger<DataProcessingService> logger,
         IMemoryCache cache,
-        IStructuredLoggingService structuredLogging)
+        IStructuredLoggingService structuredLogging,
+        IChaosEngineeringService chaosEngineering)
     {
         _dataSetRepository = dataSetRepository ?? throw new ArgumentNullException(nameof(dataSetRepository));
         _fileUploadService = fileUploadService ?? throw new ArgumentNullException(nameof(fileUploadService));
@@ -46,7 +47,7 @@ public class DataProcessingService : IDataProcessingService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _structuredLogging = structuredLogging ?? throw new ArgumentNullException(nameof(structuredLogging));
-        _chaosRandom = new Random();
+        _chaosEngineering = chaosEngineering ?? throw new ArgumentNullException(nameof(chaosEngineering));
     }
 
 
@@ -69,14 +70,15 @@ public class DataProcessingService : IDataProcessingService
         try
         {
             // Chaos engineering: Simulate processing delay
-            if (_chaosRandom.NextDouble() < 0.001) // 0.1% probability
+            await _chaosEngineering.ExecuteChaosAsync("ProcessingDelay", async () =>
             {
+                var delayMs = new Random().Next(1000, 5000);
                 _structuredLogging.LogStep(context, "Chaos engineering delay", new Dictionary<string, object>
                 {
-                    ["DelayMs"] = _chaosRandom.Next(1000, 5000)
+                    ["DelayMs"] = delayMs
                 });
-                await Task.Delay(_chaosRandom.Next(1000, 5000)); // 1-5 second delay
-            }
+                await Task.Delay(delayMs);
+            }, new Dictionary<string, object> { ["UserId"] = createDto?.UserId ?? AppConstants.Messages.UNKNOWN });
 
             // Validate file
             _structuredLogging.LogStep(context, "File validation started");
@@ -207,8 +209,8 @@ public class DataProcessingService : IDataProcessingService
             {
                 _structuredLogging.LogStep(context, "Access denied - user mismatch", new Dictionary<string, object>
                 {
-                    ["ExpectedUserId"] = userId,
-                    ["ActualUserId"] = dataSet?.UserId ?? "null"
+                    [AppConstants.DataStructures.EXPECTED_USER_ID] = userId,
+                    [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet?.UserId ?? "null"
                 });
                 _structuredLogging.LogSummary(context, false, "Dataset not found or access denied");
                 return null;
@@ -310,15 +312,14 @@ public class DataProcessingService : IDataProcessingService
             _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             // Chaos engineering: Simulate deletion failure
-            if (_chaosRandom.NextDouble() < 0.0003) // 0.03% probability
+            await _chaosEngineering.ExecuteChaosAsync("DeletionFailure", () =>
             {
                 _structuredLogging.LogStep(context, "Chaos engineering: Simulating deletion failure", new Dictionary<string, object>
                 {
-                    ["ChaosType"] = "DeletionFailure",
-                    ["Probability"] = 0.0003
+                    ["ChaosType"] = "DeletionFailure"
                 });
                 throw new InvalidOperationException("Simulated deletion failure (chaos engineering)");
-            }
+            }, new Dictionary<string, object> { ["UserId"] = userId });
 
             _structuredLogging.LogStep(context, "Dataset retrieval started");
             var dataSet = await ExecuteWithTimeoutAsync(
@@ -332,9 +333,9 @@ public class DataProcessingService : IDataProcessingService
             {
                 _structuredLogging.LogStep(context, "Access denied - dataset not found or user mismatch", new Dictionary<string, object>
                 {
-                    ["ExpectedUserId"] = userId,
-                    ["ActualUserId"] = dataSet?.UserId ?? "null",
-                    ["DataSetFound"] = dataSet != null
+                    [AppConstants.DataStructures.EXPECTED_USER_ID] = userId,
+                    [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet?.UserId ?? "null",
+                    [AppConstants.DataStructures.DATASET_FOUND] = dataSet != null
                 });
                 _structuredLogging.LogSummary(context, false, "Dataset not found or access denied");
                 return false;
@@ -448,9 +449,9 @@ public class DataProcessingService : IDataProcessingService
             {
                 _structuredLogging.LogStep(context, "Access denied - dataset not found or user mismatch", new Dictionary<string, object>
                 {
-                    ["ExpectedUserId"] = userId,
-                    ["ActualUserId"] = dataSet?.UserId ?? "null",
-                    ["DataSetFound"] = dataSet != null
+                    [AppConstants.DataStructures.EXPECTED_USER_ID] = userId,
+                    [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet?.UserId ?? "null",
+                    [AppConstants.DataStructures.DATASET_FOUND] = dataSet != null
                 });
                 _structuredLogging.LogSummary(context, false, "Dataset not found or access denied");
                 return false;
@@ -527,9 +528,9 @@ public class DataProcessingService : IDataProcessingService
             {
                 _structuredLogging.LogStep(context, "Access denied - dataset not found or user mismatch", new Dictionary<string, object>
                 {
-                    ["ExpectedUserId"] = userId,
-                    ["ActualUserId"] = dataSet?.UserId ?? "null",
-                    ["DataSetFound"] = dataSet != null
+                    [AppConstants.DataStructures.EXPECTED_USER_ID] = userId,
+                    [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet?.UserId ?? "null",
+                    [AppConstants.DataStructures.DATASET_FOUND] = dataSet != null
                 });
                 _structuredLogging.LogSummary(context, false, "Dataset not found or access denied");
                 return false;
@@ -644,9 +645,9 @@ public class DataProcessingService : IDataProcessingService
             {
                 _structuredLogging.LogStep(context, "Access denied or no preview data", new Dictionary<string, object>
                 {
-                    ["ExpectedUserId"] = userId,
-                    ["ActualUserId"] = dataSet?.UserId ?? "null",
-                    ["DataSetFound"] = dataSet != null,
+                    [AppConstants.DataStructures.EXPECTED_USER_ID] = userId,
+                    [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet?.UserId ?? "null",
+                    [AppConstants.DataStructures.DATASET_FOUND] = dataSet != null,
                     ["HasPreviewData"] = !string.IsNullOrEmpty(dataSet?.PreviewData)
                 });
                 _structuredLogging.LogSummary(context, false, "Dataset not found, access denied, or no preview data");
@@ -701,9 +702,9 @@ public class DataProcessingService : IDataProcessingService
             {
                 _structuredLogging.LogStep(context, "Access denied or no schema", new Dictionary<string, object>
                 {
-                    ["ExpectedUserId"] = userId,
-                    ["ActualUserId"] = dataSet?.UserId ?? "null",
-                    ["DataSetFound"] = dataSet != null,
+                    [AppConstants.DataStructures.EXPECTED_USER_ID] = userId,
+                    [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet?.UserId ?? "null",
+                    [AppConstants.DataStructures.DATASET_FOUND] = dataSet != null,
                     ["HasSchema"] = !string.IsNullOrEmpty(dataSet?.Schema)
                 });
                 _structuredLogging.LogSummary(context, false, "Dataset not found, access denied, or no schema");
@@ -962,15 +963,15 @@ public class DataProcessingService : IDataProcessingService
             _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             // Chaos engineering: Simulate cache corruption
-            if (_chaosRandom.NextDouble() < 0.0005) // 0.05% probability
+            await _chaosEngineering.ExecuteChaosAsync("CacheFailure", () =>
             {
                 _structuredLogging.LogStep(context, "Chaos engineering: Simulating cache corruption", new Dictionary<string, object>
                 {
-                    ["ChaosType"] = "CacheCorruption",
-                    ["Probability"] = 0.0005
+                    ["ChaosType"] = "CacheCorruption"
                 });
                 _cache.Remove($"stats_{userId}");
-            }
+                return Task.CompletedTask;
+            }, new Dictionary<string, object> { ["UserId"] = userId });
 
             var cacheKey = $"stats_{userId}";
             
