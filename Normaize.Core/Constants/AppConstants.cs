@@ -80,6 +80,16 @@ public static class AppConstants
         public const string OPERATION_FAILED = "Operation {Operation} failed. CorrelationId: {CorrelationId}";
         public const string OPERATION_FAILED_WITH_ANALYSIS = "Failed to complete {Operation} for ID: {AnalysisId}. CorrelationId: {CorrelationId}";
         public const string OPERATION_FAILED_WITH_USER = "Failed to complete {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}";
+        public const string INPUT_VALIDATION_STARTED = "Input validation started";
+        public const string INPUT_VALIDATION_COMPLETED = "Input validation completed";
+        public const string DATABASE_RETRIEVAL_STARTED = "Database retrieval started";
+        public const string DATABASE_RETRIEVAL_COMPLETED = "Database retrieval completed";
+        public const string DTO_MAPPING_STARTED = "DTO mapping started";
+        public const string DTO_MAPPING_COMPLETED = "DTO mapping completed";
+        public const string AUDIT_LOGGING_STARTED = "Audit logging started";
+        public const string AUDIT_LOGGING_COMPLETED = "Audit logging completed";
+        public const string PAGINATION_STARTED = "Pagination processing started";
+        public const string PAGINATION_COMPLETED = "Pagination processing completed";
     }
 
     /// <summary>
@@ -97,5 +107,6 @@ public static class AppConstants
     {
         public const string CUSTOMER_ID = "customer_id";
         public const string ORDER_AMOUNT = "order_amount";
+        public const string DATASET_ID = "dataset_id";
     }
 } 

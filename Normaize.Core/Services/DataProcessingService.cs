@@ -134,7 +134,7 @@ public class DataProcessingService : IDataProcessingService
                 _quickTimeout,
                 correlationId,
                 $"{context.OperationName}_SaveToDatabase");
-            context.SetMetadata("DataSetId", savedDataSet.Id);
+            context.SetMetadata(AppConstants.DataStructures.DATASET_ID, savedDataSet.Id);
             _structuredLogging.LogStep(context, "Database save completed");
 
             // Clear cache for this user
@@ -186,22 +186,22 @@ public class DataProcessingService : IDataProcessingService
             userId,
             new Dictionary<string, object>
             {
-                ["DataSetId"] = id
+                [AppConstants.DataStructures.DATASET_ID] = id
             });
 
         try
         {
-            _structuredLogging.LogStep(context, "Input validation started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidateGetDataSetInputs(id, userId);
-            _structuredLogging.LogStep(context, "Input validation completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
-            _structuredLogging.LogStep(context, "Database retrieval started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
             var dataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByIdAsync(id),
                 _quickTimeout,
                 correlationId,
                 context.OperationName);
-            _structuredLogging.LogStep(context, "Database retrieval completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED);
 
             if (dataSet?.UserId != userId)
             {
@@ -214,17 +214,17 @@ public class DataProcessingService : IDataProcessingService
                 return null;
             }
 
-            _structuredLogging.LogStep(context, "Audit logging started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_STARTED);
             await ExecuteWithTimeoutAsync(
                 () => _auditService.LogDataSetActionAsync(id, userId, "Viewed"),
                 _quickTimeout,
                 correlationId,
                 $"{context.OperationName}_AuditLog");
-            _structuredLogging.LogStep(context, "Audit logging completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_COMPLETED);
             
-            _structuredLogging.LogStep(context, "DTO mapping started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
             var result = _mapper.Map<DataSetDto>(dataSet);
-            _structuredLogging.LogStep(context, "DTO mapping completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
             
             _structuredLogging.LogSummary(context, true);
             return result;
@@ -251,35 +251,35 @@ public class DataProcessingService : IDataProcessingService
 
         try
         {
-            _structuredLogging.LogStep(context, "Input validation started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidatePaginationInputs(page, pageSize);
             ValidateUserId(userId);
-            _structuredLogging.LogStep(context, "Input validation completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
-            _structuredLogging.LogStep(context, "Database retrieval started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
             var dataSets = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByUserIdAsync(userId, false),
                 _quickTimeout,
                 correlationId,
                 context.OperationName);
-            _structuredLogging.LogStep(context, "Database retrieval completed", new Dictionary<string, object>
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
             {
                 ["TotalDataSets"] = dataSets.Count()
             });
 
-            _structuredLogging.LogStep(context, "Pagination processing started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_STARTED);
             var pagedDataSets = dataSets
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
-            _structuredLogging.LogStep(context, "Pagination processing completed", new Dictionary<string, object>
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_COMPLETED, new Dictionary<string, object>
             {
                 ["PagedDataSets"] = pagedDataSets.Count
             });
 
-            _structuredLogging.LogStep(context, "DTO mapping started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
             var result = _mapper.Map<IEnumerable<DataSetDto>>(pagedDataSets);
-            _structuredLogging.LogStep(context, "DTO mapping completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
             
             _structuredLogging.LogSummary(context, true);
             return result;
@@ -300,14 +300,14 @@ public class DataProcessingService : IDataProcessingService
             userId,
             new Dictionary<string, object>
             {
-                ["DataSetId"] = id
+                [AppConstants.DataStructures.DATASET_ID] = id
             });
 
         try
         {
-            _structuredLogging.LogStep(context, "Input validation started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidateDeleteInputs(id, userId);
-            _structuredLogging.LogStep(context, "Input validation completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             // Chaos engineering: Simulate deletion failure
             if (_chaosRandom.NextDouble() < 0.0003) // 0.03% probability
@@ -386,7 +386,7 @@ public class DataProcessingService : IDataProcessingService
                 _cache.Remove($"stats_{userId}");
                 _structuredLogging.LogStep(context, "Cache clearing completed");
 
-                _structuredLogging.LogStep(context, "Audit logging started");
+                _structuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_STARTED);
                 await ExecuteWithTimeoutAsync(
                     () => _auditService.LogDataSetActionAsync(
                         id, 
@@ -400,7 +400,7 @@ public class DataProcessingService : IDataProcessingService
                     _quickTimeout,
                     correlationId,
                     $"{context.OperationName}_AuditLog");
-                _structuredLogging.LogStep(context, "Audit logging completed");
+                _structuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_COMPLETED);
 
                 _structuredLogging.LogSummary(context, true);
             }
@@ -427,14 +427,14 @@ public class DataProcessingService : IDataProcessingService
             userId,
             new Dictionary<string, object>
             {
-                ["DataSetId"] = id
+                [AppConstants.DataStructures.DATASET_ID] = id
             });
 
         try
         {
-            _structuredLogging.LogStep(context, "Input validation started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidateRestoreInputs(id, userId);
-            _structuredLogging.LogStep(context, "Input validation completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             _structuredLogging.LogStep(context, "Dataset retrieval started");
             var dataSet = await ExecuteWithTimeoutAsync(
@@ -473,13 +473,13 @@ public class DataProcessingService : IDataProcessingService
                 _cache.Remove($"stats_{userId}");
                 _structuredLogging.LogStep(context, "Cache clearing completed");
 
-                _structuredLogging.LogStep(context, "Audit logging started");
+                _structuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_STARTED);
                 await ExecuteWithTimeoutAsync(
                     () => _auditService.LogDataSetActionAsync(id, userId, "Restored"),
                     _quickTimeout,
                     correlationId,
                     $"{context.OperationName}_AuditLog");
-                _structuredLogging.LogStep(context, "Audit logging completed");
+                _structuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_COMPLETED);
 
                 _structuredLogging.LogSummary(context, true);
             }
@@ -506,14 +506,14 @@ public class DataProcessingService : IDataProcessingService
             userId,
             new Dictionary<string, object>
             {
-                ["DataSetId"] = id
+                [AppConstants.DataStructures.DATASET_ID] = id
             });
 
         try
         {
-            _structuredLogging.LogStep(context, "Input validation started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidateHardDeleteInputs(id, userId);
-            _structuredLogging.LogStep(context, "Input validation completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             _structuredLogging.LogStep(context, "Dataset retrieval started");
             var dataSet = await ExecuteWithTimeoutAsync(
@@ -581,7 +581,7 @@ public class DataProcessingService : IDataProcessingService
                 _cache.Remove($"stats_{userId}");
                 _structuredLogging.LogStep(context, "Cache clearing completed");
 
-                _structuredLogging.LogStep(context, "Audit logging started");
+                _structuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_STARTED);
                 await ExecuteWithTimeoutAsync(
                     () => _auditService.LogDataSetActionAsync(
                         id, 
@@ -595,7 +595,7 @@ public class DataProcessingService : IDataProcessingService
                     _quickTimeout,
                     correlationId,
                     $"{context.OperationName}_AuditLog");
-                _structuredLogging.LogStep(context, "Audit logging completed");
+                _structuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_COMPLETED);
 
                 _structuredLogging.LogSummary(context, true);
             }
@@ -622,18 +622,18 @@ public class DataProcessingService : IDataProcessingService
             userId,
             new Dictionary<string, object>
             {
-                ["DataSetId"] = id,
+                [AppConstants.DataStructures.DATASET_ID] = id,
                 ["RequestedRows"] = rows
             });
 
         try
         {
-            _structuredLogging.LogStep(context, "Input validation started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidatePreviewInputs(id, rows, userId);
-            _structuredLogging.LogStep(context, "Input validation completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             _structuredLogging.LogStep(context, "Dataset retrieval started");
-            var dataSet = await ExecuteWithTimeoutAsync<DataSet?>(
+            var dataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByIdAsync(id),
                 _quickTimeout,
                 correlationId,
@@ -653,13 +653,13 @@ public class DataProcessingService : IDataProcessingService
                 return null;
             }
 
-            _structuredLogging.LogStep(context, "Audit logging started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_STARTED);
             await ExecuteWithTimeoutAsync(
                 () => _auditService.LogDataSetActionAsync(id, userId, "Previewed", new { rows }),
                 _quickTimeout,
                 correlationId,
                 $"{context.OperationName}_AuditLog");
-            _structuredLogging.LogStep(context, "Audit logging completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_COMPLETED);
 
             _structuredLogging.LogSummary(context, true);
             return dataSet.PreviewData;
@@ -680,17 +680,17 @@ public class DataProcessingService : IDataProcessingService
             userId,
             new Dictionary<string, object>
             {
-                ["DataSetId"] = id
+                [AppConstants.DataStructures.DATASET_ID] = id
             });
 
         try
         {
-            _structuredLogging.LogStep(context, "Input validation started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidateSchemaInputs(id, userId);
-            _structuredLogging.LogStep(context, "Input validation completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             _structuredLogging.LogStep(context, "Dataset retrieval started");
-            var dataSet = await ExecuteWithTimeoutAsync<DataSet?>(
+            var dataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByIdAsync(id),
                 _quickTimeout,
                 correlationId,
@@ -739,18 +739,18 @@ public class DataProcessingService : IDataProcessingService
 
         try
         {
-            _structuredLogging.LogStep(context, "Input validation started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidatePaginationInputs(page, pageSize);
             ValidateUserId(userId);
-            _structuredLogging.LogStep(context, "Input validation completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
-            _structuredLogging.LogStep(context, "Database retrieval started");
-            var dataSets = await ExecuteWithTimeoutAsync<IEnumerable<DataSet>>(
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
+            var dataSets = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByUserIdAsync(userId, includeDeleted: true),
                 _quickTimeout,
                 correlationId,
                 context.OperationName);
-            _structuredLogging.LogStep(context, "Database retrieval completed", new Dictionary<string, object>
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
             {
                 ["TotalDataSets"] = dataSets.Count()
             });
@@ -766,9 +766,9 @@ public class DataProcessingService : IDataProcessingService
                 ["DeletedDataSets"] = deletedDataSets.Count
             });
 
-            _structuredLogging.LogStep(context, "DTO mapping started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
             var result = _mapper.Map<IEnumerable<DataSetDto>>(deletedDataSets);
-            _structuredLogging.LogStep(context, "DTO mapping completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
             
             _structuredLogging.LogSummary(context, true);
             return result;
@@ -796,12 +796,12 @@ public class DataProcessingService : IDataProcessingService
 
         try
         {
-            _structuredLogging.LogStep(context, "Input validation started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidateSearchInputs(searchTerm, userId, page, pageSize);
-            _structuredLogging.LogStep(context, "Input validation completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             _structuredLogging.LogStep(context, "Search operation started");
-            var dataSets = await ExecuteWithTimeoutAsync<IEnumerable<DataSet>>(
+            var dataSets = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.SearchAsync(searchTerm, userId),
                 _quickTimeout,
                 correlationId,
@@ -811,19 +811,19 @@ public class DataProcessingService : IDataProcessingService
                 ["TotalMatches"] = dataSets.Count()
             });
 
-            _structuredLogging.LogStep(context, "Pagination processing started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_STARTED);
             var pagedDataSets = dataSets
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
-            _structuredLogging.LogStep(context, "Pagination processing completed", new Dictionary<string, object>
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_COMPLETED, new Dictionary<string, object>
             {
                 ["PagedResults"] = pagedDataSets.Count
             });
 
-            _structuredLogging.LogStep(context, "DTO mapping started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
             var result = _mapper.Map<IEnumerable<DataSetDto>>(pagedDataSets);
-            _structuredLogging.LogStep(context, "DTO mapping completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
             
             _structuredLogging.LogSummary(context, true);
             return result;
@@ -851,13 +851,13 @@ public class DataProcessingService : IDataProcessingService
 
         try
         {
-            _structuredLogging.LogStep(context, "Input validation started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidatePaginationInputs(page, pageSize);
             ValidateUserId(userId);
-            _structuredLogging.LogStep(context, "Input validation completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             _structuredLogging.LogStep(context, "Database retrieval by file type started");
-            var dataSets = await ExecuteWithTimeoutAsync<IEnumerable<DataSet>>(
+            var dataSets = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByFileTypeAsync(fileType, userId),
                 _quickTimeout,
                 correlationId,
@@ -867,19 +867,19 @@ public class DataProcessingService : IDataProcessingService
                 ["TotalDataSets"] = dataSets.Count()
             });
 
-            _structuredLogging.LogStep(context, "Pagination processing started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_STARTED);
             var pagedDataSets = dataSets
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
-            _structuredLogging.LogStep(context, "Pagination processing completed", new Dictionary<string, object>
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_COMPLETED, new Dictionary<string, object>
             {
                 ["PagedDataSets"] = pagedDataSets.Count
             });
 
-            _structuredLogging.LogStep(context, "DTO mapping started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
             var result = _mapper.Map<IEnumerable<DataSetDto>>(pagedDataSets);
-            _structuredLogging.LogStep(context, "DTO mapping completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
             
             _structuredLogging.LogSummary(context, true);
             return result;
@@ -908,12 +908,12 @@ public class DataProcessingService : IDataProcessingService
 
         try
         {
-            _structuredLogging.LogStep(context, "Input validation started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidateDateRangeInputs(startDate, endDate, userId, page, pageSize);
-            _structuredLogging.LogStep(context, "Input validation completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             _structuredLogging.LogStep(context, "Database retrieval by date range started");
-            var dataSets = await ExecuteWithTimeoutAsync<IEnumerable<DataSet>>(
+            var dataSets = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByDateRangeAsync(startDate, endDate, userId),
                 _quickTimeout,
                 correlationId,
@@ -923,19 +923,19 @@ public class DataProcessingService : IDataProcessingService
                 ["TotalDataSets"] = dataSets.Count()
             });
 
-            _structuredLogging.LogStep(context, "Pagination processing started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_STARTED);
             var pagedDataSets = dataSets
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
-            _structuredLogging.LogStep(context, "Pagination processing completed", new Dictionary<string, object>
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_COMPLETED, new Dictionary<string, object>
             {
                 ["PagedDataSets"] = pagedDataSets.Count
             });
 
-            _structuredLogging.LogStep(context, "DTO mapping started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
             var result = _mapper.Map<IEnumerable<DataSetDto>>(pagedDataSets);
-            _structuredLogging.LogStep(context, "DTO mapping completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
             
             _structuredLogging.LogSummary(context, true);
             return result;
@@ -957,9 +957,9 @@ public class DataProcessingService : IDataProcessingService
 
         try
         {
-            _structuredLogging.LogStep(context, "Input validation started");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidateUserId(userId);
-            _structuredLogging.LogStep(context, "Input validation completed");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             // Chaos engineering: Simulate cache corruption
             if (_chaosRandom.NextDouble() < 0.0005) // 0.05% probability
@@ -985,7 +985,7 @@ public class DataProcessingService : IDataProcessingService
             _structuredLogging.LogStep(context, "Cache miss - calculating statistics");
 
             _structuredLogging.LogStep(context, "Total count calculation started");
-            var totalCount = await ExecuteWithTimeoutAsync<int>(
+            var totalCount = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetTotalCountAsync(userId),
                 _quickTimeout,
                 correlationId,
