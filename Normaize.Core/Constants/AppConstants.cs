@@ -47,6 +47,7 @@ public static class AppConstants
         public const string ERROR = "Error";
         public const string NOT_FOUND = "Not Found";
         public const string UNAUTHORIZED = "Unauthorized";
+        public const string UNKNOWN = "Unknown";
     }
 
     /// <summary>

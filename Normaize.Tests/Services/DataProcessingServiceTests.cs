@@ -9,6 +9,7 @@ using Normaize.Core.Models;
 using Normaize.Core.Services;
 using Xunit;
 using FluentAssertions;
+using System.Diagnostics;
 
 namespace Normaize.Tests.Services;
 
@@ -20,6 +21,7 @@ public class DataProcessingServiceTests
     private readonly Mock<IMapper> _mockMapper;
     private readonly Mock<ILogger<DataProcessingService>> _mockLogger;
     private readonly IMemoryCache _cache;
+    private readonly Mock<IStructuredLoggingService> _mockStructuredLogging;
     private readonly DataProcessingService _service;
 
     public DataProcessingServiceTests()
@@ -30,6 +32,7 @@ public class DataProcessingServiceTests
         _mockMapper = new Mock<IMapper>();
         _mockLogger = new Mock<ILogger<DataProcessingService>>();
         _cache = new MemoryCache(new MemoryCacheOptions());
+        _mockStructuredLogging = new Mock<IStructuredLoggingService>();
         
         _service = new DataProcessingService(
             _mockRepository.Object, 
@@ -37,7 +40,28 @@ public class DataProcessingServiceTests
             _mockAuditService.Object, 
             _mockMapper.Object, 
             _mockLogger.Object, 
-            _cache);
+            _cache,
+            _mockStructuredLogging.Object);
+        
+        // Setup default structured logging mocks
+        SetupStructuredLoggingMocks();
+    }
+
+    private void SetupStructuredLoggingMocks()
+    {
+        var mockContext = new Mock<IOperationContext>();
+        mockContext.Setup(c => c.OperationName).Returns("TestOperation");
+        mockContext.Setup(c => c.CorrelationId).Returns("test-correlation-id");
+        mockContext.Setup(c => c.UserId).Returns("test-user");
+        mockContext.Setup(c => c.Metadata).Returns(new Dictionary<string, object>());
+        mockContext.Setup(c => c.Steps).Returns(new List<string>());
+        mockContext.Setup(c => c.Stopwatch).Returns(Stopwatch.StartNew());
+        mockContext.Setup(c => c.SetMetadata(It.IsAny<string>(), It.IsAny<object>()));
+        
+        _mockStructuredLogging.Setup(s => s.CreateContext(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+            .Returns(mockContext.Object);
+        _mockStructuredLogging.Setup(s => s.LogStep(It.IsAny<IOperationContext>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()));
+        _mockStructuredLogging.Setup(s => s.LogSummary(It.IsAny<IOperationContext>(), It.IsAny<bool>(), It.IsAny<string>()));
     }
 
     [Fact]
@@ -51,7 +75,8 @@ public class DataProcessingServiceTests
                 _mockAuditService.Object, 
                 _mockMapper.Object, 
                 _mockLogger.Object, 
-                _cache));
+                _cache,
+                _mockStructuredLogging.Object));
         
         exception.ParamName.Should().Be("dataSetRepository");
     }
@@ -67,7 +92,8 @@ public class DataProcessingServiceTests
                 _mockAuditService.Object, 
                 _mockMapper.Object, 
                 _mockLogger.Object, 
-                _cache));
+                _cache,
+                _mockStructuredLogging.Object));
         
         exception.ParamName.Should().Be("fileUploadService");
     }
@@ -83,7 +109,8 @@ public class DataProcessingServiceTests
                 null!, 
                 _mockMapper.Object, 
                 _mockLogger.Object, 
-                _cache));
+                _cache,
+                _mockStructuredLogging.Object));
         
         exception.ParamName.Should().Be("auditService");
     }
@@ -99,7 +126,8 @@ public class DataProcessingServiceTests
                 _mockAuditService.Object, 
                 null!, 
                 _mockLogger.Object, 
-                _cache));
+                _cache,
+                _mockStructuredLogging.Object));
         
         exception.ParamName.Should().Be("mapper");
     }
@@ -115,7 +143,8 @@ public class DataProcessingServiceTests
                 _mockAuditService.Object, 
                 _mockMapper.Object, 
                 null!, 
-                _cache));
+                _cache,
+                _mockStructuredLogging.Object));
         
         exception.ParamName.Should().Be("logger");
     }
@@ -131,7 +160,8 @@ public class DataProcessingServiceTests
                 _mockAuditService.Object, 
                 _mockMapper.Object, 
                 _mockLogger.Object, 
-                null!));
+                null!,
+                _mockStructuredLogging.Object));
         
         exception.ParamName.Should().Be("cache");
     }
@@ -620,7 +650,7 @@ public class DataProcessingServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.GetDataSetAsync(id, "user123"));
         
-        exception.Message.Should().Contain("Failed to complete GetDataSetAsync for dataset ID");
+        exception.Message.Should().Contain("Failed to complete TestOperation for dataset ID");
         exception.InnerException.Should().BeOfType<ArgumentException>();
         exception.InnerException!.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
     }
@@ -635,7 +665,7 @@ public class DataProcessingServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.GetDataSetAsync(1, userId!));
         
-        exception.Message.Should().Contain("Failed to complete GetDataSetAsync for dataset ID 1");
+        exception.Message.Should().Contain("Failed to complete TestOperation for dataset ID 1");
         exception.InnerException.Should().BeOfType<ArgumentException>();
         exception.InnerException!.Message.Should().Contain("User ID is required");
     }
@@ -649,7 +679,7 @@ public class DataProcessingServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.GetDataSetsByUserAsync("user123", page));
         
-        exception.Message.Should().Contain("Failed to complete GetDataSetsByUserAsync for user user123");
+        exception.Message.Should().Contain("Failed to complete TestOperation for user user123");
         exception.InnerException.Should().BeOfType<ArgumentException>();
         exception.InnerException!.Message.Should().Contain("Page must be positive");
     }
@@ -664,7 +694,7 @@ public class DataProcessingServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.GetDataSetsByUserAsync("user123", 1, pageSize));
         
-        exception.Message.Should().Contain("Failed to complete GetDataSetsByUserAsync for user user123");
+        exception.Message.Should().Contain("Failed to complete TestOperation for user user123");
         exception.InnerException.Should().BeOfType<ArgumentException>();
         exception.InnerException!.Message.Should().Contain("Page size must be between 1 and 100");
     }

@@ -22,10 +22,13 @@ public class DataProcessingService : IDataProcessingService
     private readonly IMapper _mapper;
     private readonly ILogger<DataProcessingService> _logger;
     private readonly IMemoryCache _cache;
+    private readonly IStructuredLoggingService _structuredLogging;
     private readonly Random _chaosRandom;
     private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(5);
     private readonly TimeSpan _defaultTimeout = TimeSpan.FromMinutes(10);
     private readonly TimeSpan _quickTimeout = TimeSpan.FromSeconds(30);
+
+
 
     public DataProcessingService(
         IDataSetRepository dataSetRepository,
@@ -33,7 +36,8 @@ public class DataProcessingService : IDataProcessingService
         IAuditService auditService,
         IMapper mapper,
         ILogger<DataProcessingService> logger,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        IStructuredLoggingService structuredLogging)
     {
         _dataSetRepository = dataSetRepository ?? throw new ArgumentNullException(nameof(dataSetRepository));
         _fileUploadService = fileUploadService ?? throw new ArgumentNullException(nameof(fileUploadService));
@@ -41,16 +45,23 @@ public class DataProcessingService : IDataProcessingService
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _structuredLogging = structuredLogging ?? throw new ArgumentNullException(nameof(structuredLogging));
         _chaosRandom = new Random();
     }
+
+
 
     public async Task<DataSetUploadResponse> UploadDataSetAsync(FileUploadRequest fileRequest, CreateDataSetDto createDto)
     {
         var correlationId = GetCorrelationId();
-        var operationName = nameof(UploadDataSetAsync);
-        
-        _logger.LogInformation(AppConstants.LogMessages.STARTING_OPERATION_WITH_FILE,
-            operationName, fileRequest?.FileName, createDto?.UserId, correlationId);
+        var context = _structuredLogging.CreateContext(
+            nameof(UploadDataSetAsync), 
+            correlationId, 
+            createDto?.UserId,
+            new Dictionary<string, object>
+            {
+                ["FileName"] = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN
+            });
 
         // Validate inputs first (before try-catch so exceptions are thrown)
         ValidateUploadInputs(fileRequest!, createDto!);
@@ -60,64 +71,71 @@ public class DataProcessingService : IDataProcessingService
             // Chaos engineering: Simulate processing delay
             if (_chaosRandom.NextDouble() < 0.001) // 0.1% probability
             {
-                _logger.LogWarning("Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}", correlationId);
+                _structuredLogging.LogStep(context, "Chaos engineering delay", new Dictionary<string, object>
+                {
+                    ["DelayMs"] = _chaosRandom.Next(1000, 5000)
+                });
                 await Task.Delay(_chaosRandom.Next(1000, 5000)); // 1-5 second delay
             }
 
             // Validate file
-            _logger.LogInformation("Validating file {FileName}. CorrelationId: {CorrelationId}", fileRequest!.FileName, correlationId);
+            _structuredLogging.LogStep(context, "File validation started");
             if (!await ExecuteWithTimeoutAsync(
-                () => _fileUploadService.ValidateFileAsync(fileRequest),
+                () => _fileUploadService.ValidateFileAsync(fileRequest!),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_ValidateFile"))
+                $"{context.OperationName}_ValidateFile"))
             {
-                _logger.LogWarning("File validation failed for {FileName}. CorrelationId: {CorrelationId}", 
-                    fileRequest.FileName, correlationId);
+                _structuredLogging.LogStep(context, "File validation failed");
+                _structuredLogging.LogSummary(context, false, "Invalid file format or size");
                 return new DataSetUploadResponse
                 {
                     Success = false,
                     Message = "Invalid file format or size"
                 };
             }
-            _logger.LogInformation("File validation passed for {FileName}. CorrelationId: {CorrelationId}", 
-                fileRequest.FileName, correlationId);
+            _structuredLogging.LogStep(context, "File validation passed");
 
             // Save file
-            _logger.LogInformation("Saving file {FileName} to storage. CorrelationId: {CorrelationId}", 
-                fileRequest.FileName, correlationId);
+            _structuredLogging.LogStep(context, "File save started");
             var filePath = await ExecuteWithTimeoutAsync(
-                () => _fileUploadService.SaveFileAsync(fileRequest),
+                () => _fileUploadService.SaveFileAsync(fileRequest!),
                 _defaultTimeout,
                 correlationId,
-                $"{operationName}_SaveFile");
-            _logger.LogInformation("File saved successfully to {FilePath}. CorrelationId: {CorrelationId}", 
-                filePath, correlationId);
+                $"{context.OperationName}_SaveFile");
+            _structuredLogging.LogStep(context, "File saved", new Dictionary<string, object>
+            {
+                ["FilePath"] = filePath
+            });
 
             // Process file and create dataset
-            _logger.LogInformation("Processing file {FilePath}. CorrelationId: {CorrelationId}", filePath, correlationId);
-            var dataSet = await ExecuteWithTimeoutAsync<DataSet>(
-                () => _fileUploadService.ProcessFileAsync(filePath, Path.GetExtension(fileRequest.FileName)),
+            _structuredLogging.LogStep(context, "File processing started");
+            var dataSet = await ExecuteWithTimeoutAsync(
+                () => _fileUploadService.ProcessFileAsync(filePath, Path.GetExtension(fileRequest!.FileName)),
                 _defaultTimeout,
                 correlationId,
-                $"{operationName}_ProcessFile");
-            _logger.LogInformation("File processing completed. Rows: {RowCount}, Columns: {ColumnCount}, FileSize: {FileSize}. CorrelationId: {CorrelationId}", 
-                dataSet.RowCount, dataSet.ColumnCount, dataSet.FileSize, correlationId);
+                $"{context.OperationName}_ProcessFile");
+            _structuredLogging.LogStep(context, "File processing completed", new Dictionary<string, object>
+            {
+                ["RowCount"] = dataSet.RowCount,
+                ["ColumnCount"] = dataSet.ColumnCount,
+                ["FileSize"] = dataSet.FileSize
+            });
             
             // Update with user-provided information
-            dataSet.Name = createDto!.Name;
-            dataSet.Description = createDto.Description;
-            dataSet.UserId = createDto.UserId;
+            dataSet.Name = createDto!.Name ?? "Unnamed Dataset";
+            dataSet.Description = createDto.Description ?? string.Empty;
+            dataSet.UserId = createDto.UserId ?? AppConstants.Messages.UNKNOWN;
 
             // Save to database
-            _logger.LogInformation("Saving dataset to database. CorrelationId: {CorrelationId}", correlationId);
+            _structuredLogging.LogStep(context, "Database save started");
             var savedDataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.AddAsync(dataSet),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_SaveToDatabase");
-            _logger.LogInformation("Dataset saved to database with ID {DataSetId}. CorrelationId: {CorrelationId}", 
-                savedDataSet.Id, correlationId);
+                $"{context.OperationName}_SaveToDatabase");
+            context.SetMetadata("DataSetId", savedDataSet.Id);
+            _structuredLogging.LogStep(context, "Database save completed");
 
             // Clear cache for this user
             _cache.Remove($"stats_{createDto.UserId}");
@@ -126,10 +144,10 @@ public class DataProcessingService : IDataProcessingService
             await ExecuteWithTimeoutAsync(
                 () => _auditService.LogDataSetActionAsync(
                     savedDataSet.Id,
-                    createDto.UserId,
+                    createDto.UserId ?? AppConstants.Messages.UNKNOWN,
                     "Created",
                     new { 
-                        fileName = fileRequest.FileName,
+                        fileName = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN,
                         fileSize = dataSet.FileSize,
                         rowCount = dataSet.RowCount,
                         columnCount = dataSet.ColumnCount,
@@ -137,10 +155,9 @@ public class DataProcessingService : IDataProcessingService
                     }),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_AuditLog");
+                $"{context.OperationName}_AuditLog");
 
-            _logger.LogInformation("File upload completed successfully. Dataset ID: {DataSetId}, File: {FilePath}. CorrelationId: {CorrelationId}", 
-                savedDataSet.Id, filePath, correlationId);
+            _structuredLogging.LogSummary(context, true);
 
             return new DataSetUploadResponse
             {
@@ -151,8 +168,7 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
-                operationName, fileRequest?.FileName, createDto?.UserId, correlationId);
+            _structuredLogging.LogSummary(context, false, ex.Message);
             return new DataSetUploadResponse
             {
                 Success = false,
@@ -164,153 +180,213 @@ public class DataProcessingService : IDataProcessingService
     public async Task<DataSetDto?> GetDataSetAsync(int id, string userId)
     {
         var correlationId = GetCorrelationId();
-        var operationName = nameof(GetDataSetAsync);
-        
-        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_USER,
-            operationName, id, userId, correlationId);
+        var context = _structuredLogging.CreateContext(
+            nameof(GetDataSetAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["DataSetId"] = id
+            });
 
         try
         {
+            _structuredLogging.LogStep(context, "Input validation started");
             ValidateGetDataSetInputs(id, userId);
+            _structuredLogging.LogStep(context, "Input validation completed");
 
+            _structuredLogging.LogStep(context, "Database retrieval started");
             var dataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByIdAsync(id),
                 _quickTimeout,
                 correlationId,
-                operationName);
+                context.OperationName);
+            _structuredLogging.LogStep(context, "Database retrieval completed");
 
             if (dataSet?.UserId != userId)
             {
-                _logger.LogWarning("Dataset {DataSetId} not found or access denied for user {UserId}. CorrelationId: {CorrelationId}", 
-                    id, userId, correlationId);
+                _structuredLogging.LogStep(context, "Access denied - user mismatch", new Dictionary<string, object>
+                {
+                    ["ExpectedUserId"] = userId,
+                    ["ActualUserId"] = dataSet?.UserId ?? "null"
+                });
+                _structuredLogging.LogSummary(context, false, "Dataset not found or access denied");
                 return null;
             }
 
-            // Log audit trail for data access
+            _structuredLogging.LogStep(context, "Audit logging started");
             await ExecuteWithTimeoutAsync(
                 () => _auditService.LogDataSetActionAsync(id, userId, "Viewed"),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_AuditLog");
+                $"{context.OperationName}_AuditLog");
+            _structuredLogging.LogStep(context, "Audit logging completed");
             
+            _structuredLogging.LogStep(context, "DTO mapping started");
             var result = _mapper.Map<DataSetDto>(dataSet);
+            _structuredLogging.LogStep(context, "DTO mapping completed");
             
-            _logger.LogDebug("Successfully completed {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
-                operationName, id, userId, correlationId);
-            
+            _structuredLogging.LogSummary(context, true);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
-                operationName, id, userId, correlationId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {id}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for dataset ID {id}", ex);
         }
     }
 
     public async Task<IEnumerable<DataSetDto>> GetDataSetsByUserAsync(string userId, int page = 1, int pageSize = 20)
     {
         var correlationId = GetCorrelationId();
-        var operationName = nameof(GetDataSetsByUserAsync);
-        
-        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_PAGINATION,
-            operationName, userId, page, pageSize, correlationId);
+        var context = _structuredLogging.CreateContext(
+            nameof(GetDataSetsByUserAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["Page"] = page,
+                ["PageSize"] = pageSize
+            });
 
         try
         {
+            _structuredLogging.LogStep(context, "Input validation started");
             ValidatePaginationInputs(page, pageSize);
             ValidateUserId(userId);
+            _structuredLogging.LogStep(context, "Input validation completed");
 
+            _structuredLogging.LogStep(context, "Database retrieval started");
             var dataSets = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByUserIdAsync(userId, false),
                 _quickTimeout,
                 correlationId,
-                operationName);
+                context.OperationName);
+            _structuredLogging.LogStep(context, "Database retrieval completed", new Dictionary<string, object>
+            {
+                ["TotalDataSets"] = dataSets.Count()
+            });
 
+            _structuredLogging.LogStep(context, "Pagination processing started");
             var pagedDataSets = dataSets
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
+            _structuredLogging.LogStep(context, "Pagination processing completed", new Dictionary<string, object>
+            {
+                ["PagedDataSets"] = pagedDataSets.Count
+            });
 
+            _structuredLogging.LogStep(context, "DTO mapping started");
             var result = _mapper.Map<IEnumerable<DataSetDto>>(pagedDataSets);
+            _structuredLogging.LogStep(context, "DTO mapping completed");
             
-            _logger.LogDebug("Successfully completed {Operation} for user: {UserId}, retrieved {Count} datasets (page {Page}). CorrelationId: {CorrelationId}", 
-                operationName, userId, pagedDataSets.Count, page, correlationId);
-            
+            _structuredLogging.LogSummary(context, true);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for user {UserId}. CorrelationId: {CorrelationId}", 
-                operationName, userId, correlationId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for user {userId}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for user {userId}", ex);
         }
     }
 
     public async Task<bool> DeleteDataSetAsync(int id, string userId)
     {
         var correlationId = GetCorrelationId();
-        var operationName = nameof(DeleteDataSetAsync);
-        
-        _logger.LogInformation(AppConstants.LogMessages.STARTING_OPERATION_WITH_USER,
-            operationName, id, userId, correlationId);
+        var context = _structuredLogging.CreateContext(
+            nameof(DeleteDataSetAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["DataSetId"] = id
+            });
 
         try
         {
+            _structuredLogging.LogStep(context, "Input validation started");
             ValidateDeleteInputs(id, userId);
+            _structuredLogging.LogStep(context, "Input validation completed");
 
             // Chaos engineering: Simulate deletion failure
             if (_chaosRandom.NextDouble() < 0.0003) // 0.03% probability
             {
-                _logger.LogWarning("Chaos engineering: Simulating deletion failure. CorrelationId: {CorrelationId}", correlationId);
+                _structuredLogging.LogStep(context, "Chaos engineering: Simulating deletion failure", new Dictionary<string, object>
+                {
+                    ["ChaosType"] = "DeletionFailure",
+                    ["Probability"] = 0.0003
+                });
                 throw new InvalidOperationException("Simulated deletion failure (chaos engineering)");
             }
 
+            _structuredLogging.LogStep(context, "Dataset retrieval started");
             var dataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByIdAsync(id),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_GetDataSet");
+                $"{context.OperationName}_GetDataSet");
+            _structuredLogging.LogStep(context, "Dataset retrieval completed");
 
             if (dataSet == null || dataSet.UserId != userId)
             {
-                _logger.LogWarning("Dataset {DataSetId} not found or access denied for user {UserId}. CorrelationId: {CorrelationId}", 
-                    id, userId, correlationId);
+                _structuredLogging.LogStep(context, "Access denied - dataset not found or user mismatch", new Dictionary<string, object>
+                {
+                    ["ExpectedUserId"] = userId,
+                    ["ActualUserId"] = dataSet?.UserId ?? "null",
+                    ["DataSetFound"] = dataSet != null
+                });
+                _structuredLogging.LogSummary(context, false, "Dataset not found or access denied");
                 return false;
             }
 
             // Delete the file
             if (!string.IsNullOrEmpty(dataSet.FilePath))
             {
+                _structuredLogging.LogStep(context, "File deletion started", new Dictionary<string, object>
+                {
+                    ["FilePath"] = dataSet.FilePath
+                });
                 try
                 {
                     await ExecuteWithTimeoutAsync(
                         () => _fileUploadService.DeleteFileAsync(dataSet.FilePath),
                         _quickTimeout,
                         correlationId,
-                        $"{operationName}_DeleteFile");
-                    _logger.LogDebug("File deleted successfully: {FilePath}. CorrelationId: {CorrelationId}", 
-                        dataSet.FilePath, correlationId);
+                        $"{context.OperationName}_DeleteFile");
+                    _structuredLogging.LogStep(context, "File deletion completed successfully");
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to delete file {FilePath}, continuing with database deletion. CorrelationId: {CorrelationId}", 
-                        dataSet.FilePath, correlationId);
+                    _structuredLogging.LogStep(context, "File deletion failed, continuing with database deletion", new Dictionary<string, object>
+                    {
+                        ["FileDeletionError"] = ex.Message
+                    });
                 }
             }
+            else
+            {
+                _structuredLogging.LogStep(context, "No file path to delete");
+            }
 
+            _structuredLogging.LogStep(context, "Database deletion started");
             var result = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.DeleteAsync(id),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_DeleteFromDatabase");
+                $"{context.OperationName}_DeleteFromDatabase");
+            _structuredLogging.LogStep(context, "Database deletion completed", new Dictionary<string, object>
+            {
+                ["DeletionResult"] = result
+            });
             
             if (result)
             {
-                // Clear cache for this user
+                _structuredLogging.LogStep(context, "Cache clearing started");
                 _cache.Remove($"stats_{userId}");
+                _structuredLogging.LogStep(context, "Cache clearing completed");
 
-                // Log audit trail for soft delete
+                _structuredLogging.LogStep(context, "Audit logging started");
                 await ExecuteWithTimeoutAsync(
                     () => _auditService.LogDataSetActionAsync(
                         id, 
@@ -323,146 +399,189 @@ public class DataProcessingService : IDataProcessingService
                         }),
                     _quickTimeout,
                     correlationId,
-                    $"{operationName}_AuditLog");
+                    $"{context.OperationName}_AuditLog");
+                _structuredLogging.LogStep(context, "Audit logging completed");
 
-                _logger.LogInformation("Successfully completed {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
-                    operationName, id, userId, correlationId);
+                _structuredLogging.LogSummary(context, true);
             }
             else
             {
-                _logger.LogWarning(AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
-                    operationName, id, userId, correlationId);
+                _structuredLogging.LogSummary(context, false, "Database deletion failed");
             }
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
-                operationName, id, userId, correlationId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {id}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for dataset ID {id}", ex);
         }
     }
 
     public async Task<bool> RestoreDataSetAsync(int id, string userId)
     {
         var correlationId = GetCorrelationId();
-        var operationName = nameof(RestoreDataSetAsync);
-        
-        _logger.LogInformation(AppConstants.LogMessages.STARTING_OPERATION_WITH_USER,
-            operationName, id, userId, correlationId);
+        var context = _structuredLogging.CreateContext(
+            nameof(RestoreDataSetAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["DataSetId"] = id
+            });
 
         try
         {
+            _structuredLogging.LogStep(context, "Input validation started");
             ValidateRestoreInputs(id, userId);
+            _structuredLogging.LogStep(context, "Input validation completed");
 
+            _structuredLogging.LogStep(context, "Dataset retrieval started");
             var dataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByIdAsync(id),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_GetDataSet");
+                $"{context.OperationName}_GetDataSet");
+            _structuredLogging.LogStep(context, "Dataset retrieval completed");
 
             if (dataSet == null || dataSet.UserId != userId)
             {
-                _logger.LogWarning("Dataset {DataSetId} not found or access denied for user {UserId}. CorrelationId: {CorrelationId}", 
-                    id, userId, correlationId);
+                _structuredLogging.LogStep(context, "Access denied - dataset not found or user mismatch", new Dictionary<string, object>
+                {
+                    ["ExpectedUserId"] = userId,
+                    ["ActualUserId"] = dataSet?.UserId ?? "null",
+                    ["DataSetFound"] = dataSet != null
+                });
+                _structuredLogging.LogSummary(context, false, "Dataset not found or access denied");
                 return false;
             }
 
+            _structuredLogging.LogStep(context, "Database restore started");
             var result = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.RestoreAsync(id),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_RestoreFromDatabase");
+                $"{context.OperationName}_RestoreFromDatabase");
+            _structuredLogging.LogStep(context, "Database restore completed", new Dictionary<string, object>
+            {
+                ["RestoreResult"] = result
+            });
             
             if (result)
             {
-                // Clear cache for this user
+                _structuredLogging.LogStep(context, "Cache clearing started");
                 _cache.Remove($"stats_{userId}");
+                _structuredLogging.LogStep(context, "Cache clearing completed");
 
-                // Log audit trail for restore
+                _structuredLogging.LogStep(context, "Audit logging started");
                 await ExecuteWithTimeoutAsync(
                     () => _auditService.LogDataSetActionAsync(id, userId, "Restored"),
                     _quickTimeout,
                     correlationId,
-                    $"{operationName}_AuditLog");
+                    $"{context.OperationName}_AuditLog");
+                _structuredLogging.LogStep(context, "Audit logging completed");
 
-                _logger.LogInformation("Successfully completed {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
-                    operationName, id, userId, correlationId);
+                _structuredLogging.LogSummary(context, true);
             }
             else
             {
-                _logger.LogWarning(AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
-                    operationName, id, userId, correlationId);
+                _structuredLogging.LogSummary(context, false, "Database restore failed");
             }
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
-                operationName, id, userId, correlationId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {id}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for dataset ID {id}", ex);
         }
     }
 
     public async Task<bool> HardDeleteDataSetAsync(int id, string userId)
     {
         var correlationId = GetCorrelationId();
-        var operationName = nameof(HardDeleteDataSetAsync);
-        
-        _logger.LogInformation(AppConstants.LogMessages.STARTING_OPERATION_WITH_USER,
-            operationName, id, userId, correlationId);
+        var context = _structuredLogging.CreateContext(
+            nameof(HardDeleteDataSetAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["DataSetId"] = id
+            });
 
         try
         {
+            _structuredLogging.LogStep(context, "Input validation started");
             ValidateHardDeleteInputs(id, userId);
+            _structuredLogging.LogStep(context, "Input validation completed");
 
+            _structuredLogging.LogStep(context, "Dataset retrieval started");
             var dataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.GetByIdAsync(id),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_GetDataSet");
+                $"{context.OperationName}_GetDataSet");
+            _structuredLogging.LogStep(context, "Dataset retrieval completed");
 
             if (dataSet == null || dataSet.UserId != userId)
             {
-                _logger.LogWarning("Dataset {DataSetId} not found or access denied for user {UserId}. CorrelationId: {CorrelationId}", 
-                    id, userId, correlationId);
+                _structuredLogging.LogStep(context, "Access denied - dataset not found or user mismatch", new Dictionary<string, object>
+                {
+                    ["ExpectedUserId"] = userId,
+                    ["ActualUserId"] = dataSet?.UserId ?? "null",
+                    ["DataSetFound"] = dataSet != null
+                });
+                _structuredLogging.LogSummary(context, false, "Dataset not found or access denied");
                 return false;
             }
 
             // Delete the file
             if (!string.IsNullOrEmpty(dataSet.FilePath))
             {
+                _structuredLogging.LogStep(context, "File deletion started", new Dictionary<string, object>
+                {
+                    ["FilePath"] = dataSet.FilePath
+                });
                 try
                 {
                     await ExecuteWithTimeoutAsync(
                         () => _fileUploadService.DeleteFileAsync(dataSet.FilePath),
                         _quickTimeout,
                         correlationId,
-                        $"{operationName}_DeleteFile");
-                    _logger.LogDebug("File deleted successfully: {FilePath}. CorrelationId: {CorrelationId}", 
-                        dataSet.FilePath, correlationId);
+                        $"{context.OperationName}_DeleteFile");
+                    _structuredLogging.LogStep(context, "File deletion completed successfully");
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to delete file {FilePath}, continuing with database deletion. CorrelationId: {CorrelationId}", 
-                        dataSet.FilePath, correlationId);
+                    _structuredLogging.LogStep(context, "File deletion failed, continuing with database deletion", new Dictionary<string, object>
+                    {
+                        ["FileDeletionError"] = ex.Message
+                    });
                 }
             }
+            else
+            {
+                _structuredLogging.LogStep(context, "No file path to delete");
+            }
 
+            _structuredLogging.LogStep(context, "Database hard delete started");
             var result = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.HardDeleteAsync(id),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_HardDeleteFromDatabase");
+                $"{context.OperationName}_HardDeleteFromDatabase");
+            _structuredLogging.LogStep(context, "Database hard delete completed", new Dictionary<string, object>
+            {
+                ["HardDeleteResult"] = result
+            });
             
             if (result)
             {
-                // Clear cache for this user
+                _structuredLogging.LogStep(context, "Cache clearing started");
                 _cache.Remove($"stats_{userId}");
+                _structuredLogging.LogStep(context, "Cache clearing completed");
 
-                // Log audit trail for hard delete
+                _structuredLogging.LogStep(context, "Audit logging started");
                 await ExecuteWithTimeoutAsync(
                     () => _auditService.LogDataSetActionAsync(
                         id, 
@@ -475,337 +594,449 @@ public class DataProcessingService : IDataProcessingService
                         }),
                     _quickTimeout,
                     correlationId,
-                    $"{operationName}_AuditLog");
+                    $"{context.OperationName}_AuditLog");
+                _structuredLogging.LogStep(context, "Audit logging completed");
 
-                _logger.LogInformation("Successfully completed {Operation} for ID: {DataSetId}, user: {UserId}. CorrelationId: {CorrelationId}", 
-                    operationName, id, userId, correlationId);
+                _structuredLogging.LogSummary(context, true);
             }
             else
             {
-                _logger.LogWarning(AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
-                    operationName, id, userId, correlationId);
+                _structuredLogging.LogSummary(context, false, "Database hard delete failed");
             }
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
-                operationName, id, userId, correlationId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {id}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for dataset ID {id}", ex);
         }
     }
 
     public async Task<string?> GetDataSetPreviewAsync(int id, int rows, string userId)
     {
         var correlationId = GetCorrelationId();
-        var operationName = nameof(GetDataSetPreviewAsync);
-        
-        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_ROWS,
-            operationName, id, rows, userId, correlationId);
+        var context = _structuredLogging.CreateContext(
+            nameof(GetDataSetPreviewAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["DataSetId"] = id,
+                ["RequestedRows"] = rows
+            });
 
         try
         {
+            _structuredLogging.LogStep(context, "Input validation started");
             ValidatePreviewInputs(id, rows, userId);
+            _structuredLogging.LogStep(context, "Input validation completed");
 
+            _structuredLogging.LogStep(context, "Dataset retrieval started");
             var dataSet = await ExecuteWithTimeoutAsync<DataSet?>(
                 () => _dataSetRepository.GetByIdAsync(id),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_GetDataSet");
+                $"{context.OperationName}_GetDataSet");
+            _structuredLogging.LogStep(context, "Dataset retrieval completed");
 
             if (dataSet == null || dataSet.UserId != userId || string.IsNullOrEmpty(dataSet.PreviewData))
             {
-                _logger.LogWarning("Dataset {DataSetId} not found, access denied, or no preview data for user {UserId}. CorrelationId: {CorrelationId}", 
-                    id, userId, correlationId);
+                _structuredLogging.LogStep(context, "Access denied or no preview data", new Dictionary<string, object>
+                {
+                    ["ExpectedUserId"] = userId,
+                    ["ActualUserId"] = dataSet?.UserId ?? "null",
+                    ["DataSetFound"] = dataSet != null,
+                    ["HasPreviewData"] = !string.IsNullOrEmpty(dataSet?.PreviewData)
+                });
+                _structuredLogging.LogSummary(context, false, "Dataset not found, access denied, or no preview data");
                 return null;
             }
 
-            // Log audit trail for preview access
+            _structuredLogging.LogStep(context, "Audit logging started");
             await ExecuteWithTimeoutAsync(
                 () => _auditService.LogDataSetActionAsync(id, userId, "Previewed", new { rows }),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_AuditLog");
+                $"{context.OperationName}_AuditLog");
+            _structuredLogging.LogStep(context, "Audit logging completed");
 
-            _logger.LogDebug("Successfully completed {Operation} for ID: {DataSetId}. CorrelationId: {CorrelationId}", 
-                operationName, id, correlationId);
-            
+            _structuredLogging.LogSummary(context, true);
             return dataSet.PreviewData;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
-                operationName, id, userId, correlationId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {id}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for dataset ID {id}", ex);
         }
     }
 
     public async Task<object?> GetDataSetSchemaAsync(int id, string userId)
     {
         var correlationId = GetCorrelationId();
-        var operationName = nameof(GetDataSetSchemaAsync);
-        
-        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_USER,
-            operationName, id, userId, correlationId);
+        var context = _structuredLogging.CreateContext(
+            nameof(GetDataSetSchemaAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["DataSetId"] = id
+            });
 
         try
         {
+            _structuredLogging.LogStep(context, "Input validation started");
             ValidateSchemaInputs(id, userId);
+            _structuredLogging.LogStep(context, "Input validation completed");
 
+            _structuredLogging.LogStep(context, "Dataset retrieval started");
             var dataSet = await ExecuteWithTimeoutAsync<DataSet?>(
                 () => _dataSetRepository.GetByIdAsync(id),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_GetDataSet");
+                $"{context.OperationName}_GetDataSet");
+            _structuredLogging.LogStep(context, "Dataset retrieval completed");
 
             if (dataSet == null || dataSet.UserId != userId || string.IsNullOrEmpty(dataSet.Schema))
             {
-                _logger.LogWarning("Dataset {DataSetId} not found, access denied, or no schema for user {UserId}. CorrelationId: {CorrelationId}", 
-                    id, userId, correlationId);
+                _structuredLogging.LogStep(context, "Access denied or no schema", new Dictionary<string, object>
+                {
+                    ["ExpectedUserId"] = userId,
+                    ["ActualUserId"] = dataSet?.UserId ?? "null",
+                    ["DataSetFound"] = dataSet != null,
+                    ["HasSchema"] = !string.IsNullOrEmpty(dataSet?.Schema)
+                });
+                _structuredLogging.LogSummary(context, false, "Dataset not found, access denied, or no schema");
                 return null;
             }
 
+            _structuredLogging.LogStep(context, "Schema deserialization started");
             var schema = await DeserializeSchemaSafelyAsync(dataSet.Schema, id, correlationId);
+            _structuredLogging.LogStep(context, "Schema deserialization completed");
             
-            _logger.LogDebug("Successfully completed {Operation} for ID: {DataSetId}. CorrelationId: {CorrelationId}", 
-                operationName, id, correlationId);
-            
+            _structuredLogging.LogSummary(context, true);
             return schema;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, AppConstants.LogMessages.OPERATION_FAILED_WITH_USER, 
-                operationName, id, userId, correlationId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {id}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for dataset ID {id}", ex);
         }
     }
 
     public async Task<IEnumerable<DataSetDto>> GetDeletedDataSetsAsync(string userId, int page = 1, int pageSize = 20)
     {
         var correlationId = GetCorrelationId();
-        var operationName = nameof(GetDeletedDataSetsAsync);
-        
-        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_PAGINATION,
-            operationName, userId, page, pageSize, correlationId);
+        var context = _structuredLogging.CreateContext(
+            nameof(GetDeletedDataSetsAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["Page"] = page,
+                ["PageSize"] = pageSize
+            });
 
         try
         {
+            _structuredLogging.LogStep(context, "Input validation started");
             ValidatePaginationInputs(page, pageSize);
             ValidateUserId(userId);
+            _structuredLogging.LogStep(context, "Input validation completed");
 
+            _structuredLogging.LogStep(context, "Database retrieval started");
             var dataSets = await ExecuteWithTimeoutAsync<IEnumerable<DataSet>>(
                 () => _dataSetRepository.GetByUserIdAsync(userId, includeDeleted: true),
                 _quickTimeout,
                 correlationId,
-                operationName);
+                context.OperationName);
+            _structuredLogging.LogStep(context, "Database retrieval completed", new Dictionary<string, object>
+            {
+                ["TotalDataSets"] = dataSets.Count()
+            });
 
+            _structuredLogging.LogStep(context, "Filtering deleted datasets started");
             var deletedDataSets = dataSets
                 .Where(d => d.IsDeleted)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
+            _structuredLogging.LogStep(context, "Filtering deleted datasets completed", new Dictionary<string, object>
+            {
+                ["DeletedDataSets"] = deletedDataSets.Count
+            });
 
+            _structuredLogging.LogStep(context, "DTO mapping started");
             var result = _mapper.Map<IEnumerable<DataSetDto>>(deletedDataSets);
+            _structuredLogging.LogStep(context, "DTO mapping completed");
             
-            _logger.LogDebug("Successfully completed {Operation} for user: {UserId}, retrieved {Count} deleted datasets (page {Page}). CorrelationId: {CorrelationId}", 
-                operationName, userId, deletedDataSets.Count, page, correlationId);
-            
+            _structuredLogging.LogSummary(context, true);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for user {UserId}. CorrelationId: {CorrelationId}", 
-                operationName, userId, correlationId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for user {userId}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for user {userId}", ex);
         }
     }
 
     public async Task<IEnumerable<DataSetDto>> SearchDataSetsAsync(string searchTerm, string userId, int page = 1, int pageSize = 20)
     {
         var correlationId = GetCorrelationId();
-        var operationName = nameof(SearchDataSetsAsync);
-        
-        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_SEARCH,
-            operationName, userId, searchTerm, page, pageSize, correlationId);
+        var context = _structuredLogging.CreateContext(
+            nameof(SearchDataSetsAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["SearchTerm"] = searchTerm,
+                ["Page"] = page,
+                ["PageSize"] = pageSize
+            });
 
         try
         {
+            _structuredLogging.LogStep(context, "Input validation started");
             ValidateSearchInputs(searchTerm, userId, page, pageSize);
+            _structuredLogging.LogStep(context, "Input validation completed");
 
+            _structuredLogging.LogStep(context, "Search operation started");
             var dataSets = await ExecuteWithTimeoutAsync<IEnumerable<DataSet>>(
                 () => _dataSetRepository.SearchAsync(searchTerm, userId),
                 _quickTimeout,
                 correlationId,
-                operationName);
+                context.OperationName);
+            _structuredLogging.LogStep(context, "Search operation completed", new Dictionary<string, object>
+            {
+                ["TotalMatches"] = dataSets.Count()
+            });
 
+            _structuredLogging.LogStep(context, "Pagination processing started");
             var pagedDataSets = dataSets
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
+            _structuredLogging.LogStep(context, "Pagination processing completed", new Dictionary<string, object>
+            {
+                ["PagedResults"] = pagedDataSets.Count
+            });
 
+            _structuredLogging.LogStep(context, "DTO mapping started");
             var result = _mapper.Map<IEnumerable<DataSetDto>>(pagedDataSets);
+            _structuredLogging.LogStep(context, "DTO mapping completed");
             
-            _logger.LogDebug("Successfully completed {Operation} for user: {UserId}, found {Count} datasets matching '{SearchTerm}' (page {Page}). CorrelationId: {CorrelationId}", 
-                operationName, userId, pagedDataSets.Count, searchTerm, page, correlationId);
-            
+            _structuredLogging.LogSummary(context, true);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for user {UserId} with term '{SearchTerm}'. CorrelationId: {CorrelationId}", 
-                operationName, userId, searchTerm, correlationId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for user {userId} with search term '{searchTerm}'", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for user {userId} with search term '{searchTerm}'", ex);
         }
     }
 
     public async Task<IEnumerable<DataSetDto>> GetDataSetsByFileTypeAsync(FileType fileType, string userId, int page = 1, int pageSize = 20)
     {
         var correlationId = GetCorrelationId();
-        var operationName = nameof(GetDataSetsByFileTypeAsync);
-        
-        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_FILETYPE,
-            operationName, fileType, userId, page, pageSize, correlationId);
+        var context = _structuredLogging.CreateContext(
+            nameof(GetDataSetsByFileTypeAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["FileType"] = fileType.ToString(),
+                ["Page"] = page,
+                ["PageSize"] = pageSize
+            });
 
         try
         {
+            _structuredLogging.LogStep(context, "Input validation started");
             ValidatePaginationInputs(page, pageSize);
             ValidateUserId(userId);
+            _structuredLogging.LogStep(context, "Input validation completed");
 
+            _structuredLogging.LogStep(context, "Database retrieval by file type started");
             var dataSets = await ExecuteWithTimeoutAsync<IEnumerable<DataSet>>(
                 () => _dataSetRepository.GetByFileTypeAsync(fileType, userId),
                 _quickTimeout,
                 correlationId,
-                operationName);
+                context.OperationName);
+            _structuredLogging.LogStep(context, "Database retrieval by file type completed", new Dictionary<string, object>
+            {
+                ["TotalDataSets"] = dataSets.Count()
+            });
 
+            _structuredLogging.LogStep(context, "Pagination processing started");
             var pagedDataSets = dataSets
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
+            _structuredLogging.LogStep(context, "Pagination processing completed", new Dictionary<string, object>
+            {
+                ["PagedDataSets"] = pagedDataSets.Count
+            });
 
+            _structuredLogging.LogStep(context, "DTO mapping started");
             var result = _mapper.Map<IEnumerable<DataSetDto>>(pagedDataSets);
+            _structuredLogging.LogStep(context, "DTO mapping completed");
             
-            _logger.LogDebug("Successfully completed {Operation} for file type {FileType}, user: {UserId}, retrieved {Count} datasets (page {Page}). CorrelationId: {CorrelationId}", 
-                operationName, fileType, userId, pagedDataSets.Count, page, correlationId);
-            
+            _structuredLogging.LogSummary(context, true);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for file type {FileType}, user {UserId}. CorrelationId: {CorrelationId}", 
-                operationName, fileType, userId, correlationId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for file type {fileType}, user {userId}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for file type {fileType}, user {userId}", ex);
         }
     }
 
     public async Task<IEnumerable<DataSetDto>> GetDataSetsByDateRangeAsync(DateTime startDate, DateTime endDate, string userId, int page = 1, int pageSize = 20)
     {
         var correlationId = GetCorrelationId();
-        var operationName = nameof(GetDataSetsByDateRangeAsync);
-        
-        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_WITH_DATERANGE,
-            operationName, startDate, endDate, userId, page, pageSize, correlationId);
+        var context = _structuredLogging.CreateContext(
+            nameof(GetDataSetsByDateRangeAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["StartDate"] = startDate.ToString("yyyy-MM-dd"),
+                ["EndDate"] = endDate.ToString("yyyy-MM-dd"),
+                ["Page"] = page,
+                ["PageSize"] = pageSize
+            });
 
         try
         {
+            _structuredLogging.LogStep(context, "Input validation started");
             ValidateDateRangeInputs(startDate, endDate, userId, page, pageSize);
+            _structuredLogging.LogStep(context, "Input validation completed");
 
+            _structuredLogging.LogStep(context, "Database retrieval by date range started");
             var dataSets = await ExecuteWithTimeoutAsync<IEnumerable<DataSet>>(
                 () => _dataSetRepository.GetByDateRangeAsync(startDate, endDate, userId),
                 _quickTimeout,
                 correlationId,
-                operationName);
+                context.OperationName);
+            _structuredLogging.LogStep(context, "Database retrieval by date range completed", new Dictionary<string, object>
+            {
+                ["TotalDataSets"] = dataSets.Count()
+            });
 
+            _structuredLogging.LogStep(context, "Pagination processing started");
             var pagedDataSets = dataSets
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
+            _structuredLogging.LogStep(context, "Pagination processing completed", new Dictionary<string, object>
+            {
+                ["PagedDataSets"] = pagedDataSets.Count
+            });
 
+            _structuredLogging.LogStep(context, "DTO mapping started");
             var result = _mapper.Map<IEnumerable<DataSetDto>>(pagedDataSets);
+            _structuredLogging.LogStep(context, "DTO mapping completed");
             
-            _logger.LogDebug("Successfully completed {Operation} for date range, user: {UserId}, retrieved {Count} datasets (page {Page}). CorrelationId: {CorrelationId}", 
-                operationName, userId, pagedDataSets.Count, page, correlationId);
-            
+            _structuredLogging.LogSummary(context, true);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for date range, user {UserId}. CorrelationId: {CorrelationId}", 
-                operationName, userId, correlationId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for date range, user {userId}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for date range, user {userId}", ex);
         }
     }
 
     public async Task<DataSetStatisticsDto> GetDataSetStatisticsAsync(string userId)
     {
         var correlationId = GetCorrelationId();
-        var operationName = nameof(GetDataSetStatisticsAsync);
-        
-        _logger.LogDebug(AppConstants.LogMessages.STARTING_OPERATION_FOR_STATISTICS,
-            operationName, userId, correlationId);
+        var context = _structuredLogging.CreateContext(
+            nameof(GetDataSetStatisticsAsync), 
+            correlationId, 
+            userId);
 
         try
         {
+            _structuredLogging.LogStep(context, "Input validation started");
             ValidateUserId(userId);
+            _structuredLogging.LogStep(context, "Input validation completed");
 
             // Chaos engineering: Simulate cache corruption
             if (_chaosRandom.NextDouble() < 0.0005) // 0.05% probability
             {
-                _logger.LogWarning("Chaos engineering: Simulating cache corruption. CorrelationId: {CorrelationId}", correlationId);
+                _structuredLogging.LogStep(context, "Chaos engineering: Simulating cache corruption", new Dictionary<string, object>
+                {
+                    ["ChaosType"] = "CacheCorruption",
+                    ["Probability"] = 0.0005
+                });
                 _cache.Remove($"stats_{userId}");
             }
 
             var cacheKey = $"stats_{userId}";
             
+            _structuredLogging.LogStep(context, "Cache lookup started");
             // Try to get from cache first
             if (_cache.TryGetValue(cacheKey, out DataSetStatisticsDto? cachedStats))
             {
-                _logger.LogDebug("Retrieved statistics from cache for user {UserId}. CorrelationId: {CorrelationId}", 
-                    userId, correlationId);
+                _structuredLogging.LogStep(context, "Statistics retrieved from cache");
+                _structuredLogging.LogSummary(context, true);
                 return cachedStats!;
             }
+            _structuredLogging.LogStep(context, "Cache miss - calculating statistics");
 
-            _logger.LogDebug("Calculating statistics for user {UserId}. CorrelationId: {CorrelationId}", 
-                userId, correlationId);
-
+            _structuredLogging.LogStep(context, "Total count calculation started");
             var totalCount = await ExecuteWithTimeoutAsync<int>(
                 () => _dataSetRepository.GetTotalCountAsync(userId),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_GetTotalCount");
+                $"{context.OperationName}_GetTotalCount");
+            _structuredLogging.LogStep(context, "Total count calculation completed", new Dictionary<string, object>
+            {
+                ["TotalCount"] = totalCount
+            });
 
+            _structuredLogging.LogStep(context, "Total size calculation started");
             var totalSize = await ExecuteWithTimeoutAsync<long>(
                 () => _dataSetRepository.GetTotalSizeAsync(userId),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_GetTotalSize");
+                $"{context.OperationName}_GetTotalSize");
+            _structuredLogging.LogStep(context, "Total size calculation completed", new Dictionary<string, object>
+            {
+                ["TotalSize"] = totalSize
+            });
 
+            _structuredLogging.LogStep(context, "Recently modified retrieval started");
             var recentlyModified = await ExecuteWithTimeoutAsync<IEnumerable<DataSet>>(
                 () => _dataSetRepository.GetRecentlyModifiedAsync(userId, 5),
                 _quickTimeout,
                 correlationId,
-                $"{operationName}_GetRecentlyModified");
+                $"{context.OperationName}_GetRecentlyModified");
+            _structuredLogging.LogStep(context, "Recently modified retrieval completed", new Dictionary<string, object>
+            {
+                ["RecentlyModifiedCount"] = recentlyModified.Count()
+            });
 
+            _structuredLogging.LogStep(context, "Statistics object creation started");
             var statistics = new DataSetStatisticsDto
             {
                 TotalCount = totalCount,
                 TotalSize = totalSize,
                 RecentlyModified = _mapper.Map<IEnumerable<DataSetDto>>(recentlyModified)
             };
+            _structuredLogging.LogStep(context, "Statistics object creation completed");
 
-            // Cache the results
+            _structuredLogging.LogStep(context, "Cache storage started");
             _cache.Set(cacheKey, statistics, _cacheExpiration);
+            _structuredLogging.LogStep(context, "Cache storage completed");
 
-            _logger.LogDebug("Successfully completed {Operation} for user {UserId}: {TotalCount} datasets, {TotalSize} bytes. CorrelationId: {CorrelationId}", 
-                operationName, userId, totalCount, totalSize, correlationId);
-
+            _structuredLogging.LogSummary(context, true);
             return statistics;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to complete {Operation} for user {UserId}. CorrelationId: {CorrelationId}", 
-                operationName, userId, correlationId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for user {userId}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for user {userId}", ex);
         }
     }
 

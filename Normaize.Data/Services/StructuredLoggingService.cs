@@ -1,12 +1,16 @@
-using Serilog.Context;
-using System.Security.Claims;
+using Microsoft.Extensions.Logging;
 using Normaize.Core.Constants;
 using Normaize.Core.Interfaces;
-using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 namespace Normaize.Data.Services;
 
+/// <summary>
+/// Implementation of structured logging service for batching log operations.
+/// Reduces logging overhead while maintaining detailed information.
+/// </summary>
 public class StructuredLoggingService : IStructuredLoggingService
 {
     private readonly ILogger<StructuredLoggingService> _logger;
@@ -18,6 +22,93 @@ public class StructuredLoggingService : IStructuredLoggingService
         _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
     }
 
+    public IOperationContext CreateContext(string operationName, string correlationId, string? userId = null, Dictionary<string, object>? additionalContext = null)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(operationName);
+        ArgumentException.ThrowIfNullOrEmpty(correlationId);
+
+        return new OperationContext
+        {
+            OperationName = operationName,
+            CorrelationId = correlationId,
+            UserId = userId ?? AppConstants.Messages.UNKNOWN,
+            Metadata = additionalContext ?? []
+        };
+    }
+
+    public void LogStep(IOperationContext context, string step, Dictionary<string, object>? additionalData = null)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentException.ThrowIfNullOrEmpty(step);
+
+        context.Steps.Add(step);
+        
+        if (additionalData != null)
+        {
+            foreach (var kvp in additionalData)
+            {
+                context.SetMetadata(kvp.Key, kvp.Value);
+            }
+        }
+    }
+
+    public void LogSummary(IOperationContext context, bool isSuccess, string? errorMessage = null)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var logData = new Dictionary<string, object>
+        {
+            ["OperationName"] = context.OperationName,
+            ["CorrelationId"] = context.CorrelationId,
+            ["UserId"] = context.UserId ?? AppConstants.Messages.UNKNOWN,
+            ["Steps"] = context.Steps,
+            ["Duration"] = context.Stopwatch.Elapsed.TotalMilliseconds,
+            ["Success"] = isSuccess
+        };
+
+        // Add all metadata
+        foreach (var kvp in context.Metadata)
+        {
+            logData[kvp.Key] = kvp.Value;
+        }
+
+        if (isSuccess)
+        {
+            _logger.LogInformation("Operation completed successfully. {@OperationData}", logData);
+        }
+        else
+        {
+            logData["ErrorMessage"] = errorMessage ?? AppConstants.Messages.UNKNOWN;
+            _logger.LogError("Operation failed. {@OperationData}", logData);
+        }
+    }
+
+    public void LogImmediateStep(IOperationContext context, string step, LogLevel level = LogLevel.Information, Dictionary<string, object>? additionalData = null)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentException.ThrowIfNullOrEmpty(step);
+
+        var logData = new Dictionary<string, object>
+        {
+            ["OperationName"] = context.OperationName,
+            ["CorrelationId"] = context.CorrelationId,
+            ["UserId"] = context.UserId ?? AppConstants.Messages.UNKNOWN,
+            ["Step"] = step,
+            ["Duration"] = context.Stopwatch.Elapsed.TotalMilliseconds
+        };
+
+        if (additionalData != null)
+        {
+            foreach (var kvp in additionalData)
+            {
+                logData[kvp.Key] = kvp.Value;
+            }
+        }
+
+        _logger.Log(level, "Operation step: {Step}. {@StepData}", step, logData);
+    }
+
+    // Backward compatibility methods
     public void LogUserAction(string action, object? data = null)
     {
         LogUserAction(action, data, LogLevel.Information);
@@ -150,13 +241,13 @@ public class StructuredLoggingService : IStructuredLoggingService
         
         var userId = GetCurrentUserId();
         var userEmail = GetCurrentUserEmail();
-        
+
         var performanceData = new
         {
             Operation = operation,
             DurationMs = durationMs,
             UserId = userId ?? AppConstants.Auth.AnonymousUser,
-            UserEmail = userEmail ?? "unknown",
+            UserEmail = userEmail ?? AppConstants.Messages.UNKNOWN,
             Timestamp = DateTime.UtcNow
         };
         
@@ -171,7 +262,8 @@ public class StructuredLoggingService : IStructuredLoggingService
 
     public IDisposable CreateUserScope(string? userId, string? userEmail)
     {
-        return LogContext.PushProperty("UserEmail", userEmail ?? "unknown");
+        // For now, return a no-op disposable since we're not using Serilog contexts
+        return new NoOpDisposable();
     }
 
     private string? GetCurrentUserId()
@@ -219,7 +311,7 @@ public class StructuredLoggingService : IStructuredLoggingService
     {
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext == null)
-            return ("unknown", "unknown");
+            return (AppConstants.Messages.UNKNOWN, AppConstants.Messages.UNKNOWN);
         
         return (httpContext.Request.Method, httpContext.Request.Path.ToString());
     }
@@ -240,5 +332,34 @@ public class StructuredLoggingService : IStructuredLoggingService
     {
         if (durationMs < 0)
             throw new ArgumentException("Duration cannot be negative", nameof(durationMs));
+    }
+
+    private class NoOpDisposable : IDisposable
+    {
+        public void Dispose() { }
+    }
+
+    private class OperationContext : IOperationContext
+    {
+        public string OperationName { get; set; } = string.Empty;
+        public string CorrelationId { get; set; } = string.Empty;
+        public string? UserId { get; set; }
+        public Dictionary<string, object> Metadata { get; set; } = [];
+        public List<string> Steps { get; set; } = [];
+        public Stopwatch Stopwatch { get; set; } = Stopwatch.StartNew();
+
+        public void SetMetadata(string key, object value)
+        {
+            Metadata[key] = value;
+        }
+
+        public T? GetMetadata<T>(string key, T? defaultValue = default)
+        {
+            if (Metadata.TryGetValue(key, out var value) && value is T typedValue)
+            {
+                return typedValue;
+            }
+            return defaultValue;
+        }
     }
 } 
