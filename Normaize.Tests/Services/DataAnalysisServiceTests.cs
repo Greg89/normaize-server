@@ -96,10 +96,12 @@ public class DataAnalysisServiceTests
     public async Task CreateAnalysisAsync_WithNullDto_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentNullException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.CreateAnalysisAsync(null!));
         
-        exception.ParamName.Should().Be("createDto");
+        exception.Message.Should().Contain("Failed to complete CreateAnalysisAsync for analysis");
+        exception.InnerException.Should().BeOfType<ArgumentNullException>();
+        ((ArgumentNullException)exception.InnerException!).ParamName.Should().Be("createDto");
     }
 
     [Theory]
@@ -117,10 +119,12 @@ public class DataAnalysisServiceTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.CreateAnalysisAsync(createDto));
         
-        exception.Message.Should().Contain("Analysis name is required");
+        exception.Message.Should().Contain("Failed to complete CreateAnalysisAsync for analysis");
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("Analysis name is required");
     }
 
     [Fact]
@@ -135,10 +139,12 @@ public class DataAnalysisServiceTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.CreateAnalysisAsync(createDto));
         
-        exception.Message.Should().Contain("Analysis name cannot exceed 255 characters");
+        exception.Message.Should().Contain("Failed to complete CreateAnalysisAsync for analysis");
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("Analysis name cannot exceed 255 characters");
     }
 
     [Fact]
@@ -153,10 +159,12 @@ public class DataAnalysisServiceTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
             _service.CreateAnalysisAsync(createDto));
         
-        exception.Message.Should().Contain("Valid dataset ID is required");
+        exception.Message.Should().Contain("Failed to complete CreateAnalysisAsync for analysis");
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("Valid dataset ID is required");
     }
 
     [Fact]

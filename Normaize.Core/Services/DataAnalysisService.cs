@@ -60,7 +60,7 @@ public class DataAnalysisService : IDataAnalysisService
         {
             _logger.LogError(ex, "Failed to complete {Operation} for analysis: {AnalysisName}. CorrelationId: {CorrelationId}", 
                 operationName, createDto?.Name, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for analysis '{createDto?.Name}'", ex);
         }
     }
 
@@ -129,7 +129,7 @@ public class DataAnalysisService : IDataAnalysisService
         {
             _logger.LogError(ex, "Failed to complete {Operation} for dataset ID: {DataSetId}. CorrelationId: {CorrelationId}", 
                 operationName, dataSetId, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {dataSetId}", ex);
         }
     }
 
@@ -160,7 +160,7 @@ public class DataAnalysisService : IDataAnalysisService
         {
             _logger.LogError(ex, "Failed to complete {Operation} for status: {Status}. CorrelationId: {CorrelationId}", 
                 operationName, status, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for status {status}", ex);
         }
     }
 
@@ -191,7 +191,7 @@ public class DataAnalysisService : IDataAnalysisService
         {
             _logger.LogError(ex, "Failed to complete {Operation} for type: {Type}. CorrelationId: {CorrelationId}", 
                 operationName, type, correlationId);
-            throw;
+            throw new InvalidOperationException($"Failed to complete {operationName} for type {type}", ex);
         }
     }
 
@@ -351,7 +351,7 @@ public class DataAnalysisService : IDataAnalysisService
     {
         if (analysis.Status == AnalysisStatus.Processing)
         {
-            throw new InvalidOperationException($"Analysis with ID {analysisId} is already in progress");
+            throw new InvalidOperationException($"Analysis with ID {analysisId} is already in progress. CorrelationId: {correlationId}");
         }
     }
 
@@ -403,7 +403,7 @@ public class DataAnalysisService : IDataAnalysisService
                 correlationId,
                 "UpdateAnalysisFailure");
             
-            throw;
+            throw new InvalidOperationException($"Failed to execute analysis of type {analysis.Type} for ID {analysis.Id}", ex);
         }
     }
 
@@ -473,9 +473,9 @@ public class DataAnalysisService : IDataAnalysisService
         {
             Type = "Normalization",
             Message = "Data normalization completed",
-            NormalizedColumns = new[] { "column1", "column2" },
-            MinValues = new { column1 = 0.0, column2 = 0.0 },
-            MaxValues = new { column1 = 1.0, column2 = 1.0 }
+            NormalizedColumns = new[] { "customer_id", "order_amount" },
+            MinValues = new { customer_id = 0.0, order_amount = 0.0 },
+            MaxValues = new { customer_id = 1.0, order_amount = 1.0 }
         };
     }
 
@@ -491,8 +491,8 @@ public class DataAnalysisService : IDataAnalysisService
             Type = "Comparison",
             Message = "Dataset comparison completed",
             SimilarityScore = 0.85,
-            Differences = new[] { "column1", "column3" },
-            CommonColumns = new[] { "column2", "column4" }
+            Differences = new[] { "customer_id", "product_code" },
+            CommonColumns = new[] { "order_amount", "sales_region" }
         };
     }
 
@@ -507,9 +507,9 @@ public class DataAnalysisService : IDataAnalysisService
         {
             Type = "Statistical",
             Message = "Statistical analysis completed",
-            Mean = new { column1 = 45.2, column2 = 78.9 },
-            Median = new { column1 = 42.0, column2 = 75.0 },
-            StandardDeviation = new { column1 = 12.5, column2 = 15.3 }
+            Mean = new { customer_id = 45.2, order_amount = 78.9 },
+            Median = new { customer_id = 42.0, order_amount = 75.0 },
+            StandardDeviation = new { customer_id = 12.5, order_amount = 15.3 }
         };
     }
 
@@ -527,7 +527,7 @@ public class DataAnalysisService : IDataAnalysisService
             RemovedRows = 15,
             FixedNullValues = 8,
             RemovedDuplicates = 3,
-            CleanedColumns = new[] { "column1", "column2", "column3" }
+            CleanedColumns = new[] { "customer_id", "order_amount", "product_code" }
         };
     }
 
@@ -543,7 +543,7 @@ public class DataAnalysisService : IDataAnalysisService
             Type = "OutlierDetection",
             Message = "Outlier detection completed",
             DetectedOutliers = 7,
-            OutlierColumns = new[] { "column1", "column2" },
+            OutlierColumns = new[] { "customer_id", "order_amount" },
             OutlierIndices = new[] { 15, 23, 45, 67, 89, 123, 156 }
         };
     }
@@ -561,12 +561,12 @@ public class DataAnalysisService : IDataAnalysisService
             Message = "Correlation analysis completed",
             CorrelationMatrix = new
             {
-                column1_column2 = 0.75,
-                column1_column3 = -0.32,
-                column2_column3 = 0.18
+                customer_id_order_amount = 0.75,
+                customer_id_product_code = -0.32,
+                order_amount_product_code = 0.18
             },
-            StrongCorrelations = new[] { "column1-column2" },
-            WeakCorrelations = new[] { "column2-column3" }
+            StrongCorrelations = new[] { "customer_id-order_amount" },
+            WeakCorrelations = new[] { "order_amount-product_code" }
         };
     }
 
