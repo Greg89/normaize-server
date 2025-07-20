@@ -11,16 +11,13 @@ public class ConfigurationValidationService : IConfigurationValidationService
 {
     private readonly ILogger<ConfigurationValidationService> _logger;
     private readonly ServiceConfigurationOptions _config;
-    private readonly HealthCheckConfiguration _healthConfig;
 
     public ConfigurationValidationService(
         ILogger<ConfigurationValidationService> logger,
-        IOptions<ServiceConfigurationOptions> config,
-        IOptions<HealthCheckConfiguration> healthConfig)
+        IOptions<ServiceConfigurationOptions> config)
     {
         _logger = logger;
         _config = config.Value;
-        _healthConfig = healthConfig.Value;
     }
 
     public ConfigurationValidationResult ValidateConfiguration(CancellationToken cancellationToken = default)
@@ -123,7 +120,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
             }
 
             stopwatch.Stop();
-            result.IsValid = !result.Errors.Any();
+            result.IsValid = result.Errors.Count == 0;
             result.ValidationDuration = stopwatch.Elapsed;
 
             return result;
@@ -155,12 +152,12 @@ public class ConfigurationValidationService : IConfigurationValidationService
             }
 
             // Validate CORS configuration
-            var corsValidation = ValidateCorsConfiguration(securityConfig.Cors, cancellationToken);
+            var corsValidation = ValidateCorsConfiguration(securityConfig.Cors);
             result.Errors.AddRange(corsValidation.Errors);
             result.Warnings.AddRange(corsValidation.Warnings);
 
             // Validate JWT configuration
-            var jwtValidation = ValidateJwtConfiguration(securityConfig.Jwt, cancellationToken);
+            var jwtValidation = ValidateJwtConfiguration(securityConfig.Jwt);
             result.Errors.AddRange(jwtValidation.Errors);
             result.Warnings.AddRange(jwtValidation.Warnings);
 
@@ -176,7 +173,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
             }
 
             stopwatch.Stop();
-            result.IsValid = !result.Errors.Any();
+            result.IsValid = result.Errors.Count == 0;
             result.ValidationDuration = stopwatch.Elapsed;
 
             return result;
@@ -210,7 +207,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
             // Validate S3 configuration if provider is S3
             if (storageConfig.Provider.Equals("S3", StringComparison.OrdinalIgnoreCase))
             {
-                var s3Validation = ValidateS3Configuration(storageConfig, cancellationToken);
+                var s3Validation = ValidateS3Configuration(storageConfig);
                 result.Errors.AddRange(s3Validation.Errors);
                 result.Warnings.AddRange(s3Validation.Warnings);
             }
@@ -222,7 +219,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
             }
 
             stopwatch.Stop();
-            result.IsValid = !result.Errors.Any();
+            result.IsValid = result.Errors.Count == 0;
             result.ValidationDuration = stopwatch.Elapsed;
 
             return result;
@@ -260,7 +257,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
             }
 
             stopwatch.Stop();
-            result.IsValid = !result.Errors.Any();
+            result.IsValid = result.Errors.Count == 0;
             result.ValidationDuration = stopwatch.Elapsed;
 
             return result;
@@ -303,7 +300,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
             }
 
             stopwatch.Stop();
-            result.IsValid = !result.Errors.Any();
+            result.IsValid = result.Errors.Count == 0;
             result.ValidationDuration = stopwatch.Elapsed;
 
             return result;
@@ -318,7 +315,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
         }
     }
 
-    private ConfigurationValidationResult ValidateCorsConfiguration(CorsConfiguration corsConfig, CancellationToken cancellationToken)
+    private static ConfigurationValidationResult ValidateCorsConfiguration(CorsConfiguration corsConfig)
     {
         var result = new ConfigurationValidationResult();
         var validationContext = new ValidationContext(corsConfig);
@@ -332,7 +329,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
         return result;
     }
 
-    private ConfigurationValidationResult ValidateJwtConfiguration(JwtConfiguration jwtConfig, CancellationToken cancellationToken)
+    private static ConfigurationValidationResult ValidateJwtConfiguration(JwtConfiguration jwtConfig)
     {
         var result = new ConfigurationValidationResult();
         var validationContext = new ValidationContext(jwtConfig);
@@ -357,7 +354,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
         return result;
     }
 
-    private ConfigurationValidationResult ValidateS3Configuration(StorageConfiguration storageConfig, CancellationToken cancellationToken)
+    private static ConfigurationValidationResult ValidateS3Configuration(StorageConfiguration storageConfig)
     {
         var result = new ConfigurationValidationResult();
 

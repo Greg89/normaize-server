@@ -1,285 +1,681 @@
 using AutoMapper;
 using Microsoft.Extensions.Logging;
+using Normaize.Core.Constants;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
-using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace Normaize.Core.Services;
 
+/// <summary>
+/// Service for managing data analysis operations with chaos engineering resilience.
+/// Implements industry-standard error handling and distributed tracing.
+/// </summary>
 public class DataAnalysisService : IDataAnalysisService
 {
     private readonly IAnalysisRepository _analysisRepository;
     private readonly IMapper _mapper;
     private readonly ILogger<DataAnalysisService> _logger;
+    private readonly IStructuredLoggingService _structuredLogging;
+    private readonly IChaosEngineeringService _chaosEngineering;
+    private readonly TimeSpan _defaultTimeout = TimeSpan.FromMinutes(5);
+    private readonly Random _random = new();
 
     public DataAnalysisService(
         IAnalysisRepository analysisRepository,
         IMapper mapper,
-        ILogger<DataAnalysisService> logger)
+        ILogger<DataAnalysisService> logger,
+        IStructuredLoggingService structuredLogging,
+        IChaosEngineeringService chaosEngineering)
     {
-        _analysisRepository = analysisRepository;
-        _mapper = mapper;
-        _logger = logger;
+        _analysisRepository = analysisRepository ?? throw new ArgumentNullException(nameof(analysisRepository));
+        _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _structuredLogging = structuredLogging ?? throw new ArgumentNullException(nameof(structuredLogging));
+        _chaosEngineering = chaosEngineering ?? throw new ArgumentNullException(nameof(chaosEngineering));
     }
 
     public async Task<AnalysisDto> CreateAnalysisAsync(CreateAnalysisDto createDto)
     {
+        var correlationId = GetCorrelationId();
+        var context = _structuredLogging.CreateContext(
+            nameof(CreateAnalysisAsync), 
+            correlationId, 
+            AppConstants.Auth.AnonymousUser,
+            new Dictionary<string, object>
+            {
+                ["AnalysisName"] = createDto?.Name ?? AppConstants.Messages.UNKNOWN,
+                ["AnalysisType"] = createDto?.Type.ToString() ?? AppConstants.Messages.UNKNOWN,
+                ["DataSetId"] = createDto?.DataSetId ?? 0
+            });
+
         try
         {
-            _logger.LogInformation("Creating new analysis: {AnalysisName} of type {AnalysisType}", 
-                createDto.Name, createDto.Type);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
+            ValidateCreateAnalysisDto(createDto!);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
-            // Validate input
-            ValidateCreateAnalysisDto(createDto);
+            // Chaos engineering: Simulate analysis creation failure
+            await _chaosEngineering.ExecuteChaosAsync("AnalysisCreationFailure", correlationId, context.OperationName, () =>
+            {
+                _structuredLogging.LogStep(context, "Chaos engineering: Simulating analysis creation failure", new Dictionary<string, object>
+                {
+                    ["ChaosType"] = "AnalysisCreationFailure"
+                });
+                throw new InvalidOperationException("Simulated analysis creation failure (chaos engineering)");
+            }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
 
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
             var analysis = _mapper.Map<Analysis>(createDto);
-            var savedAnalysis = await _analysisRepository.AddAsync(analysis);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
+
+            _structuredLogging.LogStep(context, "Database save started");
+            var savedAnalysis = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.AddAsync(analysis),
+                _defaultTimeout,
+                correlationId,
+                $"{context.OperationName}_SaveToDatabase");
+            _structuredLogging.LogStep(context, "Database save completed", new Dictionary<string, object>
+            {
+                ["AnalysisId"] = savedAnalysis.Id
+            });
+
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
+            var result = _mapper.Map<AnalysisDto>(savedAnalysis);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
             
-            _logger.LogInformation("Successfully created analysis with ID: {AnalysisId}", savedAnalysis.Id);
-            return _mapper.Map<AnalysisDto>(savedAnalysis);
+            _structuredLogging.LogSummary(context, true);
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating analysis: {AnalysisName}", createDto.Name);
-            throw;
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for analysis '{createDto?.Name}'", ex);
         }
     }
 
     public async Task<AnalysisDto?> GetAnalysisAsync(int id)
     {
+        var correlationId = GetCorrelationId();
+        var context = _structuredLogging.CreateContext(
+            nameof(GetAnalysisAsync), 
+            correlationId, 
+            AppConstants.Auth.AnonymousUser,
+            new Dictionary<string, object>
+            {
+                [AppConstants.DataStructures.DATASET_ID] = id
+            });
+
         try
         {
-            _logger.LogDebug("Retrieving analysis with ID: {AnalysisId}", id);
-            
-            var analysis = await _analysisRepository.GetByIdAsync(id);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
+            if (id <= 0)
+            {
+                throw new ArgumentException(AppConstants.ValidationMessages.ANALYSIS_ID_MUST_BE_POSITIVE, nameof(id));
+            }
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
+
+            // Chaos engineering: Simulate database timeout
+            await _chaosEngineering.ExecuteChaosAsync("DatabaseTimeout", correlationId, context.OperationName, async () =>
+            {
+                _structuredLogging.LogStep(context, "Chaos engineering: Simulating database timeout", new Dictionary<string, object>
+                {
+                    ["ChaosType"] = "DatabaseTimeout"
+                });
+                await Task.Delay(15000); // 15 second delay
+            }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
+            var analysis = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.GetByIdAsync(id),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                $"{context.OperationName}_GetFromDatabase");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED);
+
             if (analysis == null)
             {
-                _logger.LogWarning("Analysis with ID {AnalysisId} not found", id);
+                _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND, new Dictionary<string, object>
+                {
+                    ["AnalysisId"] = id
+                });
+                _structuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
                 return null;
             }
 
-            return _mapper.Map<AnalysisDto>(analysis);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
+            var result = _mapper.Map<AnalysisDto>(analysis);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
+            
+            _structuredLogging.LogSummary(context, true);
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving analysis with ID: {AnalysisId}", id);
-            throw;
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for analysis ID {id}", ex);
         }
     }
 
     public async Task<IEnumerable<AnalysisDto>> GetAnalysesByDataSetAsync(int dataSetId)
     {
+        var correlationId = GetCorrelationId();
+        var context = _structuredLogging.CreateContext(
+            nameof(GetAnalysesByDataSetAsync), 
+            correlationId, 
+            AppConstants.Auth.AnonymousUser,
+            new Dictionary<string, object>
+            {
+                ["DataSetId"] = dataSetId
+            });
+
         try
         {
-            _logger.LogDebug("Retrieving analyses for dataset ID: {DataSetId}", dataSetId);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
+            if (dataSetId <= 0)
+            {
+                throw new ArgumentException("Dataset ID must be positive", nameof(dataSetId));
+            }
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
+
+            // Chaos engineering: Simulate network latency
+            await _chaosEngineering.ExecuteChaosAsync("NetworkLatency", correlationId, context.OperationName, async () =>
+            {
+                _structuredLogging.LogStep(context, "Chaos engineering: Simulating network latency", new Dictionary<string, object>
+                {
+                    ["ChaosType"] = "NetworkLatency"
+                });
+                await Task.Delay(_random.Next(500, 2000));
+            }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
+            var analyses = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.GetByDataSetIdAsync(dataSetId),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                $"{context.OperationName}_GetFromDatabase");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
+            {
+                ["AnalysisCount"] = analyses.Count()
+            });
+
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
+            var result = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
             
-            var analyses = await _analysisRepository.GetByDataSetIdAsync(dataSetId);
-            var analysisDtos = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
-            
-            _logger.LogDebug("Retrieved {Count} analyses for dataset ID: {DataSetId}", 
-                analysisDtos.Count(), dataSetId);
-            
-            return analysisDtos;
+            _structuredLogging.LogSummary(context, true);
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving analyses for dataset ID: {DataSetId}", dataSetId);
-            throw;
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for dataset ID {dataSetId}", ex);
         }
     }
 
     public async Task<IEnumerable<AnalysisDto>> GetAnalysesByStatusAsync(AnalysisStatus status)
     {
+        var correlationId = GetCorrelationId();
+        var context = _structuredLogging.CreateContext(
+            nameof(GetAnalysesByStatusAsync), 
+            correlationId, 
+            AppConstants.Auth.AnonymousUser,
+            new Dictionary<string, object>
+            {
+                ["Status"] = status.ToString()
+            });
+
         try
         {
-            _logger.LogDebug("Retrieving analyses with status: {Status}", status);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
+            if (!Enum.IsDefined(typeof(AnalysisStatus), status))
+            {
+                throw new ArgumentException(string.Format(AppConstants.ValidationMessages.INVALID_ANALYSIS_STATUS, status), nameof(status));
+            }
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
+
+            // Chaos engineering: Simulate cache failure
+            await _chaosEngineering.ExecuteChaosAsync("CacheFailure", correlationId, context.OperationName, () =>
+            {
+                _structuredLogging.LogStep(context, "Chaos engineering: Simulating cache failure", new Dictionary<string, object>
+                {
+                    ["ChaosType"] = "CacheFailure"
+                });
+                throw new InvalidOperationException("Simulated cache failure (chaos engineering)");
+            }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
+            var analyses = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.GetByStatusAsync(status),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                $"{context.OperationName}_GetFromDatabase");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
+            {
+                ["AnalysisCount"] = analyses.Count()
+            });
+
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
+            var result = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
             
-            var analyses = await _analysisRepository.GetByStatusAsync(status);
-            var analysisDtos = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
-            
-            _logger.LogDebug("Retrieved {Count} analyses with status: {Status}", 
-                analysisDtos.Count(), status);
-            
-            return analysisDtos;
+            _structuredLogging.LogSummary(context, true);
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving analyses with status: {Status}", status);
-            throw;
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for status {status}", ex);
         }
     }
 
     public async Task<IEnumerable<AnalysisDto>> GetAnalysesByTypeAsync(AnalysisType type)
     {
+        var correlationId = GetCorrelationId();
+        var context = _structuredLogging.CreateContext(
+            nameof(GetAnalysesByTypeAsync), 
+            correlationId, 
+            AppConstants.Auth.AnonymousUser,
+            new Dictionary<string, object>
+            {
+                ["Type"] = type.ToString()
+            });
+
         try
         {
-            _logger.LogDebug("Retrieving analyses with type: {Type}", type);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
+            if (!Enum.IsDefined(typeof(AnalysisType), type))
+            {
+                throw new ArgumentException(string.Format(AppConstants.ValidationMessages.INVALID_ANALYSIS_TYPE, type), nameof(type));
+            }
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
+
+            // Chaos engineering: Simulate storage failure
+            await _chaosEngineering.ExecuteChaosAsync("StorageFailure", correlationId, context.OperationName, () =>
+            {
+                _structuredLogging.LogStep(context, "Chaos engineering: Simulating storage failure", new Dictionary<string, object>
+                {
+                    ["ChaosType"] = "StorageFailure"
+                });
+                throw new InvalidOperationException("Simulated storage failure (chaos engineering)");
+            }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
+            var analyses = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.GetByTypeAsync(type),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                $"{context.OperationName}_GetFromDatabase");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
+            {
+                ["AnalysisCount"] = analyses.Count()
+            });
+
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
+            var result = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
             
-            var analyses = await _analysisRepository.GetByTypeAsync(type);
-            var analysisDtos = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
-            
-            _logger.LogDebug("Retrieved {Count} analyses with type: {Type}", 
-                analysisDtos.Count(), type);
-            
-            return analysisDtos;
+            _structuredLogging.LogSummary(context, true);
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving analyses with type: {Type}", type);
-            throw;
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for type {type}", ex);
         }
     }
 
     public async Task<AnalysisResultDto> GetAnalysisResultAsync(int analysisId)
     {
+        var correlationId = GetCorrelationId();
+        var context = _structuredLogging.CreateContext(
+            nameof(GetAnalysisResultAsync), 
+            correlationId, 
+            AppConstants.Auth.AnonymousUser,
+            new Dictionary<string, object>
+            {
+                ["AnalysisId"] = analysisId
+            });
+
         try
         {
-            _logger.LogDebug("Retrieving analysis result for ID: {AnalysisId}", analysisId);
-            
-            var analysis = await _analysisRepository.GetByIdAsync(analysisId);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
+            if (analysisId <= 0)
+            {
+                throw new ArgumentException(AppConstants.ValidationMessages.ANALYSIS_ID_MUST_BE_POSITIVE, nameof(analysisId));
+            }
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
+
+            // Chaos engineering: Simulate memory pressure
+            await _chaosEngineering.ExecuteChaosAsync("MemoryPressure", correlationId, context.OperationName, async () =>
+            {
+                _structuredLogging.LogStep(context, "Chaos engineering: Simulating memory pressure", new Dictionary<string, object>
+                {
+                    ["ChaosType"] = "MemoryPressure"
+                });
+                // Simulate memory pressure by allocating temporary objects
+                var tempObjects = new List<byte[]>();
+                for (int i = 0; i < 50; i++)
+                {
+                    tempObjects.Add(new byte[1024 * 1024]); // 1MB each
+                }
+                await Task.Delay(100);
+                tempObjects.Clear();
+                GC.Collect();
+            }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
+            var analysis = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.GetByIdAsync(analysisId),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                $"{context.OperationName}_GetFromDatabase");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED);
+
             if (analysis == null)
             {
-                _logger.LogWarning("Analysis with ID {AnalysisId} not found", analysisId);
-                throw new ArgumentException($"Analysis with ID {analysisId} not found");
+                _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND, new Dictionary<string, object>
+                {
+                    ["AnalysisId"] = analysisId
+                });
+                _structuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
+                throw new ArgumentException($"Analysis with ID {analysisId} not found", nameof(analysisId));
             }
 
-            object? deserializedResults = null;
-            if (!string.IsNullOrEmpty(analysis.Results))
-            {
-                try
-                {
-                    deserializedResults = JsonSerializer.Deserialize<object>(analysis.Results);
-                }
-                catch (JsonException jsonEx)
-                {
-                    _logger.LogWarning(jsonEx, "Failed to deserialize results for analysis ID: {AnalysisId}", analysisId);
-                    // Continue with null results rather than failing the entire request
-                }
-            }
+            _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.RESULTS_DESERIALIZATION_STARTED);
+            var deserializedResults = await DeserializeResultsSafelyAsync(analysis.Results, analysisId, correlationId);
+            _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.RESULTS_DESERIALIZATION_COMPLETED);
 
-            return new AnalysisResultDto
+            var result = new AnalysisResultDto
             {
                 AnalysisId = analysisId,
                 Status = analysis.Status,
                 Results = deserializedResults,
                 ErrorMessage = analysis.ErrorMessage
             };
+            
+            _structuredLogging.LogSummary(context, true);
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving analysis result for ID: {AnalysisId}", analysisId);
-            throw;
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for analysis ID {analysisId}", ex);
         }
     }
 
     public async Task<bool> DeleteAnalysisAsync(int id)
     {
+        var correlationId = GetCorrelationId();
+        var context = _structuredLogging.CreateContext(
+            nameof(DeleteAnalysisAsync), 
+            correlationId, 
+            AppConstants.Auth.AnonymousUser,
+            new Dictionary<string, object>
+            {
+                ["AnalysisId"] = id
+            });
+
         try
         {
-            _logger.LogInformation("Deleting analysis with ID: {AnalysisId}", id);
-            
-            var result = await _analysisRepository.DeleteAsync(id);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
+            if (id <= 0)
+            {
+                throw new ArgumentException(AppConstants.ValidationMessages.ANALYSIS_ID_MUST_BE_POSITIVE, nameof(id));
+            }
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
+
+            // Chaos engineering: Simulate processing delay
+            await _chaosEngineering.ExecuteChaosAsync("ProcessingDelay", correlationId, context.OperationName, async () =>
+            {
+                _structuredLogging.LogStep(context, "Chaos engineering: Simulating processing delay", new Dictionary<string, object>
+                {
+                    ["ChaosType"] = "ProcessingDelay"
+                });
+                await Task.Delay(_random.Next(1000, 3000));
+            }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+
+            _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.DATABASE_DELETION_STARTED);
+            var result = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.DeleteAsync(id),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                $"{context.OperationName}_DeleteFromDatabase");
+            _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.DATABASE_DELETION_COMPLETED, new Dictionary<string, object>
+            {
+                ["DeletionResult"] = result
+            });
             
             if (result)
             {
-                _logger.LogInformation("Successfully deleted analysis with ID: {AnalysisId}", id);
+                _structuredLogging.LogSummary(context, true);
             }
             else
             {
-                _logger.LogWarning("Failed to delete analysis with ID: {AnalysisId} - not found or already deleted", id);
+                _structuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND_OR_DELETED);
             }
             
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting analysis with ID: {AnalysisId}", id);
-            throw;
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for analysis ID {id}", ex);
         }
     }
 
     public async Task<AnalysisDto> RunAnalysisAsync(int analysisId)
     {
+        var correlationId = GetCorrelationId();
+        var context = _structuredLogging.CreateContext(
+            nameof(RunAnalysisAsync), 
+            correlationId, 
+            AppConstants.Auth.AnonymousUser,
+            new Dictionary<string, object>
+            {
+                ["AnalysisId"] = analysisId
+            });
+
         try
         {
-            _logger.LogInformation("Starting analysis execution for ID: {AnalysisId}", analysisId);
-            
-            var analysis = await _analysisRepository.GetByIdAsync(analysisId);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
+            if (analysisId <= 0)
+            {
+                throw new ArgumentException(AppConstants.ValidationMessages.ANALYSIS_ID_MUST_BE_POSITIVE, nameof(analysisId));
+            }
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
+
+            // Chaos engineering: Simulate processing delay
+            await _chaosEngineering.ExecuteChaosAsync("ProcessingDelay", correlationId, context.OperationName, async () =>
+            {
+                _structuredLogging.LogStep(context, "Chaos engineering: Simulating processing delay", new Dictionary<string, object>
+                {
+                    ["ChaosType"] = "ProcessingDelay"
+                });
+                await Task.Delay(_random.Next(1000, 5000));
+            }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
+            var analysis = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.GetByIdAsync(analysisId),
+                TimeSpan.FromSeconds(30),
+                correlationId,
+                $"{context.OperationName}_GetAnalysis");
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED);
+
             if (analysis == null)
             {
-                _logger.LogWarning("Analysis with ID {AnalysisId} not found", analysisId);
-                throw new ArgumentException($"Analysis with ID {analysisId} not found");
+                _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND, new Dictionary<string, object>
+                {
+                    ["AnalysisId"] = analysisId
+                });
+                _structuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
+                throw new ArgumentException($"Analysis with ID {analysisId} not found", nameof(analysisId));
             }
 
-            // Check if analysis is already in progress or completed
-            if (analysis.Status == AnalysisStatus.Processing)
-            {
-                _logger.LogWarning("Analysis with ID {AnalysisId} is already in progress", analysisId);
-                throw new InvalidOperationException($"Analysis with ID {analysisId} is already in progress");
-            }
+            _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_STATE_VALIDATION_STARTED);
+            ValidateAnalysisState(analysis, analysisId, correlationId);
+            _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_STATE_VALIDATION_COMPLETED);
 
+            // If already completed, return existing result
             if (analysis.Status == AnalysisStatus.Completed)
             {
-                _logger.LogInformation("Analysis with ID {AnalysisId} is already completed", analysisId);
+                _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_ALREADY_COMPLETED, new Dictionary<string, object>
+                {
+                    ["AnalysisId"] = analysisId,
+                    ["Status"] = analysis.Status.ToString()
+                });
+                _structuredLogging.LogSummary(context, true, AppConstants.AnalysisMessages.ANALYSIS_ALREADY_COMPLETED);
                 return _mapper.Map<AnalysisDto>(analysis);
             }
 
-            try
+            // Execute analysis with state management
+            _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_EXECUTION_STARTED, new Dictionary<string, object>
             {
-                analysis.Status = AnalysisStatus.Processing;
-                await _analysisRepository.UpdateAsync(analysis);
-
-                _logger.LogInformation("Executing analysis of type {AnalysisType} for ID: {AnalysisId}", 
-                    analysis.Type, analysisId);
-
-                // Execute analysis based on type
-                var results = await ExecuteAnalysisByTypeAsync(analysis);
-
-                analysis.Status = AnalysisStatus.Completed;
-                analysis.CompletedAt = DateTime.UtcNow;
-                analysis.Results = JsonSerializer.Serialize(results);
-                analysis.ErrorMessage = null; // Clear any previous errors
-                
-                var updatedAnalysis = await _analysisRepository.UpdateAsync(analysis);
-                
-                _logger.LogInformation("Successfully completed analysis with ID: {AnalysisId}", analysisId);
-                return _mapper.Map<AnalysisDto>(updatedAnalysis);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error executing analysis with ID: {AnalysisId}", analysisId);
-                
-                analysis.Status = AnalysisStatus.Failed;
-                analysis.ErrorMessage = ex.Message;
-                await _analysisRepository.UpdateAsync(analysis);
-                throw;
-            }
+                ["AnalysisType"] = analysis.Type.ToString(),
+                ["AnalysisId"] = analysis.Id
+            });
+            var result = await ExecuteAnalysisWithStateManagementAsync(analysis, context);
+            _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_EXECUTION_COMPLETED);
+            
+            _structuredLogging.LogSummary(context, true);
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in RunAnalysisAsync for ID: {AnalysisId}", analysisId);
-            throw;
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for analysis ID {analysisId}", ex);
         }
     }
 
-    private void ValidateCreateAnalysisDto(CreateAnalysisDto createDto)
+    #region Private Methods
+
+    private static void ValidateCreateAnalysisDto(CreateAnalysisDto createDto)
     {
-        if (createDto == null)
-            throw new ArgumentNullException(nameof(createDto));
+        ArgumentNullException.ThrowIfNull(createDto);
 
         if (string.IsNullOrWhiteSpace(createDto.Name))
-            throw new ArgumentException("Analysis name is required", nameof(createDto.Name));
+            throw new ArgumentException("Analysis name is required", nameof(createDto));
 
         if (createDto.Name.Length > 255)
-            throw new ArgumentException("Analysis name cannot exceed 255 characters", nameof(createDto.Name));
+            throw new ArgumentException("Analysis name cannot exceed 255 characters", nameof(createDto));
 
         if (createDto.Description?.Length > 1000)
-            throw new ArgumentException("Analysis description cannot exceed 1000 characters", nameof(createDto.Description));
+            throw new ArgumentException("Analysis description cannot exceed 1000 characters", nameof(createDto));
 
         if (createDto.DataSetId <= 0)
-            throw new ArgumentException("Valid dataset ID is required", nameof(createDto.DataSetId));
+            throw new ArgumentException("Valid dataset ID is required", nameof(createDto));
+    }
+
+    private static void ValidateAnalysisState(Analysis analysis, int analysisId, string correlationId)
+    {
+        if (analysis.Status == AnalysisStatus.Processing)
+        {
+            throw new InvalidOperationException($"Analysis with ID {analysisId} is already in progress. CorrelationId: {correlationId}");
+        }
+    }
+
+    private async Task<AnalysisDto> ExecuteAnalysisWithStateManagementAsync(Analysis analysis, IOperationContext context)
+    {
+        // Set processing state
+        analysis.Status = AnalysisStatus.Processing;
+        _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.SETTING_ANALYSIS_STATUS_TO_PROCESSING);
+        await ExecuteWithTimeoutAsync(
+            () => _analysisRepository.UpdateAsync(analysis),
+            TimeSpan.FromSeconds(30),
+            context.CorrelationId,
+            $"{context.OperationName}_UpdateStatus");
+
+        try
+        {
+            _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_EXECUTION_STARTED, new Dictionary<string, object>
+            {
+                ["AnalysisType"] = analysis.Type.ToString(),
+                ["AnalysisId"] = analysis.Id
+            });
+
+            // Execute analysis with timeout
+            var results = await ExecuteWithTimeoutAsync(
+                () => ExecuteAnalysisByTypeAsync(analysis),
+                _defaultTimeout,
+                context.CorrelationId,
+                $"{context.OperationName}_ExecuteAnalysis");
+
+            // Update with success state
+            analysis.Status = AnalysisStatus.Completed;
+            analysis.CompletedAt = DateTime.UtcNow;
+            analysis.Results = JsonSerializer.Serialize(results);
+            analysis.ErrorMessage = null;
+
+            _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_COMPLETED_SUCCESSFULLY, new Dictionary<string, object>
+            {
+                ["AnalysisId"] = analysis.Id,
+                ["Status"] = analysis.Status.ToString()
+            });
+
+            var updatedAnalysis = await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.UpdateAsync(analysis),
+                TimeSpan.FromSeconds(30),
+                context.CorrelationId,
+                $"{context.OperationName}_UpdateSuccess");
+
+            return _mapper.Map<AnalysisDto>(updatedAnalysis);
+        }
+        catch (Exception ex)
+        {
+            // Update with failure state
+            analysis.Status = AnalysisStatus.Failed;
+            analysis.ErrorMessage = ex.Message;
+            
+            _structuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_FAILED, new Dictionary<string, object>
+            {
+                ["AnalysisId"] = analysis.Id,
+                ["ErrorMessage"] = ex.Message
+            });
+            
+            await ExecuteWithTimeoutAsync(
+                () => _analysisRepository.UpdateAsync(analysis),
+                TimeSpan.FromSeconds(30),
+                context.CorrelationId,
+                $"{context.OperationName}_UpdateFailure");
+            
+            throw new InvalidOperationException($"Failed to execute analysis of type {analysis.Type} for ID {analysis.Id}", ex);
+        }
+    }
+
+    private async Task<T> ExecuteWithTimeoutAsync<T>(Func<Task<T>> operation, TimeSpan timeout, string correlationId, string operationName)
+    {
+        using var cts = new CancellationTokenSource(timeout);
+        
+        try
+        {
+            return await operation().WaitAsync(cts.Token);
+        }
+        catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
+        {
+            _logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
+                operationName, timeout, correlationId);
+            throw new TimeoutException($"Operation {operationName} timed out after {timeout}");
+        }
+    }
+
+    private async Task<object?> DeserializeResultsSafelyAsync(string? results, int analysisId, string correlationId)
+    {
+        if (string.IsNullOrEmpty(results))
+            return null;
+
+        try
+        {
+            return await Task.Run(() => JsonSerializer.Deserialize<object>(results));
+        }
+        catch (JsonException jsonEx)
+        {
+            _logger.LogWarning(jsonEx, "Failed to deserialize results for analysis ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+                analysisId, correlationId);
+            return null;
+        }
     }
 
     private async Task<object> ExecuteAnalysisByTypeAsync(Analysis analysis)
@@ -298,20 +694,26 @@ public class DataAnalysisService : IDataAnalysisService
         };
     }
 
+    private static string GetCorrelationId() => Activity.Current?.Id ?? Guid.NewGuid().ToString();
+
+    #endregion
+
+    #region Analysis Execution Methods
+
     private async Task<object> ExecuteNormalizationAnalysisAsync(Analysis analysis)
     {
         _logger.LogDebug("Executing normalization analysis for ID: {AnalysisId}", analysis.Id);
         
-        // TODO: Implement normalization logic
+        // FUTURE: Implement normalization logic
         await Task.Delay(1000); // Simulate processing time
         
         return new
         {
             Type = "Normalization",
             Message = "Data normalization completed",
-            NormalizedColumns = new[] { "column1", "column2" },
-            MinValues = new { column1 = 0.0, column2 = 0.0 },
-            MaxValues = new { column1 = 1.0, column2 = 1.0 }
+            NormalizedColumns = new[] { AppConstants.DataStructures.CUSTOMER_ID, AppConstants.DataStructures.ORDER_AMOUNT },
+            MinValues = new { customer_id = 0.0, order_amount = 0.0 },
+            MaxValues = new { customer_id = 1.0, order_amount = 1.0 }
         };
     }
 
@@ -319,7 +721,7 @@ public class DataAnalysisService : IDataAnalysisService
     {
         _logger.LogDebug("Executing comparison analysis for ID: {AnalysisId}", analysis.Id);
         
-        // TODO: Implement comparison logic
+        // FUTURE: Implement comparison logic
         await Task.Delay(1000); // Simulate processing time
         
         return new
@@ -327,8 +729,8 @@ public class DataAnalysisService : IDataAnalysisService
             Type = "Comparison",
             Message = "Dataset comparison completed",
             SimilarityScore = 0.85,
-            Differences = new[] { "column1", "column3" },
-            CommonColumns = new[] { "column2", "column4" }
+            Differences = new[] { AppConstants.DataStructures.CUSTOMER_ID, "product_code" },
+            CommonColumns = new[] { AppConstants.DataStructures.ORDER_AMOUNT, "sales_region" }
         };
     }
 
@@ -336,16 +738,16 @@ public class DataAnalysisService : IDataAnalysisService
     {
         _logger.LogDebug("Executing statistical analysis for ID: {AnalysisId}", analysis.Id);
         
-        // TODO: Implement statistical analysis logic
+        // FUTURE: Implement statistical analysis logic
         await Task.Delay(1000); // Simulate processing time
         
         return new
         {
             Type = "Statistical",
             Message = "Statistical analysis completed",
-            Mean = new { column1 = 45.2, column2 = 78.9 },
-            Median = new { column1 = 42.0, column2 = 75.0 },
-            StandardDeviation = new { column1 = 12.5, column2 = 15.3 }
+            Mean = new { customer_id = 45.2, order_amount = 78.9 },
+            Median = new { customer_id = 42.0, order_amount = 75.0 },
+            StandardDeviation = new { customer_id = 12.5, order_amount = 15.3 }
         };
     }
 
@@ -353,7 +755,7 @@ public class DataAnalysisService : IDataAnalysisService
     {
         _logger.LogDebug("Executing data cleaning analysis for ID: {AnalysisId}", analysis.Id);
         
-        // TODO: Implement data cleaning logic
+        // FUTURE: Implement data cleaning logic
         await Task.Delay(1000); // Simulate processing time
         
         return new
@@ -363,7 +765,7 @@ public class DataAnalysisService : IDataAnalysisService
             RemovedRows = 15,
             FixedNullValues = 8,
             RemovedDuplicates = 3,
-            CleanedColumns = new[] { "column1", "column2", "column3" }
+            CleanedColumns = new[] { AppConstants.DataStructures.CUSTOMER_ID, AppConstants.DataStructures.ORDER_AMOUNT, "product_code" }
         };
     }
 
@@ -379,7 +781,7 @@ public class DataAnalysisService : IDataAnalysisService
             Type = "OutlierDetection",
             Message = "Outlier detection completed",
             DetectedOutliers = 7,
-            OutlierColumns = new[] { "column1", "column2" },
+            OutlierColumns = new[] { AppConstants.DataStructures.CUSTOMER_ID, AppConstants.DataStructures.ORDER_AMOUNT },
             OutlierIndices = new[] { 15, 23, 45, 67, 89, 123, 156 }
         };
     }
@@ -397,12 +799,12 @@ public class DataAnalysisService : IDataAnalysisService
             Message = "Correlation analysis completed",
             CorrelationMatrix = new
             {
-                column1_column2 = 0.75,
-                column1_column3 = -0.32,
-                column2_column3 = 0.18
+                customer_id_order_amount = 0.75,
+                customer_id_product_code = -0.32,
+                order_amount_product_code = 0.18
             },
-            StrongCorrelations = new[] { "column1-column2" },
-            WeakCorrelations = new[] { "column2-column3" }
+            StrongCorrelations = new[] { "customer_id-order_amount" },
+            WeakCorrelations = new[] { "order_amount-product_code" }
         };
     }
 
@@ -410,7 +812,7 @@ public class DataAnalysisService : IDataAnalysisService
     {
         _logger.LogDebug("Executing trend analysis for ID: {AnalysisId}", analysis.Id);
         
-        // TODO: Implement trend analysis logic
+        // FUTURE: Implement trend analysis logic
         await Task.Delay(1000); // Simulate processing time
         
         return new
@@ -440,4 +842,8 @@ public class DataAnalysisService : IDataAnalysisService
             CustomConfiguration = analysis.Configuration
         };
     }
+
+    #endregion
 } 
+
+

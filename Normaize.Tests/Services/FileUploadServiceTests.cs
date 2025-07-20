@@ -18,6 +18,8 @@ public class FileUploadServiceTests
 {
     private readonly Mock<ILogger<FileUploadService>> _mockLogger;
     private readonly Mock<IStorageService> _mockStorageService;
+    private readonly Mock<IStructuredLoggingService> _mockStructuredLogging;
+    private readonly Mock<IChaosEngineeringService> _mockChaosEngineering;
     private readonly FileUploadService _service;
     private readonly FileUploadConfiguration _fileUploadConfig;
     private readonly DataProcessingConfiguration _dataProcessingConfig;
@@ -26,6 +28,8 @@ public class FileUploadServiceTests
     {
         _mockLogger = new Mock<ILogger<FileUploadService>>();
         _mockStorageService = new Mock<IStorageService>();
+        _mockStructuredLogging = new Mock<IStructuredLoggingService>();
+        _mockChaosEngineering = new Mock<IChaosEngineeringService>();
 
         // Setup configuration objects
         _fileUploadConfig = new FileUploadConfiguration
@@ -58,7 +62,9 @@ public class FileUploadServiceTests
             mockFileUploadOptions.Object,
             mockDataProcessingOptions.Object,
             _mockLogger.Object,
-            _mockStorageService.Object);
+            _mockStorageService.Object,
+            _mockStructuredLogging.Object,
+            _mockChaosEngineering.Object);
     }
 
     #region SaveFileAsync Tests

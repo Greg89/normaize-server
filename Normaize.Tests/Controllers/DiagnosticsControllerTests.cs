@@ -52,7 +52,7 @@ public class DiagnosticsControllerTests
         // Assert
         var okResult = result.Result as OkObjectResult;
         okResult.Should().NotBeNull();
-        var diagnostics = okResult.Value as StorageDiagnosticsDto;
+        var diagnostics = okResult!.Value as StorageDiagnosticsDto;
         diagnostics.Should().NotBeNull();
         diagnostics!.StorageProvider.Should().Be(StorageProvider.S3);
         diagnostics.S3Configured.Should().BeTrue();
@@ -136,7 +136,7 @@ public class DiagnosticsControllerTests
         // Assert
         var okResult = result.Result as OkObjectResult;
         okResult.Should().NotBeNull();
-        var diagnostics = okResult.Value as StorageDiagnosticsDto;
+        var diagnostics = okResult!.Value as StorageDiagnosticsDto;
         diagnostics.Should().NotBeNull();
         diagnostics!.StorageProvider.Should().Be(StorageProvider.Local);
         diagnostics.S3Configured.Should().BeFalse();
@@ -178,7 +178,7 @@ public class DiagnosticsControllerTests
         // Assert
         var okResult = result.Result as OkObjectResult;
         okResult.Should().NotBeNull();
-        var diagnostics = okResult.Value as StorageDiagnosticsDto;
+        var diagnostics = okResult!.Value as StorageDiagnosticsDto;
         diagnostics.Should().NotBeNull();
         diagnostics!.StorageProvider.Should().Be(provider);
         
@@ -211,7 +211,7 @@ public class DiagnosticsControllerTests
         // Assert
         var okResult = result.Result as OkObjectResult;
         okResult.Should().NotBeNull();
-        var diagnostics = okResult.Value as StorageDiagnosticsDto;
+        var diagnostics = okResult!.Value as StorageDiagnosticsDto;
         diagnostics.Should().NotBeNull();
         
         // Verify logging was called
@@ -277,7 +277,7 @@ public class DiagnosticsControllerTests
         ok.Should().NotBeNull();
         
         // Verify logging was called with null user
-        _mockLoggingService.Verify(x => x.LogUserAction("Storage diagnostics requested", It.Is<object>(o => o.ToString().Contains("UserId"))), Times.Once);
+        _mockLoggingService.Verify(x => x.LogUserAction("Storage diagnostics requested", It.Is<object>(o => o != null && o.ToString() != null && o.ToString()!.Contains("UserId"))), Times.Once);
     }
 
     [Fact]
@@ -302,6 +302,6 @@ public class DiagnosticsControllerTests
 
         // Assert
         result.Should().NotBeNull();
-        _mockLoggingService.Verify(x => x.LogUserAction("Storage test requested", It.Is<object>(o => o.ToString().Contains("UserId"))), Times.Once);
+        _mockLoggingService.Verify(x => x.LogUserAction("Storage test requested", It.Is<object>(o => o != null && o.ToString() != null && o.ToString()!.Contains("UserId"))), Times.Once);
     }
 } 
