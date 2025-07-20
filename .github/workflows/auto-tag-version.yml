@@ -1,9 +1,10 @@
 name: Auto Tag Version After Merge
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Version Bump"]
+    branches: [main]
+    types: [completed]
 
 jobs:
   tag-version:

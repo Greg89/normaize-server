@@ -115,25 +115,11 @@ jobs:
           echo "has-changes=false" >> $GITHUB_OUTPUT
         else
           echo "has-changes=true" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Create version bump branch and commit
-      if: steps.check-changes.outputs.has-changes == 'true'
-      id: create-version-bump-branch
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        ts=$(date +'%Y%m%d%H%M%S')
-        branch_name="version-bump/${{ steps.new-version.outputs.new-version }}-$ts"
-        git checkout -b "$branch_name"
-        git commit -m "chore: bump version to ${{ steps.new-version.outputs.new-version }} [skip ci]"
-        git push origin "$branch_name"
-        echo "branch-name=$branch_name" >> $GITHUB_OUTPUT
 
     - name: Skip commit - no changes
       if: steps.check-changes.outputs.has-changes == 'false'
       run: |
-        echo "No version changes detected; skipping branch and commit."
+        echo "No version changes detected; skipping PR creation."
 
     - name: Create Pull Request
       if: steps.check-changes.outputs.has-changes == 'true'
@@ -141,7 +127,6 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         commit-message: "chore: bump version to ${{ steps.new-version.outputs.new-version }} [skip ci]"
-        branch: ${{ steps.create-version-bump-branch.outputs.branch-name }}
         base: main
         title: "chore: bump version to ${{ steps.new-version.outputs.new-version }}"
         body: |
@@ -159,8 +144,6 @@ jobs:
           ### Notes
           - `[skip ci]` in commit message to prevent CI loop
           - Merge to complete the bump; see release workflow for release creation
-        labels: |
-          automated
-          version-bump
+        labels: automated,version-bump
         assignees: ${{ github.actor }}
         reviewers: ${{ github.actor }}
