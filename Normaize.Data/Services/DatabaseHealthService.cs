@@ -97,15 +97,31 @@ public class DatabaseHealthService : IDatabaseHealthService
             }
             else
             {
-                // Other databases use INFORMATION_SCHEMA
-                var columnsList = string.Join(",", _config.CriticalColumns.Select(c => $"'" + c.Replace("'", "''") + "'"));
-                var sql = $@"
-                    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-                    WHERE TABLE_NAME = 'DataSets' AND COLUMN_NAME IN ({columnsList})
-                ";
+                // Other databases use INFORMATION_SCHEMA with parameterized query
                 using (var command = _context.Database.GetDbConnection().CreateCommand())
                 {
+                    var sql = @"
+                        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                        WHERE TABLE_NAME = 'DataSets' AND COLUMN_NAME IN (";
+                    
+                    // Build parameterized query with proper parameters
+                    var parameters = new List<System.Data.Common.DbParameter>();
+                    for (int i = 0; i < _config.CriticalColumns.Length; i++)
+                    {
+                        if (i > 0) sql += ",";
+                        var paramName = $"@column{i}";
+                        sql += paramName;
+                        
+                        var parameter = command.CreateParameter();
+                        parameter.ParameterName = paramName;
+                        parameter.Value = _config.CriticalColumns[i];
+                        parameters.Add(parameter);
+                    }
+                    sql += ")";
+                    
                     command.CommandText = sql;
+                    command.Parameters.AddRange(parameters.ToArray());
+                    
                     if (command.Connection?.State != System.Data.ConnectionState.Open)
                         await command.Connection!.OpenAsync(cancellationToken);
                     using var reader = await command.ExecuteReaderAsync(cancellationToken);
