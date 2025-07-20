@@ -170,4 +170,69 @@ public static class AppConstants
         public const string EXPECTED_USER_ID = "ExpectedUserId";
         public const string DATASET_FOUND = "DataSetFound";
     }
+
+    /// <summary>
+    /// File upload and processing constants
+    /// </summary>
+    public static class FileProcessing
+    {
+        // File processing defaults
+        public const int DEFAULT_COLUMN_INDEX = 1;
+        public const int HEADER_ROW_INDEX = 1;
+        public const int DATA_START_ROW_INDEX = 2;
+        public const string DEFAULT_COLUMN_PREFIX = "Column";
+        public const string DEFAULT_DELIMITER = ",";
+        
+        // Collection capacity defaults
+        public const int DEFAULT_RECORDS_CAPACITY = 1000;
+        
+        // Text file processing
+        public const string LINE_NUMBER_COLUMN = "LineNumber";
+        public const string CONTENT_COLUMN = "Content";
+        
+        // File type identifiers
+        public const string CSV_FILE_TYPE = "CSV";
+        public const string EXCEL_FILE_TYPE = "Excel";
+        public const string XML_FILE_TYPE = "XML";
+        public const string TEXT_FILE_TYPE = "text";
+        
+        // Chaos engineering scenario names
+        public const string STORAGE_FAILURE_SCENARIO = "StorageFailure";
+        public const string PROCESSING_DELAY_SCENARIO = "ProcessingDelay";
+        
+        // Context keys for structured logging
+        public const string FILE_NAME_KEY = "FileName";
+        public const string FILE_TYPE_KEY = "FileType";
+        public const string FILE_PATH_KEY = "FilePath";
+        
+        // Size conversion constants
+        public const int BYTES_PER_MEGABYTE = 1024 * 1024;
+        public const int BYTES_PER_KILOBYTE = 1024;
+    }
+
+    /// <summary>
+    /// File upload error messages
+    /// </summary>
+    public static class FileUploadMessages
+    {
+        public const string FILE_UPLOAD_STARTED = "File upload started";
+        public const string FILE_UPLOAD_SUCCESS = "File uploaded successfully";
+        public const string FILE_UPLOAD_FAILED = "File upload failed";
+        public const string FILE_VALIDATION_STARTED = "File validation started";
+        public const string FILE_VALIDATION_PASSED = "File validation passed";
+        public const string FILE_VALIDATION_FAILED = "File validation failed";
+        public const string FILE_VALIDATION_ERROR = "File validation error";
+        public const string FILE_SIZE_VALIDATION_FAILED = "File size validation failed";
+        public const string FILE_EXTENSION_VALIDATION_FAILED = "File extension validation failed";
+        public const string FILE_PROCESSING_STARTED = "File processing started";
+        public const string FILE_PROCESSED_SUCCESS = "File processed successfully";
+        public const string FILE_PROCESSING_FAILED = "File processing failed";
+        public const string FILE_DELETION_STARTED = "File deletion started";
+        public const string FILE_DELETED_SUCCESS = "File deleted successfully";
+        public const string FILE_DELETION_FAILED = "File deletion failed";
+        public const string FILE_NOT_FOUND = "File not found";
+        public const string UNSUPPORTED_FILE_TYPE = "Unsupported file type";
+        public const string CONFIGURATION_VALIDATION_FAILED = "Configuration validation failed";
+        public const string ALLOWED_EXTENSIONS_CONFLICT = "AllowedExtensions cannot contain blocked extensions";
+    }
 } 
