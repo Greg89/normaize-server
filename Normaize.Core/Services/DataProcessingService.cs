@@ -20,38 +20,26 @@ public class DataProcessingService : IDataProcessingService
     private readonly IFileUploadService _fileUploadService;
     private readonly IAuditService _auditService;
     private readonly IMapper _mapper;
-    private readonly ILogger<DataProcessingService> _logger;
-    private readonly IMemoryCache _cache;
-    private readonly IStructuredLoggingService _structuredLogging;
-    private readonly IChaosEngineeringService _chaosEngineering;
-    private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(5);
-    private readonly TimeSpan _defaultTimeout = TimeSpan.FromMinutes(10);
-    private readonly TimeSpan _quickTimeout = TimeSpan.FromSeconds(30);
+    private readonly IDataProcessingInfrastructure _infrastructure;
 
     public DataProcessingService(
         IDataSetRepository dataSetRepository,
         IFileUploadService fileUploadService,
         IAuditService auditService,
         IMapper mapper,
-        ILogger<DataProcessingService> logger,
-        IMemoryCache cache,
-        IStructuredLoggingService structuredLogging,
-        IChaosEngineeringService chaosEngineering)
+        IDataProcessingInfrastructure infrastructure)
     {
         _dataSetRepository = dataSetRepository ?? throw new ArgumentNullException(nameof(dataSetRepository));
         _fileUploadService = fileUploadService ?? throw new ArgumentNullException(nameof(fileUploadService));
         _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _structuredLogging = structuredLogging ?? throw new ArgumentNullException(nameof(structuredLogging));
-        _chaosEngineering = chaosEngineering ?? throw new ArgumentNullException(nameof(chaosEngineering));
+        _infrastructure = infrastructure ?? throw new ArgumentNullException(nameof(infrastructure));
     }
 
     public async Task<DataSetUploadResponse> UploadDataSetAsync(FileUploadRequest fileRequest, CreateDataSetDto createDto)
     {
         var correlationId = GetCorrelationId();
-        var context = _structuredLogging.CreateContext(
+        var context = _infrastructure.StructuredLogging.CreateContext(
             nameof(UploadDataSetAsync), 
             correlationId, 
             createDto?.UserId,
@@ -66,10 +54,10 @@ public class DataProcessingService : IDataProcessingService
         try
         {
             // Chaos engineering: Simulate processing delay
-            await _chaosEngineering.ExecuteChaosAsync("ProcessingDelay", correlationId, context.OperationName, async () =>
+            await _infrastructure.ChaosEngineering.ExecuteChaosAsync("ProcessingDelay", correlationId, context.OperationName, async () =>
             {
                 var delayMs = new Random().Next(1000, 5000);
-                _structuredLogging.LogStep(context, "Chaos engineering delay", new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering delay", new Dictionary<string, object>
                 {
                     ["DelayMs"] = delayMs
                 });
@@ -77,43 +65,43 @@ public class DataProcessingService : IDataProcessingService
             }, new Dictionary<string, object> { ["UserId"] = createDto?.UserId ?? AppConstants.Messages.UNKNOWN });
 
             // Validate file
-            _structuredLogging.LogStep(context, "File validation started");
+            _infrastructure.StructuredLogging.LogStep(context, "File validation started");
             if (!await ExecuteWithTimeoutAsync(
                 () => _fileUploadService.ValidateFileAsync(fileRequest!),
-                _quickTimeout,
+                _infrastructure.QuickTimeout,
                 correlationId,
                 $"{context.OperationName}_ValidateFile"))
             {
-                _structuredLogging.LogStep(context, "File validation failed");
-                _structuredLogging.LogSummary(context, false, "Invalid file format or size");
+                _infrastructure.StructuredLogging.LogStep(context, "File validation failed");
+                _infrastructure.StructuredLogging.LogSummary(context, false, "Invalid file format or size");
                 return new DataSetUploadResponse
                 {
                     Success = false,
                     Message = "Invalid file format or size"
                 };
             }
-            _structuredLogging.LogStep(context, "File validation passed");
+            _infrastructure.StructuredLogging.LogStep(context, "File validation passed");
 
             // Save file
-            _structuredLogging.LogStep(context, "File save started");
+            _infrastructure.StructuredLogging.LogStep(context, "File save started");
             var filePath = await ExecuteWithTimeoutAsync(
                 () => _fileUploadService.SaveFileAsync(fileRequest!),
-                _defaultTimeout,
+                _infrastructure.DefaultTimeout,
                 correlationId,
                 $"{context.OperationName}_SaveFile");
-            _structuredLogging.LogStep(context, "File saved", new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, "File saved", new Dictionary<string, object>
             {
                 ["FilePath"] = filePath
             });
 
             // Process file and create dataset
-            _structuredLogging.LogStep(context, "File processing started");
+            _infrastructure.StructuredLogging.LogStep(context, "File processing started");
             var dataSet = await ExecuteWithTimeoutAsync(
                 () => _fileUploadService.ProcessFileAsync(filePath, Path.GetExtension(fileRequest!.FileName)),
-                _defaultTimeout,
+                _infrastructure.DefaultTimeout,
                 correlationId,
                 $"{context.OperationName}_ProcessFile");
-            _structuredLogging.LogStep(context, "File processing completed", new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, "File processing completed", new Dictionary<string, object>
             {
                 ["RowCount"] = dataSet.RowCount,
                 ["ColumnCount"] = dataSet.ColumnCount,
@@ -126,17 +114,17 @@ public class DataProcessingService : IDataProcessingService
             dataSet.UserId = createDto.UserId ?? AppConstants.Messages.UNKNOWN;
 
             // Save to database
-            _structuredLogging.LogStep(context, "Database save started");
+            _infrastructure.StructuredLogging.LogStep(context, "Database save started");
             var savedDataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.AddAsync(dataSet),
-                _quickTimeout,
+                _infrastructure.QuickTimeout,
                 correlationId,
                 $"{context.OperationName}_SaveToDatabase");
             context.SetMetadata(AppConstants.DataStructures.DATASET_ID, savedDataSet.Id);
-            _structuredLogging.LogStep(context, "Database save completed");
+            _infrastructure.StructuredLogging.LogStep(context, "Database save completed");
 
             // Clear cache for this user
-            _cache.Remove($"stats_{createDto.UserId}");
+            _infrastructure.Cache.Remove($"stats_{createDto.UserId}");
 
             // Log audit trail
             await ExecuteWithTimeoutAsync(
@@ -151,11 +139,11 @@ public class DataProcessingService : IDataProcessingService
                         columnCount = dataSet.ColumnCount,
                         filePath = filePath
                     }),
-                _quickTimeout,
+                _infrastructure.QuickTimeout,
                 correlationId,
                 $"{context.OperationName}_AuditLog");
 
-            _structuredLogging.LogSummary(context, true);
+            _infrastructure.StructuredLogging.LogSummary(context, true);
 
             return new DataSetUploadResponse
             {
@@ -166,7 +154,7 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (Exception ex)
         {
-            _structuredLogging.LogSummary(context, false, ex.Message);
+            _infrastructure.StructuredLogging.LogSummary(context, false, ex.Message);
             return new DataSetUploadResponse
             {
                 Success = false,
@@ -209,13 +197,13 @@ public class DataProcessingService : IDataProcessingService
             },
             operation: async (context) =>
             {
-                var dataSets = await ExecuteWithTimeoutAsync(
-                    () => _dataSetRepository.GetByUserIdAsync(userId, false),
-                    _quickTimeout,
-                    GetCorrelationId(),
-                    context.OperationName);
+                            var dataSets = await ExecuteWithTimeoutAsync(
+                () => _dataSetRepository.GetByUserIdAsync(userId, false),
+                _infrastructure.QuickTimeout,
+                GetCorrelationId(),
+                context.OperationName);
 
-                _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
                 {
                     ["TotalDataSets"] = dataSets.Count()
                 });
@@ -234,15 +222,15 @@ public class DataProcessingService : IDataProcessingService
             validation: () => ValidateDeleteInputs(id, userId),
             operation: async (context) =>
             {
-                // Chaos engineering: Simulate deletion failure
-                await _chaosEngineering.ExecuteChaosAsync("DeletionFailure", () =>
+                            // Chaos engineering: Simulate deletion failure
+            await _infrastructure.ChaosEngineering.ExecuteChaosAsync("DeletionFailure", () =>
+            {
+                _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating deletion failure", new Dictionary<string, object>
                 {
-                    _structuredLogging.LogStep(context, "Chaos engineering: Simulating deletion failure", new Dictionary<string, object>
-                    {
-                        ["ChaosType"] = "DeletionFailure"
-                    });
-                    throw new InvalidOperationException("Simulated deletion failure (chaos engineering)");
-                }, new Dictionary<string, object> { ["UserId"] = userId });
+                    ["ChaosType"] = "DeletionFailure"
+                });
+                throw new InvalidOperationException("Simulated deletion failure (chaos engineering)");
+            }, new Dictionary<string, object> { ["UserId"] = userId });
 
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
                 if (dataSet == null) return false;
@@ -251,7 +239,7 @@ public class DataProcessingService : IDataProcessingService
                 
                 var result = await ExecuteWithTimeoutAsync(
                     () => _dataSetRepository.DeleteAsync(id),
-                    _quickTimeout,
+                    _infrastructure.QuickTimeout,
                     GetCorrelationId(),
                     $"{context.OperationName}_DeleteFromDatabase");
 
@@ -278,7 +266,7 @@ public class DataProcessingService : IDataProcessingService
 
                 var result = await ExecuteWithTimeoutAsync(
                     () => _dataSetRepository.RestoreAsync(id),
-                    _quickTimeout,
+                    _infrastructure.QuickTimeout,
                     GetCorrelationId(),
                     $"{context.OperationName}_RestoreFromDatabase");
 
@@ -307,7 +295,7 @@ public class DataProcessingService : IDataProcessingService
 
                 var result = await ExecuteWithTimeoutAsync(
                     () => _dataSetRepository.HardDeleteAsync(id),
-                    _quickTimeout,
+                    _infrastructure.QuickTimeout,
                     GetCorrelationId(),
                     $"{context.OperationName}_HardDeleteFromDatabase");
 
@@ -336,7 +324,7 @@ public class DataProcessingService : IDataProcessingService
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
                 if (dataSet == null || string.IsNullOrEmpty(dataSet.PreviewData))
                 {
-                    _structuredLogging.LogStep(context, "Access denied or no preview data", new Dictionary<string, object>
+                    _infrastructure.StructuredLogging.LogStep(context, "Access denied or no preview data", new Dictionary<string, object>
                     {
                         ["HasPreviewData"] = !string.IsNullOrEmpty(dataSet?.PreviewData)
                     });
@@ -360,7 +348,7 @@ public class DataProcessingService : IDataProcessingService
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
                 if (dataSet == null || string.IsNullOrEmpty(dataSet.Schema))
                 {
-                    _structuredLogging.LogStep(context, "Access denied or no schema", new Dictionary<string, object>
+                    _infrastructure.StructuredLogging.LogStep(context, "Access denied or no schema", new Dictionary<string, object>
                     {
                         ["HasSchema"] = !string.IsNullOrEmpty(dataSet?.Schema)
                     });
@@ -391,11 +379,11 @@ public class DataProcessingService : IDataProcessingService
             {
                 var dataSets = await ExecuteWithTimeoutAsync(
                     () => _dataSetRepository.GetByUserIdAsync(userId, includeDeleted: true),
-                    _quickTimeout,
+                    _infrastructure.QuickTimeout,
                     GetCorrelationId(),
                     context.OperationName);
 
-                _structuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
                 {
                     ["TotalDataSets"] = dataSets.Count()
                 });
@@ -406,7 +394,7 @@ public class DataProcessingService : IDataProcessingService
                     .Take(pageSize)
                     .ToList();
 
-                _structuredLogging.LogStep(context, "Filtering deleted datasets completed", new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, "Filtering deleted datasets completed", new Dictionary<string, object>
                 {
                     ["DeletedDataSets"] = deletedDataSets.Count
                 });
@@ -431,11 +419,11 @@ public class DataProcessingService : IDataProcessingService
             {
                 var dataSets = await ExecuteWithTimeoutAsync(
                     () => _dataSetRepository.SearchAsync(searchTerm, userId),
-                    _quickTimeout,
+                    _infrastructure.QuickTimeout,
                     GetCorrelationId(),
                     context.OperationName);
 
-                _structuredLogging.LogStep(context, "Search operation completed", new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, "Search operation completed", new Dictionary<string, object>
                 {
                     ["TotalMatches"] = dataSets.Count()
                 });
@@ -465,11 +453,11 @@ public class DataProcessingService : IDataProcessingService
             {
                 var dataSets = await ExecuteWithTimeoutAsync(
                     () => _dataSetRepository.GetByFileTypeAsync(fileType, userId),
-                    _quickTimeout,
+                    _infrastructure.QuickTimeout,
                     GetCorrelationId(),
                     context.OperationName);
 
-                _structuredLogging.LogStep(context, "Database retrieval by file type completed", new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, "Database retrieval by file type completed", new Dictionary<string, object>
                 {
                     ["TotalDataSets"] = dataSets.Count()
                 });
@@ -496,11 +484,11 @@ public class DataProcessingService : IDataProcessingService
             {
                 var dataSets = await ExecuteWithTimeoutAsync(
                     () => _dataSetRepository.GetByDateRangeAsync(startDate, endDate, userId),
-                    _quickTimeout,
+                    _infrastructure.QuickTimeout,
                     GetCorrelationId(),
                     context.OperationName);
 
-                _structuredLogging.LogStep(context, "Database retrieval by date range completed", new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, "Database retrieval by date range completed", new Dictionary<string, object>
                 {
                     ["TotalDataSets"] = dataSets.Count()
                 });
@@ -520,41 +508,41 @@ public class DataProcessingService : IDataProcessingService
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate cache corruption
-                await _chaosEngineering.ExecuteChaosAsync("CacheFailure", () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("CacheFailure", () =>
                 {
-                    _structuredLogging.LogStep(context, "Chaos engineering: Simulating cache corruption", new Dictionary<string, object>
+                    _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating cache corruption", new Dictionary<string, object>
                     {
                         ["ChaosType"] = "CacheCorruption"
                     });
-                    _cache.Remove($"stats_{userId}");
+                    _infrastructure.Cache.Remove($"stats_{userId}");
                     return Task.CompletedTask;
                 }, new Dictionary<string, object> { ["UserId"] = userId });
 
                 var cacheKey = $"stats_{userId}";
                 
-                _structuredLogging.LogStep(context, "Cache lookup started");
-                if (_cache.TryGetValue(cacheKey, out DataSetStatisticsDto? cachedStats))
+                _infrastructure.StructuredLogging.LogStep(context, "Cache lookup started");
+                if (_infrastructure.Cache.TryGetValue(cacheKey, out DataSetStatisticsDto? cachedStats))
                 {
-                    _structuredLogging.LogStep(context, "Statistics retrieved from cache");
+                    _infrastructure.StructuredLogging.LogStep(context, "Statistics retrieved from cache");
                     return cachedStats!;
                 }
-                _structuredLogging.LogStep(context, "Cache miss - calculating statistics");
+                _infrastructure.StructuredLogging.LogStep(context, "Cache miss - calculating statistics");
 
                 var totalCount = await ExecuteWithTimeoutAsync(
                     () => _dataSetRepository.GetTotalCountAsync(userId),
-                    _quickTimeout,
+                    _infrastructure.QuickTimeout,
                     GetCorrelationId(),
                     $"{context.OperationName}_GetTotalCount");
 
                 var totalSize = await ExecuteWithTimeoutAsync<long>(
                     () => _dataSetRepository.GetTotalSizeAsync(userId),
-                    _quickTimeout,
+                    _infrastructure.QuickTimeout,
                     GetCorrelationId(),
                     $"{context.OperationName}_GetTotalSize");
 
                 var recentlyModified = await ExecuteWithTimeoutAsync<IEnumerable<DataSet>>(
                     () => _dataSetRepository.GetRecentlyModifiedAsync(userId, 5),
-                    _quickTimeout,
+                    _infrastructure.QuickTimeout,
                     GetCorrelationId(),
                     $"{context.OperationName}_GetRecentlyModified");
 
@@ -565,9 +553,9 @@ public class DataProcessingService : IDataProcessingService
                     RecentlyModified = _mapper.Map<IEnumerable<DataSetDto>>(recentlyModified)
                 };
 
-                _structuredLogging.LogStep(context, "Cache storage started");
-                _cache.Set(cacheKey, statistics, _cacheExpiration);
-                _structuredLogging.LogStep(context, "Cache storage completed");
+                _infrastructure.StructuredLogging.LogStep(context, "Cache storage started");
+                _infrastructure.Cache.Set(cacheKey, statistics, _infrastructure.CacheExpiration);
+                _infrastructure.StructuredLogging.LogStep(context, "Cache storage completed");
 
                 return statistics;
             });
@@ -583,43 +571,43 @@ public class DataProcessingService : IDataProcessingService
         Func<IOperationContext, Task<T>> operation)
     {
         var correlationId = GetCorrelationId();
-        var context = _structuredLogging.CreateContext(operationName, correlationId, userId, additionalMetadata);
+        var context = _infrastructure.StructuredLogging.CreateContext(operationName, correlationId, userId, additionalMetadata);
 
         try
         {
-            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             validation();
-            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             var result = await operation(context);
-            _structuredLogging.LogSummary(context, true);
+            _infrastructure.StructuredLogging.LogSummary(context, true);
             return result;
         }
         catch (Exception ex)
         {
-            _structuredLogging.LogSummary(context, false, ex.Message);
+            _infrastructure.StructuredLogging.LogSummary(context, false, ex.Message);
             throw new InvalidOperationException($"Failed to complete {operationName} for user {userId}", ex);
         }
     }
 
     private async Task<DataSet?> RetrieveDataSetWithAccessControlAsync(int id, string userId, IOperationContext context)
     {
-        _structuredLogging.LogStep(context, "Dataset retrieval started");
+        _infrastructure.StructuredLogging.LogStep(context, "Dataset retrieval started");
         var dataSet = await ExecuteWithTimeoutAsync(
             () => _dataSetRepository.GetByIdAsync(id),
-            _quickTimeout,
+            _infrastructure.QuickTimeout,
             GetCorrelationId(),
             $"{context.OperationName}_GetDataSet");
-        _structuredLogging.LogStep(context, "Dataset retrieval completed");
+        _infrastructure.StructuredLogging.LogStep(context, "Dataset retrieval completed");
 
         if (dataSet?.UserId != userId)
         {
-            _structuredLogging.LogStep(context, "Access denied - user mismatch", new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, "Access denied - user mismatch", new Dictionary<string, object>
             {
                 [AppConstants.DataStructures.EXPECTED_USER_ID] = userId,
                 [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet?.UserId ?? "null"
             });
-            _structuredLogging.LogSummary(context, false, AppConstants.ValidationMessages.DATASET_NOT_FOUND_OR_ACCESS_DENIED);
+            _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.ValidationMessages.DATASET_NOT_FOUND_OR_ACCESS_DENIED);
             return null;
         }
 
@@ -630,7 +618,7 @@ public class DataProcessingService : IDataProcessingService
     {
         if (!string.IsNullOrEmpty(dataSet.FilePath))
         {
-            _structuredLogging.LogStep(context, "File deletion started", new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, "File deletion started", new Dictionary<string, object>
             {
                 ["FilePath"] = dataSet.FilePath
             });
@@ -638,14 +626,14 @@ public class DataProcessingService : IDataProcessingService
             {
                 await ExecuteWithTimeoutAsync(
                     () => _fileUploadService.DeleteFileAsync(dataSet.FilePath),
-                    _quickTimeout,
+                    _infrastructure.QuickTimeout,
                     GetCorrelationId(),
                     $"{context.OperationName}_DeleteFile");
-                _structuredLogging.LogStep(context, "File deletion completed successfully");
+                _infrastructure.StructuredLogging.LogStep(context, "File deletion completed successfully");
             }
             catch (Exception ex)
             {
-                _structuredLogging.LogStep(context, "File deletion failed, continuing with database deletion", new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, "File deletion failed, continuing with database deletion", new Dictionary<string, object>
                 {
                     ["FileDeletionError"] = ex.Message
                 });
@@ -653,15 +641,15 @@ public class DataProcessingService : IDataProcessingService
         }
         else
         {
-            _structuredLogging.LogStep(context, "No file path to delete");
+            _infrastructure.StructuredLogging.LogStep(context, "No file path to delete");
         }
     }
 
     private async Task HandleSuccessfulDeletionAsync(int id, string userId, DataSet dataSet, IOperationContext context)
     {
-        _structuredLogging.LogStep(context, "Cache clearing started");
-        _cache.Remove($"stats_{userId}");
-        _structuredLogging.LogStep(context, "Cache clearing completed");
+        _infrastructure.StructuredLogging.LogStep(context, "Cache clearing started");
+        _infrastructure.Cache.Remove($"stats_{userId}");
+        _infrastructure.StructuredLogging.LogStep(context, "Cache clearing completed");
 
         await LogAuditActionAsync(id, userId, "Deleted", context, new { 
             fileName = dataSet.FileName,
@@ -672,18 +660,18 @@ public class DataProcessingService : IDataProcessingService
 
     private async Task HandleSuccessfulRestoreAsync(int id, string userId, IOperationContext context)
     {
-        _structuredLogging.LogStep(context, "Cache clearing started");
-        _cache.Remove($"stats_{userId}");
-        _structuredLogging.LogStep(context, "Cache clearing completed");
+        _infrastructure.StructuredLogging.LogStep(context, "Cache clearing started");
+        _infrastructure.Cache.Remove($"stats_{userId}");
+        _infrastructure.StructuredLogging.LogStep(context, "Cache clearing completed");
 
         await LogAuditActionAsync(id, userId, "Restored", context);
     }
 
     private async Task HandleSuccessfulHardDeleteAsync(int id, string userId, DataSet dataSet, IOperationContext context)
     {
-        _structuredLogging.LogStep(context, "Cache clearing started");
-        _cache.Remove($"stats_{userId}");
-        _structuredLogging.LogStep(context, "Cache clearing completed");
+        _infrastructure.StructuredLogging.LogStep(context, "Cache clearing started");
+        _infrastructure.Cache.Remove($"stats_{userId}");
+        _infrastructure.StructuredLogging.LogStep(context, "Cache clearing completed");
 
         await LogAuditActionAsync(id, userId, "HardDeleted", context, new { 
             fileName = dataSet.FileName,
@@ -694,23 +682,23 @@ public class DataProcessingService : IDataProcessingService
 
     private async Task LogAuditActionAsync(int id, string userId, string action, IOperationContext context, object? additionalData = null)
     {
-        _structuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_STARTED);
+        _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_STARTED);
         await ExecuteWithTimeoutAsync(
             () => _auditService.LogDataSetActionAsync(id, userId, action, additionalData),
-            _quickTimeout,
+            _infrastructure.QuickTimeout,
             GetCorrelationId(),
             $"{context.OperationName}_AuditLog");
-        _structuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_COMPLETED);
+        _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_COMPLETED);
     }
 
     private IEnumerable<DataSet> ApplyPagination(IEnumerable<DataSet> dataSets, int page, int pageSize, IOperationContext context)
     {
-        _structuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_STARTED);
+        _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_STARTED);
         var pagedDataSets = dataSets
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToList();
-        _structuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_COMPLETED, new Dictionary<string, object>
+        _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_COMPLETED, new Dictionary<string, object>
         {
             ["PagedDataSets"] = pagedDataSets.Count
         });
@@ -727,7 +715,7 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
+            _infrastructure.Logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
                 operationName, timeout, correlationId);
             throw new TimeoutException($"Operation {operationName} timed out after {timeout}");
         }
@@ -743,7 +731,7 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
+            _infrastructure.Logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
                 operationName, timeout, correlationId);
             throw new TimeoutException($"Operation {operationName} timed out after {timeout}");
         }
@@ -757,7 +745,7 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (JsonException jsonEx)
         {
-            _logger.LogWarning(jsonEx, "Failed to deserialize schema for dataset {DataSetId}. CorrelationId: {CorrelationId}", 
+            _infrastructure.Logger.LogWarning(jsonEx, "Failed to deserialize schema for dataset {DataSetId}. CorrelationId: {CorrelationId}", 
                 dataSetId, correlationId);
             return null;
         }

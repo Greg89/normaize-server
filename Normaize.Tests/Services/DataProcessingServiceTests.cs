@@ -23,6 +23,7 @@ public class DataProcessingServiceTests
     private readonly IMemoryCache _cache;
     private readonly Mock<IStructuredLoggingService> _mockStructuredLogging;
     private readonly Mock<IChaosEngineeringService> _mockChaosEngineering;
+    private readonly Mock<IDataProcessingInfrastructure> _mockInfrastructure;
     private readonly DataProcessingService _service;
 
     public DataProcessingServiceTests()
@@ -35,16 +36,23 @@ public class DataProcessingServiceTests
         _cache = new MemoryCache(new MemoryCacheOptions());
         _mockStructuredLogging = new Mock<IStructuredLoggingService>();
         _mockChaosEngineering = new Mock<IChaosEngineeringService>();
+        _mockInfrastructure = new Mock<IDataProcessingInfrastructure>();
+        
+        // Setup infrastructure mock
+        _mockInfrastructure.Setup(i => i.Logger).Returns(_mockLogger.Object);
+        _mockInfrastructure.Setup(i => i.Cache).Returns(_cache);
+        _mockInfrastructure.Setup(i => i.StructuredLogging).Returns(_mockStructuredLogging.Object);
+        _mockInfrastructure.Setup(i => i.ChaosEngineering).Returns(_mockChaosEngineering.Object);
+        _mockInfrastructure.Setup(i => i.CacheExpiration).Returns(TimeSpan.FromMinutes(5));
+        _mockInfrastructure.Setup(i => i.DefaultTimeout).Returns(TimeSpan.FromMinutes(10));
+        _mockInfrastructure.Setup(i => i.QuickTimeout).Returns(TimeSpan.FromSeconds(30));
         
         _service = new DataProcessingService(
             _mockRepository.Object, 
             _mockFileUploadService.Object, 
             _mockAuditService.Object, 
             _mockMapper.Object, 
-            _mockLogger.Object, 
-            _cache,
-            _mockStructuredLogging.Object,
-            _mockChaosEngineering.Object);
+            _mockInfrastructure.Object);
         
         // Setup default structured logging mocks
         SetupStructuredLoggingMocks();
@@ -77,10 +85,7 @@ public class DataProcessingServiceTests
                 _mockFileUploadService.Object, 
                 _mockAuditService.Object, 
                 _mockMapper.Object, 
-                _mockLogger.Object, 
-                _cache,
-                _mockStructuredLogging.Object,
-                _mockChaosEngineering.Object));
+                _mockInfrastructure.Object));
         
         exception.ParamName.Should().Be("dataSetRepository");
     }
@@ -95,10 +100,7 @@ public class DataProcessingServiceTests
                 null!, 
                 _mockAuditService.Object, 
                 _mockMapper.Object, 
-                _mockLogger.Object, 
-                _cache,
-                _mockStructuredLogging.Object,
-                _mockChaosEngineering.Object));
+                _mockInfrastructure.Object));
         
         exception.ParamName.Should().Be("fileUploadService");
     }
@@ -113,10 +115,7 @@ public class DataProcessingServiceTests
                 _mockFileUploadService.Object, 
                 null!, 
                 _mockMapper.Object, 
-                _mockLogger.Object, 
-                _cache,
-                _mockStructuredLogging.Object,
-                _mockChaosEngineering.Object));
+                _mockInfrastructure.Object));
         
         exception.ParamName.Should().Be("auditService");
     }
@@ -131,16 +130,13 @@ public class DataProcessingServiceTests
                 _mockFileUploadService.Object, 
                 _mockAuditService.Object, 
                 null!, 
-                _mockLogger.Object, 
-                _cache,
-                _mockStructuredLogging.Object,
-                _mockChaosEngineering.Object));
+                _mockInfrastructure.Object));
         
         exception.ParamName.Should().Be("mapper");
     }
 
     [Fact]
-    public void Constructor_WithNullLogger_ShouldThrowArgumentNullException()
+    public void Constructor_WithNullInfrastructure_ShouldThrowArgumentNullException()
     {
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() => 
@@ -149,30 +145,9 @@ public class DataProcessingServiceTests
                 _mockFileUploadService.Object, 
                 _mockAuditService.Object, 
                 _mockMapper.Object, 
-                null!, 
-                _cache,
-                _mockStructuredLogging.Object,
-                _mockChaosEngineering.Object));
+                null!));
         
-        exception.ParamName.Should().Be("logger");
-    }
-
-    [Fact]
-    public void Constructor_WithNullCache_ShouldThrowArgumentNullException()
-    {
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => 
-            new DataProcessingService(
-                _mockRepository.Object, 
-                _mockFileUploadService.Object, 
-                _mockAuditService.Object, 
-                _mockMapper.Object, 
-                _mockLogger.Object, 
-                null!,
-                _mockStructuredLogging.Object,
-                _mockChaosEngineering.Object));
-        
-        exception.ParamName.Should().Be("cache");
+        exception.ParamName.Should().Be("infrastructure");
     }
 
     [Fact]
