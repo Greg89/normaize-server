@@ -16,6 +16,8 @@ public class DataVisualizationServiceTests
     private readonly Mock<ILogger<DataVisualizationService>> _mockLogger = new();
     private readonly Mock<IDataSetRepository> _mockRepo = new();
     private readonly Mock<IOptions<DataVisualizationOptions>> _mockOptions = new();
+    private readonly Mock<IStructuredLoggingService> _mockStructuredLogging = new();
+    private readonly Mock<IChaosEngineeringService> _mockChaosEngineering = new();
     private readonly IMemoryCache _memoryCache = new MemoryCache(new MemoryCacheOptions());
     private readonly DataVisualizationService _service;
 
@@ -24,7 +26,19 @@ public class DataVisualizationServiceTests
         var options = new DataVisualizationOptions();
         _mockOptions.Setup(x => x.Value).Returns(options);
         
-        _service = new DataVisualizationService(_mockLogger.Object, _mockRepo.Object, _memoryCache, _mockOptions.Object);
+        // Setup structured logging mock
+        var mockContext = new Mock<IOperationContext>();
+        mockContext.Setup(x => x.OperationName).Returns("TestOperation");
+        _mockStructuredLogging.Setup(x => x.CreateContext(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+            .Returns(mockContext.Object);
+        _mockStructuredLogging.Setup(x => x.LogStep(It.IsAny<IOperationContext>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()));
+        _mockStructuredLogging.Setup(x => x.LogSummary(It.IsAny<IOperationContext>(), It.IsAny<bool>(), It.IsAny<string>()));
+        
+        // Setup chaos engineering mock
+        _mockChaosEngineering.Setup(x => x.ExecuteChaosAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Func<Task>>(), It.IsAny<Dictionary<string, object>>()))
+            .ReturnsAsync(false);
+        
+        _service = new DataVisualizationService(_mockLogger.Object, _mockRepo.Object, _memoryCache, _mockOptions.Object, _mockStructuredLogging.Object, _mockChaosEngineering.Object);
     }
 
     [Fact]
@@ -58,8 +72,20 @@ public class DataVisualizationServiceTests
         var chartType = ChartType.Pie;
         var config = new ChartConfigurationDto { Title = "Pie Chart" };
         var expected = new ChartDataDto { DataSetId = dataSetId, ChartType = chartType, Labels = new List<string> { "A" }, Series = new List<ChartSeriesDto> { new ChartSeriesDto { Name = "S", Data = new List<object> { 1 } } } };
-        var cacheKey = $"chart_{dataSetId}_{chartType}_{System.Text.Json.JsonSerializer.Serialize(config)}";
+        
+        // Use the same cache key generation logic as the service
+        var baseKey = $"chart_{dataSetId}_{chartType}";
+        var configHash = System.Text.Json.JsonSerializer.Serialize(config);
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(configHash));
+        var hashString = Convert.ToBase64String(hashBytes).Replace("/", "_").Replace("+", "-").Substring(0, 8);
+        var cacheKey = $"{baseKey}_{hashString}";
+        
         _memoryCache.Set(cacheKey, expected);
+        
+        // Setup dataset for validation
+        var dataSet = new DataSet { Id = dataSetId, UserId = userId, ProcessedData = "[{\"label\": \"A\", \"value\": 1}]", UseSeparateTable = false };
+        _mockRepo.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
         
         // Act
         var result = await _service.GenerateChartAsync(dataSetId, chartType, config, userId);
@@ -78,7 +104,9 @@ public class DataVisualizationServiceTests
         var config = new ChartConfigurationDto();
         
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.GenerateChartAsync(dataSetId, chartType, config, userId));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateChartAsync(dataSetId, chartType, config, userId));
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("Dataset ID must be positive");
     }
 
     [Fact]
@@ -92,7 +120,7 @@ public class DataVisualizationServiceTests
         
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateChartAsync(dataSetId, ChartType.Bar, null, userId));
-        exception.Message.Should().Contain("Failed to complete GenerateChartAsync for dataset ID");
+        exception.Message.Should().Contain("Failed to complete TestOperation for dataset ID");
         exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
         exception.InnerException!.Message.Should().Contain("User user3 is not authorized to access dataset 3");
     }
@@ -107,7 +135,9 @@ public class DataVisualizationServiceTests
         _mockRepo.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
         
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.GenerateChartAsync(dataSetId, ChartType.Bar, null, userId));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateChartAsync(dataSetId, ChartType.Bar, null, userId));
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("Dataset 4 has been deleted");
     }
 
     [Fact]
@@ -121,7 +151,9 @@ public class DataVisualizationServiceTests
         var config = new ChartConfigurationDto { MaxDataPoints = 0 };
         
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.GenerateChartAsync(dataSetId, ChartType.Bar, config, userId));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateChartAsync(dataSetId, ChartType.Bar, config, userId));
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("MaxDataPoints must be greater than 0");
     }
 
     [Fact]
@@ -151,7 +183,9 @@ public class DataVisualizationServiceTests
         var id = 12; var userId = "user12";
         
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.GenerateComparisonChartAsync(id, id, ChartType.Bar, null, userId));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateComparisonChartAsync(id, id, ChartType.Bar, null, userId));
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("Dataset IDs must be different for comparison");
     }
 
     [Fact]
@@ -166,7 +200,7 @@ public class DataVisualizationServiceTests
         
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateComparisonChartAsync(id1, id2, ChartType.Bar, null, userId));
-        exception.Message.Should().Contain("Failed to complete GenerateComparisonChartAsync for dataset IDs");
+        exception.Message.Should().Contain("Failed to complete TestOperation for dataset IDs");
         exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
         exception.InnerException!.Message.Should().Contain("User user13 is not authorized to access dataset 13");
     }
@@ -196,7 +230,9 @@ public class DataVisualizationServiceTests
         var userId = "user";
         
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.GetDataSummaryAsync(dataSetId, userId));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetDataSummaryAsync(dataSetId, userId));
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("Dataset ID must be positive");
     }
 
     [Fact]
@@ -210,7 +246,7 @@ public class DataVisualizationServiceTests
         
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetDataSummaryAsync(dataSetId, userId));
-        exception.Message.Should().Contain("Failed to complete GetDataSummaryAsync for dataset ID");
+        exception.Message.Should().Contain("Failed to complete TestOperation for dataset ID");
         exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
         exception.InnerException!.Message.Should().Contain("User user21 is not authorized to access dataset 21");
     }
@@ -240,7 +276,9 @@ public class DataVisualizationServiceTests
         var userId = "user";
         
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.GetStatisticalSummaryAsync(dataSetId, userId));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetStatisticalSummaryAsync(dataSetId, userId));
+        exception.InnerException.Should().BeOfType<ArgumentException>();
+        exception.InnerException!.Message.Should().Contain("Dataset ID must be positive");
     }
 
     [Fact]
@@ -254,7 +292,7 @@ public class DataVisualizationServiceTests
         
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetStatisticalSummaryAsync(dataSetId, userId));
-        exception.Message.Should().Contain("Failed to complete GetStatisticalSummaryAsync for dataset ID");
+        exception.Message.Should().Contain("Failed to complete TestOperation for dataset ID");
         exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
         exception.InnerException!.Message.Should().Contain("User user31 is not authorized to access dataset 31");
     }
@@ -313,7 +351,7 @@ public class DataVisualizationServiceTests
     public void TestIsNumericMethod()
     {
         // Test the IsNumeric method directly
-        var service = new DataVisualizationService(_mockLogger.Object, _mockRepo.Object, _memoryCache, _mockOptions.Object);
+        var service = new DataVisualizationService(_mockLogger.Object, _mockRepo.Object, _memoryCache, _mockOptions.Object, _mockStructuredLogging.Object, _mockChaosEngineering.Object);
         
         // Test with reflection to access the private static method
         var method = typeof(DataVisualizationService).GetMethod("IsNumeric", 
@@ -356,7 +394,7 @@ public class DataVisualizationServiceTests
     public void TestChartGenerationDirectly()
     {
         // Test the chart generation logic directly
-        var service = new DataVisualizationService(_mockLogger.Object, _mockRepo.Object, _memoryCache, _mockOptions.Object);
+        var service = new DataVisualizationService(_mockLogger.Object, _mockRepo.Object, _memoryCache, _mockOptions.Object, _mockStructuredLogging.Object, _mockChaosEngineering.Object);
         
         // Create test data
         var dataSet = new DataSet { Id = 1, UserId = "user1", ProcessedData = "[{\"label\": \"A\", \"value\": 10}, {\"label\": \"B\", \"value\": 20}]", UseSeparateTable = false };

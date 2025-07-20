@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Normaize.Core.Interfaces;
 using Normaize.Core.DTOs;
 using Normaize.Core.Models;
+using Normaize.Core.Constants;
 using System.Text.Json;
 using System.Diagnostics;
 using System.Security.Cryptography;
@@ -16,19 +17,25 @@ public class DataVisualizationService : IDataVisualizationService
     private readonly IDataSetRepository _dataSetRepository;
     private readonly IMemoryCache _cache;
     private readonly DataVisualizationOptions _options;
-    private readonly Random _chaosRandom;
+    private readonly IStructuredLoggingService _structuredLogging;
+    private readonly IChaosEngineeringService _chaosEngineering;
+    private readonly Random _random;
 
     public DataVisualizationService(
         ILogger<DataVisualizationService> logger,
         IDataSetRepository dataSetRepository,
         IMemoryCache cache,
-        IOptions<DataVisualizationOptions> options)
+        IOptions<DataVisualizationOptions> options,
+        IStructuredLoggingService structuredLogging,
+        IChaosEngineeringService chaosEngineering)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _dataSetRepository = dataSetRepository ?? throw new ArgumentNullException(nameof(dataSetRepository));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-        _chaosRandom = new Random();
+        _structuredLogging = structuredLogging ?? throw new ArgumentNullException(nameof(structuredLogging));
+        _chaosEngineering = chaosEngineering ?? throw new ArgumentNullException(nameof(chaosEngineering));
+        _random = new Random();
         
         _logger.LogInformation("DataVisualizationService initialized with configuration: CacheExpiration={CacheExpiration}, MaxDataPoints={MaxDataPoints}, ChaosProcessingDelayProbability={ChaosProcessingDelayProbability}",
             _options.CacheExpiration, _options.MaxDataPoints, _options.ChaosProcessingDelayProbability);
@@ -36,109 +43,198 @@ public class DataVisualizationService : IDataVisualizationService
 
     public async Task<ChartDataDto> GenerateChartAsync(int dataSetId, ChartType chartType, ChartConfigurationDto? configuration, string userId)
     {
-        var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
-        var operationName = "GenerateChartAsync";
-        
-        _logger.LogInformation("Starting chart generation. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}, UserId: {UserId}",
-            correlationId, dataSetId, chartType, userId);
+        var correlationId = GetCorrelationId();
+        var context = _structuredLogging.CreateContext(
+            nameof(GenerateChartAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["DataSetId"] = dataSetId,
+                ["ChartType"] = chartType.ToString(),
+                ["Configuration"] = configuration?.ToString() ?? "null"
+            });
 
         try
         {
-            // Validate inputs first (before try-catch so exceptions are thrown)
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidateGenerateChartInputs(dataSetId, chartType, configuration, userId);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
-            return await ExecuteWithTimeoutAsync(
+            // Chaos engineering: Simulate processing delay
+            await _chaosEngineering.ExecuteChaosAsync("ProcessingDelay", correlationId, context.OperationName, async () =>
+            {
+                _structuredLogging.LogStep(context, "Chaos engineering: Simulating processing delay", new Dictionary<string, object>
+                {
+                    ["ChaosType"] = "ProcessingDelay"
+                });
+                await Task.Delay(_random.Next(1000, 5000));
+            }, new Dictionary<string, object> { ["UserId"] = userId });
+
+            _structuredLogging.LogStep(context, AppConstants.VisualizationMessages.CHART_GENERATION_STARTED);
+            var result = await ExecuteWithTimeoutAsync(
                 async () => await GenerateChartInternalAsync(dataSetId, chartType, configuration, userId, correlationId),
                 _options.ChartGenerationTimeout,
                 correlationId,
-                operationName);
+                $"{context.OperationName}_Internal");
+            _structuredLogging.LogStep(context, AppConstants.VisualizationMessages.CHART_GENERATION_COMPLETED);
+            
+            _structuredLogging.LogSummary(context, true);
+            return result;
         }
-        catch (Exception ex) when (ex is not ArgumentException && ex is not ArgumentNullException)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to generate chart. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}, UserId: {UserId}",
-                correlationId, dataSetId, chartType, userId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {dataSetId}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for dataset ID {dataSetId}", ex);
         }
     }
 
     public async Task<ComparisonChartDto> GenerateComparisonChartAsync(int dataSetId1, int dataSetId2, ChartType chartType, ChartConfigurationDto? configuration, string userId)
     {
-        var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
-        var operationName = "GenerateComparisonChartAsync";
-        
-        _logger.LogInformation("Starting comparison chart generation. CorrelationId: {CorrelationId}, DataSetId1: {DataSetId1}, DataSetId2: {DataSetId2}, ChartType: {ChartType}, UserId: {UserId}",
-            correlationId, dataSetId1, dataSetId2, chartType, userId);
+        var correlationId = GetCorrelationId();
+        var context = _structuredLogging.CreateContext(
+            nameof(GenerateComparisonChartAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["DataSetId1"] = dataSetId1,
+                ["DataSetId2"] = dataSetId2,
+                ["ChartType"] = chartType.ToString(),
+                ["Configuration"] = configuration?.ToString() ?? "null"
+            });
 
         try
         {
-            // Validate inputs first
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidateComparisonChartInputs(dataSetId1, dataSetId2, chartType, configuration, userId);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
-            return await ExecuteWithTimeoutAsync(
+            // Chaos engineering: Simulate network latency
+            await _chaosEngineering.ExecuteChaosAsync("NetworkLatency", correlationId, context.OperationName, async () =>
+            {
+                _structuredLogging.LogStep(context, "Chaos engineering: Simulating network latency", new Dictionary<string, object>
+                {
+                    ["ChaosType"] = "NetworkLatency"
+                });
+                await Task.Delay(_random.Next(500, 2000));
+            }, new Dictionary<string, object> { ["UserId"] = userId });
+
+            _structuredLogging.LogStep(context, AppConstants.VisualizationMessages.COMPARISON_CHART_GENERATION_STARTED);
+            var result = await ExecuteWithTimeoutAsync(
                 async () => await GenerateComparisonChartInternalAsync(dataSetId1, dataSetId2, chartType, configuration, userId, correlationId),
                 _options.ComparisonChartTimeout,
                 correlationId,
-                operationName);
+                $"{context.OperationName}_Internal");
+            _structuredLogging.LogStep(context, AppConstants.VisualizationMessages.COMPARISON_CHART_GENERATION_COMPLETED);
+            
+            _structuredLogging.LogSummary(context, true);
+            return result;
         }
-        catch (Exception ex) when (ex is not ArgumentException && ex is not ArgumentNullException)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to generate comparison chart. CorrelationId: {CorrelationId}, DataSetId1: {DataSetId1}, DataSetId2: {DataSetId2}, UserId: {UserId}",
-                correlationId, dataSetId1, dataSetId2, userId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for dataset IDs {dataSetId1} and {dataSetId2}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for dataset IDs {dataSetId1} and {dataSetId2}", ex);
         }
     }
 
     public async Task<DataSummaryDto> GetDataSummaryAsync(int dataSetId, string userId)
     {
-        var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
-        var operationName = "GetDataSummaryAsync";
-        
-        _logger.LogInformation("Starting data summary generation. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
-            correlationId, dataSetId, userId);
+        var correlationId = GetCorrelationId();
+        var context = _structuredLogging.CreateContext(
+            nameof(GetDataSummaryAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["DataSetId"] = dataSetId
+            });
 
         try
         {
-            // Validate inputs first
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidateDataSummaryInputs(dataSetId, userId);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
-            return await ExecuteWithTimeoutAsync(
+            // Chaos engineering: Simulate cache failure
+            await _chaosEngineering.ExecuteChaosAsync("CacheFailure", correlationId, context.OperationName, () =>
+            {
+                _structuredLogging.LogStep(context, "Chaos engineering: Simulating cache failure", new Dictionary<string, object>
+                {
+                    ["ChaosType"] = "CacheFailure"
+                });
+                throw new InvalidOperationException("Simulated cache failure (chaos engineering)");
+            }, new Dictionary<string, object> { ["UserId"] = userId });
+
+            _structuredLogging.LogStep(context, AppConstants.VisualizationMessages.DATA_SUMMARY_GENERATION_STARTED);
+            var result = await ExecuteWithTimeoutAsync(
                 async () => await GetDataSummaryInternalAsync(dataSetId, userId, correlationId),
                 _options.SummaryGenerationTimeout,
                 correlationId,
-                operationName);
+                $"{context.OperationName}_Internal");
+            _structuredLogging.LogStep(context, AppConstants.VisualizationMessages.DATA_SUMMARY_GENERATION_COMPLETED);
+            
+            _structuredLogging.LogSummary(context, true);
+            return result;
         }
-        catch (Exception ex) when (ex is not ArgumentException && ex is not ArgumentNullException)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to generate data summary. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
-                correlationId, dataSetId, userId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {dataSetId}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for dataset ID {dataSetId}", ex);
         }
     }
 
     public async Task<StatisticalSummaryDto> GetStatisticalSummaryAsync(int dataSetId, string userId)
     {
-        var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
-        var operationName = "GetStatisticalSummaryAsync";
-        
-        _logger.LogInformation("Starting statistical summary generation. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
-            correlationId, dataSetId, userId);
+        var correlationId = GetCorrelationId();
+        var context = _structuredLogging.CreateContext(
+            nameof(GetStatisticalSummaryAsync), 
+            correlationId, 
+            userId,
+            new Dictionary<string, object>
+            {
+                ["DataSetId"] = dataSetId
+            });
 
         try
         {
-            // Validate inputs first
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             ValidateStatisticalSummaryInputs(dataSetId, userId);
+            _structuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
-            return await ExecuteWithTimeoutAsync(
+            // Chaos engineering: Simulate memory pressure
+            await _chaosEngineering.ExecuteChaosAsync("MemoryPressure", correlationId, context.OperationName, async () =>
+            {
+                _structuredLogging.LogStep(context, "Chaos engineering: Simulating memory pressure", new Dictionary<string, object>
+                {
+                    ["ChaosType"] = "MemoryPressure"
+                });
+                // Simulate memory pressure by allocating temporary objects
+                var tempObjects = new List<byte[]>();
+                for (int i = 0; i < 30; i++)
+                {
+                    tempObjects.Add(new byte[1024 * 1024]); // 1MB each
+                }
+                await Task.Delay(100);
+                tempObjects.Clear();
+                GC.Collect();
+            }, new Dictionary<string, object> { ["UserId"] = userId });
+
+            _structuredLogging.LogStep(context, AppConstants.VisualizationMessages.STATISTICAL_SUMMARY_GENERATION_STARTED);
+            var result = await ExecuteWithTimeoutAsync(
                 async () => await GetStatisticalSummaryInternalAsync(dataSetId, userId, correlationId),
                 _options.StatisticalSummaryTimeout,
                 correlationId,
-                operationName);
+                $"{context.OperationName}_Internal");
+            _structuredLogging.LogStep(context, AppConstants.VisualizationMessages.STATISTICAL_SUMMARY_GENERATION_COMPLETED);
+            
+            _structuredLogging.LogSummary(context, true);
+            return result;
         }
-        catch (Exception ex) when (ex is not ArgumentException && ex is not ArgumentNullException)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to generate statistical summary. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
-                correlationId, dataSetId, userId);
-            throw new InvalidOperationException($"Failed to complete {operationName} for dataset ID {dataSetId}", ex);
+            _structuredLogging.LogSummary(context, false, ex.Message);
+            throw new InvalidOperationException($"Failed to complete {context.OperationName} for dataset ID {dataSetId}", ex);
         }
     }
 
@@ -192,10 +288,10 @@ public class DataVisualizationService : IDataVisualizationService
         var stopwatch = Stopwatch.StartNew();
         
         // Chaos engineering: Simulate processing delay
-        if (_chaosRandom.NextDouble() < _options.ChaosProcessingDelayProbability)
+        if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
         {
             _logger.LogWarning("Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}", correlationId);
-            await Task.Delay(_chaosRandom.Next(1000, 5000)); // 1-5 second delay
+            await Task.Delay(_random.Next(1000, 5000)); // 1-5 second delay
         }
 
         var cacheKey = GenerateCacheKey($"chart_{dataSetId}_{chartType}", configuration);
@@ -229,10 +325,10 @@ public class DataVisualizationService : IDataVisualizationService
         var stopwatch = Stopwatch.StartNew();
         
         // Chaos engineering: Simulate processing delay
-        if (_chaosRandom.NextDouble() < _options.ChaosProcessingDelayProbability)
+        if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
         {
             _logger.LogWarning("Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}", correlationId);
-            await Task.Delay(_chaosRandom.Next(1000, 5000)); // 1-5 second delay
+            await Task.Delay(_random.Next(1000, 5000)); // 1-5 second delay
         }
 
         var cacheKey = GenerateCacheKey($"comparison_{dataSetId1}_{dataSetId2}_{chartType}", configuration);
@@ -269,10 +365,10 @@ public class DataVisualizationService : IDataVisualizationService
         var stopwatch = Stopwatch.StartNew();
         
         // Chaos engineering: Simulate processing delay
-        if (_chaosRandom.NextDouble() < _options.ChaosProcessingDelayProbability)
+        if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
         {
             _logger.LogWarning("Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}", correlationId);
-            await Task.Delay(_chaosRandom.Next(500, 2000)); // 0.5-2 second delay
+            await Task.Delay(_random.Next(500, 2000)); // 0.5-2 second delay
         }
 
         var cacheKey = $"summary_{dataSetId}";
@@ -306,10 +402,10 @@ public class DataVisualizationService : IDataVisualizationService
         var stopwatch = Stopwatch.StartNew();
         
         // Chaos engineering: Simulate processing delay
-        if (_chaosRandom.NextDouble() < _options.ChaosProcessingDelayProbability)
+        if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
         {
             _logger.LogWarning("Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}", correlationId);
-            await Task.Delay(_chaosRandom.Next(1000, 3000)); // 1-3 second delay
+            await Task.Delay(_random.Next(1000, 3000)); // 1-3 second delay
         }
 
         var cacheKey = $"stats_{dataSetId}";
@@ -357,10 +453,10 @@ public class DataVisualizationService : IDataVisualizationService
     private static void ValidateGenerateChartInputs(int dataSetId, ChartType chartType, ChartConfigurationDto? configuration, string? userId)
     {
         if (dataSetId <= 0)
-            throw new ArgumentException("Dataset ID must be greater than 0", nameof(dataSetId));
+            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId));
         
         if (string.IsNullOrWhiteSpace(userId))
-            throw new ArgumentException("User ID is required", nameof(userId));
+            throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
         
         ValidateChartConfigurationInternal(chartType, configuration);
     }
@@ -368,16 +464,16 @@ public class DataVisualizationService : IDataVisualizationService
     private static void ValidateComparisonChartInputs(int dataSetId1, int dataSetId2, ChartType chartType, ChartConfigurationDto? configuration, string? userId)
     {
         if (dataSetId1 <= 0)
-            throw new ArgumentException("First dataset ID must be greater than 0", nameof(dataSetId1));
+            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId1));
         
         if (dataSetId2 <= 0)
-            throw new ArgumentException("Second dataset ID must be greater than 0", nameof(dataSetId2));
+            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId2));
         
         if (dataSetId1 == dataSetId2)
             throw new ArgumentException("Dataset IDs must be different for comparison", nameof(dataSetId2));
         
         if (string.IsNullOrWhiteSpace(userId))
-            throw new ArgumentException("User ID is required", nameof(userId));
+            throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
         
         ValidateChartConfigurationInternal(chartType, configuration);
     }
@@ -385,19 +481,19 @@ public class DataVisualizationService : IDataVisualizationService
     private static void ValidateDataSummaryInputs(int dataSetId, string? userId)
     {
         if (dataSetId <= 0)
-            throw new ArgumentException("Dataset ID must be greater than 0", nameof(dataSetId));
+            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId));
         
         if (string.IsNullOrWhiteSpace(userId))
-            throw new ArgumentException("User ID is required", nameof(userId));
+            throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
     }
 
     private static void ValidateStatisticalSummaryInputs(int dataSetId, string? userId)
     {
         if (dataSetId <= 0)
-            throw new ArgumentException("Dataset ID must be greater than 0", nameof(dataSetId));
+            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId));
         
         if (string.IsNullOrWhiteSpace(userId))
-            throw new ArgumentException("User ID is required", nameof(userId));
+            throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
     }
 
     private async Task<DataSet> GetAndValidateDataSetAsync(int dataSetId, string userId, string correlationId)
@@ -408,14 +504,14 @@ public class DataVisualizationService : IDataVisualizationService
         {
             _logger.LogWarning("Dataset not found. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
                 correlationId, dataSetId, userId);
-            throw new ArgumentException($"Dataset with ID {dataSetId} not found", nameof(dataSetId));
+            throw new ArgumentException($"{AppConstants.VisualizationMessages.DATASET_NOT_FOUND} with ID {dataSetId}", nameof(dataSetId));
         }
 
         if (dataSet.UserId != userId)
         {
             _logger.LogWarning("Unauthorized access attempt. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, RequestedUserId: {RequestedUserId}, ActualUserId: {ActualUserId}",
                 correlationId, dataSetId, userId, dataSet.UserId);
-            throw new UnauthorizedAccessException($"User {userId} is not authorized to access dataset {dataSetId}");
+            throw new UnauthorizedAccessException($"{AppConstants.VisualizationMessages.DATASET_ACCESS_DENIED} - User {userId} is not authorized to access dataset {dataSetId}");
         }
 
         if (dataSet.IsDeleted)
@@ -860,11 +956,19 @@ public class DataVisualizationService : IDataVisualizationService
 
     private static string GenerateCacheKey(string baseKey, ChartConfigurationDto? configuration)
     {
-        var configJson = configuration != null ? JsonSerializer.Serialize(configuration) : "null";
-        return $"{baseKey}_{configJson}";
+        if (configuration == null) return baseKey;
+        
+        var configHash = JsonSerializer.Serialize(configuration);
+        using var sha256 = SHA256.Create();
+        var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(configHash));
+        var hashString = Convert.ToBase64String(hashBytes).Replace("/", "_").Replace("+", "-").Substring(0, 8);
+        
+        return $"{baseKey}_{hashString}";
     }
 
     #endregion
+
+    private static string GetCorrelationId() => Activity.Current?.Id ?? Guid.NewGuid().ToString();
 }
 
 public class DataVisualizationOptions

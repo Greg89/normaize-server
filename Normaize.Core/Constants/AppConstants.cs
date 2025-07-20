@@ -125,6 +125,40 @@ public static class AppConstants
     }
 
     /// <summary>
+    /// Data visualization messages
+    /// </summary>
+    public static class VisualizationMessages
+    {
+        public const string CHART_GENERATION_STARTED = "Chart generation started";
+        public const string CHART_GENERATION_COMPLETED = "Chart generation completed";
+        public const string COMPARISON_CHART_GENERATION_STARTED = "Comparison chart generation started";
+        public const string COMPARISON_CHART_GENERATION_COMPLETED = "Comparison chart generation completed";
+        public const string DATA_SUMMARY_GENERATION_STARTED = "Data summary generation started";
+        public const string DATA_SUMMARY_GENERATION_COMPLETED = "Data summary generation completed";
+        public const string STATISTICAL_SUMMARY_GENERATION_STARTED = "Statistical summary generation started";
+        public const string STATISTICAL_SUMMARY_GENERATION_COMPLETED = "Statistical summary generation completed";
+        public const string CACHE_RETRIEVAL_STARTED = "Cache retrieval started";
+        public const string CACHE_RETRIEVAL_COMPLETED = "Cache retrieval completed";
+        public const string CACHE_STORAGE_STARTED = "Cache storage started";
+        public const string CACHE_STORAGE_COMPLETED = "Cache storage completed";
+        public const string DATASET_RETRIEVAL_STARTED = "Dataset retrieval started";
+        public const string DATASET_RETRIEVAL_COMPLETED = "Dataset retrieval completed";
+        public const string DATA_EXTRACTION_STARTED = "Data extraction started";
+        public const string DATA_EXTRACTION_COMPLETED = "Data extraction completed";
+        public const string CHART_DATA_GENERATION_STARTED = "Chart data generation started";
+        public const string CHART_DATA_GENERATION_COMPLETED = "Chart data generation completed";
+        public const string CONFIGURATION_VALIDATION_STARTED = "Configuration validation started";
+        public const string CONFIGURATION_VALIDATION_COMPLETED = "Configuration validation completed";
+        public const string DATASET_NOT_FOUND = "Dataset not found";
+        public const string DATASET_ACCESS_DENIED = "Dataset access denied";
+        public const string INVALID_CHART_TYPE = "Invalid chart type";
+        public const string INVALID_DATASET_ID = "Invalid dataset ID";
+        public const string INVALID_USER_ID = "Invalid user ID";
+        public const string MAX_DATA_POINTS_EXCEEDED = "Max data points exceeded";
+        public const string CHART_CONFIGURATION_INVALID = "Chart configuration invalid";
+    }
+
+    /// <summary>
     /// Validation error messages
     /// </summary>
     public static class DataStructures
