@@ -19,7 +19,8 @@ jobs:
     - name: Checkout main branch
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        # Use the PAT for all git operations requiring permission
+        token: ${{ secrets.GH_PAT }}
         fetch-depth: 0
         ref: main
         clean: true
@@ -126,7 +127,7 @@ jobs:
       if: steps.check-changes.outputs.has-changes == 'true'
       uses: peter-evans/create-pull-request@v6
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.GH_PAT }}
         commit-message: "chore: bump version to ${{ steps.new-version.outputs.new-version }} [skip ci]"
         base: main
         title: "chore: bump version to ${{ steps.new-version.outputs.new-version }}"
