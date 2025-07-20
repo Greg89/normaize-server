@@ -17,6 +17,16 @@ public interface IChaosEngineeringService
     bool ShouldTriggerChaos(string scenarioName, IDictionary<string, object>? context = null);
     
     /// <summary>
+    /// Determines if a chaos scenario should be triggered with correlation info
+    /// </summary>
+    /// <param name="scenarioName">Name of the chaos scenario</param>
+    /// <param name="correlationId">Correlation ID for tracing</param>
+    /// <param name="operationName">Name of the operation that triggered chaos</param>
+    /// <param name="context">Additional context for the scenario</param>
+    /// <returns>True if the scenario should be triggered</returns>
+    bool ShouldTriggerChaos(string scenarioName, string correlationId, string operationName, IDictionary<string, object>? context = null);
+    
+    /// <summary>
     /// Executes a chaos scenario if conditions are met
     /// </summary>
     /// <param name="scenarioName">Name of the chaos scenario</param>
@@ -24,6 +34,17 @@ public interface IChaosEngineeringService
     /// <param name="context">Additional context for the scenario</param>
     /// <returns>True if chaos was triggered and executed</returns>
     Task<bool> ExecuteChaosAsync(string scenarioName, Func<Task> action, IDictionary<string, object>? context = null);
+    
+    /// <summary>
+    /// Executes a chaos scenario with correlation info
+    /// </summary>
+    /// <param name="scenarioName">Name of the chaos scenario</param>
+    /// <param name="correlationId">Correlation ID for tracing</param>
+    /// <param name="operationName">Name of the operation that triggered chaos</param>
+    /// <param name="action">Action to execute if chaos is triggered</param>
+    /// <param name="context">Additional context for the scenario</param>
+    /// <returns>True if chaos was triggered and executed</returns>
+    Task<bool> ExecuteChaosAsync(string scenarioName, string correlationId, string operationName, Func<Task> action, IDictionary<string, object>? context = null);
     
     /// <summary>
     /// Executes a chaos scenario with a return value
@@ -34,6 +55,18 @@ public interface IChaosEngineeringService
     /// <param name="context">Additional context for the scenario</param>
     /// <returns>Result of the chaos action or default value</returns>
     Task<T?> ExecuteChaosAsync<T>(string scenarioName, Func<Task<T>> action, IDictionary<string, object>? context = null);
+    
+    /// <summary>
+    /// Executes a chaos scenario with a return value and correlation info
+    /// </summary>
+    /// <typeparam name="T">Return type</typeparam>
+    /// <param name="scenarioName">Name of the chaos scenario</param>
+    /// <param name="correlationId">Correlation ID for tracing</param>
+    /// <param name="operationName">Name of the operation that triggered chaos</param>
+    /// <param name="action">Action to execute if chaos is triggered</param>
+    /// <param name="context">Additional context for the scenario</param>
+    /// <returns>Result of the chaos action or default value</returns>
+    Task<T?> ExecuteChaosAsync<T>(string scenarioName, string correlationId, string operationName, Func<Task<T>> action, IDictionary<string, object>? context = null);
     
     /// <summary>
     /// Registers a custom chaos scenario

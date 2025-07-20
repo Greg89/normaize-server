@@ -70,7 +70,7 @@ public class DataProcessingService : IDataProcessingService
         try
         {
             // Chaos engineering: Simulate processing delay
-            await _chaosEngineering.ExecuteChaosAsync("ProcessingDelay", async () =>
+            await _chaosEngineering.ExecuteChaosAsync("ProcessingDelay", correlationId, context.OperationName, async () =>
             {
                 var delayMs = new Random().Next(1000, 5000);
                 _structuredLogging.LogStep(context, "Chaos engineering delay", new Dictionary<string, object>

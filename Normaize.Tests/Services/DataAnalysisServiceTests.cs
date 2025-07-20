@@ -20,6 +20,8 @@ public class DataAnalysisServiceTests
     private readonly Mock<IAnalysisRepository> _mockRepository;
     private readonly Mock<IMapper> _mockMapper;
     private readonly Mock<ILogger<DataAnalysisService>> _mockLogger;
+    private readonly Mock<IStructuredLoggingService> _mockStructuredLogging;
+    private readonly Mock<IChaosEngineeringService> _mockChaosEngineering;
     private readonly DataAnalysisService _service;
 
     public DataAnalysisServiceTests()
@@ -27,8 +29,41 @@ public class DataAnalysisServiceTests
         _mockRepository = new Mock<IAnalysisRepository>();
         _mockMapper = new Mock<IMapper>();
         _mockLogger = new Mock<ILogger<DataAnalysisService>>();
+        _mockStructuredLogging = new Mock<IStructuredLoggingService>();
+        _mockChaosEngineering = new Mock<IChaosEngineeringService>();
         
-        _service = new DataAnalysisService(_mockRepository.Object, _mockMapper.Object, _mockLogger.Object);
+        _service = new DataAnalysisService(
+            _mockRepository.Object, 
+            _mockMapper.Object, 
+            _mockLogger.Object,
+            _mockStructuredLogging.Object,
+            _mockChaosEngineering.Object);
+        
+        // Setup default structured logging mocks
+        SetupStructuredLoggingMocks();
+    }
+
+    private void SetupStructuredLoggingMocks()
+    {
+        _mockStructuredLogging.Setup(s => s.CreateContext(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+            .Returns<string, string, string, Dictionary<string, object>>((operationName, correlationId, userId, metadata) =>
+            {
+                var mockContext = new Mock<IOperationContext>();
+                mockContext.Setup(c => c.OperationName).Returns(operationName);
+                mockContext.Setup(c => c.CorrelationId).Returns(correlationId);
+                mockContext.Setup(c => c.UserId).Returns(userId);
+                mockContext.Setup(c => c.Metadata).Returns(metadata ?? new Dictionary<string, object>());
+                mockContext.Setup(c => c.Steps).Returns(new List<string>());
+                mockContext.Setup(c => c.Stopwatch).Returns(System.Diagnostics.Stopwatch.StartNew());
+                mockContext.Setup(c => c.SetMetadata(It.IsAny<string>(), It.IsAny<object>()));
+                return mockContext.Object;
+            });
+        
+        _mockStructuredLogging.Setup(s => s.LogStep(It.IsAny<IOperationContext>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()));
+        _mockStructuredLogging.Setup(s => s.LogSummary(It.IsAny<IOperationContext>(), It.IsAny<bool>(), It.IsAny<string>()));
+        
+        _mockChaosEngineering.Setup(c => c.ExecuteChaosAsync(It.IsAny<string>(), It.IsAny<Func<Task>>(), It.IsAny<Dictionary<string, object>>()))
+            .Returns(Task.FromResult(false));
     }
 
     [Fact]
@@ -36,7 +71,7 @@ public class DataAnalysisServiceTests
     {
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() => 
-            new DataAnalysisService(null!, _mockMapper.Object, _mockLogger.Object));
+            new DataAnalysisService(null!, _mockMapper.Object, _mockLogger.Object, _mockStructuredLogging.Object, _mockChaosEngineering.Object));
         
         exception.ParamName.Should().Be("analysisRepository");
     }
@@ -46,7 +81,7 @@ public class DataAnalysisServiceTests
     {
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() => 
-            new DataAnalysisService(_mockRepository.Object, null!, _mockLogger.Object));
+            new DataAnalysisService(_mockRepository.Object, null!, _mockLogger.Object, _mockStructuredLogging.Object, _mockChaosEngineering.Object));
         
         exception.ParamName.Should().Be("mapper");
     }
@@ -56,7 +91,7 @@ public class DataAnalysisServiceTests
     {
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() => 
-            new DataAnalysisService(_mockRepository.Object, _mockMapper.Object, null!));
+            new DataAnalysisService(_mockRepository.Object, _mockMapper.Object, null!, _mockStructuredLogging.Object, _mockChaosEngineering.Object));
         
         exception.ParamName.Should().Be("logger");
     }

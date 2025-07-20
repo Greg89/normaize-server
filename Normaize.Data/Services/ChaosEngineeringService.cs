@@ -20,7 +20,7 @@ public class ChaosEngineeringService : IChaosEngineeringService
     private readonly ConcurrentDictionary<string, Func<IDictionary<string, object>?, bool>> _customTriggers = new();
     private readonly ConcurrentDictionary<string, Func<Task>> _customActions = new();
     private readonly ConcurrentQueue<DateTime> _recentTriggers = new();
-    private readonly object _lockObject = new();
+    private readonly Lock _lockObject = new();
     
     public ChaosEngineeringService(
         ILogger<ChaosEngineeringService> logger,
@@ -42,6 +42,11 @@ public class ChaosEngineeringService : IChaosEngineeringService
     }
     
     public bool ShouldTriggerChaos(string scenarioName, IDictionary<string, object>? context = null)
+    {
+        return ShouldTriggerChaos(scenarioName, "unknown", "unknown", context);
+    }
+    
+    public bool ShouldTriggerChaos(string scenarioName, string correlationId, string operationName, IDictionary<string, object>? context = null)
     {
         if (!_options.Enabled)
             return false;
@@ -106,7 +111,12 @@ public class ChaosEngineeringService : IChaosEngineeringService
     
     public async Task<bool> ExecuteChaosAsync(string scenarioName, Func<Task> action, IDictionary<string, object>? context = null)
     {
-        if (!ShouldTriggerChaos(scenarioName, context))
+        return await ExecuteChaosAsync(scenarioName, "unknown", "unknown", action, context);
+    }
+    
+    public async Task<bool> ExecuteChaosAsync(string scenarioName, string correlationId, string operationName, Func<Task> action, IDictionary<string, object>? context = null)
+    {
+        if (!ShouldTriggerChaos(scenarioName, correlationId, operationName, context))
             return false;
             
         try
@@ -115,8 +125,8 @@ public class ChaosEngineeringService : IChaosEngineeringService
             
             if (_options.EnableLogging)
             {
-                _logger.LogWarning("Chaos engineering triggered: {ScenarioName}. Context: {@Context}", 
-                    scenarioName, context);
+                _logger.LogWarning("Chaos engineering triggered: {ScenarioName} for operation {OperationName}. CorrelationId: {CorrelationId}. Context: {@Context}", 
+                    scenarioName, operationName, correlationId, context);
             }
             
             // Execute custom action if registered
@@ -134,15 +144,21 @@ public class ChaosEngineeringService : IChaosEngineeringService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Chaos engineering scenario failed: {ScenarioName}", scenarioName);
+            _logger.LogError(ex, "Chaos engineering scenario failed: {ScenarioName} for operation {OperationName}. CorrelationId: {CorrelationId}", 
+                scenarioName, operationName, correlationId);
             return false;
         }
     }
     
     public async Task<T?> ExecuteChaosAsync<T>(string scenarioName, Func<Task<T>> action, IDictionary<string, object>? context = null)
     {
-        if (!ShouldTriggerChaos(scenarioName, context))
-            return default(T);
+        return await ExecuteChaosAsync(scenarioName, "unknown", "unknown", action, context);
+    }
+    
+    public async Task<T?> ExecuteChaosAsync<T>(string scenarioName, string correlationId, string operationName, Func<Task<T>> action, IDictionary<string, object>? context = null)
+    {
+        if (!ShouldTriggerChaos(scenarioName, correlationId, operationName, context))
+            return default;
             
         try
         {
@@ -150,15 +166,15 @@ public class ChaosEngineeringService : IChaosEngineeringService
             
             if (_options.EnableLogging)
             {
-                _logger.LogWarning("Chaos engineering triggered: {ScenarioName}. Context: {@Context}", 
-                    scenarioName, context);
+                _logger.LogWarning("Chaos engineering triggered: {ScenarioName} for operation {OperationName}. CorrelationId: {CorrelationId}. Context: {@Context}", 
+                    scenarioName, operationName, correlationId, context);
             }
             
             // Execute custom action if registered
             if (_customActions.TryGetValue(scenarioName, out var customAction))
             {
                 await customAction();
-                return default(T);
+                return default;
             }
             else
             {
@@ -168,8 +184,9 @@ public class ChaosEngineeringService : IChaosEngineeringService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Chaos engineering scenario failed: {ScenarioName}", scenarioName);
-            return default(T);
+            _logger.LogError(ex, "Chaos engineering scenario failed: {ScenarioName} for operation {OperationName}. CorrelationId: {CorrelationId}", 
+                scenarioName, operationName, correlationId);
+            return default;
         }
     }
     
@@ -188,7 +205,7 @@ public class ChaosEngineeringService : IChaosEngineeringService
             TotalScenarios = _scenarioCounts.Count,
             TriggeredScenarios = _scenarioCounts.Values.Sum(),
             ScenarioCounts = new ConcurrentDictionary<string, int>(_scenarioCounts),
-            LastTriggered = _lastTriggerTimes.Values.Any() ? _lastTriggerTimes.Values.Max() : DateTime.MinValue
+            LastTriggered = _lastTriggerTimes.Values.Count > 0 ? _lastTriggerTimes.Values.Max() : DateTime.MinValue
         };
     }
     
