@@ -104,9 +104,9 @@ public class AppConfigurationService : IAppConfigurationService
                            !string.IsNullOrEmpty(config.User) && 
                            !string.IsNullOrEmpty(config.Password);
 
-        _logger.LogDebug("Database connection check: Host={Host}, Database={Database}, User={User}, HasPassword={HasPassword}, HasConnection={HasConnection}",
+        _logger.LogDebug("Database connection check: Host={Host}, Database={Database}, User={User}, HasConnection={HasConnection}",
             !string.IsNullOrEmpty(config.Host), !string.IsNullOrEmpty(config.Database), !string.IsNullOrEmpty(config.User), 
-            !string.IsNullOrEmpty(config.Password), hasConnection);
+            hasConnection);
 
         return hasConnection;
     }

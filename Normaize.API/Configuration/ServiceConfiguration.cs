@@ -392,6 +392,9 @@ public static class ServiceConfiguration
             builder.Configuration.GetSection(ChaosEngineeringOptions.SectionName));
         builder.Services.AddSingleton<IChaosEngineeringService, ChaosEngineeringService>();
         
+        // Register infrastructure services first
+        builder.Services.AddScoped<IDataProcessingInfrastructure, DataProcessingInfrastructure>();
+        
         builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
         builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();
         builder.Services.AddScoped<IDataVisualizationService, DataVisualizationService>();
