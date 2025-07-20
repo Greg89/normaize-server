@@ -13,11 +13,9 @@ namespace Normaize.Tests.Services;
 
 public class DataVisualizationServiceTests
 {
-    private readonly Mock<ILogger<DataVisualizationService>> _mockLogger = new();
     private readonly Mock<IDataSetRepository> _mockRepo = new();
     private readonly Mock<IOptions<DataVisualizationOptions>> _mockOptions = new();
-    private readonly Mock<IStructuredLoggingService> _mockStructuredLogging = new();
-    private readonly Mock<IChaosEngineeringService> _mockChaosEngineering = new();
+    private readonly Mock<IDataProcessingInfrastructure> _mockInfrastructure = new();
     private readonly IMemoryCache _memoryCache = new MemoryCache(new MemoryCacheOptions());
     private readonly DataVisualizationService _service;
 
@@ -26,19 +24,37 @@ public class DataVisualizationServiceTests
         var options = new DataVisualizationOptions();
         _mockOptions.Setup(x => x.Value).Returns(options);
         
+        // Setup infrastructure mocks
+        SetupInfrastructureMocks();
+        
+        _service = new DataVisualizationService(_mockRepo.Object, _memoryCache, _mockOptions.Object, _mockInfrastructure.Object);
+    }
+
+    private void SetupInfrastructureMocks()
+    {
+        // Setup logger mock
+        var mockLogger = new Mock<ILogger<DataVisualizationService>>();
+        _mockInfrastructure.Setup(x => x.Logger).Returns(mockLogger.Object);
+
         // Setup structured logging mock
+        var mockStructuredLogging = new Mock<IStructuredLoggingService>();
         var mockContext = new Mock<IOperationContext>();
         mockContext.Setup(x => x.OperationName).Returns("TestOperation");
-        _mockStructuredLogging.Setup(x => x.CreateContext(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+        mockStructuredLogging.Setup(x => x.CreateContext(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
             .Returns(mockContext.Object);
-        _mockStructuredLogging.Setup(x => x.LogStep(It.IsAny<IOperationContext>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()));
-        _mockStructuredLogging.Setup(x => x.LogSummary(It.IsAny<IOperationContext>(), It.IsAny<bool>(), It.IsAny<string>()));
-        
+        mockStructuredLogging.Setup(x => x.LogStep(It.IsAny<IOperationContext>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()));
+        mockStructuredLogging.Setup(x => x.LogSummary(It.IsAny<IOperationContext>(), It.IsAny<bool>(), It.IsAny<string>()));
+        _mockInfrastructure.Setup(x => x.StructuredLogging).Returns(mockStructuredLogging.Object);
+
         // Setup chaos engineering mock
-        _mockChaosEngineering.Setup(x => x.ExecuteChaosAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Func<Task>>(), It.IsAny<Dictionary<string, object>>()))
+        var mockChaosEngineering = new Mock<IChaosEngineeringService>();
+        mockChaosEngineering.Setup(x => x.ExecuteChaosAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Func<Task>>(), It.IsAny<Dictionary<string, object>>()))
             .ReturnsAsync(false);
-        
-        _service = new DataVisualizationService(_mockLogger.Object, _mockRepo.Object, _memoryCache, _mockOptions.Object, _mockStructuredLogging.Object, _mockChaosEngineering.Object);
+        _mockInfrastructure.Setup(x => x.ChaosEngineering).Returns(mockChaosEngineering.Object);
+
+        // Setup default timeout values
+        _mockInfrastructure.Setup(x => x.DefaultTimeout).Returns(TimeSpan.FromMinutes(5));
+        _mockInfrastructure.Setup(x => x.QuickTimeout).Returns(TimeSpan.FromSeconds(30));
     }
 
     [Fact]
@@ -76,10 +92,8 @@ public class DataVisualizationServiceTests
         // Use the same cache key generation logic as the service
         var baseKey = $"chart_{dataSetId}_{chartType}";
         var configHash = System.Text.Json.JsonSerializer.Serialize(config);
-        using var sha256 = System.Security.Cryptography.SHA256.Create();
-        var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(configHash));
-        var hashString = Convert.ToBase64String(hashBytes).Replace("/", "_").Replace("+", "-").Substring(0, 8);
-        var cacheKey = $"{baseKey}_{hashString}";
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(configHash));
+        var cacheKey = $"{baseKey}_{Convert.ToBase64String(hash)[..8]}";
         
         _memoryCache.Set(cacheKey, expected);
         
@@ -120,7 +134,7 @@ public class DataVisualizationServiceTests
         
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateChartAsync(dataSetId, ChartType.Bar, null, userId));
-        exception.Message.Should().Contain("Failed to complete TestOperation for dataset ID");
+        exception.Message.Should().Contain("Failed to complete GenerateChartAsync for dataset ID");
         exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
         exception.InnerException!.Message.Should().Contain("User user3 is not authorized to access dataset 3");
     }
@@ -200,7 +214,7 @@ public class DataVisualizationServiceTests
         
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateComparisonChartAsync(id1, id2, ChartType.Bar, null, userId));
-        exception.Message.Should().Contain("Failed to complete TestOperation for dataset IDs");
+        exception.Message.Should().Contain("Failed to complete GenerateComparisonChartAsync for dataset IDs");
         exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
         exception.InnerException!.Message.Should().Contain("User user13 is not authorized to access dataset 13");
     }
@@ -246,7 +260,7 @@ public class DataVisualizationServiceTests
         
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetDataSummaryAsync(dataSetId, userId));
-        exception.Message.Should().Contain("Failed to complete TestOperation for dataset ID");
+        exception.Message.Should().Contain("Failed to complete GetDataSummaryAsync for dataset ID");
         exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
         exception.InnerException!.Message.Should().Contain("User user21 is not authorized to access dataset 21");
     }
@@ -292,7 +306,7 @@ public class DataVisualizationServiceTests
         
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetStatisticalSummaryAsync(dataSetId, userId));
-        exception.Message.Should().Contain("Failed to complete TestOperation for dataset ID");
+        exception.Message.Should().Contain("Failed to complete GetStatisticalSummaryAsync for dataset ID");
         exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
         exception.InnerException!.Message.Should().Contain("User user31 is not authorized to access dataset 31");
     }
@@ -351,7 +365,7 @@ public class DataVisualizationServiceTests
     public void TestIsNumericMethod()
     {
         // Test the IsNumeric method directly
-        var service = new DataVisualizationService(_mockLogger.Object, _mockRepo.Object, _memoryCache, _mockOptions.Object, _mockStructuredLogging.Object, _mockChaosEngineering.Object);
+        var service = new DataVisualizationService(_mockRepo.Object, _memoryCache, _mockOptions.Object, _mockInfrastructure.Object);
         
         // Test with reflection to access the private static method
         var method = typeof(DataVisualizationService).GetMethod("IsNumeric", 
@@ -394,7 +408,7 @@ public class DataVisualizationServiceTests
     public void TestChartGenerationDirectly()
     {
         // Test the chart generation logic directly
-        var service = new DataVisualizationService(_mockLogger.Object, _mockRepo.Object, _memoryCache, _mockOptions.Object, _mockStructuredLogging.Object, _mockChaosEngineering.Object);
+        var service = new DataVisualizationService(_mockRepo.Object, _memoryCache, _mockOptions.Object, _mockInfrastructure.Object);
         
         // Create test data
         var dataSet = new DataSet { Id = 1, UserId = "user1", ProcessedData = "[{\"label\": \"A\", \"value\": 10}, {\"label\": \"B\", \"value\": 20}]", UseSeparateTable = false };
