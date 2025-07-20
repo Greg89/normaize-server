@@ -115,6 +115,7 @@ jobs:
           echo "has-changes=false" >> $GITHUB_OUTPUT
         else
           echo "has-changes=true" >> $GITHUB_OUTPUT
+        fi
 
     - name: Skip commit - no changes
       if: steps.check-changes.outputs.has-changes == 'false'

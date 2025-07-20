@@ -101,6 +101,7 @@ public static class AppConstants
         public const string ANALYSIS_ID_MUST_BE_POSITIVE = "Analysis ID must be positive";
         public const string INVALID_ANALYSIS_STATUS = "Invalid analysis status: {0}";
         public const string INVALID_ANALYSIS_TYPE = "Invalid analysis type: {0}";
+        public const string DATASET_NOT_FOUND_OR_ACCESS_DENIED = "Dataset not found or access denied";
     }
 
     /// <summary>
@@ -169,6 +170,12 @@ public static class AppConstants
         public const string ACTUAL_USER_ID = "ActualUserId";
         public const string EXPECTED_USER_ID = "ExpectedUserId";
         public const string DATASET_FOUND = "DataSetFound";
+        public const string PAGE = "Page";
+        public const string PAGE_SIZE = "PageSize";
+        public const string SEARCH_TERM = "SearchTerm";
+        public const string FILE_TYPE = "FileType";
+        public const string START_DATE = "StartDate";
+        public const string END_DATE = "EndDate";
     }
 
     /// <summary>

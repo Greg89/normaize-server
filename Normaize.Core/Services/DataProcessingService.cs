@@ -212,7 +212,7 @@ public class DataProcessingService : IDataProcessingService
                     [AppConstants.DataStructures.EXPECTED_USER_ID] = userId,
                     [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet?.UserId ?? "null"
                 });
-                _structuredLogging.LogSummary(context, false, "Dataset not found or access denied");
+                _structuredLogging.LogSummary(context, false, AppConstants.ValidationMessages.DATASET_NOT_FOUND_OR_ACCESS_DENIED);
                 return null;
             }
 
@@ -247,8 +247,8 @@ public class DataProcessingService : IDataProcessingService
             userId,
             new Dictionary<string, object>
             {
-                ["Page"] = page,
-                ["PageSize"] = pageSize
+                [AppConstants.DataStructures.PAGE] = page,
+                [AppConstants.DataStructures.PAGE_SIZE] = pageSize
             });
 
         try
@@ -337,7 +337,7 @@ public class DataProcessingService : IDataProcessingService
                     [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet?.UserId ?? "null",
                     [AppConstants.DataStructures.DATASET_FOUND] = dataSet != null
                 });
-                _structuredLogging.LogSummary(context, false, "Dataset not found or access denied");
+                _structuredLogging.LogSummary(context, false, AppConstants.ValidationMessages.DATASET_NOT_FOUND_OR_ACCESS_DENIED);
                 return false;
             }
 
@@ -453,7 +453,7 @@ public class DataProcessingService : IDataProcessingService
                     [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet?.UserId ?? "null",
                     [AppConstants.DataStructures.DATASET_FOUND] = dataSet != null
                 });
-                _structuredLogging.LogSummary(context, false, "Dataset not found or access denied");
+                _structuredLogging.LogSummary(context, false, AppConstants.ValidationMessages.DATASET_NOT_FOUND_OR_ACCESS_DENIED);
                 return false;
             }
 
@@ -532,7 +532,7 @@ public class DataProcessingService : IDataProcessingService
                     [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet?.UserId ?? "null",
                     [AppConstants.DataStructures.DATASET_FOUND] = dataSet != null
                 });
-                _structuredLogging.LogSummary(context, false, "Dataset not found or access denied");
+                _structuredLogging.LogSummary(context, false, AppConstants.ValidationMessages.DATASET_NOT_FOUND_OR_ACCESS_DENIED);
                 return false;
             }
 
@@ -734,8 +734,8 @@ public class DataProcessingService : IDataProcessingService
             userId,
             new Dictionary<string, object>
             {
-                ["Page"] = page,
-                ["PageSize"] = pageSize
+                [AppConstants.DataStructures.PAGE] = page,
+                [AppConstants.DataStructures.PAGE_SIZE] = pageSize
             });
 
         try
@@ -790,9 +790,9 @@ public class DataProcessingService : IDataProcessingService
             userId,
             new Dictionary<string, object>
             {
-                ["SearchTerm"] = searchTerm,
-                ["Page"] = page,
-                ["PageSize"] = pageSize
+                [AppConstants.DataStructures.SEARCH_TERM] = searchTerm,
+                [AppConstants.DataStructures.PAGE] = page,
+                [AppConstants.DataStructures.PAGE_SIZE] = pageSize
             });
 
         try
@@ -845,9 +845,9 @@ public class DataProcessingService : IDataProcessingService
             userId,
             new Dictionary<string, object>
             {
-                ["FileType"] = fileType.ToString(),
-                ["Page"] = page,
-                ["PageSize"] = pageSize
+                [AppConstants.DataStructures.FILE_TYPE] = fileType.ToString(),
+                [AppConstants.DataStructures.PAGE] = page,
+                [AppConstants.DataStructures.PAGE_SIZE] = pageSize
             });
 
         try
@@ -901,10 +901,10 @@ public class DataProcessingService : IDataProcessingService
             userId,
             new Dictionary<string, object>
             {
-                ["StartDate"] = startDate.ToString("yyyy-MM-dd"),
-                ["EndDate"] = endDate.ToString("yyyy-MM-dd"),
-                ["Page"] = page,
-                ["PageSize"] = pageSize
+                [AppConstants.DataStructures.START_DATE] = startDate.ToString("yyyy-MM-dd"),
+                [AppConstants.DataStructures.END_DATE] = endDate.ToString("yyyy-MM-dd"),
+                [AppConstants.DataStructures.PAGE] = page,
+                [AppConstants.DataStructures.PAGE_SIZE] = pageSize
             });
 
         try
