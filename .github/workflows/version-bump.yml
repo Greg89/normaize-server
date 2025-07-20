@@ -148,4 +148,3 @@ jobs:
           - Merge to complete the bump; see release workflow for release creation
         labels: automated,version-bump
         assignees: ${{ github.actor }}
-        reviewers: ${{ github.actor }}
