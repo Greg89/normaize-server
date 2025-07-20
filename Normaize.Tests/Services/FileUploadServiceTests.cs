@@ -16,20 +16,16 @@ namespace Normaize.Tests.Services;
 
 public class FileUploadServiceTests
 {
-    private readonly Mock<ILogger<FileUploadService>> _mockLogger;
     private readonly Mock<IStorageService> _mockStorageService;
-    private readonly Mock<IStructuredLoggingService> _mockStructuredLogging;
-    private readonly Mock<IChaosEngineeringService> _mockChaosEngineering;
+    private readonly Mock<IDataProcessingInfrastructure> _mockInfrastructure;
     private readonly FileUploadService _service;
     private readonly FileUploadConfiguration _fileUploadConfig;
     private readonly DataProcessingConfiguration _dataProcessingConfig;
 
     public FileUploadServiceTests()
     {
-        _mockLogger = new Mock<ILogger<FileUploadService>>();
         _mockStorageService = new Mock<IStorageService>();
-        _mockStructuredLogging = new Mock<IStructuredLoggingService>();
-        _mockChaosEngineering = new Mock<IChaosEngineeringService>();
+        _mockInfrastructure = new Mock<IDataProcessingInfrastructure>();
 
         // Setup configuration objects
         _fileUploadConfig = new FileUploadConfiguration
@@ -58,13 +54,14 @@ public class FileUploadServiceTests
         var mockDataProcessingOptions = new Mock<IOptions<DataProcessingConfiguration>>();
         mockDataProcessingOptions.Setup(x => x.Value).Returns(_dataProcessingConfig);
 
+        // Setup infrastructure mocks
+        SetupInfrastructureMocks();
+
         _service = new FileUploadService(
             mockFileUploadOptions.Object,
             mockDataProcessingOptions.Object,
-            _mockLogger.Object,
             _mockStorageService.Object,
-            _mockStructuredLogging.Object,
-            _mockChaosEngineering.Object);
+            _mockInfrastructure.Object);
     }
 
     #region SaveFileAsync Tests
@@ -533,6 +530,48 @@ public class FileUploadServiceTests
     #endregion
 
     #region Helper Methods
+
+    private void SetupInfrastructureMocks()
+    {
+        // Setup logger mock
+        var mockLogger = new Mock<ILogger<FileUploadService>>();
+        _mockInfrastructure.Setup(x => x.Logger).Returns(mockLogger.Object);
+
+        // Setup structured logging mock
+        var mockStructuredLogging = new Mock<IStructuredLoggingService>();
+        _mockInfrastructure.Setup(x => x.StructuredLogging).Returns(mockStructuredLogging.Object);
+
+        // Setup chaos engineering mock
+        var mockChaosEngineering = new Mock<IChaosEngineeringService>();
+        _mockInfrastructure.Setup(x => x.ChaosEngineering).Returns(mockChaosEngineering.Object);
+
+        // Setup default timeout values
+        _mockInfrastructure.Setup(x => x.DefaultTimeout).Returns(TimeSpan.FromSeconds(30));
+        _mockInfrastructure.Setup(x => x.QuickTimeout).Returns(TimeSpan.FromSeconds(5));
+
+        // Setup structured logging context creation
+        mockStructuredLogging.Setup(s => s.CreateContext(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+            .Returns<string, string, string, Dictionary<string, object>>((operationName, correlationId, userId, metadata) =>
+            {
+                var mockContext = new Mock<IOperationContext>();
+                mockContext.Setup(c => c.OperationName).Returns(operationName);
+                mockContext.Setup(c => c.CorrelationId).Returns(correlationId);
+                mockContext.Setup(c => c.UserId).Returns(userId);
+                mockContext.Setup(c => c.Metadata).Returns(metadata ?? new Dictionary<string, object>());
+                mockContext.Setup(c => c.Steps).Returns(new List<string>());
+                mockContext.Setup(c => c.Stopwatch).Returns(System.Diagnostics.Stopwatch.StartNew());
+                return mockContext.Object;
+            });
+
+        // Setup chaos engineering execution
+        mockChaosEngineering.Setup(x => x.ExecuteChaosAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Func<Task>>(), It.IsAny<Dictionary<string, object>>()))
+            .Returns<string, string, string, Func<Task>, Dictionary<string, object>>(async (scenario, correlationId, operationName, operation, metadata) =>
+            {
+                await operation();
+                return true;
+            });
+    }
 
     private static FileUploadRequest CreateValidFileUploadRequest()
     {
