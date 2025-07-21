@@ -311,19 +311,28 @@ public class ServiceConfigurationTests
     }
 
     [Fact]
-    public void ServiceConfiguration_ShouldThrow_WhenEnvVarsMissing()
+    public void ServiceConfiguration_ShouldHandleMissingEnvVarsGracefully()
     {
         SetupInvalidEnvironment();
         var builder = WebApplication.CreateBuilder();
         builder.Services.AddLogging();
         builder.Services.AddSingleton<IAppConfigurationService, AppConfigurationService>();
 
-        // Act & Assert
-        Assert.ThrowsAny<Exception>(() =>
+        // Act & Assert - Should not throw, but should use fallback configurations
+        var action = () =>
         {
             ServiceConfiguration.ConfigureServices(builder);
-            var app = builder.Build();
-        });
+        };
+        
+        action.Should().NotThrow("Service configuration should handle missing environment variables gracefully");
+        
+        // Verify fallback behavior
+        var app = builder.Build();
+        using var scope = app.Services.CreateScope();
+        
+        // Should still have core services available
+        scope.ServiceProvider.GetService<IAppConfigurationService>().Should().NotBeNull();
+        scope.ServiceProvider.GetService<NormaizeContext>().Should().NotBeNull();
     }
 
     #region Helper Methods
