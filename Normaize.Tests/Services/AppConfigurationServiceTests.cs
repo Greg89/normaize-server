@@ -116,10 +116,8 @@ public class AppConfigurationServiceTests
 
         // Assert
         config.Should().NotBeNull();
-        config.Host.Should().NotBeNull(); // Can be null if not configured
-        config.Database.Should().NotBeNull(); // Can be null if not configured
-        config.User.Should().NotBeNull(); // Can be null if not configured
-        config.Password.Should().NotBeNull(); // Can be null if not configured
+        // These can be null if not configured in the environment
+        // config.Host, config.Database, config.User, config.Password can be null
         config.Port.Should().Be("3306"); // Default value
     }
 

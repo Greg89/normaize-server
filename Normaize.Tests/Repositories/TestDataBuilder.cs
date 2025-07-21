@@ -58,7 +58,7 @@ public static class TestDataBuilder
             AnalysisStatus status = AnalysisStatus.Completed,
             int? comparisonDataSetId = null,
             string results = "{\"result\": \"test\"}",
-            string errorMessage = null,
+            string? errorMessage = null,
             bool isDeleted = false)
         {
             return new Analysis

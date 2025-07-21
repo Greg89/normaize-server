@@ -134,14 +134,14 @@ public class FileUploadService : IFileUploadService
                 ["FileSize"] = fileRequest?.FileSize ?? 0
             },
             validation: () => ValidateFileUploadRequest(fileRequest!),
-            operation: async (context) =>
+            operation: (context) =>
             {
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_VALIDATION_STARTED);
 
                 if (!IsFileSizeValid(fileRequest!.FileSize, GetCorrelationId(), fileRequest.FileName))
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_SIZE_VALIDATION_FAILED);
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 var fileExtension = GetFileExtension(fileRequest.FileName);
@@ -149,12 +149,12 @@ public class FileUploadService : IFileUploadService
                 if (!IsFileExtensionValid(fileExtension, GetCorrelationId(), fileRequest.FileName))
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_EXTENSION_VALIDATION_FAILED);
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_VALIDATION_PASSED);
                 
-                return true;
+                return Task.FromResult(true);
             });
     }
 
