@@ -772,11 +772,11 @@ public class DataProcessingService : IDataProcessingService
             throw new ArgumentException("User ID is required", nameof(createDto));
 
         // Security: Validate file path to prevent directory traversal
-        if (fileRequest.FileName.Contains("..") || fileRequest.FileName.Contains("/") || fileRequest.FileName.Contains("\\"))
+        if (fileRequest.FileName.Contains("..") || fileRequest.FileName.Contains('/') || fileRequest.FileName.Contains('\\'))
             throw new ArgumentException("Invalid file name", nameof(fileRequest));
     }
 
-    private static void ValidateGetDataSetInputs(int id, string userId)
+    private static void ValidateDataSetIdAndUserId(int id, string userId)
     {
         if (id <= 0)
             throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
@@ -784,29 +784,13 @@ public class DataProcessingService : IDataProcessingService
         ValidateUserId(userId);
     }
 
-    private static void ValidateDeleteInputs(int id, string userId)
-    {
-        if (id <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
-        
-        ValidateUserId(userId);
-    }
+    private static void ValidateGetDataSetInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
 
-    private static void ValidateRestoreInputs(int id, string userId)
-    {
-        if (id <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
-        
-        ValidateUserId(userId);
-    }
+    private static void ValidateDeleteInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
 
-    private static void ValidateHardDeleteInputs(int id, string userId)
-    {
-        if (id <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
-        
-        ValidateUserId(userId);
-    }
+    private static void ValidateRestoreInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
+
+    private static void ValidateHardDeleteInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
 
     private static void ValidatePreviewInputs(int id, int rows, string userId)
     {

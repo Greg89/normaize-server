@@ -830,7 +830,7 @@ public class FileUploadService : IFileUploadService
         }
     }
 
-    private void ExtractXmlObjectData(XElement root, HashSet<string> headers, List<Dictionary<string, object>> records)
+    private static void ExtractXmlObjectData(XElement root, HashSet<string> headers, List<Dictionary<string, object>> records)
     {
         // Single object - convert attributes and elements to record
         var record = new Dictionary<string, object>();

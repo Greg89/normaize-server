@@ -458,7 +458,7 @@ public class DataVisualizationService : IDataVisualizationService
         var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, correlationId);
         var data = ExtractDataSetData(dataSet, correlationId);
         
-        var summary = GenerateDataSummary(dataSet, data, correlationId);
+        var summary = GenerateDataSummary(dataSet, data);
         summary.ProcessingTime = stopwatch.Elapsed;
 
         _cache.Set(cacheKey, summary, _options.CacheExpiration);
@@ -802,7 +802,7 @@ public class DataVisualizationService : IDataVisualizationService
 
     #region Summary Generation Methods
 
-    private DataSummaryDto GenerateDataSummary(DataSet dataSet, List<Dictionary<string, object>> data, string correlationId)
+    private static DataSummaryDto GenerateDataSummary(DataSet dataSet, List<Dictionary<string, object>> data)
     {
         if (data.Count == 0)
         {
@@ -813,7 +813,7 @@ public class DataVisualizationService : IDataVisualizationService
             TotalColumns = 0,
             MissingValues = 0,
             DuplicateRows = 0,
-            ColumnSummaries = new Dictionary<string, ColumnSummaryDto>(),
+            ColumnSummaries = [],
             ProcessingTime = TimeSpan.Zero
         };
         }
@@ -854,14 +854,14 @@ public class DataVisualizationService : IDataVisualizationService
         };
     }
 
-    private StatisticalSummaryDto GenerateStatisticalSummary(DataSet dataSet, List<Dictionary<string, object>> data, string correlationId)
+    private static StatisticalSummaryDto GenerateStatisticalSummary(DataSet dataSet, List<Dictionary<string, object>> data, string correlationId)
     {
         if (data.Count == 0)
         {
                     return new StatisticalSummaryDto
         {
             DataSetId = dataSet.Id,
-            ColumnStatistics = new Dictionary<string, ColumnStatisticsDto>(),
+            ColumnStatistics = [],
             ProcessingTime = TimeSpan.Zero
         };
         }
@@ -992,22 +992,6 @@ public class DataVisualizationService : IDataVisualizationService
         var kurtosis = data.Select(x => Math.Pow((x - mean) / stdDev, 4)).Average();
         return (kurtosis - 3) * Math.Sqrt(data.Count * (data.Count - 1)) / ((data.Count - 2) * (data.Count - 3));
     }
-
-    //private static double CalculateCorrelation(List<double> data1, List<double> data2)
-    //{
-    //    if (data1.Count != data2.Count || data1.Count == 0) return 0;
-        
-        //var mean1 = data1.Average();
-        //var mean2 = data2.Average();
-        
-        //var numerator = data1.Zip(data2, (x, y) => (x - mean1) * (y - mean2)).Sum();
-        //var denominator1 = data1.Select(x => Math.Pow(x - mean1, 2)).Sum();
-        //var denominator2 = data2.Select(y => Math.Pow(y - mean2, 2)).Sum();
-        
-        //if (Math.Abs(denominator1) < double.Epsilon || Math.Abs(denominator2) < double.Epsilon) return 0;
-        
-        //return numerator / Math.Sqrt(denominator1 * denominator2);
-    //}
 
     #endregion
 }
