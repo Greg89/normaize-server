@@ -218,7 +218,7 @@ public class FileUploadService : IFileUploadService
                     
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_DELETED_SUCCESS);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_DELETION_FAILED);
                     // Don't re-throw - log and continue (as per original behavior)
