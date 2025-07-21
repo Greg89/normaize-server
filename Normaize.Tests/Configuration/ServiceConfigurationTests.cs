@@ -328,7 +328,7 @@ public class ServiceConfigurationTests
 
     #region Helper Methods
 
-    private void SetupValidEnvironment()
+    private static void SetupValidEnvironment()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         Environment.SetEnvironmentVariable("MYSQLHOST", "localhost");
@@ -351,7 +351,7 @@ public class ServiceConfigurationTests
         Environment.SetEnvironmentVariable("MYSQLPORT", null);
     }
 
-    private void SetupEnvironmentWithoutDatabase()
+    private static void SetupEnvironmentWithoutDatabase()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         Environment.SetEnvironmentVariable("MYSQLHOST", null);
@@ -363,7 +363,7 @@ public class ServiceConfigurationTests
         Environment.SetEnvironmentVariable("AUTH0_AUDIENCE", "test-audience");
     }
 
-    private void SetupEnvironmentWithS3ButNoCredentials()
+    private static void SetupEnvironmentWithS3ButNoCredentials()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         Environment.SetEnvironmentVariable("STORAGE_PROVIDER", "s3");
@@ -373,14 +373,14 @@ public class ServiceConfigurationTests
         Environment.SetEnvironmentVariable("AUTH0_AUDIENCE", "test-audience");
     }
 
-    private void SetupTestEnvironment()
+    private static void SetupTestEnvironment()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Test");
         Environment.SetEnvironmentVariable("AUTH0_ISSUER", "https://test.auth0.com/");
         Environment.SetEnvironmentVariable("AUTH0_AUDIENCE", "test-audience");
     }
 
-    private void SetupDevelopmentEnvironment()
+    private static void SetupDevelopmentEnvironment()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         Environment.SetEnvironmentVariable("MYSQLHOST", "localhost");

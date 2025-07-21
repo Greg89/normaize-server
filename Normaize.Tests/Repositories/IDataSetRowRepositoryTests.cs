@@ -17,28 +17,28 @@ public class IDataSetRowRepositoryTests
         var interfaceType = typeof(IDataSetRowRepository);
         
         // Assert - Verify all required methods exist
-        interfaceType.GetMethod("GetByDataSetIdAsync", new[] { typeof(int) })
+        interfaceType.GetMethod("GetByDataSetIdAsync", [typeof(int)])
             .Should().NotBeNull("GetByDataSetIdAsync(int) method should exist");
             
-        interfaceType.GetMethod("GetByDataSetIdAsync", new[] { typeof(int), typeof(int), typeof(int) })
+        interfaceType.GetMethod("GetByDataSetIdAsync", [typeof(int), typeof(int), typeof(int)])
             .Should().NotBeNull("GetByDataSetIdAsync(int, int, int) method should exist");
             
-        interfaceType.GetMethod("GetByIdAsync", new[] { typeof(int) })
+        interfaceType.GetMethod("GetByIdAsync", [typeof(int)])
             .Should().NotBeNull("GetByIdAsync method should exist");
             
-        interfaceType.GetMethod("AddAsync", new[] { typeof(DataSetRow) })
+        interfaceType.GetMethod("AddAsync", [typeof(DataSetRow)])
             .Should().NotBeNull("AddAsync method should exist");
             
-        interfaceType.GetMethod("AddRangeAsync", new[] { typeof(IEnumerable<DataSetRow>) })
+        interfaceType.GetMethod("AddRangeAsync", [typeof(IEnumerable<DataSetRow>)])
             .Should().NotBeNull("AddRangeAsync method should exist");
             
-        interfaceType.GetMethod("DeleteAsync", new[] { typeof(int) })
+        interfaceType.GetMethod("DeleteAsync", [typeof(int)])
             .Should().NotBeNull("DeleteAsync method should exist");
             
-        interfaceType.GetMethod("DeleteByDataSetIdAsync", new[] { typeof(int) })
+        interfaceType.GetMethod("DeleteByDataSetIdAsync", [typeof(int)])
             .Should().NotBeNull("DeleteByDataSetIdAsync method should exist");
             
-        interfaceType.GetMethod("GetCountByDataSetIdAsync", new[] { typeof(int) })
+        interfaceType.GetMethod("GetCountByDataSetIdAsync", [typeof(int)])
             .Should().NotBeNull("GetCountByDataSetIdAsync method should exist");
     }
 
@@ -50,29 +50,29 @@ public class IDataSetRowRepositoryTests
         var interfaceType = typeof(IDataSetRowRepository);
         
         // Verify return types
-        interfaceType.GetMethod("GetByDataSetIdAsync", new[] { typeof(int) })!
-            .ReturnType.Should().Be(typeof(Task<IEnumerable<DataSetRow>>));
+        interfaceType.GetMethod("GetByDataSetIdAsync", [typeof(int)])!
+            .ReturnType.Should().Be<Task<IEnumerable<DataSetRow>>>();
             
-        interfaceType.GetMethod("GetByDataSetIdAsync", new[] { typeof(int), typeof(int), typeof(int) })!
-            .ReturnType.Should().Be(typeof(Task<IEnumerable<DataSetRow>>));
+        interfaceType.GetMethod("GetByDataSetIdAsync", [typeof(int), typeof(int), typeof(int)])!
+            .ReturnType.Should().Be<Task<IEnumerable<DataSetRow>>>();
             
-        interfaceType.GetMethod("GetByIdAsync", new[] { typeof(int) })!
-            .ReturnType.Should().Be(typeof(Task<DataSetRow?>));
+        interfaceType.GetMethod("GetByIdAsync", [typeof(int)])!
+            .ReturnType.Should().Be<Task<DataSetRow?>>();
             
-        interfaceType.GetMethod("AddAsync", new[] { typeof(DataSetRow) })!
-            .ReturnType.Should().Be(typeof(Task<DataSetRow>));
+        interfaceType.GetMethod("AddAsync", [typeof(DataSetRow)])!
+            .ReturnType.Should().Be<Task<DataSetRow>>();
             
-        interfaceType.GetMethod("AddRangeAsync", new[] { typeof(IEnumerable<DataSetRow>) })!
-            .ReturnType.Should().Be(typeof(Task<IEnumerable<DataSetRow>>));
+        interfaceType.GetMethod("AddRangeAsync", [typeof(IEnumerable<DataSetRow>)])!
+            .ReturnType.Should().Be<Task<IEnumerable<DataSetRow>>>();
             
-        interfaceType.GetMethod("DeleteAsync", new[] { typeof(int) })!
-            .ReturnType.Should().Be(typeof(Task<bool>));
+        interfaceType.GetMethod("DeleteAsync", [typeof(int)])!
+            .ReturnType.Should().Be<Task<bool>>();
             
-        interfaceType.GetMethod("DeleteByDataSetIdAsync", new[] { typeof(int) })!
-            .ReturnType.Should().Be(typeof(Task<bool>));
+        interfaceType.GetMethod("DeleteByDataSetIdAsync", [typeof(int)])!
+            .ReturnType.Should().Be<Task<bool>>();
             
-        interfaceType.GetMethod("GetCountByDataSetIdAsync", new[] { typeof(int) })!
-            .ReturnType.Should().Be(typeof(Task<int>));
+        interfaceType.GetMethod("GetCountByDataSetIdAsync", [typeof(int)])!
+            .ReturnType.Should().Be<Task<int>>();
     }
 
     [Fact]

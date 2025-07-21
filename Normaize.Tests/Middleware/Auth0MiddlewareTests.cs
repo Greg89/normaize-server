@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using Normaize.API.Middleware;
 using System.Security.Claims;
 using Xunit;
 using FluentAssertions;
@@ -34,9 +33,11 @@ public class Auth0MiddlewareTests
     public async Task Auth0Middleware_WithAuthenticatedUser_ShouldExtractClaimsAndAddToContext()
     {
         // Arrange
-        var context = new DefaultHttpContext();
-        context.RequestServices = _mockServiceProvider.Object;
-        
+        var context = new DefaultHttpContext
+        {
+            RequestServices = _mockServiceProvider.Object
+        };
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, "auth0|123456789"),
@@ -60,9 +61,11 @@ public class Auth0MiddlewareTests
     public async Task Auth0Middleware_WithAuth0SubClaim_ShouldExtractUserIdFromSubClaim()
     {
         // Arrange
-        var context = new DefaultHttpContext();
-        context.RequestServices = _mockServiceProvider.Object;
-        
+        var context = new DefaultHttpContext
+        {
+            RequestServices = _mockServiceProvider.Object
+        };
+
         var claims = new List<Claim>
         {
             new("sub", "auth0|987654321"), // Auth0 sub claim
@@ -86,9 +89,11 @@ public class Auth0MiddlewareTests
     public async Task Auth0Middleware_WithMissingClaims_ShouldHandleNullValues()
     {
         // Arrange
-        var context = new DefaultHttpContext();
-        context.RequestServices = _mockServiceProvider.Object;
-        
+        var context = new DefaultHttpContext
+        {
+            RequestServices = _mockServiceProvider.Object
+        };
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, "auth0|123456789")
@@ -111,9 +116,11 @@ public class Auth0MiddlewareTests
     public async Task Auth0Middleware_WithUnauthenticatedUser_ShouldNotAddUserInfoToContext()
     {
         // Arrange
-        var context = new DefaultHttpContext();
-        context.RequestServices = _mockServiceProvider.Object;
-        context.User = new ClaimsPrincipal(new ClaimsIdentity()); // Unauthenticated
+        var context = new DefaultHttpContext
+        {
+            RequestServices = _mockServiceProvider.Object,
+            User = new ClaimsPrincipal(new ClaimsIdentity()) // Unauthenticated
+        };
 
         // Act - Simulate the middleware logic directly
         await SimulateAuth0Middleware(context);
@@ -128,9 +135,11 @@ public class Auth0MiddlewareTests
     public async Task Auth0Middleware_WithAuthenticatedUser_ShouldLogDebugInformation()
     {
         // Arrange
-        var context = new DefaultHttpContext();
-        context.RequestServices = _mockServiceProvider.Object;
-        
+        var context = new DefaultHttpContext
+        {
+            RequestServices = _mockServiceProvider.Object
+        };
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, "auth0|123456789"),
@@ -182,16 +191,18 @@ public class Auth0MiddlewareTests
     public async Task Auth0Middleware_ShouldCallNextMiddleware()
     {
         // Arrange
-        var context = new DefaultHttpContext();
-        context.RequestServices = _mockServiceProvider.Object;
-        context.User = new ClaimsPrincipal(new ClaimsIdentity());
+        var context = new DefaultHttpContext
+        {
+            RequestServices = _mockServiceProvider.Object,
+            User = new ClaimsPrincipal(new ClaimsIdentity())
+        };
 
         var nextCalled = false;
-        RequestDelegate next = async (ctx) => 
+        async Task next(HttpContext ctx)
         {
             nextCalled = true;
             await Task.CompletedTask;
-        };
+        }
 
         // Act - Simulate the middleware logic directly
         await SimulateAuth0Middleware(context, next);
@@ -201,7 +212,7 @@ public class Auth0MiddlewareTests
     }
 
     // Helper method to simulate the Auth0Middleware logic for testing
-    private async Task SimulateAuth0Middleware(HttpContext context, RequestDelegate? next = null)
+    private static async Task SimulateAuth0Middleware(HttpContext context, RequestDelegate? next = null)
     {
         var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
         var logger = loggerFactory.CreateLogger("Auth0Middleware");
