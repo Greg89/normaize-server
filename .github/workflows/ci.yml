@@ -10,10 +10,11 @@ env:
 jobs:
   build-test-coverage:
     runs-on: ubuntu-latest
-    # Skip this job if commit message contains [skip ci] or if it's a version-bump branch
+    # Skip this job if commit message contains [skip ci] or is a version-bump branch or is a create-pull-request bot merge
     if: |
       !contains(github.event.head_commit.message, '[skip ci]') &&
-      !startsWith(github.ref, 'refs/heads/version-bump/')
+      !startsWith(github.ref, 'refs/heads/version-bump/') &&
+      !(startsWith(github.event.head_commit.message, 'Merge pull request #') && contains(github.event.head_commit.message, 'from Greg89/create-pull-request/patch'))
     
     steps:
     - name: Checkout code

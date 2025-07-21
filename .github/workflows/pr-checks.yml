@@ -44,8 +44,8 @@ jobs:
         # Install SonarQube scanner
         dotnet tool install --global dotnet-sonarscanner
         
-        # Run SonarQube analysis
-        dotnet sonarscanner begin /k:"Greg89_normaize-server" /o:"greg89" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
+        # Run SonarQube analysis with exclusions
+        dotnet sonarscanner begin /k:"Greg89_normaize-server" /o:"greg89" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.exclusions="**/coverage-report/**,**/coverage-summary/**,**/coverage-opencover/**,**/coverage/**,**/test-results/**,**/bin/**,**/obj/**,**/uploads/**,**/*.Designer.cs,**/Migrations/**"
         dotnet build
         dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
