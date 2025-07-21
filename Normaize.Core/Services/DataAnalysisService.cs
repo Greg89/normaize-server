@@ -271,7 +271,7 @@ public class DataAnalysisService : IDataAnalysisService
                         [AppConstants.DataStructures.ANALYSIS_ID] = analysisId
                     });
                     _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
-                    throw new ArgumentException($"Analysis with ID {analysisId} not found", nameof(analysisId));
+                    throw new ArgumentException($"Analysis with ID {analysisId} not found", AppConstants.DataStructures.ANALYSIS_ID);
                 }
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.RESULTS_DESERIALIZATION_STARTED);
@@ -365,7 +365,7 @@ public class DataAnalysisService : IDataAnalysisService
                         [AppConstants.DataStructures.ANALYSIS_ID] = analysisId
                     });
                     _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
-                    throw new ArgumentException($"Analysis with ID {analysisId} not found", nameof(analysisId));
+                    throw new ArgumentException($"Analysis with ID {analysisId} not found", AppConstants.DataStructures.ANALYSIS_ID);
                 }
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_STATE_VALIDATION_STARTED);
@@ -423,12 +423,12 @@ public class DataAnalysisService : IDataAnalysisService
             _infrastructure.StructuredLogging.LogSummary(context, false, ex.Message);
             
             // Create detailed error message based on operation type and metadata
-            var errorMessage = CreateDetailedErrorMessage(operationName, additionalMetadata, ex);
+            var errorMessage = CreateDetailedErrorMessage(operationName, additionalMetadata);
             throw new InvalidOperationException(errorMessage, ex);
         }
     }
 
-    private static string CreateDetailedErrorMessage(string operationName, Dictionary<string, object>? metadata, Exception ex)
+    private static string CreateDetailedErrorMessage(string operationName, Dictionary<string, object>? metadata)
     {
         if (metadata == null) return $"Failed to complete {operationName}";
 
@@ -444,15 +444,15 @@ public class DataAnalysisService : IDataAnalysisService
             case nameof(RunAnalysisAsync):
             case nameof(GetAnalysisResultAsync):
                 var analysisId = metadata.TryGetValue(AppConstants.DataStructures.ANALYSIS_ID, out var id) ? id?.ToString() : 
-                               metadata.TryGetValue(AppConstants.DataStructures.DATASET_ID, out var datasetId) ? datasetId?.ToString() : "unknown";
+                               metadata.TryGetValue(AppConstants.DataStructures.DATASET_ID, out var datasetId) ? datasetId?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for analysis ID {analysisId}";
                 
             case nameof(GetAnalysesByDataSetAsync):
-                var dataSetId = metadata.TryGetValue("DataSetId", out var dsId) ? dsId?.ToString() : "unknown";
+                var dataSetId = metadata.TryGetValue("DataSetId", out var dsId) ? dsId?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for dataset ID {dataSetId}";
                 
             case nameof(GetAnalysesByStatusAsync):
-                var status = metadata.TryGetValue("Status", out var statusValue) ? statusValue?.ToString() : "unknown";
+                var status = metadata.TryGetValue("Status", out var statusValue) ? statusValue?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for status {status}";
                 
             case nameof(GetAnalysesByTypeAsync):

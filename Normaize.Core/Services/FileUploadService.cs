@@ -262,12 +262,12 @@ public class FileUploadService : IFileUploadService
             }
             
             // Create detailed error message based on operation type and metadata
-            var errorMessage = CreateDetailedErrorMessage(operationName, additionalMetadata, ex);
+            var errorMessage = CreateDetailedErrorMessage(operationName, additionalMetadata);
             throw new InvalidOperationException(errorMessage, ex);
         }
     }
 
-    private static string CreateDetailedErrorMessage(string operationName, Dictionary<string, object>? metadata, Exception ex)
+    private static string CreateDetailedErrorMessage(string operationName, Dictionary<string, object>? metadata)
     {
         if (metadata == null) return $"Failed to complete {operationName}";
 
@@ -275,20 +275,20 @@ public class FileUploadService : IFileUploadService
         switch (operationName)
         {
             case nameof(SaveFileAsync):
-                var fileName = metadata.TryGetValue("FileName", out var name) ? name?.ToString() : "unknown";
+                var fileName = metadata.TryGetValue("FileName", out var name) ? name?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{fileName}'";
                 
             case nameof(ValidateFileAsync):
-                var validateFileName = metadata.TryGetValue("FileName", out var validateName) ? validateName?.ToString() : "unknown";
+                var validateFileName = metadata.TryGetValue("FileName", out var validateName) ? validateName?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{validateFileName}'";
                 
             case nameof(ProcessFileAsync):
-                var filePath = metadata.TryGetValue("FilePath", out var path) ? path?.ToString() : "unknown";
-                var fileType = metadata.TryGetValue("FileType", out var type) ? type?.ToString() : "unknown";
+                var filePath = metadata.TryGetValue("FilePath", out var path) ? path?.ToString() : AppConstants.Messages.UNKNOWN;
+                var fileType = metadata.TryGetValue("FileType", out var type) ? type?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{filePath}' of type '{fileType}'";
                 
             case nameof(DeleteFileAsync):
-                var deleteFilePath = metadata.TryGetValue("FilePath", out var deletePath) ? deletePath?.ToString() : "unknown";
+                var deleteFilePath = metadata.TryGetValue("FilePath", out var deletePath) ? deletePath?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{deleteFilePath}'";
                 
             default:

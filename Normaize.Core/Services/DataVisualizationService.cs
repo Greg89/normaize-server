@@ -215,12 +215,12 @@ public class DataVisualizationService : IDataVisualizationService
             _infrastructure.StructuredLogging.LogSummary(context, false, ex.Message);
             
             // Create detailed error message based on operation type and metadata
-            var errorMessage = CreateDetailedErrorMessage(operationName, additionalMetadata, ex);
+            var errorMessage = CreateDetailedErrorMessage(operationName, additionalMetadata);
             throw new InvalidOperationException(errorMessage, ex);
         }
     }
 
-    private static string CreateDetailedErrorMessage(string operationName, Dictionary<string, object>? metadata, Exception ex)
+    private static string CreateDetailedErrorMessage(string operationName, Dictionary<string, object>? metadata)
     {
         if (metadata == null) return $"Failed to complete {operationName}";
 
