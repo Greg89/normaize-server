@@ -244,7 +244,6 @@ public class ChaosEngineeringService : IChaosEngineeringService
                 }
                 await Task.Delay(100);
                 tempObjects.Clear();
-                GC.Collect();
             });
     }
     

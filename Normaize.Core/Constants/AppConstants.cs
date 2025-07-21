@@ -37,6 +37,13 @@ public static class AppConstants
         public const string S3 = "s3";
         public const string LOCAL = "local";
     }
+    /// <summary>
+    /// Storage provider constants
+    /// </summary>
+    public static class ChaosEngineering
+    {
+        public const string CHAOS_TYPE = "ChaosType";
+    }
 
     /// <summary>
     /// HTTP status messages
@@ -176,6 +183,8 @@ public static class AppConstants
         public const string FILE_TYPE = "FileType";
         public const string START_DATE = "StartDate";
         public const string END_DATE = "EndDate";
+        public const string USER_ID = "UserId";
+        public const string ANALYSIS_ID = "AnalysisId";
     }
 
     /// <summary>

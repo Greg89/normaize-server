@@ -1,6 +1,6 @@
 using Normaize.Core.Models;
 
-namespace Normaize.Data.Repositories;
+namespace Normaize.Core.Interfaces;
 
 public interface IDataSetRowRepository
 {
