@@ -14,6 +14,7 @@ using System.Security.Cryptography;
 using System.ComponentModel.DataAnnotations;
 using Normaize.Core.Configuration;
 using Normaize.Core.Constants;
+using System.Diagnostics;
 
 namespace Normaize.Core.Services;
 
@@ -21,27 +22,19 @@ public class FileUploadService : IFileUploadService
 {
     private readonly FileUploadConfiguration _fileUploadConfig;
     private readonly DataProcessingConfiguration _dataProcessingConfig;
-    private readonly ILogger<FileUploadService> _logger;
     private readonly IStorageService _storageService;
-    private readonly IStructuredLoggingService _structuredLoggingService;
-    private readonly IChaosEngineeringService _chaosEngineeringService;
-
-    // Constants moved to AppConstants.FileProcessing
+    private readonly IDataProcessingInfrastructure _infrastructure;
 
     public FileUploadService(
         IOptions<FileUploadConfiguration> fileUploadConfig,
         IOptions<DataProcessingConfiguration> dataProcessingConfig,
-        ILogger<FileUploadService> logger,
         IStorageService storageService,
-        IStructuredLoggingService structuredLoggingService,
-        IChaosEngineeringService chaosEngineeringService)
+        IDataProcessingInfrastructure infrastructure)
     {
         _fileUploadConfig = fileUploadConfig?.Value ?? throw new ArgumentNullException(nameof(fileUploadConfig));
         _dataProcessingConfig = dataProcessingConfig?.Value ?? throw new ArgumentNullException(nameof(dataProcessingConfig));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _storageService = storageService ?? throw new ArgumentNullException(nameof(storageService));
-        _structuredLoggingService = structuredLoggingService ?? throw new ArgumentNullException(nameof(structuredLoggingService));
-        _chaosEngineeringService = chaosEngineeringService ?? throw new ArgumentNullException(nameof(chaosEngineeringService));
+        _infrastructure = infrastructure ?? throw new ArgumentNullException(nameof(infrastructure));
         
         ValidateConfiguration();
         LogConfiguration();
@@ -76,7 +69,7 @@ public class FileUploadService : IFileUploadService
 
     private void LogConfiguration()
     {
-        _logger.LogInformation("FileUploadService initialized with configuration: " +
+        _infrastructure.Logger.LogInformation("FileUploadService initialized with configuration: " +
             "MaxFileSize={MaxFileSize}MB, MaxRowsPerDataset={MaxRowsPerDataset}, " +
             "AllowedExtensions=[{AllowedExtensions}], BlockedExtensions=[{BlockedExtensions}]",
             _fileUploadConfig.MaxFileSize / AppConstants.FileProcessing.BYTES_PER_MEGABYTE,
@@ -87,129 +80,263 @@ public class FileUploadService : IFileUploadService
 
     public async Task<string> SaveFileAsync(FileUploadRequest fileRequest)
     {
-        var correlationId = GenerateCorrelationId();
-        
-        try
-        {
-            _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_UPLOAD_STARTED);
-
-            // Apply chaos engineering for file upload
-            await _chaosEngineeringService.ExecuteChaosAsync(AppConstants.FileProcessing.STORAGE_FAILURE_SCENARIO, correlationId, "SaveFileAsync", 
-                async () => await Task.Delay(100), new Dictionary<string, object> { [AppConstants.FileProcessing.FILE_NAME_KEY] = fileRequest.FileName });
-
-            // Validate file before saving
-            var isValid = await ValidateFileAsync(fileRequest);
-            if (!isValid)
+        return await ExecuteFileOperationAsync(
+            operationName: nameof(SaveFileAsync),
+            additionalMetadata: new Dictionary<string, object>
             {
-                _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_VALIDATION_FAILED);
-                throw new FileValidationException($"File validation failed for {fileRequest.FileName}");
-            }
+                ["FileName"] = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN,
+                ["FileSize"] = fileRequest?.FileSize ?? 0
+            },
+            validation: () => ValidateFileUploadRequest(fileRequest!),
+            operation: async (context) =>
+            {
+                _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_UPLOAD_STARTED);
 
-            var filePath = await _storageService.SaveFileAsync(fileRequest);
-            
-            _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_UPLOAD_SUCCESS);
-            
-            return filePath;
-        }
-        catch (FileValidationException)
-        {
-            // Re-throw validation exceptions as they are already logged
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_UPLOAD_FAILED);
-            throw new FileUploadException($"Failed to save file {fileRequest.FileName}", ex);
-        }
+                // Apply chaos engineering for file upload
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(
+                    AppConstants.FileProcessing.STORAGE_FAILURE_SCENARIO, 
+                    GetCorrelationId(), 
+                    context.OperationName, 
+                    async () => await Task.Delay(100), 
+                    new Dictionary<string, object> { [AppConstants.FileProcessing.FILE_NAME_KEY] = fileRequest!.FileName });
+
+                // Validate file before saving
+                var isValid = await ValidateFileAsync(fileRequest!);
+                if (!isValid)
+                {
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_VALIDATION_FAILED);
+                    throw new FileValidationException($"File validation failed for {fileRequest!.FileName}");
+                }
+
+                try
+                {
+                    var filePath = await _storageService.SaveFileAsync(fileRequest!);
+                    
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_UPLOAD_SUCCESS);
+                    
+                    return filePath;
+                }
+                catch (Exception ex)
+                {
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_UPLOAD_FAILED);
+                    throw new FileUploadException($"Failed to save file {fileRequest!.FileName}", ex);
+                }
+            });
     }
 
-    public Task<bool> ValidateFileAsync(FileUploadRequest fileRequest)
+    public async Task<bool> ValidateFileAsync(FileUploadRequest fileRequest)
     {
-        var correlationId = GenerateCorrelationId();
-        
-        try
-        {
-            _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_VALIDATION_STARTED);
-
-            if (!IsFileSizeValid(fileRequest.FileSize, correlationId, fileRequest.FileName))
+        return await ExecuteFileOperationAsync(
+            operationName: nameof(ValidateFileAsync),
+            additionalMetadata: new Dictionary<string, object>
             {
-                _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_SIZE_VALIDATION_FAILED);
-                return Task.FromResult(false);
-            }
-
-            var fileExtension = GetFileExtension(fileRequest.FileName);
-            
-            if (!IsFileExtensionValid(fileExtension, correlationId, fileRequest.FileName))
+                ["FileName"] = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN,
+                ["FileSize"] = fileRequest?.FileSize ?? 0
+            },
+            validation: () => ValidateFileUploadRequest(fileRequest!),
+            operation: async (context) =>
             {
-                _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_EXTENSION_VALIDATION_FAILED);
-                return Task.FromResult(false);
-            }
+                _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_VALIDATION_STARTED);
 
-            _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_VALIDATION_PASSED);
-            
-            return Task.FromResult(true);
-        }
-        catch (Exception ex)
-        {
-            _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_VALIDATION_ERROR);
-            return Task.FromResult(false);
-        }
+                if (!IsFileSizeValid(fileRequest!.FileSize, GetCorrelationId(), fileRequest.FileName))
+                {
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_SIZE_VALIDATION_FAILED);
+                    return false;
+                }
+
+                var fileExtension = GetFileExtension(fileRequest.FileName);
+                
+                if (!IsFileExtensionValid(fileExtension, GetCorrelationId(), fileRequest.FileName))
+                {
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_EXTENSION_VALIDATION_FAILED);
+                    return false;
+                }
+
+                _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_VALIDATION_PASSED);
+                
+                return true;
+            });
     }
 
     public async Task<DataSet> ProcessFileAsync(string filePath, string fileType)
     {
-        var correlationId = GenerateCorrelationId();
-        DataSet dataSet = null!;
-        
+        return await ExecuteFileOperationAsync(
+            operationName: nameof(ProcessFileAsync),
+            additionalMetadata: new Dictionary<string, object>
+            {
+                ["FilePath"] = filePath,
+                ["FileType"] = fileType
+            },
+            validation: () => ValidateFileProcessingInputs(filePath, fileType),
+            operation: async (context) =>
+            {
+                _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_PROCESSING_STARTED);
+
+                // Apply chaos engineering for file processing
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(
+                    AppConstants.FileProcessing.PROCESSING_DELAY_SCENARIO, 
+                    GetCorrelationId(), 
+                    context.OperationName, 
+                    async () => await Task.Delay(100), 
+                    new Dictionary<string, object> { [AppConstants.FileProcessing.FILE_TYPE_KEY] = fileType });
+
+                // Validate file exists
+                await ValidateFileExistsAsync(filePath, GetCorrelationId());
+
+                var dataSet = CreateInitialDataSet(filePath, fileType);
+
+                await ProcessFileByTypeAsync(filePath, fileType, dataSet, GetCorrelationId());
+                await FinalizeDataSetAsync(filePath, dataSet);
+
+                _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_PROCESSED_SUCCESS);
+                
+                return dataSet;
+            });
+    }
+
+    public async Task DeleteFileAsync(string filePath)
+    {
+        await ExecuteFileOperationAsync(
+            operationName: nameof(DeleteFileAsync),
+            additionalMetadata: new Dictionary<string, object> { ["FilePath"] = filePath },
+            validation: () => ValidateFilePath(filePath),
+            operation: async (context) =>
+            {
+                _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_DELETION_STARTED);
+
+                // Apply chaos engineering for file deletion
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(
+                    AppConstants.FileProcessing.STORAGE_FAILURE_SCENARIO, 
+                    GetCorrelationId(), 
+                    context.OperationName, 
+                    async () => await Task.Delay(100), 
+                    new Dictionary<string, object> { [AppConstants.FileProcessing.FILE_PATH_KEY] = filePath });
+
+                try
+                {
+                    await _storageService.DeleteFileAsync(filePath);
+                    
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_DELETED_SUCCESS);
+                }
+                catch (Exception ex)
+                {
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_DELETION_FAILED);
+                    // Don't re-throw - log and continue (as per original behavior)
+                }
+                
+                return true; // Return value for consistency
+            });
+    }
+
+    #region Private Methods
+
+    private async Task<T> ExecuteFileOperationAsync<T>(
+        string operationName,
+        Dictionary<string, object>? additionalMetadata,
+        Action validation,
+        Func<IOperationContext, Task<T>> operation)
+    {
+        var correlationId = GetCorrelationId();
+        var context = _infrastructure.StructuredLogging.CreateContext(operationName, correlationId, AppConstants.Auth.AnonymousUser, additionalMetadata);
+
         try
         {
-            _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_PROCESSING_STARTED);
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
+            validation();
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
-            // Apply chaos engineering for file processing
-            await _chaosEngineeringService.ExecuteChaosAsync(AppConstants.FileProcessing.PROCESSING_DELAY_SCENARIO, correlationId, "ProcessFileAsync", 
-                async () => await Task.Delay(100), new Dictionary<string, object> { [AppConstants.FileProcessing.FILE_TYPE_KEY] = fileType });
-
-            // Validate file exists
-            await ValidateFileExistsAsync(filePath, correlationId);
-
-            dataSet = CreateInitialDataSet(filePath, fileType);
-
-            await ProcessFileByTypeAsync(filePath, fileType, dataSet, correlationId);
-            await FinalizeDataSetAsync(filePath, dataSet);
-
-            _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_PROCESSED_SUCCESS);
-            
-            return dataSet;
-        }
-        catch (UnsupportedFileTypeException)
-        {
-            // Re-throw specific exceptions
-            throw;
-        }
-        catch (FileProcessingException)
-        {
-            // Re-throw processing exceptions
-            throw;
+            var result = await operation(context);
+            _infrastructure.StructuredLogging.LogSummary(context, true);
+            return result;
         }
         catch (Exception ex)
         {
-            _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_PROCESSING_FAILED);
-            if (dataSet != null)
+            _infrastructure.StructuredLogging.LogSummary(context, false, ex.Message);
+            
+            // Preserve specific exception types for better error handling
+            if (ex is FileNotFoundException || ex is UnsupportedFileTypeException || 
+                ex is FileUploadException || ex is FileProcessingException || 
+                ex is FileValidationException)
             {
-                HandleProcessingError(filePath, fileType, dataSet, correlationId, ex);
+                throw; // Re-throw specific exceptions as-is
             }
-            throw;
+            
+            // Create detailed error message based on operation type and metadata
+            var errorMessage = CreateDetailedErrorMessage(operationName, additionalMetadata, ex);
+            throw new InvalidOperationException(errorMessage, ex);
         }
     }
 
-    // Helper methods for better code organization
-    private static string GenerateCorrelationId() => Guid.NewGuid().ToString();
+    private static string CreateDetailedErrorMessage(string operationName, Dictionary<string, object>? metadata, Exception ex)
+    {
+        if (metadata == null) return $"Failed to complete {operationName}";
+
+        // Handle specific operation types with detailed error messages
+        switch (operationName)
+        {
+            case nameof(SaveFileAsync):
+                var fileName = metadata.TryGetValue("FileName", out var name) ? name?.ToString() : "unknown";
+                return $"Failed to complete {operationName} for file '{fileName}'";
+                
+            case nameof(ValidateFileAsync):
+                var validateFileName = metadata.TryGetValue("FileName", out var validateName) ? validateName?.ToString() : "unknown";
+                return $"Failed to complete {operationName} for file '{validateFileName}'";
+                
+            case nameof(ProcessFileAsync):
+                var filePath = metadata.TryGetValue("FilePath", out var path) ? path?.ToString() : "unknown";
+                var fileType = metadata.TryGetValue("FileType", out var type) ? type?.ToString() : "unknown";
+                return $"Failed to complete {operationName} for file '{filePath}' of type '{fileType}'";
+                
+            case nameof(DeleteFileAsync):
+                var deleteFilePath = metadata.TryGetValue("FilePath", out var deletePath) ? deletePath?.ToString() : "unknown";
+                return $"Failed to complete {operationName} for file '{deleteFilePath}'";
+                
+            default:
+                return $"Failed to complete {operationName}";
+        }
+    }
+
+    private static string GetCorrelationId() => Activity.Current?.Id ?? Guid.NewGuid().ToString();
+
+    #endregion
+
+    #region Validation Methods
+
+    private static void ValidateFileUploadRequest(FileUploadRequest fileRequest)
+    {
+        ArgumentNullException.ThrowIfNull(fileRequest);
+
+        if (string.IsNullOrWhiteSpace(fileRequest.FileName))
+            throw new ArgumentException("File name is required", nameof(fileRequest));
+
+        if (fileRequest.FileSize <= 0)
+            throw new ArgumentException("File size must be positive", nameof(fileRequest));
+    }
+
+    private static void ValidateFileProcessingInputs(string filePath, string fileType)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            throw new ArgumentException("File path is required", nameof(filePath));
+
+        if (string.IsNullOrWhiteSpace(fileType))
+            throw new ArgumentException("File type is required", nameof(fileType));
+    }
+
+    private static void ValidateFilePath(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            throw new ArgumentException("File path is required", nameof(filePath));
+    }
+
+    #endregion
+
+    #region File Processing Methods
 
     private bool IsFileSizeValid(long fileSize, string correlationId, string fileName)
     {
         if (fileSize <= _fileUploadConfig.MaxFileSize) return true;
         
-        _logger.LogWarning("File size exceeds limit. CorrelationId: {CorrelationId}, FileName: {FileName}, FileSize: {FileSize}, MaxSize: {MaxSize}", 
+        _infrastructure.Logger.LogWarning("File size exceeds limit. CorrelationId: {CorrelationId}, FileName: {FileName}, FileSize: {FileSize}, MaxSize: {MaxSize}", 
             correlationId, fileName, fileSize, _fileUploadConfig.MaxFileSize);
         return false;
     }
@@ -222,7 +349,7 @@ public class FileUploadService : IFileUploadService
         // Check if extension is blocked
         if (_fileUploadConfig.BlockedExtensions.Contains(fileExtension))
         {
-            _logger.LogWarning("File extension is blocked. CorrelationId: {CorrelationId}, FileName: {FileName}, Extension: {Extension}", 
+            _infrastructure.Logger.LogWarning("File extension is blocked. CorrelationId: {CorrelationId}, FileName: {FileName}, Extension: {Extension}", 
                 correlationId, fileName, fileExtension);
             return false;
         }
@@ -230,7 +357,7 @@ public class FileUploadService : IFileUploadService
         // Check if extension is allowed
         if (!_fileUploadConfig.AllowedExtensions.Contains(fileExtension))
         {
-            _logger.LogWarning("File extension not allowed. CorrelationId: {CorrelationId}, FileName: {FileName}, Extension: {Extension}, AllowedExtensions: {AllowedExtensions}", 
+            _infrastructure.Logger.LogWarning("File extension not allowed. CorrelationId: {CorrelationId}, FileName: {FileName}, Extension: {Extension}, AllowedExtensions: {AllowedExtensions}", 
                 correlationId, fileName, fileExtension, string.Join(", ", _fileUploadConfig.AllowedExtensions));
             return false;
         }
@@ -244,7 +371,7 @@ public class FileUploadService : IFileUploadService
         if (!fileExists)
         {
             var error = $"File not found: {filePath}";
-            _logger.LogError("File not found during processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+            _infrastructure.Logger.LogError("File not found during processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
                 correlationId, filePath);
             throw new FileNotFoundException(error);
         }
@@ -301,12 +428,16 @@ public class FileUploadService : IFileUploadService
     private void HandleProcessingError(string filePath, string fileType, DataSet dataSet, string correlationId, Exception ex)
     {
         var error = $"Error processing file {filePath}: {ex.Message}";
-        _logger.LogError(ex, "Unexpected error during file processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}, FileType: {FileType}", 
+        _infrastructure.Logger.LogError(ex, "Unexpected error during file processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}, FileType: {FileType}", 
             correlationId, filePath, fileType);
         
         dataSet.IsProcessed = false;
         dataSet.ProcessingErrors = error;
     }
+
+    #endregion
+
+    #region File Type Processing Methods
 
     private async Task ProcessCsvFileAsync(string filePath, DataSet dataSet, string correlationId)
     {
@@ -356,7 +487,7 @@ public class FileUploadService : IFileUploadService
             
             if (headers.Count == 0)
             {
-                _logger.LogWarning("CSV file has no headers. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+                _infrastructure.Logger.LogWarning("CSV file has no headers. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
                     correlationId, filePath);
             }
         }
@@ -387,7 +518,7 @@ public class FileUploadService : IFileUploadService
         if (headers.Count <= _dataProcessingConfig.MaxColumnsPerDataset) 
             return headers;
 
-        _logger.LogWarning("File has too many columns. CorrelationId: {CorrelationId}, FilePath: {FilePath}, ColumnCount: {ColumnCount}, MaxColumns: {MaxColumns}", 
+        _infrastructure.Logger.LogWarning("File has too many columns. CorrelationId: {CorrelationId}, FilePath: {FilePath}, ColumnCount: {ColumnCount}, MaxColumns: {MaxColumns}", 
             correlationId, filePath, headers.Count, _dataProcessingConfig.MaxColumnsPerDataset);
         return headers.Take(_dataProcessingConfig.MaxColumnsPerDataset).ToList();
     }
@@ -421,7 +552,7 @@ public class FileUploadService : IFileUploadService
             dataSet.ProcessedData = JsonSerializer.Serialize(records, jsonOptions);
         }
 
-        _logger.LogDebug("File processing completed. CorrelationId: {CorrelationId}, FilePath: {FilePath}, Rows: {RowCount}, Columns: {ColumnCount}", 
+        _infrastructure.Logger.LogDebug("File processing completed. CorrelationId: {CorrelationId}, FilePath: {FilePath}, Rows: {RowCount}, Columns: {ColumnCount}", 
             correlationId, filePath, records.Count, headers.Count);
     }
 
@@ -429,7 +560,7 @@ public class FileUploadService : IFileUploadService
     {
         // Use string interpolation for better performance
         var error = $"CSV parsing error: {ex.Message}";
-        _logger.LogError(ex, "CSV parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+        _infrastructure.Logger.LogError(ex, "CSV parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
             correlationId, filePath);
         throw new FileProcessingException(error, ex);
     }
@@ -438,7 +569,7 @@ public class FileUploadService : IFileUploadService
     {
         // Use string interpolation for better performance
         var error = $"JSON serialization error during {fileType} processing: {ex.Message}";
-        _logger.LogError(ex, "JSON serialization failed during {FileType} processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+        _infrastructure.Logger.LogError(ex, "JSON serialization failed during {FileType} processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
             fileType, correlationId, filePath);
         throw new FileProcessingException(error, ex);
     }
@@ -460,7 +591,7 @@ public class FileUploadService : IFileUploadService
         catch (JsonException ex)
         {
             var error = $"JSON parsing error: {ex.Message}";
-            _logger.LogError(ex, "JSON parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+            _infrastructure.Logger.LogError(ex, "JSON parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
                 correlationId, filePath);
             throw new FileProcessingException(error, ex);
         }
@@ -482,7 +613,7 @@ public class FileUploadService : IFileUploadService
                 break;
             default:
                 var error = $"Unsupported JSON structure: {jsonElement.ValueKind}";
-                _logger.LogWarning("Unsupported JSON structure. CorrelationId: {CorrelationId}, FilePath: {FilePath}, ValueKind: {ValueKind}", 
+                _infrastructure.Logger.LogWarning("Unsupported JSON structure. CorrelationId: {CorrelationId}, FilePath: {FilePath}, ValueKind: {ValueKind}", 
                     correlationId, filePath, jsonElement.ValueKind);
                 throw new FileProcessingException(error);
         }
@@ -541,7 +672,7 @@ public class FileUploadService : IFileUploadService
         catch (InvalidOperationException ex)
         {
             var error = $"Excel processing error: {ex.Message}";
-            _logger.LogError(ex, "Excel processing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+            _infrastructure.Logger.LogError(ex, "Excel processing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
                 correlationId, filePath);
             throw new FileProcessingException(error, ex);
         }
@@ -641,7 +772,7 @@ public class FileUploadService : IFileUploadService
         catch (XmlException ex)
         {
             var error = $"XML parsing error: {ex.Message}";
-            _logger.LogError(ex, "XML parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+            _infrastructure.Logger.LogError(ex, "XML parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
                 correlationId, filePath);
             throw new FileProcessingException(error, ex);
         }
@@ -754,6 +885,10 @@ public class FileUploadService : IFileUploadService
         return records;
     }
 
+    #endregion
+
+    #region Utility Methods
+
     private async Task<string> GenerateDataHashAsync(string filePath)
     {
         try
@@ -764,31 +899,8 @@ public class FileUploadService : IFileUploadService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to generate data hash for file {FilePath}", filePath);
+            _infrastructure.Logger.LogWarning(ex, "Failed to generate data hash for file {FilePath}", filePath);
             return string.Empty; // Return empty string instead of throwing
-        }
-    }
-
-    public async Task DeleteFileAsync(string filePath)
-    {
-        var correlationId = GenerateCorrelationId();
-        
-        try
-        {
-            _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_DELETION_STARTED);
-
-            // Apply chaos engineering for file deletion
-            await _chaosEngineeringService.ExecuteChaosAsync(AppConstants.FileProcessing.STORAGE_FAILURE_SCENARIO, correlationId, "DeleteFileAsync", 
-                async () => await Task.Delay(100), new Dictionary<string, object> { [AppConstants.FileProcessing.FILE_PATH_KEY] = filePath });
-
-            await _storageService.DeleteFileAsync(filePath);
-            
-            _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_DELETED_SUCCESS);
-        }
-        catch (Exception ex)
-        {
-            _structuredLoggingService.LogUserAction(AppConstants.FileUploadMessages.FILE_DELETION_FAILED);
-            // Don't re-throw - log and continue
         }
     }
 
@@ -816,6 +928,8 @@ public class FileUploadService : IFileUploadService
             _ => StorageProvider.Local
         };
     }
+
+    #endregion
 }
 
 // Custom exception types for better error handling
