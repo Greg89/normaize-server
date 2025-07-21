@@ -70,7 +70,7 @@ jobs:
         echo "Projects to analyze: Normaize.API, Normaize.Core, Normaize.Data"
         echo "Test project: Normaize.Tests"
         
-        ./.sonar/scanner/dotnet-sonarscanner begin /k:"Greg89_normaize-server" /o:"greg89" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="**/coverage-report/**,**/coverage-summary/**,**/coverage-opencover/**,**/coverage/**,**/test-results/**,**/bin/**,**/obj/**,**/uploads/**,**/*.Designer.cs" /d:sonar.verbose=true
+        ./.sonar/scanner/dotnet-sonarscanner begin /k:"Greg89_normaize-server" /o:"greg89" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" /d:sonar.exclusions="**/coverage-report/**,**/coverage-summary/**,**/coverage-opencover/**,**/coverage/**,**/test-results/**,**/bin/**,**/obj/**,**/uploads/**,**/*.Designer.cs,**/Migrations/**" /d:sonar.verbose=true
 
     - name: Build for SonarQube Analysis
       run: |
