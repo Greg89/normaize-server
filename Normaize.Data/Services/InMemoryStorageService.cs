@@ -137,7 +137,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
             ValidateFilePath(filePath);
 
             return await ExecuteWithTimeoutAsync(
-                async () => await FileExistsInternalAsync(filePath, correlationId),
+                async () => await FileExistsInternalAsync(filePath),
                 _options.QuickTimeout,
                 correlationId,
                 operationName);
@@ -283,7 +283,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
         }
     }
 
-    private async Task<bool> FileExistsInternalAsync(string filePath, string correlationId)
+    private async Task<bool> FileExistsInternalAsync(string filePath)
     {
         await _storageSemaphore.WaitAsync();
         

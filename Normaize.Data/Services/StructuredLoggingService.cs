@@ -148,9 +148,8 @@ public class StructuredLoggingService : IStructuredLoggingService
 
     public void LogException(Exception exception, string context, LogLevel level)
     {
-        if (exception == null)
-            throw new ArgumentNullException(nameof(exception));
-        
+        ArgumentNullException.ThrowIfNull(exception);
+
         var userId = GetCurrentUserId();
         var userEmail = GetCurrentUserEmail();
         var requestContext = GetRequestContext();
@@ -159,12 +158,12 @@ public class StructuredLoggingService : IStructuredLoggingService
         {
             Context = context,
             UserId = userId ?? AppConstants.Auth.AnonymousUser,
-            UserEmail = userEmail ?? "unknown",
+            UserEmail = userEmail ?? AppConstants.Messages.UNKNOWN,
             RequestPath = requestContext.Path,
             RequestMethod = requestContext.Method,
             ExceptionType = exception.GetType().Name,
             ExceptionMessage = exception.Message,
-            StackTrace = exception.StackTrace,
+            exception.StackTrace,
             Timestamp = DateTime.UtcNow
         };
 
@@ -185,14 +184,6 @@ public class StructuredLoggingService : IStructuredLoggingService
         ValidateInput(path, nameof(path));
         
         var actualUserId = userId ?? GetCurrentUserId() ?? AppConstants.Auth.AnonymousUser;
-        
-        var requestData = new
-        {
-            Method = method,
-            Path = path,
-            UserId = actualUserId,
-            Timestamp = DateTime.UtcNow
-        };
         
         _logger.Log(level, "Request Started: {Method} {Path} by User: {UserId}", 
             method, path, actualUserId);

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Normaize.Core.Configuration;
@@ -293,7 +294,7 @@ public class ChaosEngineeringService : IChaosEngineeringService
         return false;
     }
     
-    private bool IsInAllowedTimeWindow(List<TimeWindow> allowedWindows)
+    private static bool IsInAllowedTimeWindow(List<TimeWindow> allowedWindows)
     {
         var now = DateTime.Now;
         var currentTime = now.TimeOfDay;
@@ -304,8 +305,8 @@ public class ChaosEngineeringService : IChaosEngineeringService
             if (!window.DaysOfWeek.Contains(currentDayOfWeek))
                 return false;
                 
-            var startTime = TimeSpan.Parse(window.StartTime);
-            var endTime = TimeSpan.Parse(window.EndTime);
+            var startTime = TimeSpan.Parse(window.StartTime, CultureInfo.InvariantCulture);
+            var endTime = TimeSpan.Parse(window.EndTime, CultureInfo.InvariantCulture);
             
             if (startTime <= endTime)
             {

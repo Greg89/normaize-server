@@ -310,6 +310,22 @@ public class ServiceConfigurationTests
         httpContextAccessor.Should().NotBeNull();
     }
 
+    [Fact]
+    public void ServiceConfiguration_ShouldThrow_WhenEnvVarsMissing()
+    {
+        SetupInvalidEnvironment();
+        var builder = WebApplication.CreateBuilder();
+        builder.Services.AddLogging();
+        builder.Services.AddSingleton<IAppConfigurationService, AppConfigurationService>();
+
+        // Act & Assert
+        Assert.ThrowsAny<Exception>(() =>
+        {
+            ServiceConfiguration.ConfigureServices(builder);
+            var app = builder.Build();
+        });
+    }
+
     #region Helper Methods
 
     private void SetupValidEnvironment()
@@ -324,7 +340,7 @@ public class ServiceConfigurationTests
         Environment.SetEnvironmentVariable("AUTH0_AUDIENCE", "test-audience");
     }
 
-    private void SetupInvalidEnvironment()
+    private static void SetupInvalidEnvironment()
     {
         // Remove required environment variables to cause configuration failure
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", null);
