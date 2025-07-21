@@ -44,15 +44,15 @@ public class AppConfigurationServiceTests
 
         // Assert
         interfaceType.GetMethod("LoadEnvironmentVariables")!.ReturnType.Should().Be(typeof(void));
-        interfaceType.GetMethod("GetEnvironment")!.ReturnType.Should().Be(typeof(string));
-        interfaceType.GetMethod("GetSeqUrl")!.ReturnType.Should().Be(typeof(string));
-        interfaceType.GetMethod("GetSeqApiKey")!.ReturnType.Should().Be(typeof(string));
-        interfaceType.GetMethod("GetDatabaseConfig")!.ReturnType.Should().Be(typeof(DatabaseConfig));
-        interfaceType.GetMethod("HasDatabaseConnection")!.ReturnType.Should().Be(typeof(bool));
-        interfaceType.GetMethod("IsProductionLike")!.ReturnType.Should().Be(typeof(bool));
-        interfaceType.GetMethod("IsContainerized")!.ReturnType.Should().Be(typeof(bool));
-        interfaceType.GetMethod("GetPort")!.ReturnType.Should().Be(typeof(string));
-        interfaceType.GetMethod("GetHttpsPort")!.ReturnType.Should().Be(typeof(string));
+        interfaceType.GetMethod("GetEnvironment")!.ReturnType.Should().Be<string>();
+        interfaceType.GetMethod("GetSeqUrl")!.ReturnType.Should().Be<string?>();
+        interfaceType.GetMethod("GetSeqApiKey")!.ReturnType.Should().Be<string?>();
+        interfaceType.GetMethod("GetDatabaseConfig")!.ReturnType.Should().Be<DatabaseConfig>();
+        interfaceType.GetMethod("HasDatabaseConnection")!.ReturnType.Should().Be<bool>();
+        interfaceType.GetMethod("IsProductionLike")!.ReturnType.Should().Be<bool>();
+        interfaceType.GetMethod("IsContainerized")!.ReturnType.Should().Be<bool>();
+        interfaceType.GetMethod("GetPort")!.ReturnType.Should().Be<string>();
+        interfaceType.GetMethod("GetHttpsPort")!.ReturnType.Should().Be<string?>();
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class AppConfigurationServiceTests
     public void LoadEnvironmentVariables_ShouldNotThrow()
     {
         // Act & Assert
-        var action = () => _service.LoadEnvironmentVariables();
+        var action = _service.LoadEnvironmentVariables;
         action.Should().NotThrow();
     }
 

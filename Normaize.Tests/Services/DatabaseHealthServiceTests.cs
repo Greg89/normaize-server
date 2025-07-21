@@ -25,7 +25,7 @@ public class DatabaseHealthServiceTests
         _mockOptions.Setup(x => x.Value).Returns(_defaultConfig);
     }
 
-    private NormaizeContext CreateInMemoryContext()
+    private static NormaizeContext CreateInMemoryContext()
     {
         var options = new DbContextOptionsBuilder<NormaizeContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())

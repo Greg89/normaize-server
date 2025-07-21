@@ -27,10 +27,10 @@ public class IStorageServiceTests
         var interfaceType = typeof(IStorageService);
 
         // Assert
-        interfaceType.GetMethod("SaveFileAsync", new[] { typeof(FileUploadRequest) })!.ReturnType.Should().Be(typeof(Task<string>));
-        interfaceType.GetMethod("GetFileAsync", new[] { typeof(string) })!.ReturnType.Should().Be(typeof(Task<Stream>));
-        interfaceType.GetMethod("DeleteFileAsync", new[] { typeof(string) })!.ReturnType.Should().Be(typeof(Task));
-        interfaceType.GetMethod("FileExistsAsync", new[] { typeof(string) })!.ReturnType.Should().Be(typeof(Task<bool>));
+        interfaceType.GetMethod("SaveFileAsync", [typeof(FileUploadRequest)])!.ReturnType.Should().Be<Task<string>>();
+        interfaceType.GetMethod("GetFileAsync", [typeof(string)])!.ReturnType.Should().Be<Task<Stream>>();
+        interfaceType.GetMethod("DeleteFileAsync", [typeof(string)])!.ReturnType.Should().Be<Task>();
+        interfaceType.GetMethod("FileExistsAsync", [typeof(string)])!.ReturnType.Should().Be<Task<bool>>();
     }
 
     [Fact]
@@ -54,10 +54,10 @@ public class IStorageServiceTests
         var interfaceType = typeof(IStorageService);
 
         // Assert
-        interfaceType.GetMethod("SaveFileAsync", new[] { typeof(FileUploadRequest) })!.ReturnType.Name.Should().Contain("Task");
-        interfaceType.GetMethod("GetFileAsync", new[] { typeof(string) })!.ReturnType.Name.Should().Contain("Task");
-        interfaceType.GetMethod("DeleteFileAsync", new[] { typeof(string) })!.ReturnType.Name.Should().Contain("Task");
-        interfaceType.GetMethod("FileExistsAsync", new[] { typeof(string) })!.ReturnType.Name.Should().Contain("Task");
+        interfaceType.GetMethod("SaveFileAsync", [typeof(FileUploadRequest)])!.ReturnType.Name.Should().Contain("Task");
+        interfaceType.GetMethod("GetFileAsync", [typeof(string)])!.ReturnType.Name.Should().Contain("Task");
+        interfaceType.GetMethod("DeleteFileAsync", [typeof(string)])!.ReturnType.Name.Should().Contain("Task");
+        interfaceType.GetMethod("FileExistsAsync", [typeof(string)])!.ReturnType.Name.Should().Contain("Task");
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class IStorageServiceTests
         // Assert
         method.Should().NotBeNull();
         method!.GetParameters().Should().HaveCount(1);
-        method.GetParameters()[0].ParameterType.Should().Be(typeof(FileUploadRequest));
+        method.GetParameters()[0].ParameterType.Should().Be<FileUploadRequest>();
     }
 
     [Fact]
@@ -78,12 +78,12 @@ public class IStorageServiceTests
     {
         // Arrange
         var interfaceType = typeof(IStorageService);
-        var method = interfaceType.GetMethod("GetFileAsync", new[] { typeof(string) });
+        var method = interfaceType.GetMethod("GetFileAsync", [typeof(string)]);
 
         // Assert
         method.Should().NotBeNull();
         method!.GetParameters().Should().HaveCount(1);
-        method.GetParameters()[0].ParameterType.Should().Be(typeof(string));
+        method.GetParameters()[0].ParameterType.Should().Be<string>();
     }
 
     [Fact]
@@ -91,12 +91,12 @@ public class IStorageServiceTests
     {
         // Arrange
         var interfaceType = typeof(IStorageService);
-        var method = interfaceType.GetMethod("DeleteFileAsync", new[] { typeof(string) });
+        var method = interfaceType.GetMethod("DeleteFileAsync", [typeof(string)]);
 
         // Assert
         method.Should().NotBeNull();
         method!.GetParameters().Should().HaveCount(1);
-        method.GetParameters()[0].ParameterType.Should().Be(typeof(string));
+        method.GetParameters()[0].ParameterType.Should().Be<string>();
     }
 
     [Fact]
@@ -104,12 +104,12 @@ public class IStorageServiceTests
     {
         // Arrange
         var interfaceType = typeof(IStorageService);
-        var method = interfaceType.GetMethod("FileExistsAsync", new[] { typeof(string) });
+        var method = interfaceType.GetMethod("FileExistsAsync", [typeof(string)]);
 
         // Assert
         method.Should().NotBeNull();
         method!.GetParameters().Should().HaveCount(1);
-        method.GetParameters()[0].ParameterType.Should().Be(typeof(string));
+        method.GetParameters()[0].ParameterType.Should().Be<string>();
     }
 
     [Fact]
@@ -117,11 +117,11 @@ public class IStorageServiceTests
     {
         // Arrange
         var interfaceType = typeof(IStorageService);
-        var method = interfaceType.GetMethod("SaveFileAsync", new[] { typeof(FileUploadRequest) });
+        var method = interfaceType.GetMethod("SaveFileAsync", [typeof(FileUploadRequest)]);
 
         // Assert
         method.Should().NotBeNull();
-        method!.ReturnType.Should().Be(typeof(Task<string>));
+        method!.ReturnType.Should().Be<Task<string>>();
     }
 
     [Fact]
@@ -129,11 +129,11 @@ public class IStorageServiceTests
     {
         // Arrange
         var interfaceType = typeof(IStorageService);
-        var method = interfaceType.GetMethod("GetFileAsync", new[] { typeof(string) });
+        var method = interfaceType.GetMethod("GetFileAsync", [typeof(string)]);
 
         // Assert
         method.Should().NotBeNull();
-        method!.ReturnType.Should().Be(typeof(Task<Stream>));
+        method!.ReturnType.Should().Be<Task<Stream>>();
     }
 
     [Fact]
@@ -141,11 +141,11 @@ public class IStorageServiceTests
     {
         // Arrange
         var interfaceType = typeof(IStorageService);
-        var method = interfaceType.GetMethod("DeleteFileAsync", new[] { typeof(string) });
+        var method = interfaceType.GetMethod("DeleteFileAsync", [typeof(string)]);
 
         // Assert
         method.Should().NotBeNull();
-        method!.ReturnType.Should().Be(typeof(Task));
+        method!.ReturnType.Should().Be<Task>();
     }
 
     [Fact]
@@ -153,10 +153,10 @@ public class IStorageServiceTests
     {
         // Arrange
         var interfaceType = typeof(IStorageService);
-        var method = interfaceType.GetMethod("FileExistsAsync", new[] { typeof(string) });
+        var method = interfaceType.GetMethod("FileExistsAsync", [typeof(string)]);
 
         // Assert
         method.Should().NotBeNull();
-        method!.ReturnType.Should().Be(typeof(Task<bool>));
+        method!.ReturnType.Should().Be<Task<bool>>();
     }
 } 

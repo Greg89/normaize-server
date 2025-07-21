@@ -13,10 +13,10 @@ public class StartupServiceTests
         var interfaceType = typeof(IStartupService);
 
         // Assert
-        interfaceType.GetMethod("ConfigureStartupAsync", new[] { typeof(CancellationToken) })!.Should().NotBeNull();
+        interfaceType.GetMethod("ConfigureStartupAsync", [typeof(CancellationToken)])!.Should().NotBeNull();
         interfaceType.GetMethod("ShouldRunStartupChecks")!.Should().NotBeNull();
-        interfaceType.GetMethod("ApplyMigrationsAsync", new[] { typeof(CancellationToken) })!.Should().NotBeNull();
-        interfaceType.GetMethod("PerformHealthChecksAsync", new[] { typeof(CancellationToken) })!.Should().NotBeNull();
+        interfaceType.GetMethod("ApplyMigrationsAsync", [typeof(CancellationToken)])!.Should().NotBeNull();
+        interfaceType.GetMethod("PerformHealthChecksAsync", [typeof(CancellationToken)])!.Should().NotBeNull();
     }
 
     [Fact]
@@ -26,10 +26,10 @@ public class StartupServiceTests
         var interfaceType = typeof(IStartupService);
 
         // Assert
-        interfaceType.GetMethod("ConfigureStartupAsync", new[] { typeof(CancellationToken) })!.ReturnType.Should().Be(typeof(Task));
-        interfaceType.GetMethod("ShouldRunStartupChecks")!.ReturnType.Should().Be(typeof(bool));
-        interfaceType.GetMethod("ApplyMigrationsAsync", new[] { typeof(CancellationToken) })!.ReturnType.Should().Be(typeof(Task));
-        interfaceType.GetMethod("PerformHealthChecksAsync", new[] { typeof(CancellationToken) })!.ReturnType.Should().Be(typeof(Task));
+        interfaceType.GetMethod("ConfigureStartupAsync", [typeof(CancellationToken)])!.ReturnType.Should().Be<Task>();
+        interfaceType.GetMethod("ShouldRunStartupChecks")!.ReturnType.Should().Be<bool>();
+        interfaceType.GetMethod("ApplyMigrationsAsync", [typeof(CancellationToken)])!.ReturnType.Should().Be<Task>();
+        interfaceType.GetMethod("PerformHealthChecksAsync", [typeof(CancellationToken)])!.ReturnType.Should().Be<Task>();
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public class StartupServiceTests
     {
         // Arrange
         var interfaceType = typeof(IStartupService);
-        var method = interfaceType.GetMethod("ConfigureStartupAsync", new[] { typeof(CancellationToken) });
+        var method = interfaceType.GetMethod("ConfigureStartupAsync", [typeof(CancellationToken)]);
 
         // Assert
         method.Should().NotBeNull();
@@ -67,7 +67,7 @@ public class StartupServiceTests
 
         // Assert
         method.Should().NotBeNull();
-        method!.ReturnType.Should().Be(typeof(bool));
+        method!.ReturnType.Should().Be<bool>();
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class StartupServiceTests
     {
         // Arrange
         var interfaceType = typeof(IStartupService);
-        var method = interfaceType.GetMethod("ApplyMigrationsAsync", new[] { typeof(CancellationToken) });
+        var method = interfaceType.GetMethod("ApplyMigrationsAsync", [typeof(CancellationToken)]);
 
         // Assert
         method.Should().NotBeNull();
@@ -87,7 +87,7 @@ public class StartupServiceTests
     {
         // Arrange
         var interfaceType = typeof(IStartupService);
-        var method = interfaceType.GetMethod("PerformHealthChecksAsync", new[] { typeof(CancellationToken) });
+        var method = interfaceType.GetMethod("PerformHealthChecksAsync", [typeof(CancellationToken)]);
 
         // Assert
         method.Should().NotBeNull();
@@ -99,12 +99,12 @@ public class StartupServiceTests
     {
         // Arrange
         var interfaceType = typeof(IStartupService);
-        var method = interfaceType.GetMethod("ConfigureStartupAsync", new[] { typeof(CancellationToken) });
+        var method = interfaceType.GetMethod("ConfigureStartupAsync", [typeof(CancellationToken)]);
 
         // Assert
         method.Should().NotBeNull();
         method!.GetParameters().Should().HaveCount(1);
-        method.GetParameters()[0].ParameterType.Should().Be(typeof(CancellationToken));
+        method.GetParameters()[0].ParameterType.Should().Be<CancellationToken>();
     }
 
     [Fact]
@@ -112,12 +112,12 @@ public class StartupServiceTests
     {
         // Arrange
         var interfaceType = typeof(IStartupService);
-        var method = interfaceType.GetMethod("ApplyMigrationsAsync", new[] { typeof(CancellationToken) });
+        var method = interfaceType.GetMethod("ApplyMigrationsAsync", [typeof(CancellationToken)]);
 
         // Assert
         method.Should().NotBeNull();
         method!.GetParameters().Should().HaveCount(1);
-        method.GetParameters()[0].ParameterType.Should().Be(typeof(CancellationToken));
+        method.GetParameters()[0].ParameterType.Should().Be<CancellationToken>();
     }
 
     [Fact]
@@ -125,12 +125,12 @@ public class StartupServiceTests
     {
         // Arrange
         var interfaceType = typeof(IStartupService);
-        var method = interfaceType.GetMethod("PerformHealthChecksAsync", new[] { typeof(CancellationToken) });
+        var method = interfaceType.GetMethod("PerformHealthChecksAsync", [typeof(CancellationToken)]);
 
         // Assert
         method.Should().NotBeNull();
         method!.GetParameters().Should().HaveCount(1);
-        method.GetParameters()[0].ParameterType.Should().Be(typeof(CancellationToken));
+        method.GetParameters()[0].ParameterType.Should().Be<CancellationToken>();
     }
 
     [Fact]

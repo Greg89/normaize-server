@@ -28,12 +28,12 @@ public class ChaosEngineeringServiceTests
         var interfaceType = typeof(IChaosEngineeringService);
 
         // Assert
-        interfaceType.GetMethod("ShouldTriggerChaos", new[] { typeof(string), typeof(IDictionary<string, object>) })!.Should().NotBeNull();
-        interfaceType.GetMethod("ShouldTriggerChaos", new[] { typeof(string), typeof(string), typeof(string), typeof(IDictionary<string, object>) })!.Should().NotBeNull();
-        interfaceType.GetMethod("ExecuteChaosAsync", new[] { typeof(string), typeof(Func<Task>), typeof(IDictionary<string, object>) })!.Should().NotBeNull();
-        interfaceType.GetMethod("ExecuteChaosAsync", new[] { typeof(string), typeof(string), typeof(string), typeof(Func<Task>), typeof(IDictionary<string, object>) })!.Should().NotBeNull();
+        interfaceType.GetMethod("ShouldTriggerChaos", [typeof(string), typeof(IDictionary<string, object>)])!.Should().NotBeNull();
+        interfaceType.GetMethod("ShouldTriggerChaos", [typeof(string), typeof(string), typeof(string), typeof(IDictionary<string, object>)])!.Should().NotBeNull();
+        interfaceType.GetMethod("ExecuteChaosAsync", [typeof(string), typeof(Func<Task>), typeof(IDictionary<string, object>)])!.Should().NotBeNull();
+        interfaceType.GetMethod("ExecuteChaosAsync", [typeof(string), typeof(string), typeof(string), typeof(Func<Task>), typeof(IDictionary<string, object>)])!.Should().NotBeNull();
         // Remove Task<object> checks, as the interface uses generics for return value
-        interfaceType.GetMethod("RegisterChaosScenario", new[] { typeof(string), typeof(Func<IDictionary<string, object>?, bool>), typeof(Func<Task>) })!.Should().NotBeNull();
+        interfaceType.GetMethod("RegisterChaosScenario", [typeof(string), typeof(Func<IDictionary<string, object>?, bool>), typeof(Func<Task>)])!.Should().NotBeNull();
         interfaceType.GetMethod("GetStats")!.Should().NotBeNull();
     }
 
@@ -44,13 +44,13 @@ public class ChaosEngineeringServiceTests
         var interfaceType = typeof(IChaosEngineeringService);
 
         // Assert
-        interfaceType.GetMethod("ShouldTriggerChaos", new[] { typeof(string), typeof(IDictionary<string, object>) })!.ReturnType.Should().Be(typeof(bool));
-        interfaceType.GetMethod("ShouldTriggerChaos", new[] { typeof(string), typeof(string), typeof(string), typeof(IDictionary<string, object>) })!.ReturnType.Should().Be(typeof(bool));
-        interfaceType.GetMethod("ExecuteChaosAsync", new[] { typeof(string), typeof(Func<Task>), typeof(IDictionary<string, object>) })!.ReturnType.Should().Be(typeof(Task<bool>));
-        interfaceType.GetMethod("ExecuteChaosAsync", new[] { typeof(string), typeof(string), typeof(string), typeof(Func<Task>), typeof(IDictionary<string, object>) })!.ReturnType.Should().Be(typeof(Task<bool>));
+        interfaceType.GetMethod("ShouldTriggerChaos", [typeof(string), typeof(IDictionary<string, object>)])!.ReturnType.Should().Be<bool>();
+        interfaceType.GetMethod("ShouldTriggerChaos", [typeof(string), typeof(string), typeof(string), typeof(IDictionary<string, object>)])!.ReturnType.Should().Be<bool>();
+        interfaceType.GetMethod("ExecuteChaosAsync", [typeof(string), typeof(Func<Task>), typeof(IDictionary<string, object>)])!.ReturnType.Should().Be<Task<bool>>();
+        interfaceType.GetMethod("ExecuteChaosAsync", [typeof(string), typeof(string), typeof(string), typeof(Func<Task>), typeof(IDictionary<string, object>)])!.ReturnType.Should().Be<Task<bool>>();
         // Remove Task<object> checks, as the interface uses generics for return value
-        interfaceType.GetMethod("RegisterChaosScenario", new[] { typeof(string), typeof(Func<IDictionary<string, object>?, bool>), typeof(Func<Task>) })!.ReturnType.Should().Be(typeof(void));
-        interfaceType.GetMethod("GetStats")!.ReturnType.Should().Be(typeof(ChaosEngineeringStats));
+        interfaceType.GetMethod("RegisterChaosScenario", [typeof(string), typeof(Func<IDictionary<string, object>?, bool>), typeof(Func<Task>)])!.ReturnType.Should().Be(typeof(void));
+        interfaceType.GetMethod("GetStats")!.ReturnType.Should().Be<ChaosEngineeringStats>();
     }
 
     [Fact]
@@ -238,6 +238,6 @@ public class ChaosEngineeringServiceTests
         stats.TotalScenarios.Should().Be(0);
         stats.TriggeredScenarios.Should().Be(0);
         stats.ScenarioCounts.Should().NotBeNull();
-        stats.LastTriggered.Should().Be(default(DateTime));
+        stats.LastTriggered.Should().Be(default);
     }
 } 
