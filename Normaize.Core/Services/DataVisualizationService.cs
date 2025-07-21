@@ -961,7 +961,7 @@ public class DataVisualizationService : IDataVisualizationService
         
         var mean = data.Average();
         var stdDev = CalculateStandardDeviation(data);
-        if (stdDev == 0) return 0;
+        if (Math.Abs(stdDev) < double.Epsilon) return 0;
         
         var skewness = data.Select(x => Math.Pow((x - mean) / stdDev, 3)).Average();
         return skewness * Math.Sqrt(data.Count * (data.Count - 1)) / (data.Count - 2);
@@ -973,7 +973,7 @@ public class DataVisualizationService : IDataVisualizationService
         
         var mean = data.Average();
         var stdDev = CalculateStandardDeviation(data);
-        if (stdDev == 0) return 0;
+        if (Math.Abs(stdDev) < double.Epsilon) return 0;
         
         var kurtosis = data.Select(x => Math.Pow((x - mean) / stdDev, 4)).Average();
         return (kurtosis - 3) * Math.Sqrt(data.Count * (data.Count - 1)) / ((data.Count - 2) * (data.Count - 3));
@@ -990,7 +990,7 @@ public class DataVisualizationService : IDataVisualizationService
         var denominator1 = data1.Select(x => Math.Pow(x - mean1, 2)).Sum();
         var denominator2 = data2.Select(y => Math.Pow(y - mean2, 2)).Sum();
         
-        if (denominator1 == 0 || denominator2 == 0) return 0;
+        if (Math.Abs(denominator1) < double.Epsilon || Math.Abs(denominator2) < double.Epsilon) return 0;
         
         return numerator / Math.Sqrt(denominator1 * denominator2);
     }
