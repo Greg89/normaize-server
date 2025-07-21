@@ -165,7 +165,6 @@ public class DataVisualizationService : IDataVisualizationService
                     }
                     await Task.Delay(100);
                     tempObjects.Clear();
-                    GC.Collect();
                 }, new Dictionary<string, object> { ["UserId"] = userId });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.STATISTICAL_SUMMARY_GENERATION_STARTED);
@@ -225,31 +224,46 @@ public class DataVisualizationService : IDataVisualizationService
     {
         if (metadata == null) return $"Failed to complete {operationName}";
 
-        // Handle specific operation types with detailed error messages
-        switch (operationName)
+        return operationName switch
         {
-            case nameof(GenerateChartAsync):
-                var dataSetId = metadata.TryGetValue("DataSetId", out var id) ? id?.ToString() : "unknown";
-                var chartType = metadata.TryGetValue("ChartType", out var type) ? type?.ToString() : "unknown";
-                return $"Failed to complete {operationName} for dataset ID {dataSetId} with chart type {chartType}";
-                
-            case nameof(GenerateComparisonChartAsync):
-                var dataSetId1 = metadata.TryGetValue("DataSetId1", out var id1) ? id1?.ToString() : "unknown";
-                var dataSetId2 = metadata.TryGetValue("DataSetId2", out var id2) ? id2?.ToString() : "unknown";
-                var compChartType = metadata.TryGetValue("ChartType", out var compType) ? compType?.ToString() : "unknown";
-                return $"Failed to complete {operationName} for dataset IDs {dataSetId1} and {dataSetId2} with chart type {compChartType}";
-                
-            case nameof(GetDataSummaryAsync):
-                var summaryDataSetId = metadata.TryGetValue("DataSetId", out var summaryId) ? summaryId?.ToString() : "unknown";
-                return $"Failed to complete {operationName} for dataset ID {summaryDataSetId}";
-                
-            case nameof(GetStatisticalSummaryAsync):
-                var statsDataSetId = metadata.TryGetValue("DataSetId", out var statsId) ? statsId?.ToString() : "unknown";
-                return $"Failed to complete {operationName} for dataset ID {statsDataSetId}";
-                
-            default:
-                return $"Failed to complete {operationName}";
-        }
+            nameof(GenerateChartAsync) => CreateChartErrorMessage(metadata),
+            nameof(GenerateComparisonChartAsync) => CreateComparisonChartErrorMessage(metadata),
+            nameof(GetDataSummaryAsync) => CreateDataSummaryErrorMessage(metadata),
+            nameof(GetStatisticalSummaryAsync) => CreateStatisticalSummaryErrorMessage(metadata),
+            _ => $"Failed to complete {operationName}"
+        };
+    }
+
+    private static string CreateChartErrorMessage(Dictionary<string, object> metadata)
+    {
+        var dataSetId = GetMetadataValue(metadata, "DataSetId");
+        var chartType = GetMetadataValue(metadata, "ChartType");
+        return $"Failed to complete GenerateChartAsync for dataset ID {dataSetId} with chart type {chartType}";
+    }
+
+    private static string CreateComparisonChartErrorMessage(Dictionary<string, object> metadata)
+    {
+        var dataSetId1 = GetMetadataValue(metadata, "DataSetId1");
+        var dataSetId2 = GetMetadataValue(metadata, "DataSetId2");
+        var chartType = GetMetadataValue(metadata, "ChartType");
+        return $"Failed to complete GenerateComparisonChartAsync for dataset IDs {dataSetId1} and {dataSetId2} with chart type {chartType}";
+    }
+
+    private static string CreateDataSummaryErrorMessage(Dictionary<string, object> metadata)
+    {
+        var dataSetId = GetMetadataValue(metadata, "DataSetId");
+        return $"Failed to complete GetDataSummaryAsync for dataset ID {dataSetId}";
+    }
+
+    private static string CreateStatisticalSummaryErrorMessage(Dictionary<string, object> metadata)
+    {
+        var dataSetId = GetMetadataValue(metadata, "DataSetId");
+        return $"Failed to complete GetStatisticalSummaryAsync for dataset ID {dataSetId}";
+    }
+
+    private static string GetMetadataValue(Dictionary<string, object> metadata, string key)
+    {
+        return metadata.TryGetValue(key, out var value) ? value?.ToString() ?? AppConstants.Messages.UNKNOWN : AppConstants.Messages.UNKNOWN;
     }
 
     private static string GetCorrelationId() => Activity.Current?.Id ?? Guid.NewGuid().ToString();
@@ -681,7 +695,7 @@ public class DataVisualizationService : IDataVisualizationService
 
         // Use first column as labels (if it's not numeric)
         var labelColumn = columns.FirstOrDefault(col => !numericColumns.Contains(col)) ?? columns[0];
-        labels.AddRange(data.Select(row => row.GetValueOrDefault(labelColumn)?.ToString() ?? "Unknown"));
+        labels.AddRange(data.Select(row => row.GetValueOrDefault(labelColumn)?.ToString() ?? AppConstants.Messages.UNKNOWN));
 
         // Create series for each numeric column
         foreach (var column in numericColumns)
@@ -717,7 +731,7 @@ public class DataVisualizationService : IDataVisualizationService
 
         // Use first column as labels
         var labelColumn = columns[0];
-        labels.AddRange(data.Select(row => row.GetValueOrDefault(labelColumn)?.ToString() ?? "Unknown"));
+        labels.AddRange(data.Select(row => row.GetValueOrDefault(labelColumn)?.ToString() ?? AppConstants.Messages.UNKNOWN));
 
         // Use first numeric column as data
         var dataColumn = numericColumns[0];
@@ -751,7 +765,7 @@ public class DataVisualizationService : IDataVisualizationService
 
         // Use first column as labels
         var labelColumn = columns[0];
-        labels.AddRange(data.Select(row => row.GetValueOrDefault(labelColumn)?.ToString() ?? "Unknown"));
+        labels.AddRange(data.Select(row => row.GetValueOrDefault(labelColumn)?.ToString() ?? AppConstants.Messages.UNKNOWN));
 
         // Use first two numeric columns as X and Y
         var xColumn = numericColumns[0];
@@ -898,7 +912,7 @@ public class DataVisualizationService : IDataVisualizationService
     private static string DetermineDataType(List<object?> data)
     {
         var nonNullData = data.Where(v => v != null).ToList();
-        if (nonNullData.Count == 0) return "Unknown";
+        if (nonNullData.Count == 0) return AppConstants.Messages.UNKNOWN;
 
         if (nonNullData.All(v => IsNumeric(v))) return "Numeric";
         if (nonNullData.All(v => v is DateTime)) return "DateTime";
@@ -979,21 +993,21 @@ public class DataVisualizationService : IDataVisualizationService
         return (kurtosis - 3) * Math.Sqrt(data.Count * (data.Count - 1)) / ((data.Count - 2) * (data.Count - 3));
     }
 
-    private static double CalculateCorrelation(List<double> data1, List<double> data2)
-    {
-        if (data1.Count != data2.Count || data1.Count == 0) return 0;
+    //private static double CalculateCorrelation(List<double> data1, List<double> data2)
+    //{
+    //    if (data1.Count != data2.Count || data1.Count == 0) return 0;
         
-        var mean1 = data1.Average();
-        var mean2 = data2.Average();
+        //var mean1 = data1.Average();
+        //var mean2 = data2.Average();
         
-        var numerator = data1.Zip(data2, (x, y) => (x - mean1) * (y - mean2)).Sum();
-        var denominator1 = data1.Select(x => Math.Pow(x - mean1, 2)).Sum();
-        var denominator2 = data2.Select(y => Math.Pow(y - mean2, 2)).Sum();
+        //var numerator = data1.Zip(data2, (x, y) => (x - mean1) * (y - mean2)).Sum();
+        //var denominator1 = data1.Select(x => Math.Pow(x - mean1, 2)).Sum();
+        //var denominator2 = data2.Select(y => Math.Pow(y - mean2, 2)).Sum();
         
-        if (Math.Abs(denominator1) < double.Epsilon || Math.Abs(denominator2) < double.Epsilon) return 0;
+        //if (Math.Abs(denominator1) < double.Epsilon || Math.Abs(denominator2) < double.Epsilon) return 0;
         
-        return numerator / Math.Sqrt(denominator1 * denominator2);
-    }
+        //return numerator / Math.Sqrt(denominator1 * denominator2);
+    //}
 
     #endregion
 }

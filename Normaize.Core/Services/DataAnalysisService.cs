@@ -48,10 +48,10 @@ public class DataAnalysisService : IDataAnalysisService
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating analysis creation failure", new Dictionary<string, object>
                     {
-                        ["ChaosType"] = "AnalysisCreationFailure"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "AnalysisCreationFailure"
                     });
                     throw new InvalidOperationException("Simulated analysis creation failure (chaos engineering)");
-                }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
                 var analysis = _mapper.Map<Analysis>(createDto);
@@ -65,7 +65,7 @@ public class DataAnalysisService : IDataAnalysisService
                     $"{context.OperationName}_SaveToDatabase");
                 _infrastructure.StructuredLogging.LogStep(context, "Database save completed", new Dictionary<string, object>
                 {
-                    ["AnalysisId"] = savedAnalysis.Id
+                    [AppConstants.DataStructures.ANALYSIS_ID] = savedAnalysis.Id
                 });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
@@ -89,10 +89,10 @@ public class DataAnalysisService : IDataAnalysisService
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating database timeout", new Dictionary<string, object>
                     {
-                        ["ChaosType"] = "DatabaseTimeout"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "DatabaseTimeout"
                     });
                     await Task.Delay(15000); // 15 second delay
-                }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
                 var analysis = await ExecuteWithTimeoutAsync(
@@ -106,7 +106,7 @@ public class DataAnalysisService : IDataAnalysisService
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND, new Dictionary<string, object>
                     {
-                        ["AnalysisId"] = id
+                        [AppConstants.DataStructures.ANALYSIS_ID] = id
                     });
                     _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
                     return null;
@@ -133,10 +133,10 @@ public class DataAnalysisService : IDataAnalysisService
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating network latency", new Dictionary<string, object>
                     {
-                        ["ChaosType"] = "NetworkLatency"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "NetworkLatency"
                     });
                     await Task.Delay(_random.Next(500, 2000));
-                }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
                 var analyses = await ExecuteWithTimeoutAsync(
@@ -170,10 +170,10 @@ public class DataAnalysisService : IDataAnalysisService
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating cache failure", new Dictionary<string, object>
                     {
-                        ["ChaosType"] = "CacheFailure"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "CacheFailure"
                     });
                     throw new InvalidOperationException("Simulated cache failure (chaos engineering)");
-                }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
                 var analyses = await ExecuteWithTimeoutAsync(
@@ -207,10 +207,10 @@ public class DataAnalysisService : IDataAnalysisService
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating storage failure", new Dictionary<string, object>
                     {
-                        ["ChaosType"] = "StorageFailure"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "StorageFailure"
                     });
                     throw new InvalidOperationException("Simulated storage failure (chaos engineering)");
-                }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
                 var analyses = await ExecuteWithTimeoutAsync(
@@ -235,7 +235,7 @@ public class DataAnalysisService : IDataAnalysisService
     {
         return await ExecuteAnalysisOperationAsync(
             operationName: nameof(GetAnalysisResultAsync),
-            additionalMetadata: new Dictionary<string, object> { ["AnalysisId"] = analysisId },
+            additionalMetadata: new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysisId },
             validation: () => ValidateAnalysisId(analysisId),
             operation: async (context) =>
             {
@@ -244,7 +244,7 @@ public class DataAnalysisService : IDataAnalysisService
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating memory pressure", new Dictionary<string, object>
                     {
-                        ["ChaosType"] = "MemoryPressure"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "MemoryPressure"
                     });
                     // Simulate memory pressure by allocating temporary objects
                     var tempObjects = new List<byte[]>();
@@ -254,8 +254,7 @@ public class DataAnalysisService : IDataAnalysisService
                     }
                     await Task.Delay(100);
                     tempObjects.Clear();
-                    GC.Collect();
-                }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
                 var analysis = await ExecuteWithTimeoutAsync(
@@ -269,7 +268,7 @@ public class DataAnalysisService : IDataAnalysisService
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND, new Dictionary<string, object>
                     {
-                        ["AnalysisId"] = analysisId
+                        [AppConstants.DataStructures.ANALYSIS_ID] = analysisId
                     });
                     _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
                     throw new ArgumentException($"Analysis with ID {analysisId} not found", nameof(analysisId));
@@ -295,7 +294,7 @@ public class DataAnalysisService : IDataAnalysisService
     {
         return await ExecuteAnalysisOperationAsync(
             operationName: nameof(DeleteAnalysisAsync),
-            additionalMetadata: new Dictionary<string, object> { ["AnalysisId"] = id },
+            additionalMetadata: new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = id },
             validation: () => ValidateAnalysisId(id),
             operation: async (context) =>
             {
@@ -304,10 +303,10 @@ public class DataAnalysisService : IDataAnalysisService
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating processing delay", new Dictionary<string, object>
                     {
-                        ["ChaosType"] = "ProcessingDelay"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "ProcessingDelay"
                     });
                     await Task.Delay(_random.Next(1000, 3000));
-                }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.DATABASE_DELETION_STARTED);
                 var result = await ExecuteWithTimeoutAsync(
@@ -337,7 +336,7 @@ public class DataAnalysisService : IDataAnalysisService
     {
         return await ExecuteAnalysisOperationAsync(
             operationName: nameof(RunAnalysisAsync),
-            additionalMetadata: new Dictionary<string, object> { ["AnalysisId"] = analysisId },
+            additionalMetadata: new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysisId },
             validation: () => ValidateAnalysisId(analysisId),
             operation: async (context) =>
             {
@@ -346,10 +345,10 @@ public class DataAnalysisService : IDataAnalysisService
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating processing delay", new Dictionary<string, object>
                     {
-                        ["ChaosType"] = "ProcessingDelay"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "ProcessingDelay"
                     });
                     await Task.Delay(_random.Next(1000, 5000));
-                }, new Dictionary<string, object> { ["UserId"] = AppConstants.Auth.AnonymousUser });
+                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
                 var analysis = await ExecuteWithTimeoutAsync(
@@ -363,7 +362,7 @@ public class DataAnalysisService : IDataAnalysisService
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND, new Dictionary<string, object>
                     {
-                        ["AnalysisId"] = analysisId
+                        [AppConstants.DataStructures.ANALYSIS_ID] = analysisId
                     });
                     _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
                     throw new ArgumentException($"Analysis with ID {analysisId} not found", nameof(analysisId));
@@ -378,7 +377,7 @@ public class DataAnalysisService : IDataAnalysisService
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_ALREADY_COMPLETED, new Dictionary<string, object>
                     {
-                        ["AnalysisId"] = analysisId,
+                        [AppConstants.DataStructures.ANALYSIS_ID] = analysisId,
                         ["Status"] = analysis.Status.ToString()
                     });
                     _infrastructure.StructuredLogging.LogSummary(context, true, AppConstants.AnalysisMessages.ANALYSIS_ALREADY_COMPLETED);
@@ -389,7 +388,7 @@ public class DataAnalysisService : IDataAnalysisService
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_EXECUTION_STARTED, new Dictionary<string, object>
                 {
                     ["AnalysisType"] = analysis.Type.ToString(),
-                    ["AnalysisId"] = analysis.Id
+                    [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id
                 });
                 var result = await ExecuteAnalysisWithStateManagementAsync(analysis, context);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_EXECUTION_COMPLETED);
@@ -444,7 +443,7 @@ public class DataAnalysisService : IDataAnalysisService
             case nameof(DeleteAnalysisAsync):
             case nameof(RunAnalysisAsync):
             case nameof(GetAnalysisResultAsync):
-                var analysisId = metadata.TryGetValue("AnalysisId", out var id) ? id?.ToString() : 
+                var analysisId = metadata.TryGetValue(AppConstants.DataStructures.ANALYSIS_ID, out var id) ? id?.ToString() : 
                                metadata.TryGetValue(AppConstants.DataStructures.DATASET_ID, out var datasetId) ? datasetId?.ToString() : "unknown";
                 return $"Failed to complete {operationName} for analysis ID {analysisId}";
                 
@@ -481,7 +480,7 @@ public class DataAnalysisService : IDataAnalysisService
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_EXECUTION_STARTED, new Dictionary<string, object>
             {
                 ["AnalysisType"] = analysis.Type.ToString(),
-                ["AnalysisId"] = analysis.Id
+                [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id
             });
 
             // Execute analysis with timeout
@@ -499,7 +498,7 @@ public class DataAnalysisService : IDataAnalysisService
 
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_COMPLETED_SUCCESSFULLY, new Dictionary<string, object>
             {
-                ["AnalysisId"] = analysis.Id,
+                [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id,
                 ["Status"] = analysis.Status.ToString()
             });
 
@@ -519,7 +518,7 @@ public class DataAnalysisService : IDataAnalysisService
             
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_FAILED, new Dictionary<string, object>
             {
-                ["AnalysisId"] = analysis.Id,
+                [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id,
                 ["ErrorMessage"] = ex.Message
             });
             
