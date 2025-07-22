@@ -67,7 +67,7 @@ public class DataSetRowRepository : IDataSetRowRepository
             .Where(r => r.DataSetId == dataSetId)
             .ToListAsync();
 
-        if (!rows.Any())
+        if (rows.Count == 0)
             return false;
 
         _context.DataSetRows.RemoveRange(rows);

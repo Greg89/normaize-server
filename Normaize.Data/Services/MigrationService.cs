@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Normaize.Core.Interfaces;
-using Normaize.Data;
 
 namespace Normaize.Data.Services;
 
@@ -29,13 +28,13 @@ public class MigrationService : IMigrationService
             {
                 result.Success = false;
                 result.ErrorMessage = "Cannot connect to database. Please check connection string and database availability.";
-                _logger.LogError(result.ErrorMessage);
+                _logger.LogError("Database migration failed: {ErrorMessage}", result.ErrorMessage);
                 return Task.FromResult(result);
             }
 
             // Get pending migrations
             var pendingMigrations = _context.Database.GetPendingMigrations().ToList();
-            if (pendingMigrations.Any())
+            if (pendingMigrations.Count > 0)
             {
                 result.PendingMigrations = pendingMigrations;
                 _logger.LogInformation("Found {Count} pending migrations: {Migrations}", 
@@ -52,7 +51,7 @@ public class MigrationService : IMigrationService
             
             result.Success = true;
             result.Message = "Database migrations applied successfully";
-            _logger.LogInformation(result.Message);
+            _logger.LogInformation("Database migration completed: {Message}", result.Message);
 
             return Task.FromResult(result);
         }

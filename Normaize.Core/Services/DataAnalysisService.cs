@@ -271,7 +271,7 @@ public class DataAnalysisService : IDataAnalysisService
                         [AppConstants.DataStructures.ANALYSIS_ID] = analysisId
                     });
                     _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
-                    throw new ArgumentException($"Analysis with ID {analysisId} not found", AppConstants.DataStructures.ANALYSIS_ID);
+                    throw new ArgumentException($"Analysis not found");
                 }
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.RESULTS_DESERIALIZATION_STARTED);
@@ -365,7 +365,7 @@ public class DataAnalysisService : IDataAnalysisService
                         [AppConstants.DataStructures.ANALYSIS_ID] = analysisId
                     });
                     _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
-                    throw new ArgumentException($"Analysis with ID {analysisId} not found", AppConstants.DataStructures.ANALYSIS_ID);
+                    throw new ArgumentException($"Analysis not found");
                 }
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_STATE_VALIDATION_STARTED);
