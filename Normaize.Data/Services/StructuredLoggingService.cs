@@ -327,7 +327,33 @@ public class StructuredLoggingService : IStructuredLoggingService
 
     private class NoOpDisposable : IDisposable
     {
-        public void Dispose() { }
+        private bool _disposed;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose managed resources (none in this case)
+                }
+                
+                // Dispose unmanaged resources (none in this case)
+                
+                _disposed = true;
+            }
+        }
+
+        ~NoOpDisposable()
+        {
+            Dispose(false);
+        }
     }
 
     private class OperationContext : IOperationContext

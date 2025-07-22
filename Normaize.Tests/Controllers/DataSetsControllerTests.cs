@@ -716,7 +716,7 @@ public class DataSetsControllerTests
             Times.Once);
     }
 
-    private static IFormFile CreateMockFile(string fileName, string contentType, string content)
+    private static FormFile CreateMockFile(string fileName, string contentType, string content)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(content);
         var stream = new MemoryStream(bytes);

@@ -339,8 +339,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
 
     private static void ValidateSaveFileInputs(FileUploadRequest? fileRequest)
     {
-        if (fileRequest == null)
-            throw new ArgumentNullException(nameof(fileRequest));
+        ArgumentNullException.ThrowIfNull(fileRequest);
         
         if (string.IsNullOrWhiteSpace(fileRequest.FileName))
             throw new ArgumentException("FileName cannot be null or empty", nameof(fileRequest));
@@ -493,15 +492,12 @@ public class InMemoryStorageService : IStorageService, IDisposable
 
     private void ThrowIfDisposed()
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(InMemoryStorageService));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, nameof(InMemoryStorageService));
     }
 
     private class FileMetadata
     {
-        public byte[] Data { get; set; } = Array.Empty<byte>();
+        public byte[] Data { get; set; } = [];
         public string FileName { get; set; } = string.Empty;
         public long FileSize { get; set; }
         public string FileHash { get; set; } = string.Empty;
