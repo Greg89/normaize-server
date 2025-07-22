@@ -1,17 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
-using Normaize.Core.Interfaces;
 using Normaize.Data;
 using Normaize.Data.Services;
 using Xunit;
+
+namespace Normaize.Tests.Services;
 
 public class DatabaseHealthServiceTests
 {
