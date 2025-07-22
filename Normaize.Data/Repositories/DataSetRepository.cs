@@ -228,7 +228,7 @@ public class DataSetRepository : IDataSetRepository
     }
 
     // Bulk operations for large datasets
-    public async Task BulkInsertDataRowsAsync(int dataSetId, IEnumerable<DataSetRow> rows)
+    public async Task BulkInsertDataRowsAsync(IEnumerable<DataSetRow> rows)
     {
         // Use MySQL bulk insert for better performance
         var batchSize = 1000;
@@ -262,29 +262,29 @@ public class DataSetRepository : IDataSetRepository
                 .ToListAsync();
 
             var data = rows.Select(r => JsonSerializer.Deserialize<Dictionary<string, object>>(r.Data)).ToList();
-            return data.Any() ? AnalyzeData(data) : null;
+            return data.Count > 0 ? AnalyzeData(data) : null;
         }
     }
 
-    private object AnalyzeData(List<Dictionary<string, object>?> data)
+    private static Dictionary<string, object> AnalyzeData(List<Dictionary<string, object>?> data)
     {
-        if (!data.Any()) return new { };
+        if (data.Count == 0) return [];
 
         var validData = data.Where(d => d != null).ToList();
-        if (!validData.Any()) return new { };
+        if (validData.Count == 0) return [];
 
         var columns = validData.First()!.Keys.ToList();
         var analysis = new Dictionary<string, object>();
 
         foreach (var column in columns)
         {
-            var values = validData.Select(row => row!.ContainsKey(column) ? row[column]?.ToString() : null)
+            var values = validData.Select(row => row!.TryGetValue(column, out var value) ? value?.ToString() : null)
                             .Where(v => !string.IsNullOrEmpty(v))
                             .ToList();
 
             analysis[column] = new
             {
-                Count = values.Count,
+                values.Count,
                 UniqueCount = values.Distinct().Count(),
                 NullCount = validData.Count - values.Count,
                 SampleValues = values.Take(5).ToList()
