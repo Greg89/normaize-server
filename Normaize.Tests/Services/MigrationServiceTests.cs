@@ -43,8 +43,8 @@ public class MigrationServiceTests
         var interfaceType = typeof(IMigrationService);
 
         // Assert
-        interfaceType.GetMethod("ApplyMigrations")!.ReturnType.Should().Be(typeof(Task<MigrationResult>));
-        interfaceType.GetMethod("VerifySchemaAsync")!.ReturnType.Should().Be(typeof(Task<MigrationResult>));
+        interfaceType.GetMethod("ApplyMigrations")!.ReturnType.Should().Be<Task<MigrationResult>>();
+        interfaceType.GetMethod("VerifySchemaAsync")!.ReturnType.Should().Be<Task<MigrationResult>>();
     }
 
     [Fact]
@@ -97,8 +97,8 @@ public class MigrationServiceTests
         {
             Success = true,
             Message = "Test message",
-            PendingMigrations = new List<string> { "Migration1", "Migration2" },
-            MissingColumns = new List<string> { "Column1", "Column2" },
+            PendingMigrations = ["Migration1", "Migration2"],
+            MissingColumns = ["Column1", "Column2"],
             ErrorMessage = "Test error"
         };
 
@@ -204,7 +204,7 @@ public class MigrationServiceTests
     public async Task ApplyMigrations_ShouldNotThrowException()
     {
         // Act & Assert
-        var action = () => _service.ApplyMigrations();
+        var action = _service.ApplyMigrations;
         await action.Should().NotThrowAsync();
     }
 
@@ -212,7 +212,7 @@ public class MigrationServiceTests
     public async Task VerifySchemaAsync_ShouldNotThrowException()
     {
         // Act & Assert
-        var action = () => _service.VerifySchemaAsync();
+        var action = _service.VerifySchemaAsync;
         await action.Should().NotThrowAsync();
     }
 
