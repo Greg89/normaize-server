@@ -56,7 +56,7 @@ public class DataVisualizationService : IDataVisualizationService
                         [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.PROCESSING_DELAY
                     });
                     await Task.Delay(_random.Next(1000, 5000));
-                }, new Dictionary<string, object> { ["UserId"] = userId });
+                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.CHART_GENERATION_STARTED);
                 var result = await ExecuteWithTimeoutAsync(
@@ -92,7 +92,7 @@ public class DataVisualizationService : IDataVisualizationService
                         [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.NETWORK_LATENCY
                     });
                     await Task.Delay(_random.Next(500, 2000));
-                }, new Dictionary<string, object> { ["UserId"] = userId });
+                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.COMPARISON_CHART_GENERATION_STARTED);
                 var result = await ExecuteWithTimeoutAsync(
@@ -125,7 +125,7 @@ public class DataVisualizationService : IDataVisualizationService
                         [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.CACHE_FAILURE
                     });
                     throw new InvalidOperationException("Simulated cache failure (chaos engineering)");
-                }, new Dictionary<string, object> { ["UserId"] = userId });
+                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.DATA_SUMMARY_GENERATION_STARTED);
                 var result = await ExecuteWithTimeoutAsync(
@@ -165,7 +165,7 @@ public class DataVisualizationService : IDataVisualizationService
                     }
                     await Task.Delay(100);
                     tempObjects.Clear();
-                }, new Dictionary<string, object> { ["UserId"] = userId });
+                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.STATISTICAL_SUMMARY_GENERATION_STARTED);
                 var result = await ExecuteWithTimeoutAsync(
@@ -355,7 +355,7 @@ public class DataVisualizationService : IDataVisualizationService
         // Chaos engineering: Simulate processing delay
         if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
         {
-            _infrastructure.Logger.LogWarning("Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}", correlationId);
+            _infrastructure.Logger.LogWarning(AppConstants.ChaosEngineering.SIMULATED_PROCESSING_DELAY_MESSAGE, correlationId);
             await Task.Delay(_random.Next(1000, 5000)); // 1-5 second delay
         }
 
@@ -392,7 +392,7 @@ public class DataVisualizationService : IDataVisualizationService
         // Chaos engineering: Simulate processing delay
         if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
         {
-            _infrastructure.Logger.LogWarning("Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}", correlationId);
+            _infrastructure.Logger.LogWarning(AppConstants.ChaosEngineering.SIMULATED_PROCESSING_DELAY_MESSAGE, correlationId);
             await Task.Delay(_random.Next(1000, 5000)); // 1-5 second delay
         }
 
@@ -432,7 +432,7 @@ public class DataVisualizationService : IDataVisualizationService
         // Chaos engineering: Simulate processing delay
         if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
         {
-            _infrastructure.Logger.LogWarning("Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}", correlationId);
+            _infrastructure.Logger.LogWarning(AppConstants.ChaosEngineering.SIMULATED_PROCESSING_DELAY_MESSAGE, correlationId);
             await Task.Delay(_random.Next(500, 2000)); // 0.5-2 second delay
         }
 
@@ -469,7 +469,7 @@ public class DataVisualizationService : IDataVisualizationService
         // Chaos engineering: Simulate processing delay
         if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
         {
-            _infrastructure.Logger.LogWarning("Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}", correlationId);
+            _infrastructure.Logger.LogWarning(AppConstants.ChaosEngineering.SIMULATED_PROCESSING_DELAY_MESSAGE, correlationId);
             await Task.Delay(_random.Next(1000, 3000)); // 1-3 second delay
         }
 

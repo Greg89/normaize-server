@@ -47,6 +47,8 @@ public static class AppConstants
         public const string NETWORK_LATENCY = "NetworkLatency";
         public const string CACHE_FAILURE = "CacheFailure";
         public const string MEMORY_PRESSURE = "MemoryPressure";
+        public const string SIMULATED_PROCESSING_DELAY_MESSAGE = "Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}";
+
 
     }
 
