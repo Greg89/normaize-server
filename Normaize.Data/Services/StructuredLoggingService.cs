@@ -203,16 +203,6 @@ public class StructuredLoggingService : IStructuredLoggingService
         
         var actualUserId = userId ?? GetCurrentUserId() ?? AppConstants.Auth.AnonymousUser;
         
-        var requestData = new
-        {
-            Method = method,
-            Path = path,
-            StatusCode = statusCode,
-            DurationMs = durationMs,
-            UserId = actualUserId,
-            Timestamp = DateTime.UtcNow
-        };
-        
         // Determine log level based on status code
         var finalLevel = statusCode >= 400 ? LogLevel.Warning : level;
         
@@ -356,7 +346,7 @@ public class StructuredLoggingService : IStructuredLoggingService
         }
     }
 
-    private class OperationContext : IOperationContext
+    private sealed class OperationContext : IOperationContext
     {
         public string OperationName { get; set; } = string.Empty;
         public string CorrelationId { get; set; } = string.Empty;

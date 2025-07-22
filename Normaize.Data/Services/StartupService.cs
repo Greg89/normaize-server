@@ -48,9 +48,9 @@ public class StartupService : IStartupService
             await RunStartupChecksAsync(correlationId, cancellationToken);
             _logger.LogInformation("Startup configuration completed successfully. CorrelationId: {CorrelationId}", correlationId);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogWarning("Startup configuration was cancelled. CorrelationId: {CorrelationId}", correlationId);
+            _logger.LogWarning(ex, "Startup configuration was cancelled. CorrelationId: {CorrelationId}", correlationId);
             throw;
         }
         catch (Exception ex)

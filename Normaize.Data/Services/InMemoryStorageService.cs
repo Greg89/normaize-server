@@ -495,7 +495,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
         ObjectDisposedException.ThrowIf(_disposed, nameof(InMemoryStorageService));
     }
 
-    private class FileMetadata
+    private sealed class FileMetadata
     {
         public byte[] Data { get; set; } = [];
         public string FileName { get; set; } = string.Empty;
