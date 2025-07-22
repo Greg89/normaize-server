@@ -10,7 +10,7 @@ namespace Normaize.Data.Services;
 
 public class S3StorageService : IStorageService
 {
-    private readonly IAmazonS3 _s3Client;
+    private readonly AmazonS3Client _s3Client;
     private readonly string _bucketName;
     private readonly ILogger<S3StorageService> _logger;
 
@@ -44,8 +44,8 @@ public class S3StorageService : IStorageService
         
         // Debug logging
         _logger.LogInformation("DEBUG: S3 Client Configuration - AccessKey: {AccessKey}, SecretKey: {SecretKey}, ServiceURL: {ServiceURL}", 
-            accessKey.Substring(0, Math.Min(8, accessKey.Length)) + "...", 
-            secretKey.Substring(0, Math.Min(8, secretKey.Length)) + "...", 
+            string.Concat(accessKey.AsSpan(0, Math.Min(8, accessKey.Length)), "..."), 
+            string.Concat(secretKey.AsSpan(0, Math.Min(8, secretKey.Length)), "..."), 
             serviceUrl ?? "Not set");
 
         // Ensure bucket exists
@@ -77,7 +77,7 @@ public class S3StorageService : IStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error ensuring S3 bucket exists: {BucketName}", _bucketName);
-            throw;
+            throw new InvalidOperationException($"Failed to ensure S3 bucket '{_bucketName}' exists", ex);
         }
     }
 
@@ -124,7 +124,7 @@ public class S3StorageService : IStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error uploading file to S3: {ObjectKey}", objectKey);
-            throw;
+            throw new InvalidOperationException($"Failed to upload file to S3: {objectKey}", ex);
         }
     }
 
@@ -156,7 +156,7 @@ public class S3StorageService : IStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error downloading file from S3: {ObjectKey}", objectKey);
-            throw;
+            throw new InvalidOperationException($"Failed to download file from S3: {objectKey}", ex);
         }
     }
 
@@ -178,7 +178,7 @@ public class S3StorageService : IStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting file from S3: {ObjectKey}", objectKey);
-            throw;
+            throw new InvalidOperationException($"Failed to delete file from S3: {objectKey}", ex);
         }
     }
 
@@ -208,7 +208,7 @@ public class S3StorageService : IStorageService
         }
     }
 
-    private string ExtractObjectKeyFromUrl(string filePath)
+    private static string ExtractObjectKeyFromUrl(string filePath)
     {
         if (filePath.StartsWith("s3://"))
         {
@@ -218,7 +218,7 @@ public class S3StorageService : IStorageService
         return filePath;
     }
 
-    private string GetContentType(string fileName)
+    private static string GetContentType(string fileName)
     {
         var extension = Path.GetExtension(fileName).ToLowerInvariant();
         return extension switch
