@@ -43,6 +43,7 @@ public static class AppConstants
     public static class ChaosEngineering
     {
         public const string CHAOS_TYPE = "ChaosType";
+        public const string PROCESSING_DELAY = "ProcessingDelay";
     }
 
     /// <summary>
@@ -185,6 +186,9 @@ public static class AppConstants
         public const string END_DATE = "EndDate";
         public const string USER_ID = "UserId";
         public const string ANALYSIS_ID = "AnalysisId";
+        public const string STATUS = "Status";
+        public const string TOTAL_DATASETS = "TotalDataSets";
+
     }
 
     /// <summary>

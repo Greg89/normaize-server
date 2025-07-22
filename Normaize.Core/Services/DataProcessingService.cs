@@ -205,7 +205,7 @@ public class DataProcessingService : IDataProcessingService
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
                 {
-                    ["TotalDataSets"] = dataSets.Count()
+                    [AppConstants.DataStructures.TOTAL_DATASETS] = dataSets.Count()
                 });
 
                 var pagedDataSets = ApplyPagination(dataSets, page, pageSize, context);
@@ -385,7 +385,7 @@ public class DataProcessingService : IDataProcessingService
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
                 {
-                    ["TotalDataSets"] = dataSets.Count()
+                    [AppConstants.DataStructures.TOTAL_DATASETS] = dataSets.Count()
                 });
 
                 var deletedDataSets = dataSets
@@ -459,7 +459,7 @@ public class DataProcessingService : IDataProcessingService
 
                 _infrastructure.StructuredLogging.LogStep(context, "Database retrieval by file type completed", new Dictionary<string, object>
                 {
-                    ["TotalDataSets"] = dataSets.Count()
+                    [AppConstants.DataStructures.TOTAL_DATASETS] = dataSets.Count()
                 });
 
                 var pagedDataSets = ApplyPagination(dataSets, page, pageSize, context);
@@ -490,7 +490,7 @@ public class DataProcessingService : IDataProcessingService
 
                 _infrastructure.StructuredLogging.LogStep(context, "Database retrieval by date range completed", new Dictionary<string, object>
                 {
-                    ["TotalDataSets"] = dataSets.Count()
+                    [AppConstants.DataStructures.TOTAL_DATASETS] = dataSets.Count()
                 });
 
                 var pagedDataSets = ApplyPagination(dataSets, page, pageSize, context);

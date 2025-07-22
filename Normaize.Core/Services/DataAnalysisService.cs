@@ -161,7 +161,7 @@ public class DataAnalysisService : IDataAnalysisService
     {
         return await ExecuteAnalysisOperationAsync(
             operationName: nameof(GetAnalysesByStatusAsync),
-            additionalMetadata: new Dictionary<string, object> { ["Status"] = status.ToString() },
+            additionalMetadata: new Dictionary<string, object> { [AppConstants.DataStructures.STATUS] = status.ToString() },
             validation: () => ValidateAnalysisStatus(status),
             operation: async (context) =>
             {
@@ -299,11 +299,11 @@ public class DataAnalysisService : IDataAnalysisService
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate processing delay
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("ProcessingDelay", GetCorrelationId(), context.OperationName, async () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.PROCESSING_DELAY, GetCorrelationId(), context.OperationName, async () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating processing delay", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "ProcessingDelay"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.PROCESSING_DELAY
                     });
                     await Task.Delay(_random.Next(1000, 3000));
                 }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
@@ -341,11 +341,11 @@ public class DataAnalysisService : IDataAnalysisService
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate processing delay
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("ProcessingDelay", GetCorrelationId(), context.OperationName, async () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.PROCESSING_DELAY, GetCorrelationId(), context.OperationName, async () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating processing delay", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "ProcessingDelay"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.PROCESSING_DELAY
                     });
                     await Task.Delay(_random.Next(1000, 5000));
                 }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
@@ -378,7 +378,7 @@ public class DataAnalysisService : IDataAnalysisService
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_ALREADY_COMPLETED, new Dictionary<string, object>
                     {
                         [AppConstants.DataStructures.ANALYSIS_ID] = analysisId,
-                        ["Status"] = analysis.Status.ToString()
+                        [AppConstants.DataStructures.STATUS] = analysis.Status.ToString()
                     });
                     _infrastructure.StructuredLogging.LogSummary(context, true, AppConstants.AnalysisMessages.ANALYSIS_ALREADY_COMPLETED);
                     return _mapper.Map<AnalysisDto>(analysis);
@@ -463,7 +463,7 @@ public class DataAnalysisService : IDataAnalysisService
                 return $"Failed to complete {operationName} for dataset ID {dataSetId}";
                 
             case nameof(GetAnalysesByStatusAsync):
-                var status = metadata.TryGetValue("Status", out var statusValue) ? statusValue?.ToString() : AppConstants.Messages.UNKNOWN;
+                var status = metadata.TryGetValue(AppConstants.DataStructures.STATUS, out var statusValue) ? statusValue?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for status {status}";
                 
             case nameof(GetAnalysesByTypeAsync):
@@ -510,7 +510,7 @@ public class DataAnalysisService : IDataAnalysisService
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_COMPLETED_SUCCESSFULLY, new Dictionary<string, object>
             {
                 [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id,
-                ["Status"] = analysis.Status.ToString()
+                [AppConstants.DataStructures.STATUS] = analysis.Status.ToString()
             });
 
             var updatedAnalysis = await ExecuteWithTimeoutAsync(
