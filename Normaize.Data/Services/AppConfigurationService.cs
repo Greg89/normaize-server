@@ -53,7 +53,7 @@ public class AppConfigurationService : IAppConfigurationService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading environment variables");
-                throw;
+                throw new InvalidOperationException("Failed to load environment variables", ex);
             }
         }
     }

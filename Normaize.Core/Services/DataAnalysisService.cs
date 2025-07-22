@@ -626,13 +626,13 @@ public class DataAnalysisService : IDataAnalysisService
 
     private static void ValidateAnalysisStatus(AnalysisStatus status)
     {
-        if (!Enum.IsDefined(typeof(AnalysisStatus), status))
+        if (!Enum.IsDefined(status))
             throw new ArgumentException(string.Format(AppConstants.ValidationMessages.INVALID_ANALYSIS_STATUS, status), nameof(status));
     }
 
     private static void ValidateAnalysisType(AnalysisType type)
     {
-        if (!Enum.IsDefined(typeof(AnalysisType), type))
+        if (!Enum.IsDefined(type))
             throw new ArgumentException(string.Format(AppConstants.ValidationMessages.INVALID_ANALYSIS_TYPE, type), nameof(type));
     }
 

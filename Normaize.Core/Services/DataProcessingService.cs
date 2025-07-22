@@ -691,7 +691,7 @@ public class DataProcessingService : IDataProcessingService
         _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_COMPLETED);
     }
 
-    private IEnumerable<DataSet> ApplyPagination(IEnumerable<DataSet> dataSets, int page, int pageSize, IOperationContext context)
+    private List<DataSet> ApplyPagination(IEnumerable<DataSet> dataSets, int page, int pageSize, IOperationContext context)
     {
         _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_STARTED);
         var pagedDataSets = dataSets
@@ -803,13 +803,7 @@ public class DataProcessingService : IDataProcessingService
         ValidateUserId(userId);
     }
 
-    private static void ValidateSchemaInputs(int id, string userId)
-    {
-        if (id <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
-        
-        ValidateUserId(userId);
-    }
+    private static void ValidateSchemaInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
 
     private static void ValidateSearchInputs(string searchTerm, string userId, int page, int pageSize)
     {

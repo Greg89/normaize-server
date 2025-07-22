@@ -309,14 +309,7 @@ public class DataVisualizationService : IDataVisualizationService
             throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
     }
 
-    private static void ValidateStatisticalSummaryInputs(int dataSetId, string? userId)
-    {
-        if (dataSetId <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId));
-        
-        if (string.IsNullOrWhiteSpace(userId))
-            throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
-    }
+    private static void ValidateStatisticalSummaryInputs(int dataSetId, string? userId) => ValidateDataSummaryInputs(dataSetId, userId);
 
     private static bool ValidateChartConfigurationInternal(ChartType chartType, ChartConfigurationDto? configuration)
     {
@@ -854,7 +847,7 @@ public class DataVisualizationService : IDataVisualizationService
         };
     }
 
-    private static StatisticalSummaryDto GenerateStatisticalSummary(DataSet dataSet, List<Dictionary<string, object>> data, string correlationId)
+    private static StatisticalSummaryDto GenerateStatisticalSummary(DataSet dataSet, List<Dictionary<string, object>> data)
     {
         if (data.Count == 0)
         {
