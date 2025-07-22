@@ -41,8 +41,8 @@ public class DataVisualizationService : IDataVisualizationService
             operationName: nameof(GenerateChartAsync),
             additionalMetadata: new Dictionary<string, object>
             {
-                ["DataSetId"] = dataSetId,
-                ["ChartType"] = chartType.ToString(),
+                [AppConstants.DataStructures.DATASETID] = dataSetId,
+                [AppConstants.DataStructures.CHART_TYPE] = chartType.ToString(),
                 ["Configuration"] = configuration?.ToString() ?? "null"
             },
             validation: () => ValidateGenerateChartInputs(dataSetId, chartType, configuration, userId),
@@ -53,7 +53,7 @@ public class DataVisualizationService : IDataVisualizationService
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating processing delay", new Dictionary<string, object>
                     {
-                        ["ChaosType"] = "ProcessingDelay"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.PROCESSING_DELAY
                     });
                     await Task.Delay(_random.Next(1000, 5000));
                 }, new Dictionary<string, object> { ["UserId"] = userId });
@@ -78,18 +78,18 @@ public class DataVisualizationService : IDataVisualizationService
             {
                 ["DataSetId1"] = dataSetId1,
                 ["DataSetId2"] = dataSetId2,
-                ["ChartType"] = chartType.ToString(),
+                [AppConstants.DataStructures.CHART_TYPE] = chartType.ToString(),
                 ["Configuration"] = configuration?.ToString() ?? "null"
             },
             validation: () => ValidateComparisonChartInputs(dataSetId1, dataSetId2, chartType, configuration, userId),
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate network latency
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("NetworkLatency", GetCorrelationId(), context.OperationName, async () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.NETWORK_LATENCY, GetCorrelationId(), context.OperationName, async () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating network latency", new Dictionary<string, object>
                     {
-                        ["ChaosType"] = "NetworkLatency"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.NETWORK_LATENCY
                     });
                     await Task.Delay(_random.Next(500, 2000));
                 }, new Dictionary<string, object> { ["UserId"] = userId });
@@ -112,17 +112,17 @@ public class DataVisualizationService : IDataVisualizationService
             operationName: nameof(GetDataSummaryAsync),
             additionalMetadata: new Dictionary<string, object>
             {
-                ["DataSetId"] = dataSetId
+                [AppConstants.DataStructures.DATASETID] = dataSetId
             },
             validation: () => ValidateDataSummaryInputs(dataSetId, userId),
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate cache failure
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("CacheFailure", GetCorrelationId(), context.OperationName, () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.CACHE_FAILURE, GetCorrelationId(), context.OperationName, () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating cache failure", new Dictionary<string, object>
                     {
-                        ["ChaosType"] = "CacheFailure"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.CACHE_FAILURE
                     });
                     throw new InvalidOperationException("Simulated cache failure (chaos engineering)");
                 }, new Dictionary<string, object> { ["UserId"] = userId });
@@ -145,17 +145,17 @@ public class DataVisualizationService : IDataVisualizationService
             operationName: nameof(GetStatisticalSummaryAsync),
             additionalMetadata: new Dictionary<string, object>
             {
-                ["DataSetId"] = dataSetId
+                [AppConstants.DataStructures.DATASETID] = dataSetId
             },
             validation: () => ValidateStatisticalSummaryInputs(dataSetId, userId),
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate memory pressure
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("MemoryPressure", GetCorrelationId(), context.OperationName, async () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.MEMORY_PRESSURE, GetCorrelationId(), context.OperationName, async () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating memory pressure", new Dictionary<string, object>
                     {
-                        ["ChaosType"] = "MemoryPressure"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.MEMORY_PRESSURE
                     });
                     // Simulate memory pressure by allocating temporary objects
                     var tempObjects = new List<byte[]>();
@@ -236,8 +236,8 @@ public class DataVisualizationService : IDataVisualizationService
 
     private static string CreateChartErrorMessage(Dictionary<string, object> metadata)
     {
-        var dataSetId = GetMetadataValue(metadata, "DataSetId");
-        var chartType = GetMetadataValue(metadata, "ChartType");
+        var dataSetId = GetMetadataValue(metadata, AppConstants.DataStructures.DATASETID);
+        var chartType = GetMetadataValue(metadata, AppConstants.DataStructures.CHART_TYPE);
         return $"Failed to complete GenerateChartAsync for dataset ID {dataSetId} with chart type {chartType}";
     }
 
@@ -245,19 +245,19 @@ public class DataVisualizationService : IDataVisualizationService
     {
         var dataSetId1 = GetMetadataValue(metadata, "DataSetId1");
         var dataSetId2 = GetMetadataValue(metadata, "DataSetId2");
-        var chartType = GetMetadataValue(metadata, "ChartType");
+        var chartType = GetMetadataValue(metadata, AppConstants.DataStructures.CHART_TYPE);
         return $"Failed to complete GenerateComparisonChartAsync for dataset IDs {dataSetId1} and {dataSetId2} with chart type {chartType}";
     }
 
     private static string CreateDataSummaryErrorMessage(Dictionary<string, object> metadata)
     {
-        var dataSetId = GetMetadataValue(metadata, "DataSetId");
+        var dataSetId = GetMetadataValue(metadata, AppConstants.DataStructures.DATASETID);
         return $"Failed to complete GetDataSummaryAsync for dataset ID {dataSetId}";
     }
 
     private static string CreateStatisticalSummaryErrorMessage(Dictionary<string, object> metadata)
     {
-        var dataSetId = GetMetadataValue(metadata, "DataSetId");
+        var dataSetId = GetMetadataValue(metadata, AppConstants.DataStructures.DATASETID);
         return $"Failed to complete GetStatisticalSummaryAsync for dataset ID {dataSetId}";
     }
 
