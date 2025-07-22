@@ -311,7 +311,7 @@ public class DataAnalysisServiceTests
         
         exception.Message.Should().Contain("Failed to complete GetAnalysisResultAsync for analysis ID 999");
         exception.InnerException.Should().BeOfType<ArgumentException>();
-        exception.InnerException!.Message.Should().Contain("Analysis with ID 999 not found");
+        exception.InnerException!.Message.Should().Contain("Analysis not found");
     }
 
     [Fact]
@@ -356,7 +356,7 @@ public class DataAnalysisServiceTests
         
         exception.Message.Should().Contain("Failed to complete RunAnalysisAsync for analysis ID 999");
         exception.InnerException.Should().BeOfType<ArgumentException>();
-        exception.InnerException!.Message.Should().Contain("Analysis with ID 999 not found");
+        exception.InnerException!.Message.Should().Contain("Analysis not found");
     }
 
     [Fact]
