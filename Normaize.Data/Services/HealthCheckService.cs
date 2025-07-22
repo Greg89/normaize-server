@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Normaize.Core.Configuration;
+using Normaize.Core.Constants;
 using Normaize.Core.Interfaces;
 using System.Diagnostics;
 
@@ -27,7 +28,7 @@ public class HealthCheckService(
         {
             var components = await CheckAllComponentsAsync(correlationId, cancellationToken);
             
-            var result = CreateHealthResult(components, "healthy", "unhealthy", correlationId);
+            var result = CreateHealthResult(components, AppConstants.Messages.HEALTHY, "unhealthy", correlationId);
             result.Duration = stopwatch.Elapsed;
 
             LogHealthCheckResult(result, correlationId);
@@ -181,7 +182,7 @@ public class HealthCheckService(
             var health = new ComponentHealth
             {
                 IsHealthy = canConnect,
-                Status = canConnect ? "healthy" : "unhealthy",
+                Status = canConnect ? AppConstants.Messages.HEALTHY : "unhealthy",
                 ErrorMessage = canConnect ? null : "Cannot connect to database",
                 Details = new Dictionary<string, object>
                 {
@@ -247,7 +248,7 @@ public class HealthCheckService(
                 var health = new ComponentHealth
                 {
                     IsHealthy = true,
-                    Status = "healthy",
+                    Status = AppConstants.Messages.HEALTHY,
                     ErrorMessage = null,
                     Details = new Dictionary<string, object>
                     {
@@ -290,7 +291,7 @@ public class HealthCheckService(
             var appHealth = new ComponentHealth
             {
                 IsHealthy = isHealthy,
-                Status = isHealthy ? "healthy" : "unhealthy",
+                Status = isHealthy ? AppConstants.Messages.HEALTHY : "unhealthy",
                 ErrorMessage = errorMessage,
                 Details = new Dictionary<string, object>
                 {
