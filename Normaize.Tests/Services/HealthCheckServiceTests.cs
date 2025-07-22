@@ -309,4 +309,9 @@ public class HealthCheckServiceTests : IDisposable
         result.Status.Should().Be("unhealthy");
         result.Issues.Should().Contain(issue => issue.EndsWith("Test exception"));
     }
+
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+    }
 } 

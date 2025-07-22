@@ -488,7 +488,7 @@ public class DataVisualizationService : IDataVisualizationService
         var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, correlationId);
         var data = ExtractDataSetData(dataSet, correlationId);
         
-        var stats = GenerateStatisticalSummary(dataSet, data, correlationId);
+        var stats = GenerateStatisticalSummary(dataSet, data);
         stats.ProcessingTime = stopwatch.Elapsed;
 
         _cache.Set(cacheKey, stats, _options.CacheExpiration);
