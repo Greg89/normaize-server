@@ -443,8 +443,19 @@ public class DataAnalysisService : IDataAnalysisService
             case nameof(DeleteAnalysisAsync):
             case nameof(RunAnalysisAsync):
             case nameof(GetAnalysisResultAsync):
-                var analysisId = metadata.TryGetValue(AppConstants.DataStructures.ANALYSIS_ID, out var id) ? id?.ToString() : 
-                               metadata.TryGetValue(AppConstants.DataStructures.DATASET_ID, out var datasetId) ? datasetId?.ToString() : AppConstants.Messages.UNKNOWN;
+                string analysisId;
+                if (metadata.TryGetValue(AppConstants.DataStructures.ANALYSIS_ID, out var id))
+                {
+                    analysisId = id?.ToString() ?? AppConstants.Messages.UNKNOWN;
+                }
+                else if (metadata.TryGetValue(AppConstants.DataStructures.DATASET_ID, out var datasetId))
+                {
+                    analysisId = datasetId?.ToString() ?? AppConstants.Messages.UNKNOWN;
+                }
+                else
+                {
+                    analysisId = AppConstants.Messages.UNKNOWN;
+                }
                 return $"Failed to complete {operationName} for analysis ID {analysisId}";
                 
             case nameof(GetAnalysesByDataSetAsync):
