@@ -128,9 +128,9 @@ public class DatabaseHealthService : IDatabaseHealthService
     private async Task<List<string>> GetStandardColumnsAsync(CancellationToken cancellationToken)
     {
         var foundColumns = new List<string>();
-        var sql = @"
+        var sqlBuilder = new System.Text.StringBuilder(@"
             SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_NAME = 'DataSets' AND COLUMN_NAME IN (";
+            WHERE TABLE_NAME = 'DataSets' AND COLUMN_NAME IN (");
         
         using var command = _context.Database.GetDbConnection().CreateCommand();
         
@@ -138,16 +138,17 @@ public class DatabaseHealthService : IDatabaseHealthService
         var parameters = new List<System.Data.Common.DbParameter>();
         for (int i = 0; i < _config.CriticalColumns.Length; i++)
         {
-            if (i > 0) sql += ",";
+            if (i > 0) sqlBuilder.Append(',');
             var paramName = $"@column{i}";
-            sql += paramName;
+            sqlBuilder.Append(paramName);
             
             var parameter = command.CreateParameter();
             parameter.ParameterName = paramName;
             parameter.Value = _config.CriticalColumns[i];
             parameters.Add(parameter);
         }
-        sql += ")";
+        sqlBuilder.Append(')');
+        var sql = sqlBuilder.ToString();
         
         command.CommandText = sql;
         command.Parameters.AddRange(parameters.ToArray());

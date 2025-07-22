@@ -7,21 +7,14 @@ using System.Diagnostics;
 
 namespace Normaize.Data.Services;
 
-public class HealthCheckService : IHealthCheckService
+public class HealthCheckService(
+    NormaizeContext context,
+    ILogger<HealthCheckService> logger,
+    IOptions<HealthCheckConfiguration> config) : IHealthCheckService
 {
-    private readonly NormaizeContext _context;
-    private readonly ILogger<HealthCheckService> _logger;
-    private readonly HealthCheckConfiguration _config;
-
-    public HealthCheckService(
-        NormaizeContext context,
-        ILogger<HealthCheckService> logger,
-        IOptions<HealthCheckConfiguration> config)
-    {
-        _context = context;
-        _logger = logger;
-        _config = config.Value;
-    }
+    private readonly NormaizeContext _context = context;
+    private readonly ILogger<HealthCheckService> _logger = logger;
+    private readonly HealthCheckConfiguration _config = config.Value;
 
     public async Task<HealthCheckResult> CheckHealthAsync(CancellationToken cancellationToken = default)
     {
@@ -40,10 +33,10 @@ public class HealthCheckService : IHealthCheckService
             LogHealthCheckResult(result, correlationId);
             return result;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             stopwatch.Stop();
-            _logger.LogWarning("Health check was cancelled. CorrelationId: {CorrelationId}", correlationId);
+            _logger.LogWarning(ex, "Health check was cancelled. CorrelationId: {CorrelationId}", correlationId);
             
             return CreateErrorResult("Health check was cancelled", stopwatch.Elapsed, correlationId);
         }
@@ -90,10 +83,10 @@ public class HealthCheckService : IHealthCheckService
             LogHealthCheckResult(result, correlationId);
             return result;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             stopwatch.Stop();
-            _logger.LogWarning("Liveness check was cancelled. CorrelationId: {CorrelationId}", correlationId);
+            _logger.LogWarning(ex, "Liveness check was cancelled. CorrelationId: {CorrelationId}", correlationId);
             
             return CreateErrorResult("Liveness check was cancelled", stopwatch.Elapsed, correlationId);
         }
@@ -135,10 +128,10 @@ public class HealthCheckService : IHealthCheckService
             LogHealthCheckResult(result, correlationId);
             return result;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             stopwatch.Stop();
-            _logger.LogWarning("Readiness check was cancelled. CorrelationId: {CorrelationId}", correlationId);
+            _logger.LogWarning(ex, "Readiness check was cancelled. CorrelationId: {CorrelationId}", correlationId);
             
             return CreateErrorResult("Readiness check was cancelled", stopwatch.Elapsed, correlationId);
         }
@@ -204,10 +197,10 @@ public class HealthCheckService : IHealthCheckService
 
             return health;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             stopwatch.Stop();
-            _logger.LogWarning("Database health check timed out after {TimeoutSeconds}s. CorrelationId: {CorrelationId}", 
+            _logger.LogWarning(ex, "Database health check timed out after {TimeoutSeconds}s. CorrelationId: {CorrelationId}", 
                 _config.DatabaseTimeoutSeconds, correlationId);
             
             return new ComponentHealth
@@ -316,10 +309,10 @@ public class HealthCheckService : IHealthCheckService
 
             return appHealth;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             stopwatch.Stop();
-            _logger.LogWarning("Application health check timed out after {TimeoutSeconds}s. CorrelationId: {CorrelationId}", 
+            _logger.LogWarning(ex, "Application health check timed out after {TimeoutSeconds}s. CorrelationId: {CorrelationId}", 
                 _config.ApplicationTimeoutSeconds, correlationId);
             
             return new ComponentHealth
