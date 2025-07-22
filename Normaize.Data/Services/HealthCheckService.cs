@@ -284,8 +284,15 @@ public class HealthCheckService : IHealthCheckService
             stopwatch.Stop();
             
             var isHealthy = canConnect && pendingMigrations.Count == 0;
-            var errorMessage = !canConnect ? "Cannot connect to database" : 
-                              pendingMigrations.Count > 0 ? $"Pending migrations: {string.Join(", ", pendingMigrations)}" : null;
+            string? errorMessage = null;
+            if (!canConnect)
+            {
+                errorMessage = "Cannot connect to database";
+            }
+            else if (pendingMigrations.Count > 0)
+            {
+                errorMessage = $"Pending migrations: {string.Join(", ", pendingMigrations)}";
+            }
 
             var appHealth = new ComponentHealth
             {

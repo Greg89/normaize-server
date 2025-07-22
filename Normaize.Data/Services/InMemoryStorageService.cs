@@ -291,13 +291,10 @@ public class InMemoryStorageService : IStorageService, IDisposable
         {
             var exists = _fileStorage.ContainsKey(filePath);
             
-            if (exists)
+            if (exists && _fileStorage.TryGetValue(filePath, out var metadata))
             {
                 // Update last accessed time for existing files
-                if (_fileStorage.TryGetValue(filePath, out var metadata))
-                {
-                    metadata.LastAccessed = DateTime.UtcNow;
-                }
+                metadata.LastAccessed = DateTime.UtcNow;
             }
             
             return exists;
