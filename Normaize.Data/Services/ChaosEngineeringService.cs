@@ -3,6 +3,7 @@ using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Normaize.Core.Configuration;
+using Normaize.Core.Constants;
 using Normaize.Core.Interfaces;
 
 namespace Normaize.Data.Services;
@@ -54,65 +55,78 @@ public class ChaosEngineeringService : IChaosEngineeringService
             
         var currentOptions = _optionsMonitor.CurrentValue;
         
-        // Check environment restrictions
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
-        if (!currentOptions.AllowedEnvironments.Contains(environment))
+        if (!IsEnvironmentAllowed(currentOptions))
             return false;
             
-        // Check rate limiting
         if (IsRateLimited())
             return false;
             
-        // Check user-based restrictions
-        if (context?.TryGetValue("UserId", out var userId) == true && 
-            currentOptions.UserBasedTriggers.Enabled)
+        if (ShouldTriggerForUser(context, currentOptions, scenarioName))
+            return true;
+        
+        if (ShouldTriggerCustomScenario(scenarioName, context))
+            return true;
+        
+        return ShouldTriggerBuiltInScenario(scenarioName, currentOptions);
+    }
+
+    private static bool IsEnvironmentAllowed(ChaosEngineeringOptions currentOptions)
+    {
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+        return currentOptions.AllowedEnvironments.Contains(environment);
+    }
+
+    private bool ShouldTriggerForUser(IDictionary<string, object>? context, ChaosEngineeringOptions currentOptions, string scenarioName)
+    {
+        if (context?.TryGetValue(AppConstants.DataStructures.USER_ID, out var userId) != true || !currentOptions.UserBasedTriggers.Enabled)
+            return false;
+            
+        var userIdStr = userId?.ToString();
+        if (string.IsNullOrEmpty(userIdStr))
+            return false;
+            
+        if (currentOptions.UserBasedTriggers.ExcludedUserIds.Contains(userIdStr))
+            return false;
+            
+        if (currentOptions.UserBasedTriggers.TestUserIds.Contains(userIdStr))
         {
-            var userIdStr = userId?.ToString();
-            if (!string.IsNullOrEmpty(userIdStr))
-            {
-                if (currentOptions.UserBasedTriggers.ExcludedUserIds.Contains(userIdStr))
-                    return false;
-                    
-                // Apply test user multiplier
-                if (currentOptions.UserBasedTriggers.TestUserIds.Contains(userIdStr))
-                {
-                    return _random.NextDouble() < (GetScenarioProbability(scenarioName) * 
-                           currentOptions.UserBasedTriggers.TestUserProbabilityMultiplier * 
-                           currentOptions.GlobalProbabilityMultiplier);
-                }
-            }
+            var probability = GetScenarioProbability(scenarioName) * 
+                            currentOptions.UserBasedTriggers.TestUserProbabilityMultiplier * 
+                            currentOptions.GlobalProbabilityMultiplier;
+            return _random.NextDouble() < probability;
         }
         
-        // Check custom triggers
-        if (_customTriggers.TryGetValue(scenarioName, out var customTrigger))
+        return false;
+    }
+
+    private bool ShouldTriggerCustomScenario(string scenarioName, IDictionary<string, object>? context)
+    {
+        return _customTriggers.TryGetValue(scenarioName, out var customTrigger) && customTrigger(context);
+    }
+
+    private bool ShouldTriggerBuiltInScenario(string scenarioName, ChaosEngineeringOptions currentOptions)
+    {
+        if (!currentOptions.Scenarios.TryGetValue(scenarioName, out var scenarioConfig))
         {
-            return customTrigger(context);
+            // Default low probability for unknown scenarios
+            return _random.NextDouble() < (0.001 * currentOptions.GlobalProbabilityMultiplier);
         }
         
-        // Check built-in scenario configuration
-        if (currentOptions.Scenarios.TryGetValue(scenarioName, out var scenarioConfig))
-        {
-            if (!scenarioConfig.Enabled)
-                return false;
-                
-            // Check time window restrictions
-            if (scenarioConfig.TimeWindowRestricted && !IsInAllowedTimeWindow(scenarioConfig.AllowedTimeWindows))
-                return false;
-                
-            // Check hourly rate limiting
-            if (IsHourlyRateLimited(scenarioName, scenarioConfig.MaxTriggersPerHour))
-                return false;
-                
-            return _random.NextDouble() < (scenarioConfig.Probability * currentOptions.GlobalProbabilityMultiplier);
-        }
-        
-        // Default low probability for unknown scenarios
-        return _random.NextDouble() < (0.001 * currentOptions.GlobalProbabilityMultiplier);
+        if (!scenarioConfig.Enabled)
+            return false;
+            
+        if (scenarioConfig.TimeWindowRestricted && !IsInAllowedTimeWindow(scenarioConfig.AllowedTimeWindows))
+            return false;
+            
+        if (IsHourlyRateLimited(scenarioName, scenarioConfig.MaxTriggersPerHour))
+            return false;
+            
+        return _random.NextDouble() < (scenarioConfig.Probability * currentOptions.GlobalProbabilityMultiplier);
     }
     
     public async Task<bool> ExecuteChaosAsync(string scenarioName, Func<Task> action, IDictionary<string, object>? context = null)
     {
-        return await ExecuteChaosAsync(scenarioName, "unknown", "unknown", action, context);
+        return await ExecuteChaosAsync(scenarioName, AppConstants.Messages.UNKNOWN, AppConstants.Messages.UNKNOWN, action, context);
     }
     
     public async Task<bool> ExecuteChaosAsync(string scenarioName, string correlationId, string operationName, Func<Task> action, IDictionary<string, object>? context = null)
@@ -153,7 +167,7 @@ public class ChaosEngineeringService : IChaosEngineeringService
     
     public async Task<T?> ExecuteChaosAsync<T>(string scenarioName, Func<Task<T>> action, IDictionary<string, object>? context = null)
     {
-        return await ExecuteChaosAsync(scenarioName, "unknown", "unknown", action, context);
+        return await ExecuteChaosAsync(scenarioName, AppConstants.Messages.UNKNOWN, AppConstants.Messages.UNKNOWN, action, context);
     }
     
     public async Task<T?> ExecuteChaosAsync<T>(string scenarioName, string correlationId, string operationName, Func<Task<T>> action, IDictionary<string, object>? context = null)
