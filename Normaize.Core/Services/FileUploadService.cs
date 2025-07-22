@@ -84,7 +84,7 @@ public class FileUploadService : IFileUploadService
             operationName: nameof(SaveFileAsync),
             additionalMetadata: new Dictionary<string, object>
             {
-                ["FileName"] = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN,
+                [AppConstants.FileProcessing.FILE_NAME_KEY] = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN,
                 ["FileSize"] = fileRequest?.FileSize ?? 0
             },
             validation: () => ValidateFileUploadRequest(fileRequest!),
@@ -130,7 +130,7 @@ public class FileUploadService : IFileUploadService
             operationName: nameof(ValidateFileAsync),
             additionalMetadata: new Dictionary<string, object>
             {
-                ["FileName"] = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN,
+                [AppConstants.FileProcessing.FILE_NAME_KEY] = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN,
                 ["FileSize"] = fileRequest?.FileSize ?? 0
             },
             validation: () => ValidateFileUploadRequest(fileRequest!),
@@ -164,7 +164,7 @@ public class FileUploadService : IFileUploadService
             operationName: nameof(ProcessFileAsync),
             additionalMetadata: new Dictionary<string, object>
             {
-                ["FilePath"] = filePath,
+                [AppConstants.FileProcessing.FILE_PATH_KEY] = filePath,
                 ["FileType"] = fileType
             },
             validation: () => ValidateFileProcessingInputs(filePath, fileType),
@@ -198,7 +198,7 @@ public class FileUploadService : IFileUploadService
     {
         await ExecuteFileOperationAsync(
             operationName: nameof(DeleteFileAsync),
-            additionalMetadata: new Dictionary<string, object> { ["FilePath"] = filePath },
+            additionalMetadata: new Dictionary<string, object> { [AppConstants.FileProcessing.FILE_PATH_KEY] = filePath },
             validation: () => ValidateFilePath(filePath),
             operation: async (context) =>
             {
@@ -275,20 +275,20 @@ public class FileUploadService : IFileUploadService
         switch (operationName)
         {
             case nameof(SaveFileAsync):
-                var fileName = metadata.TryGetValue("FileName", out var name) ? name?.ToString() : AppConstants.Messages.UNKNOWN;
+                var fileName = metadata.TryGetValue(AppConstants.FileProcessing.FILE_NAME_KEY, out var name) ? name?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{fileName}'";
                 
             case nameof(ValidateFileAsync):
-                var validateFileName = metadata.TryGetValue("FileName", out var validateName) ? validateName?.ToString() : AppConstants.Messages.UNKNOWN;
+                var validateFileName = metadata.TryGetValue(AppConstants.FileProcessing.FILE_NAME_KEY, out var validateName) ? validateName?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{validateFileName}'";
                 
             case nameof(ProcessFileAsync):
-                var filePath = metadata.TryGetValue("FilePath", out var path) ? path?.ToString() : AppConstants.Messages.UNKNOWN;
+                var filePath = metadata.TryGetValue(AppConstants.FileProcessing.FILE_PATH_KEY, out var path) ? path?.ToString() : AppConstants.Messages.UNKNOWN;
                 var fileType = metadata.TryGetValue("FileType", out var type) ? type?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{filePath}' of type '{fileType}'";
                 
             case nameof(DeleteFileAsync):
-                var deleteFilePath = metadata.TryGetValue("FilePath", out var deletePath) ? deletePath?.ToString() : AppConstants.Messages.UNKNOWN;
+                var deleteFilePath = metadata.TryGetValue(AppConstants.FileProcessing.FILE_PATH_KEY, out var deletePath) ? deletePath?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{deleteFilePath}'";
                 
             default:
