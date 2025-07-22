@@ -51,7 +51,7 @@ public class StartupService : IStartupService
         catch (OperationCanceledException ex)
         {
             _logger.LogWarning(ex, "Startup configuration was cancelled. CorrelationId: {CorrelationId}", correlationId);
-            throw;
+            throw new InvalidOperationException($"Startup configuration was cancelled. CorrelationId: {correlationId}", ex);
         }
         catch (Exception ex)
         {
