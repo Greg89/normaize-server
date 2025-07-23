@@ -8,10 +8,14 @@ public static class MiddlewareConfiguration
 {
     public static void ConfigureMiddleware(WebApplication app)
     {
-        var loggingService = app.Services.GetService<IStructuredLoggingService>();
+        IStructuredLoggingService? loggingService = null;
         
         try
         {
+            // Create a scope to resolve scoped services
+            using var scope = app.Services.CreateScope();
+            loggingService = scope.ServiceProvider.GetService<IStructuredLoggingService>();
+            
             loggingService?.LogUserAction("Middleware configuration started", new { Environment = app.Environment.EnvironmentName });
             
             ConfigureSwagger(app, loggingService);

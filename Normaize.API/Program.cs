@@ -44,7 +44,8 @@ ServiceConfiguration.ConfigureServices(builder);
 var app = builder.Build();
 
 // Configure startup (migrations, health checks)
-var startupService = app.Services.GetRequiredService<IStartupService>();
+using var scope = app.Services.CreateScope();
+var startupService = scope.ServiceProvider.GetRequiredService<IStartupService>();
 await startupService.ConfigureStartupAsync();
 
 // Configure middleware pipeline
