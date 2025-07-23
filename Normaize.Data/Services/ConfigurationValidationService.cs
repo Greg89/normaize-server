@@ -7,18 +7,12 @@ using System.Diagnostics;
 
 namespace Normaize.Data.Services;
 
-public class ConfigurationValidationService : IConfigurationValidationService
+public class ConfigurationValidationService(
+    ILogger<ConfigurationValidationService> logger,
+    IOptions<ServiceConfigurationOptions> config) : IConfigurationValidationService
 {
-    private readonly ILogger<ConfigurationValidationService> _logger;
-    private readonly ServiceConfigurationOptions _config;
-
-    public ConfigurationValidationService(
-        ILogger<ConfigurationValidationService> logger,
-        IOptions<ServiceConfigurationOptions> config)
-    {
-        _logger = logger;
-        _config = config.Value;
-    }
+    private readonly ILogger<ConfigurationValidationService> _logger = logger;
+    private readonly ServiceConfigurationOptions _config = config.Value;
 
     public ConfigurationValidationResult ValidateConfiguration(CancellationToken cancellationToken = default)
     {
