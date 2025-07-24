@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Normaize.Core.Constants;
 using Normaize.Core.Interfaces;
+using Normaize.Core.Extensions;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
@@ -250,42 +251,19 @@ public class StructuredLoggingService : IStructuredLoggingService
     private string? GetCurrentUserId()
     {
         var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext == null)
-            return null;
-        var user = httpContext.User;
-        if (user == null)
+        if (httpContext?.User == null)
             return null;
         
-        // Try to get from claims first
-        var userIdFromClaims = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!string.IsNullOrEmpty(userIdFromClaims))
-            return userIdFromClaims;
-        
-        // Fallback to sub claim (Auth0)
-        var subClaim = user.FindFirst("sub")?.Value;
-        if (!string.IsNullOrEmpty(subClaim))
-            return subClaim;
-        
-        // Fallback to name claim
-        return user.FindFirst(ClaimTypes.Name)?.Value;
+        return httpContext.User.GetUserIdWithFallback() ?? AppConstants.Auth.AnonymousUser;
     }
 
     private string? GetCurrentUserEmail()
     {
         var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext == null)
-            return null;
-        var user = httpContext.User;
-        if (user == null)
+        if (httpContext?.User == null)
             return null;
         
-        // Try to get from claims first
-        var emailFromClaims = user.FindFirst(ClaimTypes.Email)?.Value;
-        if (!string.IsNullOrEmpty(emailFromClaims))
-            return emailFromClaims;
-        
-        // Fallback to Auth0 email claim
-        return user.FindFirst("email")?.Value;
+        return httpContext.User.GetUserEmail();
     }
 
     private (string Method, string Path) GetRequestContext()

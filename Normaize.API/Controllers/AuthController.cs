@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Normaize.Core.Extensions;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -118,12 +119,16 @@ public class AuthController : ControllerBase
     public ActionResult<object> TestAuth()
     {
         var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        var userId = User.GetUserIdWithFallback();
+        var grantType = User.GetGrantType();
+        var isClientCredentials = User.IsClientCredentialsToken();
         
         return Ok(new
         {
             message = "Authentication successful",
             userId = userId,
+            grantType = grantType,
+            isClientCredentials = isClientCredentials,
             claims = claims,
             timestamp = DateTime.UtcNow
         });
