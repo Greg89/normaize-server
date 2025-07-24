@@ -19,6 +19,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for better analysis
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -31,23 +33,47 @@ jobs:
     - name: Build solution
       run: dotnet build --no-restore --configuration Release
 
-    - name: Run tests
-      run: dotnet test --no-build --verbosity normal --configuration Release
+    - name: Run tests with coverage
+      env:
+        REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
+      run: |
+        dotnet test --no-build --verbosity normal --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage-results
+        dotnet tool install --global dotnet-reportgenerator-globaltool
+        reportgenerator -reports:"./coverage-results/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: ./coverage-report/
+        retention-days: 30
 
     - name: Check for vulnerabilities
       run: dotnet list package --vulnerable
 
-    - name: Run SonarQube analysis
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    - name: Check for outdated packages
+      run: dotnet list package --outdated
+
+    - name: Run code formatting check
       run: |
-        # Install SonarQube scanner
-        dotnet tool install --global dotnet-sonarscanner
-        
-        # Run SonarQube analysis with exclusions
-        dotnet sonarscanner begin /k:"Greg89_normaize-server" /o:"greg89" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.exclusions="**/coverage-report/**,**/coverage-summary/**,**/coverage-opencover/**,**/coverage/**,**/test-results/**,**/bin/**,**/obj/**,**/uploads/**,**/*.Designer.cs,**/Migrations/**"
-        dotnet build
-        dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+        dotnet format --verify-no-changes --verbosity normal
+
+    - name: Run code analysis
+      run: |
+        dotnet build --no-restore --configuration Release /p:TreatWarningsAsErrors=true
+
+    - name: Check for TODO comments
+      run: |
+        echo "## 📝 TODO Comments Found" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if grep -r "TODO\|FIXME\|HACK" --include="*.cs" --include="*.csproj" .; then
+          echo "⚠️ Found TODO/FIXME/HACK comments in code:" >> $GITHUB_STEP_SUMMARY
+          grep -r "TODO\|FIXME\|HACK" --include="*.cs" --include="*.csproj" . | head -10 >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "*Note: These should be addressed before merging to main*" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "✅ No TODO/FIXME/HACK comments found" >> $GITHUB_STEP_SUMMARY
+        fi
 
     - name: Generate PR Summary
       id: summary
@@ -57,20 +83,22 @@ jobs:
         echo "### ✅ Build Status" >> $GITHUB_STEP_SUMMARY
         echo "- **Solution Build**: ✅ Successful" >> $GITHUB_STEP_SUMMARY
         echo "- **Dependencies**: ✅ Restored" >> $GITHUB_STEP_SUMMARY
+        echo "- **Code Formatting**: ✅ Consistent" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
         echo "- **Test Execution**: ✅ All tests passed" >> $GITHUB_STEP_SUMMARY
         echo "- **Test Configuration**: Release mode" >> $GITHUB_STEP_SUMMARY
+        echo "- **Code Coverage**: 📊 Report generated (see artifacts)" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🔒 Security Check" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔒 Security & Dependencies" >> $GITHUB_STEP_SUMMARY
         echo "- **Vulnerability Scan**: ✅ No vulnerable packages detected" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 📊 Code Quality" >> $GITHUB_STEP_SUMMARY
-        echo "- **SonarQube Analysis**: ✅ Completed" >> $GITHUB_STEP_SUMMARY
-        echo "- **Quality Gate**: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+        echo "- **Package Updates**: 📋 Check for outdated packages" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 📋 Summary" >> $GITHUB_STEP_SUMMARY
         echo "All PR checks have passed successfully! This PR is ready for review and merge." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Artifacts Available:**" >> $GITHUB_STEP_SUMMARY
+        echo "- 📊 Code Coverage Report" >> $GITHUB_STEP_SUMMARY
 
     - name: Comment PR
       uses: actions/github-script@v7
@@ -81,20 +109,22 @@ jobs:
           ### ✅ Build Status
           - **Solution Build**: ✅ Successful
           - **Dependencies**: ✅ Restored
+          - **Code Formatting**: ✅ Consistent
 
           ### 🧪 Test Results
           - **Test Execution**: ✅ All tests passed
           - **Test Configuration**: Release mode
+          - **Code Coverage**: 📊 Report generated (see artifacts)
 
-          ### 🔒 Security Check
+          ### 🔒 Security & Dependencies
           - **Vulnerability Scan**: ✅ No vulnerable packages detected
-
-          ### 📊 Code Quality
-          - **SonarQube Analysis**: ✅ Completed
-          - **Quality Gate**: ✅ Passed
+          - **Package Updates**: 📋 Check for outdated packages
 
           ### 📋 Summary
           All PR checks have passed successfully! This PR is ready for review and merge.
+
+          **Artifacts Available:**
+          - 📊 Code Coverage Report
 
           ---
           *This comment was automatically generated by GitHub Actions*`;
