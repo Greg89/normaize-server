@@ -29,11 +29,16 @@ public class DataProcessingService : IDataProcessingService
         IMapper mapper,
         IDataProcessingInfrastructure infrastructure)
     {
-        _dataSetRepository = dataSetRepository ?? throw new ArgumentNullException(nameof(dataSetRepository));
-        _fileUploadService = fileUploadService ?? throw new ArgumentNullException(nameof(fileUploadService));
-        _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
-        _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
-        _infrastructure = infrastructure ?? throw new ArgumentNullException(nameof(infrastructure));
+        ArgumentNullException.ThrowIfNull(dataSetRepository);
+        ArgumentNullException.ThrowIfNull(fileUploadService);
+        ArgumentNullException.ThrowIfNull(auditService);
+        ArgumentNullException.ThrowIfNull(mapper);
+        ArgumentNullException.ThrowIfNull(infrastructure);
+        _dataSetRepository = dataSetRepository;
+        _fileUploadService = fileUploadService;
+        _auditService = auditService;
+        _mapper = mapper;
+        _infrastructure = infrastructure;
     }
 
     public async Task<DataSetUploadResponse> UploadDataSetAsync(FileUploadRequest fileRequest, CreateDataSetDto createDto)

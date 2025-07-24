@@ -24,9 +24,13 @@ public class DataProcessingInfrastructure : IDataProcessingInfrastructure
         IStructuredLoggingService structuredLogging,
         IChaosEngineeringService chaosEngineering)
     {
-        Logger = loggerFactory?.CreateLogger<DataProcessingInfrastructure>() ?? throw new ArgumentNullException(nameof(loggerFactory));
-        Cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        StructuredLogging = structuredLogging ?? throw new ArgumentNullException(nameof(structuredLogging));
-        ChaosEngineering = chaosEngineering ?? throw new ArgumentNullException(nameof(chaosEngineering));
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        ArgumentNullException.ThrowIfNull(cache);
+        ArgumentNullException.ThrowIfNull(structuredLogging);
+        ArgumentNullException.ThrowIfNull(chaosEngineering);
+        Logger = loggerFactory.CreateLogger<DataProcessingInfrastructure>();
+        Cache = cache;
+        StructuredLogging = structuredLogging;
+        ChaosEngineering = chaosEngineering;
     }
 } 

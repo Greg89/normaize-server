@@ -28,8 +28,10 @@ public class ChaosEngineeringService : IChaosEngineeringService
         ILogger<ChaosEngineeringService> logger,
         IOptionsMonitor<ChaosEngineeringOptions> optionsMonitor)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _optionsMonitor = optionsMonitor ?? throw new ArgumentNullException(nameof(optionsMonitor));
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(optionsMonitor);
+        _logger = logger;
+        _optionsMonitor = optionsMonitor;
         _options = _optionsMonitor.CurrentValue;
         _random = new Random();
         
@@ -207,8 +209,10 @@ public class ChaosEngineeringService : IChaosEngineeringService
     
     public void RegisterChaosScenario(string scenarioName, Func<IDictionary<string, object>?, bool> triggerCondition, Func<Task> chaosAction)
     {
-        _customTriggers[scenarioName] = triggerCondition ?? throw new ArgumentNullException(nameof(triggerCondition));
-        _customActions[scenarioName] = chaosAction ?? throw new ArgumentNullException(nameof(chaosAction));
+                    ArgumentNullException.ThrowIfNull(triggerCondition);
+            ArgumentNullException.ThrowIfNull(chaosAction);
+            _customTriggers[scenarioName] = triggerCondition;
+            _customActions[scenarioName] = chaosAction;
         
         _logger.LogInformation("Registered custom chaos scenario: {ScenarioName}", scenarioName);
     }

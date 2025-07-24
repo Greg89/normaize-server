@@ -22,8 +22,10 @@ public class InMemoryStorageService : IStorageService, IDisposable
         ILogger<InMemoryStorageService> logger,
         IOptions<InMemoryStorageOptions> options)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(options);
+        _logger = logger;
+        _options = options.Value;
         _storageSemaphore = new SemaphoreSlim(_options.MaxConcurrentOperations, _options.MaxConcurrentOperations);
         _chaosRandom = new Random();
         

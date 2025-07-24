@@ -19,8 +19,10 @@ public class StructuredLoggingService : IStructuredLoggingService
 
     public StructuredLoggingService(ILogger<StructuredLoggingService> logger, IHttpContextAccessor httpContextAccessor)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(httpContextAccessor);
+        _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public IOperationContext CreateContext(string operationName, string correlationId, string? userId = null, Dictionary<string, object>? additionalContext = null)

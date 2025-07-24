@@ -25,9 +25,12 @@ public class DataAnalysisService : IDataAnalysisService
         IMapper mapper,
         IDataProcessingInfrastructure infrastructure)
     {
-        _analysisRepository = analysisRepository ?? throw new ArgumentNullException(nameof(analysisRepository));
-        _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
-        _infrastructure = infrastructure ?? throw new ArgumentNullException(nameof(infrastructure));
+        ArgumentNullException.ThrowIfNull(analysisRepository);
+        ArgumentNullException.ThrowIfNull(mapper);
+        ArgumentNullException.ThrowIfNull(infrastructure);
+        _analysisRepository = analysisRepository;
+        _mapper = mapper;
+        _infrastructure = infrastructure;
     }
 
     public async Task<AnalysisDto> CreateAnalysisAsync(CreateAnalysisDto createDto)

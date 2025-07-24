@@ -22,11 +22,16 @@ public class StartupService : IStartupService
         IOptions<StartupConfigurationOptions> startupConfig,
         IAppConfigurationService appConfigService)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _healthCheckService = healthCheckService ?? throw new ArgumentNullException(nameof(healthCheckService));
-        _migrationService = migrationService ?? throw new ArgumentNullException(nameof(migrationService));
-        _startupConfig = startupConfig?.Value ?? throw new ArgumentNullException(nameof(startupConfig));
-        _appConfigService = appConfigService ?? throw new ArgumentNullException(nameof(appConfigService));
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(healthCheckService);
+        ArgumentNullException.ThrowIfNull(migrationService);
+        ArgumentNullException.ThrowIfNull(startupConfig);
+        ArgumentNullException.ThrowIfNull(appConfigService);
+        _logger = logger;
+        _healthCheckService = healthCheckService;
+        _migrationService = migrationService;
+        _startupConfig = startupConfig.Value;
+        _appConfigService = appConfigService;
 
         ValidateConfiguration();
         LogConfiguration();

@@ -13,7 +13,8 @@ public class AppConfigurationService : IAppConfigurationService
 
     public AppConfigurationService(ILogger<AppConfigurationService> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public void LoadEnvironmentVariables()

@@ -31,10 +31,14 @@ public class FileUploadService : IFileUploadService
         IStorageService storageService,
         IDataProcessingInfrastructure infrastructure)
     {
-        _fileUploadConfig = fileUploadConfig?.Value ?? throw new ArgumentNullException(nameof(fileUploadConfig));
-        _dataProcessingConfig = dataProcessingConfig?.Value ?? throw new ArgumentNullException(nameof(dataProcessingConfig));
-        _storageService = storageService ?? throw new ArgumentNullException(nameof(storageService));
-        _infrastructure = infrastructure ?? throw new ArgumentNullException(nameof(infrastructure));
+        ArgumentNullException.ThrowIfNull(fileUploadConfig);
+        ArgumentNullException.ThrowIfNull(dataProcessingConfig);
+        ArgumentNullException.ThrowIfNull(storageService);
+        ArgumentNullException.ThrowIfNull(infrastructure);
+        _fileUploadConfig = fileUploadConfig.Value;
+        _dataProcessingConfig = dataProcessingConfig.Value;
+        _storageService = storageService;
+        _infrastructure = infrastructure;
         
         ValidateConfiguration();
         LogConfiguration();

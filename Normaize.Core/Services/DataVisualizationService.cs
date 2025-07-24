@@ -25,10 +25,14 @@ public class DataVisualizationService : IDataVisualizationService
         IOptions<DataVisualizationOptions> options,
         IDataProcessingInfrastructure infrastructure)
     {
-        _dataSetRepository = dataSetRepository ?? throw new ArgumentNullException(nameof(dataSetRepository));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-        _infrastructure = infrastructure ?? throw new ArgumentNullException(nameof(infrastructure));
+        ArgumentNullException.ThrowIfNull(dataSetRepository);
+        ArgumentNullException.ThrowIfNull(cache);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(infrastructure);
+        _dataSetRepository = dataSetRepository;
+        _cache = cache;
+        _options = options.Value;
+        _infrastructure = infrastructure;
         _random = new Random();
         
         _infrastructure.Logger.LogInformation("DataVisualizationService initialized with configuration: CacheExpiration={CacheExpiration}, MaxDataPoints={MaxDataPoints}, ChaosProcessingDelayProbability={ChaosProcessingDelayProbability}",
