@@ -40,9 +40,8 @@ public static class MiddlewareConfiguration
     private static void ConfigureSwagger(WebApplication app, IStructuredLoggingService? loggingService)
     {
         var isDevelopment = app.Environment.IsDevelopment();
-        var isBeta = app.Environment.EnvironmentName.Equals(AppConstants.Environment.BETA, StringComparison.OrdinalIgnoreCase);
         
-        if (isDevelopment || isBeta)
+        if (isDevelopment)
         {
             app.UseSwagger();
             app.UseSwaggerUI(c =>
@@ -55,7 +54,7 @@ public static class MiddlewareConfiguration
         }
         else
         {
-            loggingService?.LogUserAction("Swagger skipped", new { Environment = app.Environment.EnvironmentName, Enabled = false });
+            loggingService?.LogUserAction("Swagger disabled", new { Environment = app.Environment.EnvironmentName, Enabled = false });
         }
     }
 

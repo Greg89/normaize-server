@@ -113,36 +113,48 @@ public static class ServiceConfiguration
     {
         logger.LogDebug("Configuring Swagger. CorrelationId: {CorrelationId}", correlationId);
         
-        builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen(c =>
+        // Only enable Swagger in development environment
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+        
+        if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
         {
-            c.SwaggerDoc("v1", new() { Title = "Normaize API", Version = "v1" });
+            logger.LogInformation("Enabling Swagger for development environment. CorrelationId: {CorrelationId}", correlationId);
             
-            // Add JWT authentication to Swagger
-            c.AddSecurityDefinition(AppConstants.Auth.BEARER, new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen(c =>
             {
-                Description = $"JWT Authorization header using the Bearer scheme. Example: \"{AppConstants.Auth.AUTHORIZATION_HEADER}: {AppConstants.Auth.BEARER} {{token}}\"",
-                Name = AppConstants.Auth.AUTHORIZATION_HEADER,
-                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-                Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-                Scheme = AppConstants.Auth.JWT_SCHEME
-            });
-            
-            c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-            {
+                c.SwaggerDoc("v1", new() { Title = "Normaize API", Version = "v1" });
+                
+                // Add JWT authentication to Swagger
+                c.AddSecurityDefinition(AppConstants.Auth.BEARER, new Microsoft.OpenApi.Models.OpenApiSecurityScheme
                 {
-                    new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                    Description = $"JWT Authorization header using the Bearer scheme. Example: \"{AppConstants.Auth.AUTHORIZATION_HEADER}: {AppConstants.Auth.BEARER} {{token}}\"",
+                    Name = AppConstants.Auth.AUTHORIZATION_HEADER,
+                    In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                    Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+                    Scheme = AppConstants.Auth.JWT_SCHEME
+                });
+                
+                c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+                {
                     {
-                        Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                        new Microsoft.OpenApi.Models.OpenApiSecurityScheme
                         {
-                            Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                            Id = AppConstants.Auth.BEARER
-                        }
-                    },
-                    Array.Empty<string>()
-                }
+                            Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                            {
+                                Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                                Id = AppConstants.Auth.BEARER
+                            }
+                        },
+                        Array.Empty<string>()
+                    }
+                });
             });
-        });
+        }
+        else
+        {
+            logger.LogInformation("Swagger disabled for {Environment} environment. CorrelationId: {CorrelationId}", environment, correlationId);
+        }
     }
 
     private static void ConfigureHealthChecks(WebApplicationBuilder builder, ILogger logger, string correlationId)
