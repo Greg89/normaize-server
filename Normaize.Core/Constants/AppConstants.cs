@@ -47,6 +47,9 @@ public static class AppConstants
         public const string NETWORK_LATENCY = "NetworkLatency";
         public const string CACHE_FAILURE = "CacheFailure";
         public const string MEMORY_PRESSURE = "MemoryPressure";
+        public const string ANALYSIS_CREATION_FAILURE = "AnalysisCreationFailure";
+        public const string DATABASE_TIMEOUT = "DatabaseTimeout";
+        public const string STORAGE_FAILURE = "StorageFailure";
         public const string SIMULATED_PROCESSING_DELAY_MESSAGE = "Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}";
 
         // Chaos engineering delay constants
@@ -60,6 +63,7 @@ public static class AppConstants
         public const int MAX_STATS_DELAY_MS = 3000;
         public const int DEFAULT_CHAOS_DELAY_MS = 100;
         public const int MAX_CHAOS_DELAY_MS = 500;
+        public const int MIN_CHAOS_DELAY_MS = 100;
 
         // Memory pressure simulation constants
         public const int MEMORY_PRESSURE_OBJECT_COUNT = 30;
@@ -78,6 +82,14 @@ public static class AppConstants
         public const string UNAUTHORIZED = "Unauthorized";
         public const string UNKNOWN = "Unknown";
         public const string HEALTHY = "healthy";
+        public const string SIMULATED_ANALYSIS_CREATION_FAILURE = "Simulated analysis creation failure (chaos engineering)";
+        public const string SIMULATED_CACHE_FAILURE = "Simulated cache failure (chaos engineering)";
+        public const string SIMULATED_STORAGE_FAILURE = "Simulated storage failure (chaos engineering)";
+        public const string ANALYSIS_NOT_FOUND = "Analysis not found";
+        public const string ANALYSIS_NAME_REQUIRED = "Analysis name is required";
+        public const string ANALYSIS_NAME_TOO_LONG = "Analysis name is too long";
+        public const string ANALYSIS_DESCRIPTION_TOO_LONG = "Analysis description is too long";
+        public const string DATASET_ID_REQUIRED = "Dataset ID is required";
     }
 
     /// <summary>

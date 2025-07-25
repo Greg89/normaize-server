@@ -138,7 +138,7 @@ public class DataProcessingService : IDataProcessingService
                         fileSize = dataSet.FileSize,
                         rowCount = dataSet.RowCount,
                         columnCount = dataSet.ColumnCount,
-                        filePath = filePath
+                        filePath
                     }),
                 _infrastructure.QuickTimeout,
                 context);
@@ -525,12 +525,12 @@ public class DataProcessingService : IDataProcessingService
                     _infrastructure.QuickTimeout,
                     context);
 
-                var totalSize = await ExecuteWithTimeoutAsync<long>(
+                var totalSize = await ExecuteWithTimeoutAsync(
                     () => _dataSetRepository.GetTotalSizeAsync(userId),
                     _infrastructure.QuickTimeout,
                     context);
 
-                var recentlyModified = await ExecuteWithTimeoutAsync<IEnumerable<DataSet>>(
+                var recentlyModified = await ExecuteWithTimeoutAsync(
                     () => _dataSetRepository.GetRecentlyModifiedAsync(userId, 5),
                     _infrastructure.QuickTimeout,
                     context);

@@ -182,7 +182,7 @@ public class DataAnalysisServiceTests
 
         exception.Message.Should().Contain("Failed to complete CreateAnalysisAsync for analysis");
         exception.InnerException.Should().BeOfType<ArgumentException>();
-        exception.InnerException!.Message.Should().Contain("Analysis name cannot exceed 255 characters");
+        exception.InnerException!.Message.Should().Contain("Analysis name is too long");
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class DataAnalysisServiceTests
 
         exception.Message.Should().Contain("Failed to complete CreateAnalysisAsync for analysis");
         exception.InnerException.Should().BeOfType<ArgumentException>();
-        exception.InnerException!.Message.Should().Contain("Valid dataset ID is required");
+        exception.InnerException!.Message.Should().Contain("Dataset ID is required");
     }
 
     [Fact]

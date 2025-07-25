@@ -47,13 +47,13 @@ public class DataAnalysisService : IDataAnalysisService
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate analysis creation failure
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("AnalysisCreationFailure", GetCorrelationId(), context.OperationName, () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.ANALYSIS_CREATION_FAILURE, GetCorrelationId(), context.OperationName, () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating analysis creation failure", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "AnalysisCreationFailure"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.ANALYSIS_CREATION_FAILURE
                     });
-                    throw new InvalidOperationException("Simulated analysis creation failure (chaos engineering)");
+                    throw new InvalidOperationException(AppConstants.Messages.SIMULATED_ANALYSIS_CREATION_FAILURE);
                 }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
@@ -88,13 +88,13 @@ public class DataAnalysisService : IDataAnalysisService
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate database timeout
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("DatabaseTimeout", GetCorrelationId(), context.OperationName, async () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.DATABASE_TIMEOUT, GetCorrelationId(), context.OperationName, async () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating database timeout", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "DatabaseTimeout"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.DATABASE_TIMEOUT
                     });
-                    await Task.Delay(15000); // 15 second delay
+                    await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
                 }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
@@ -132,13 +132,13 @@ public class DataAnalysisService : IDataAnalysisService
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate network latency
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("NetworkLatency", GetCorrelationId(), context.OperationName, async () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.NETWORK_LATENCY, GetCorrelationId(), context.OperationName, async () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating network latency", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "NetworkLatency"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.NETWORK_LATENCY
                     });
-                    await Task.Delay(_random.Next(500, 2000));
+                    await Task.Delay(_random.Next(AppConstants.ChaosEngineering.MIN_CHAOS_DELAY_MS, AppConstants.ChaosEngineering.MAX_CHAOS_DELAY_MS));
                 }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
@@ -169,13 +169,13 @@ public class DataAnalysisService : IDataAnalysisService
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate cache failure
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("CacheFailure", GetCorrelationId(), context.OperationName, () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.CACHE_FAILURE, GetCorrelationId(), context.OperationName, () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating cache failure", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "CacheFailure"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.CACHE_FAILURE
                     });
-                    throw new InvalidOperationException("Simulated cache failure (chaos engineering)");
+                    throw new InvalidOperationException(AppConstants.Messages.SIMULATED_CACHE_FAILURE);
                 }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
@@ -206,13 +206,13 @@ public class DataAnalysisService : IDataAnalysisService
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate storage failure
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("StorageFailure", GetCorrelationId(), context.OperationName, () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.STORAGE_FAILURE, GetCorrelationId(), context.OperationName, () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating storage failure", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "StorageFailure"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.STORAGE_FAILURE
                     });
-                    throw new InvalidOperationException("Simulated storage failure (chaos engineering)");
+                    throw new InvalidOperationException(AppConstants.Messages.SIMULATED_STORAGE_FAILURE);
                 }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
@@ -243,11 +243,11 @@ public class DataAnalysisService : IDataAnalysisService
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate memory pressure
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("MemoryPressure", GetCorrelationId(), context.OperationName, async () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.MEMORY_PRESSURE, GetCorrelationId(), context.OperationName, async () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating memory pressure", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = "MemoryPressure"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.MEMORY_PRESSURE
                     });
                     // Simulate memory pressure by allocating temporary objects
                     var tempObjects = new List<byte[]>();
@@ -255,7 +255,7 @@ public class DataAnalysisService : IDataAnalysisService
                     {
                         tempObjects.Add(new byte[1024 * 1024]); // 1MB each
                     }
-                    await Task.Delay(100);
+                    await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
                     tempObjects.Clear();
                 }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
@@ -274,7 +274,7 @@ public class DataAnalysisService : IDataAnalysisService
                         [AppConstants.DataStructures.ANALYSIS_ID] = analysisId
                     });
                     _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
-                    throw new ArgumentException($"Analysis not found");
+                    throw new ArgumentException(AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
                 }
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.RESULTS_DESERIALIZATION_STARTED);
@@ -308,7 +308,7 @@ public class DataAnalysisService : IDataAnalysisService
                     {
                         [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.PROCESSING_DELAY
                     });
-                    await Task.Delay(_random.Next(1000, 3000));
+                    await Task.Delay(_random.Next(AppConstants.ChaosEngineering.MIN_CHAOS_DELAY_MS, AppConstants.ChaosEngineering.MAX_CHAOS_DELAY_MS));
                 }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.DATABASE_DELETION_STARTED);
@@ -350,7 +350,7 @@ public class DataAnalysisService : IDataAnalysisService
                     {
                         [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.PROCESSING_DELAY
                     });
-                    await Task.Delay(_random.Next(1000, 5000));
+                    await Task.Delay(_random.Next(AppConstants.ChaosEngineering.MIN_CHAOS_DELAY_MS, AppConstants.ChaosEngineering.MAX_CHAOS_DELAY_MS));
                 }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
@@ -368,7 +368,7 @@ public class DataAnalysisService : IDataAnalysisService
                         [AppConstants.DataStructures.ANALYSIS_ID] = analysisId
                     });
                     _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
-                    throw new ArgumentException($"Analysis not found");
+                    throw new ArgumentException(AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
                 }
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_STATE_VALIDATION_STARTED);
@@ -499,7 +499,7 @@ public class DataAnalysisService : IDataAnalysisService
 
             // Execute analysis with timeout
             var results = await ExecuteWithTimeoutAsync(
-                () => ExecuteAnalysisByTypeAsync(analysis),
+                () => ExecuteAnalysisByTypeAsync(analysis, context),
                 _infrastructure.DefaultTimeout,
                 context.CorrelationId,
                 $"{context.OperationName}_ExecuteAnalysis");
@@ -579,18 +579,18 @@ public class DataAnalysisService : IDataAnalysisService
         }
     }
 
-    private async Task<object> ExecuteAnalysisByTypeAsync(Analysis analysis)
+    private async Task<object> ExecuteAnalysisByTypeAsync(Analysis analysis, IOperationContext context)
     {
         return analysis.Type switch
         {
-            AnalysisType.Normalization => await ExecuteNormalizationAnalysisAsync(analysis),
-            AnalysisType.Comparison => await ExecuteComparisonAnalysisAsync(analysis),
-            AnalysisType.Statistical => await ExecuteStatisticalAnalysisAsync(analysis),
-            AnalysisType.DataCleaning => await ExecuteDataCleaningAnalysisAsync(analysis),
-            AnalysisType.OutlierDetection => await ExecuteOutlierDetectionAnalysisAsync(analysis),
-            AnalysisType.CorrelationAnalysis => await ExecuteCorrelationAnalysisAsync(analysis),
-            AnalysisType.TrendAnalysis => await ExecuteTrendAnalysisAsync(analysis),
-            AnalysisType.Custom => await ExecuteCustomAnalysisAsync(analysis),
+            AnalysisType.Normalization => await ExecuteNormalizationAnalysisAsync(analysis, context),
+            AnalysisType.Comparison => await ExecuteComparisonAnalysisAsync(analysis, context),
+            AnalysisType.Statistical => await ExecuteStatisticalAnalysisAsync(analysis, context),
+            AnalysisType.DataCleaning => await ExecuteDataCleaningAnalysisAsync(analysis, context),
+            AnalysisType.OutlierDetection => await ExecuteOutlierDetectionAnalysisAsync(analysis, context),
+            AnalysisType.CorrelationAnalysis => await ExecuteCorrelationAnalysisAsync(analysis, context),
+            AnalysisType.TrendAnalysis => await ExecuteTrendAnalysisAsync(analysis, context),
+            AnalysisType.Custom => await ExecuteCustomAnalysisAsync(analysis, context),
             _ => throw new NotSupportedException($"Analysis type {analysis.Type} is not supported")
         };
     }
@@ -606,16 +606,16 @@ public class DataAnalysisService : IDataAnalysisService
         ArgumentNullException.ThrowIfNull(createDto);
 
         if (string.IsNullOrWhiteSpace(createDto.Name))
-            throw new ArgumentException("Analysis name is required", nameof(createDto));
+            throw new ArgumentException(AppConstants.Messages.ANALYSIS_NAME_REQUIRED, nameof(createDto));
 
         if (createDto.Name.Length > 255)
-            throw new ArgumentException("Analysis name cannot exceed 255 characters", nameof(createDto));
+            throw new ArgumentException(AppConstants.Messages.ANALYSIS_NAME_TOO_LONG, nameof(createDto));
 
         if (createDto.Description?.Length > 1000)
-            throw new ArgumentException("Analysis description cannot exceed 1000 characters", nameof(createDto));
+            throw new ArgumentException(AppConstants.Messages.ANALYSIS_DESCRIPTION_TOO_LONG, nameof(createDto));
 
         if (createDto.DataSetId <= 0)
-            throw new ArgumentException("Valid dataset ID is required", nameof(createDto));
+            throw new ArgumentException(AppConstants.Messages.DATASET_ID_REQUIRED, nameof(createDto));
     }
 
     private static void ValidateAnalysisState(Analysis analysis, int analysisId, string correlationId)
@@ -635,7 +635,7 @@ public class DataAnalysisService : IDataAnalysisService
     private static void ValidateDataSetId(int dataSetId)
     {
         if (dataSetId <= 0)
-            throw new ArgumentException("Dataset ID must be positive", nameof(dataSetId));
+            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId));
     }
 
     private static void ValidateAnalysisStatus(AnalysisStatus status)
@@ -654,13 +654,10 @@ public class DataAnalysisService : IDataAnalysisService
 
     #region Analysis Execution Methods
 
-    private async Task<object> ExecuteNormalizationAnalysisAsync(Analysis analysis)
+    private async Task<object> ExecuteNormalizationAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.Logger.LogDebug("Executing normalization analysis for ID: {AnalysisId}", analysis.Id);
-
-        // FUTURE: Implement normalization logic
-        await Task.Delay(1000); // Simulate processing time
-
+        _infrastructure.StructuredLogging.LogStep(context, "Executing normalization analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "Normalization",
@@ -671,13 +668,10 @@ public class DataAnalysisService : IDataAnalysisService
         };
     }
 
-    private async Task<object> ExecuteComparisonAnalysisAsync(Analysis analysis)
+    private async Task<object> ExecuteComparisonAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.Logger.LogDebug("Executing comparison analysis for ID: {AnalysisId}", analysis.Id);
-
-        // FUTURE: Implement comparison logic
-        await Task.Delay(1000); // Simulate processing time
-
+        _infrastructure.StructuredLogging.LogStep(context, "Executing comparison analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "Comparison",
@@ -688,13 +682,10 @@ public class DataAnalysisService : IDataAnalysisService
         };
     }
 
-    private async Task<object> ExecuteStatisticalAnalysisAsync(Analysis analysis)
+    private async Task<object> ExecuteStatisticalAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.Logger.LogDebug("Executing statistical analysis for ID: {AnalysisId}", analysis.Id);
-
-        // FUTURE: Implement statistical analysis logic
-        await Task.Delay(1000); // Simulate processing time
-
+        _infrastructure.StructuredLogging.LogStep(context, "Executing statistical analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "Statistical",
@@ -705,13 +696,10 @@ public class DataAnalysisService : IDataAnalysisService
         };
     }
 
-    private async Task<object> ExecuteDataCleaningAnalysisAsync(Analysis analysis)
+    private async Task<object> ExecuteDataCleaningAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.Logger.LogDebug("Executing data cleaning analysis for ID: {AnalysisId}", analysis.Id);
-
-        // FUTURE: Implement data cleaning logic
-        await Task.Delay(1000); // Simulate processing time
-
+        _infrastructure.StructuredLogging.LogStep(context, "Executing data cleaning analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "DataCleaning",
@@ -723,13 +711,10 @@ public class DataAnalysisService : IDataAnalysisService
         };
     }
 
-    private async Task<object> ExecuteOutlierDetectionAnalysisAsync(Analysis analysis)
+    private async Task<object> ExecuteOutlierDetectionAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.Logger.LogDebug("Executing outlier detection analysis for ID: {AnalysisId}", analysis.Id);
-
-        // FUTURE: Implement outlier detection logic
-        await Task.Delay(1000); // Simulate processing time
-
+        _infrastructure.StructuredLogging.LogStep(context, "Executing outlier detection analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "OutlierDetection",
@@ -740,13 +725,10 @@ public class DataAnalysisService : IDataAnalysisService
         };
     }
 
-    private async Task<object> ExecuteCorrelationAnalysisAsync(Analysis analysis)
+    private async Task<object> ExecuteCorrelationAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.Logger.LogDebug("Executing correlation analysis for ID: {AnalysisId}", analysis.Id);
-
-        // FUTURE: Implement correlation analysis logic
-        await Task.Delay(1000); // Simulate processing time
-
+        _infrastructure.StructuredLogging.LogStep(context, "Executing correlation analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "CorrelationAnalysis",
@@ -762,13 +744,10 @@ public class DataAnalysisService : IDataAnalysisService
         };
     }
 
-    private async Task<object> ExecuteTrendAnalysisAsync(Analysis analysis)
+    private async Task<object> ExecuteTrendAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.Logger.LogDebug("Executing trend analysis for ID: {AnalysisId}", analysis.Id);
-
-        // FUTURE: Implement trend analysis logic
-        await Task.Delay(1000); // Simulate processing time
-
+        _infrastructure.StructuredLogging.LogStep(context, "Executing trend analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "TrendAnalysis",
@@ -780,13 +759,10 @@ public class DataAnalysisService : IDataAnalysisService
         };
     }
 
-    private async Task<object> ExecuteCustomAnalysisAsync(Analysis analysis)
+    private async Task<object> ExecuteCustomAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.Logger.LogDebug("Executing custom analysis for ID: {AnalysisId}", analysis.Id);
-
-        // FUTURE: Implement custom analysis logic based on configuration
-        await Task.Delay(1000); // Simulate processing time
-
+        _infrastructure.StructuredLogging.LogStep(context, "Executing custom analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "Custom",
