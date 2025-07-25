@@ -39,7 +39,7 @@ public class DataVisualizationService : IDataVisualizationService
         return await ExecuteVisualizationOperationAsync(
             operationName: nameof(GenerateChartAsync),
             additionalMetadata: CreateChartMetadata(dataSetId, chartType, configuration),
-            validation: () => ValidateGenerateChartInputs(dataSetId, chartType, configuration, userId),
+            validation: () => _visualizationServices.Validation.ValidateGenerateChartInputs(dataSetId, chartType, configuration, userId),
             operation: async (context) =>
             {
                 await ExecuteChaosEngineeringAsync(context, AppConstants.ChaosEngineering.PROCESSING_DELAY, userId);
@@ -60,7 +60,7 @@ public class DataVisualizationService : IDataVisualizationService
         return await ExecuteVisualizationOperationAsync(
             operationName: nameof(GenerateComparisonChartAsync),
             additionalMetadata: CreateComparisonChartMetadata(dataSetId1, dataSetId2, chartType, configuration),
-            validation: () => ValidateComparisonChartInputs(dataSetId1, dataSetId2, chartType, configuration, userId),
+            validation: () => _visualizationServices.Validation.ValidateComparisonChartInputs(dataSetId1, dataSetId2, chartType, configuration, userId),
             operation: async (context) =>
             {
                 await ExecuteChaosEngineeringAsync(context, AppConstants.ChaosEngineering.NETWORK_LATENCY, userId);
@@ -81,7 +81,7 @@ public class DataVisualizationService : IDataVisualizationService
         return await ExecuteVisualizationOperationAsync(
             operationName: nameof(GetDataSummaryAsync),
             additionalMetadata: CreateDataSummaryMetadata(dataSetId),
-            validation: () => ValidateDataSummaryInputs(dataSetId, userId),
+            validation: () => _visualizationServices.Validation.ValidateDataSummaryInputs(dataSetId, userId),
             operation: async (context) =>
             {
                 await ExecuteChaosEngineeringAsync(context, AppConstants.ChaosEngineering.CACHE_FAILURE, userId);
@@ -102,7 +102,7 @@ public class DataVisualizationService : IDataVisualizationService
         return await ExecuteVisualizationOperationAsync(
             operationName: nameof(GetStatisticalSummaryAsync),
             additionalMetadata: CreateDataSummaryMetadata(dataSetId),
-            validation: () => ValidateStatisticalSummaryInputs(dataSetId, userId),
+            validation: () => _visualizationServices.Validation.ValidateStatisticalSummaryInputs(dataSetId, userId),
             operation: async (context) =>
             {
                 await ExecuteChaosEngineeringAsync(context, AppConstants.ChaosEngineering.MEMORY_PRESSURE, userId);
@@ -125,7 +125,7 @@ public class DataVisualizationService : IDataVisualizationService
 
     public bool ValidateChartConfiguration(ChartType chartType, ChartConfigurationDto? configuration)
     {
-        return _visualizationServices.ChartGeneration.ValidateChartConfiguration(chartType, configuration);
+        return _visualizationServices.Validation.ValidateChartConfiguration(chartType, configuration);
     }
 
     #region Private Methods
@@ -290,50 +290,7 @@ public class DataVisualizationService : IDataVisualizationService
 
     #endregion
 
-    #region Validation Methods
 
-    private void ValidateGenerateChartInputs(int dataSetId, ChartType chartType, ChartConfigurationDto? configuration, string? userId)
-    {
-        if (dataSetId <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId));
-
-        if (string.IsNullOrWhiteSpace(userId))
-            throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
-
-        _visualizationServices.ChartGeneration.ValidateChartConfiguration(chartType, configuration);
-    }
-
-    private void ValidateComparisonChartInputs(int dataSetId1, int dataSetId2, ChartType chartType, ChartConfigurationDto? configuration, string? userId)
-    {
-        if (dataSetId1 <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId1));
-
-        if (dataSetId2 <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId2));
-
-        if (dataSetId1 == dataSetId2)
-            throw new ArgumentException("Dataset IDs must be different for comparison", nameof(dataSetId2));
-
-        if (string.IsNullOrWhiteSpace(userId))
-            throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
-
-        _visualizationServices.ChartGeneration.ValidateChartConfiguration(chartType, configuration);
-    }
-
-    private static void ValidateDataSummaryInputs(int dataSetId, string? userId)
-    {
-        if (dataSetId <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId));
-
-        if (string.IsNullOrWhiteSpace(userId))
-            throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
-    }
-
-    private static void ValidateStatisticalSummaryInputs(int dataSetId, string? userId) => ValidateDataSummaryInputs(dataSetId, userId);
-
-
-
-    #endregion
 
     #region Internal Processing Methods
 

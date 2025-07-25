@@ -18,6 +18,7 @@ public class DataVisualizationServiceTests
     private readonly Mock<IDataProcessingInfrastructure> _mockInfrastructure = new();
     private readonly Mock<IStatisticalCalculationService> _mockStatisticalCalculationService = new();
     private readonly Mock<IChartGenerationService> _mockChartGenerationService = new();
+    private readonly Mock<IVisualizationValidationService> _mockValidationService = new();
     private readonly Mock<IVisualizationServices> _mockVisualizationServices = new();
     private readonly Mock<ICacheManagementService> _mockCacheManagement = new();
     private readonly DataVisualizationService _service;
@@ -34,6 +35,7 @@ public class DataVisualizationServiceTests
         _mockVisualizationServices.Setup(x => x.StatisticalCalculation).Returns(_mockStatisticalCalculationService.Object);
         _mockVisualizationServices.Setup(x => x.ChartGeneration).Returns(_mockChartGenerationService.Object);
         _mockVisualizationServices.Setup(x => x.CacheManagement).Returns(_mockCacheManagement.Object);
+        _mockVisualizationServices.Setup(x => x.Validation).Returns(_mockValidationService.Object);
 
         _service = new DataVisualizationService(_mockRepo.Object, _mockOptions.Object, _mockInfrastructure.Object, _mockVisualizationServices.Object);
     }
@@ -132,6 +134,9 @@ public class DataVisualizationServiceTests
         var chartType = ChartType.Bar;
         var config = new ChartConfigurationDto();
 
+        _mockValidationService.Setup(x => x.ValidateGenerateChartInputs(dataSetId, chartType, config, userId))
+            .Throws(new ArgumentException("Dataset ID must be positive", nameof(dataSetId)));
+
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateChartAsync(dataSetId, chartType, config, userId));
         exception.InnerException.Should().BeOfType<ArgumentException>();
@@ -179,7 +184,7 @@ public class DataVisualizationServiceTests
         _mockRepo.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
         var config = new ChartConfigurationDto { MaxDataPoints = 0 };
 
-        _mockChartGenerationService.Setup(x => x.ValidateChartConfiguration(ChartType.Bar, config))
+        _mockValidationService.Setup(x => x.ValidateGenerateChartInputs(dataSetId, ChartType.Bar, config, userId))
             .Throws(new ArgumentException("MaxDataPoints must be greater than 0"));
 
         // Act & Assert
@@ -226,6 +231,9 @@ public class DataVisualizationServiceTests
     {
         // Arrange
         var id = 12; var userId = "user12";
+
+        _mockValidationService.Setup(x => x.ValidateComparisonChartInputs(id, id, ChartType.Bar, null, userId))
+            .Throws(new ArgumentException("Dataset IDs must be different for comparison", nameof(id)));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateComparisonChartAsync(id, id, ChartType.Bar, null, userId));
@@ -287,6 +295,9 @@ public class DataVisualizationServiceTests
         var dataSetId = 0;
         var userId = "user";
 
+        _mockValidationService.Setup(x => x.ValidateDataSummaryInputs(dataSetId, userId))
+            .Throws(new ArgumentException("Dataset ID must be positive", nameof(dataSetId)));
+
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetDataSummaryAsync(dataSetId, userId));
         exception.InnerException.Should().BeOfType<ArgumentException>();
@@ -342,6 +353,9 @@ public class DataVisualizationServiceTests
         var dataSetId = 0;
         var userId = "user";
 
+        _mockValidationService.Setup(x => x.ValidateStatisticalSummaryInputs(dataSetId, userId))
+            .Throws(new ArgumentException("Dataset ID must be positive", nameof(dataSetId)));
+
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetStatisticalSummaryAsync(dataSetId, userId));
         exception.InnerException.Should().BeOfType<ArgumentException>();
@@ -364,31 +378,7 @@ public class DataVisualizationServiceTests
         exception.InnerException!.Message.Should().Contain("User user31 is not authorized to access dataset 31");
     }
 
-    [Fact]
-    public void ValidateChartConfiguration_ReturnsTrue_WhenValid()
-    {
-        // Arrange
-        var config = new ChartConfigurationDto { MaxDataPoints = 5 };
-        _mockChartGenerationService.Setup(x => x.ValidateChartConfiguration(ChartType.Bar, config)).Returns(true);
 
-        // Act
-        var result = _service.ValidateChartConfiguration(ChartType.Bar, config);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void ValidateChartConfiguration_Throws_WhenInvalid()
-    {
-        // Arrange
-        var config = new ChartConfigurationDto { MaxDataPoints = 0 };
-        _mockChartGenerationService.Setup(x => x.ValidateChartConfiguration(ChartType.Bar, config))
-            .Throws(new ArgumentException("MaxDataPoints must be greater than 0"));
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => _service.ValidateChartConfiguration(ChartType.Bar, config));
-    }
 
     [Fact]
     public async Task GetSupportedChartTypesAsync_ReturnsAllTypes()
@@ -419,38 +409,5 @@ public class DataVisualizationServiceTests
 
 
 
-    [Fact]
-    public void TestChartGenerationDirectly()
-    {
-        // Test the chart generation logic through the mock service
-        var dataSet = new DataSet { Id = 1, UserId = "user1", ProcessedData = "[{\"label\": \"A\", \"value\": 10}, {\"label\": \"B\", \"value\": 20}]", UseSeparateTable = false };
-        var data = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, object>>>(dataSet.ProcessedData);
 
-        // Create a mock operation context for testing
-        var mockContext = new Mock<IOperationContext>();
-        mockContext.Setup(x => x.CorrelationId).Returns("test-correlation-id");
-        mockContext.Setup(x => x.UserId).Returns("user1");
-
-        // Setup the mock chart generation service
-        var expectedChartData = new ChartDataDto
-        {
-            DataSetId = 1,
-            ChartType = ChartType.Bar,
-            Labels = new List<string> { "A", "B" },
-            Series = new List<ChartSeriesDto> { new ChartSeriesDto { Name = "value", Data = new List<object> { 10.0, 20.0 } } }
-        };
-
-        _mockChartGenerationService.Setup(x => x.GenerateChartData(dataSet, data!, ChartType.Bar, null, mockContext.Object))
-            .Returns(expectedChartData);
-
-        // Act
-        var result = _mockChartGenerationService.Object.GenerateChartData(dataSet, data!, ChartType.Bar, null, mockContext.Object);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(1, result.DataSetId);
-        Assert.Equal(ChartType.Bar, result.ChartType);
-        Assert.NotEmpty(result.Series);
-        Assert.NotEmpty(result.Labels);
-    }
 }

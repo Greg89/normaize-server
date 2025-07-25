@@ -13,14 +13,17 @@ public class VisualizationServices : IVisualizationServices
     /// <param name="statisticalCalculationService">The statistical calculation service</param>
     /// <param name="chartGenerationService">The chart generation service</param>
     /// <param name="cacheManagementService">The cache management service</param>
+    /// <param name="validationService">The validation service</param>
     public VisualizationServices(
         IStatisticalCalculationService statisticalCalculationService,
         IChartGenerationService chartGenerationService,
-        ICacheManagementService cacheManagementService)
+        ICacheManagementService cacheManagementService,
+        IVisualizationValidationService validationService)
     {
         StatisticalCalculation = statisticalCalculationService ?? throw new ArgumentNullException(nameof(statisticalCalculationService));
         ChartGeneration = chartGenerationService ?? throw new ArgumentNullException(nameof(chartGenerationService));
         CacheManagement = cacheManagementService ?? throw new ArgumentNullException(nameof(cacheManagementService));
+        Validation = validationService ?? throw new ArgumentNullException(nameof(validationService));
     }
 
     /// <summary>
@@ -37,4 +40,9 @@ public class VisualizationServices : IVisualizationServices
     /// Gets the cache management service.
     /// </summary>
     public ICacheManagementService CacheManagement { get; }
+
+    /// <summary>
+    /// Gets the validation service.
+    /// </summary>
+    public IVisualizationValidationService Validation { get; }
 }

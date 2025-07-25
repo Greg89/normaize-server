@@ -5,7 +5,7 @@ namespace Normaize.Core.Interfaces;
 
 /// <summary>
 /// Grouped interface for visualization-related services.
-/// Provides access to statistical calculations, chart generation, and cache management functionality.
+/// Provides access to statistical calculations, chart generation, cache management, and validation functionality.
 /// </summary>
 public interface IVisualizationServices
 {
@@ -23,4 +23,9 @@ public interface IVisualizationServices
     /// Cache management service for handling cache operations in visualization services.
     /// </summary>
     ICacheManagementService CacheManagement { get; }
+
+    /// <summary>
+    /// Validation service for validating inputs and configurations in visualization operations.
+    /// </summary>
+    IVisualizationValidationService Validation { get; }
 }
