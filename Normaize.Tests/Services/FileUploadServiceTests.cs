@@ -96,7 +96,7 @@ public class FileUploadServiceTests
         _mockStorageService.Setup(x => x.SaveFileAsync(fileRequest)).ThrowsAsync(expectedException);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<FileUploadException>(() => 
+        var exception = await Assert.ThrowsAsync<FileUploadException>(() =>
             _service.SaveFileAsync(fileRequest));
         Assert.Contains("Failed to save file test.csv", exception.Message);
         Assert.Equal(expectedException, exception.InnerException);
@@ -209,7 +209,7 @@ public class FileUploadServiceTests
         _mockStorageService.Setup(x => x.FileExistsAsync(filePath)).ReturnsAsync(false);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<FileNotFoundException>(() => 
+        var exception = await Assert.ThrowsAsync<FileNotFoundException>(() =>
             _service.ProcessFileAsync(filePath, fileType));
         Assert.Contains("File not found", exception.Message);
     }
@@ -223,7 +223,7 @@ public class FileUploadServiceTests
         _mockStorageService.Setup(x => x.FileExistsAsync(filePath)).ReturnsAsync(true);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<UnsupportedFileTypeException>(() => 
+        var exception = await Assert.ThrowsAsync<UnsupportedFileTypeException>(() =>
             _service.ProcessFileAsync(filePath, fileType));
         Assert.Contains("File type .unsupported is not supported", exception.Message);
     }
@@ -258,7 +258,7 @@ public class FileUploadServiceTests
         var fileType = ".csv";
         var csvContent = "Name,Age,City\nJohn,30,New York\nJane,25,Boston";
         var csvBytes = Encoding.UTF8.GetBytes(csvContent);
-        
+
         _mockStorageService.Setup(x => x.FileExistsAsync(filePath)).ReturnsAsync(true);
         _mockStorageService.Setup(x => x.GetFileAsync(filePath)).ReturnsAsync(() => new MemoryStream(csvBytes));
 
@@ -292,7 +292,7 @@ public class FileUploadServiceTests
         var fileType = ".csv";
         var csvContent = "Name,Age\n" + string.Join("\n", Enumerable.Range(1, 15000).Select(i => $"User{i},{i}"));
         var csvBytes = Encoding.UTF8.GetBytes(csvContent);
-        
+
         _mockStorageService.Setup(x => x.FileExistsAsync(filePath)).ReturnsAsync(true);
         _mockStorageService.Setup(x => x.GetFileAsync(filePath)).ReturnsAsync(() => new MemoryStream(csvBytes));
 
@@ -328,7 +328,7 @@ public class FileUploadServiceTests
             {""name"": ""Jane"", ""age"": 25, ""city"": ""Boston""}
         ]";
         var jsonBytes = Encoding.UTF8.GetBytes(jsonContent);
-        
+
         _mockStorageService.Setup(x => x.FileExistsAsync(filePath)).ReturnsAsync(true);
         _mockStorageService.Setup(x => x.GetFileAsync(filePath)).ReturnsAsync(() => new MemoryStream(jsonBytes));
 
@@ -358,7 +358,7 @@ public class FileUploadServiceTests
         var fileType = ".json";
         var jsonContent = @"{""name"": ""John"", ""age"": 30, ""city"": ""New York""}";
         var jsonBytes = Encoding.UTF8.GetBytes(jsonContent);
-        
+
         _mockStorageService.Setup(x => x.FileExistsAsync(filePath)).ReturnsAsync(true);
         _mockStorageService.Setup(x => x.GetFileAsync(filePath)).ReturnsAsync(() => new MemoryStream(jsonBytes));
 
@@ -391,7 +391,7 @@ public class FileUploadServiceTests
         var filePath = "test.xlsx";
         var fileType = ".xlsx";
         var excelBytes = CreateSampleExcelFile();
-        
+
         _mockStorageService.Setup(x => x.FileExistsAsync(filePath)).ReturnsAsync(true);
         _mockStorageService.Setup(x => x.GetFileAsync(filePath)).ReturnsAsync(() => new MemoryStream(excelBytes));
 
@@ -437,7 +437,7 @@ public class FileUploadServiceTests
     </item>
 </root>";
         var xmlBytes = Encoding.UTF8.GetBytes(xmlContent);
-        
+
         _mockStorageService.Setup(x => x.FileExistsAsync(filePath)).ReturnsAsync(true);
         _mockStorageService.Setup(x => x.GetFileAsync(filePath)).ReturnsAsync(() => new MemoryStream(xmlBytes));
 
@@ -471,7 +471,7 @@ public class FileUploadServiceTests
         var fileType = ".txt";
         var textContent = "Line 1\nLine 2\nLine 3";
         var textBytes = Encoding.UTF8.GetBytes(textContent);
-        
+
         _mockStorageService.Setup(x => x.FileExistsAsync(filePath)).ReturnsAsync(true);
         _mockStorageService.Setup(x => x.GetFileAsync(filePath)).ReturnsAsync(() => new MemoryStream(textBytes));
 
@@ -593,23 +593,23 @@ public class FileUploadServiceTests
         // Create a simple Excel file for testing
         using var package = new OfficeOpenXml.ExcelPackage();
         var worksheet = package.Workbook.Worksheets.Add("Sheet1");
-        
+
         // Add headers
         worksheet.Cells[1, 1].Value = "Name";
         worksheet.Cells[1, 2].Value = "Age";
         worksheet.Cells[1, 3].Value = "City";
-        
+
         // Add data
         worksheet.Cells[2, 1].Value = "John";
         worksheet.Cells[2, 2].Value = 30;
         worksheet.Cells[2, 3].Value = "New York";
-        
+
         worksheet.Cells[3, 1].Value = "Jane";
         worksheet.Cells[3, 2].Value = 25;
         worksheet.Cells[3, 3].Value = "Boston";
-        
+
         return package.GetAsByteArray();
     }
 
     #endregion
-} 
+}

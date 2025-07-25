@@ -19,7 +19,7 @@ public class ChaosEngineeringServiceTests
     {
         _mockLogger = new Mock<ILogger<ChaosEngineeringService>>();
         _mockOptionsMonitor = new Mock<IOptionsMonitor<ChaosEngineeringOptions>>();
-        
+
         // Set up default options with chaos engineering enabled for tests
         var defaultOptions = new ChaosEngineeringOptions
         {
@@ -28,7 +28,7 @@ public class ChaosEngineeringServiceTests
             GlobalProbabilityMultiplier = 1.0,
             EnableLogging = true
         };
-        
+
         _mockOptionsMonitor.Setup(x => x.CurrentValue).Returns(defaultOptions);
         _service = new ChaosEngineeringService(_mockLogger.Object, _mockOptionsMonitor.Object);
     }
@@ -375,9 +375,9 @@ public class ChaosEngineeringServiceTests
             AllowedEnvironments = ["Development", "Test"],
             Scenarios = new Dictionary<string, ChaosScenarioConfig>
             {
-                ["unique-test-scenario"] = new ChaosScenarioConfig 
-                { 
-                    Enabled = true, 
+                ["unique-test-scenario"] = new ChaosScenarioConfig
+                {
+                    Enabled = true,
                     Probability = 1.0, // 100% probability
                     MaxTriggersPerHour = 10
                 }
@@ -402,8 +402,8 @@ public class ChaosEngineeringServiceTests
             AllowedEnvironments = ["Development"],
             Scenarios = new Dictionary<string, ChaosScenarioConfig>
             {
-                ["unique-disabled-scenario"] = new ChaosScenarioConfig 
-                { 
+                ["unique-disabled-scenario"] = new ChaosScenarioConfig
+                {
                     Enabled = false, // Disabled scenario
                     Probability = 1.0
                 }
@@ -428,17 +428,17 @@ public class ChaosEngineeringServiceTests
             AllowedEnvironments = ["Development", "Test"],
             Scenarios = new Dictionary<string, ChaosScenarioConfig>
             {
-                ["unique-time-scenario"] = new ChaosScenarioConfig 
-                { 
+                ["unique-time-scenario"] = new ChaosScenarioConfig
+                {
                     Enabled = true,
                     Probability = 1.0,
                     TimeWindowRestricted = true,
                     AllowedTimeWindows =
                     [
-                        new TimeWindow 
-                        { 
-                            StartTime = "00:00", 
-                            EndTime = "23:59", 
+                        new TimeWindow
+                        {
+                            StartTime = "00:00",
+                            EndTime = "23:59",
                             DaysOfWeek = [(int)DateTime.Now.DayOfWeek] // Today
                         }
                     ]
@@ -464,9 +464,9 @@ public class ChaosEngineeringServiceTests
             AllowedEnvironments = ["Development", "Test"],
             Scenarios = new Dictionary<string, ChaosScenarioConfig>
             {
-                ["unique-execute-scenario"] = new ChaosScenarioConfig 
-                { 
-                    Enabled = true, 
+                ["unique-execute-scenario"] = new ChaosScenarioConfig
+                {
+                    Enabled = true,
                     Probability = 1.0 // 100% probability
                 }
             }
@@ -474,7 +474,7 @@ public class ChaosEngineeringServiceTests
         _mockOptionsMonitor.Setup(x => x.CurrentValue).Returns(options);
 
         var actionExecuted = false;
-        var action = new Func<Task>(() => 
+        var action = new Func<Task>(() =>
         {
             actionExecuted = true;
             return Task.CompletedTask;
@@ -498,9 +498,9 @@ public class ChaosEngineeringServiceTests
             AllowedEnvironments = ["Development", "Test"],
             Scenarios = new Dictionary<string, ChaosScenarioConfig>
             {
-                ["unique-custom-scenario"] = new ChaosScenarioConfig 
-                { 
-                    Enabled = true, 
+                ["unique-custom-scenario"] = new ChaosScenarioConfig
+                {
+                    Enabled = true,
                     Probability = 1.0
                 }
             }
@@ -508,7 +508,7 @@ public class ChaosEngineeringServiceTests
         _mockOptionsMonitor.Setup(x => x.CurrentValue).Returns(options);
 
         var customActionExecuted = false;
-        var customAction = new Func<Task>(() => 
+        var customAction = new Func<Task>(() =>
         {
             customActionExecuted = true;
             return Task.CompletedTask;
@@ -517,7 +517,7 @@ public class ChaosEngineeringServiceTests
         _service.RegisterChaosScenario("unique-custom-scenario", context => true, customAction);
 
         var actionExecuted = false;
-        var action = new Func<Task>(() => 
+        var action = new Func<Task>(() =>
         {
             actionExecuted = true;
             return Task.CompletedTask;
@@ -542,9 +542,9 @@ public class ChaosEngineeringServiceTests
             AllowedEnvironments = ["Development", "Test"],
             Scenarios = new Dictionary<string, ChaosScenarioConfig>
             {
-                ["unique-exception-scenario"] = new ChaosScenarioConfig 
-                { 
-                    Enabled = true, 
+                ["unique-exception-scenario"] = new ChaosScenarioConfig
+                {
+                    Enabled = true,
                     Probability = 1.0
                 }
             }
@@ -597,9 +597,9 @@ public class ChaosEngineeringServiceTests
             AllowedEnvironments = ["Development", "Test"],
             Scenarios = new Dictionary<string, ChaosScenarioConfig>
             {
-                ["test-scenario"] = new ChaosScenarioConfig 
-                { 
-                    Enabled = true, 
+                ["test-scenario"] = new ChaosScenarioConfig
+                {
+                    Enabled = true,
                     Probability = 1.0,
                     MaxTriggersPerHour = 1 // Only 1 trigger allowed per hour
                 }
@@ -611,7 +611,7 @@ public class ChaosEngineeringServiceTests
 
         // Act - First trigger should succeed
         var firstResult = await _service.ExecuteChaosAsync("test-scenario", action);
-        
+
         // Second trigger should be rate limited
         var secondResult = await _service.ExecuteChaosAsync("test-scenario", action);
 
@@ -630,9 +630,9 @@ public class ChaosEngineeringServiceTests
             AllowedEnvironments = ["Development", "Test"],
             Scenarios = new Dictionary<string, ChaosScenarioConfig>
             {
-                ["unique-record-scenario"] = new ChaosScenarioConfig 
-                { 
-                    Enabled = true, 
+                ["unique-record-scenario"] = new ChaosScenarioConfig
+                {
+                    Enabled = true,
                     Probability = 1.0
                 }
             }

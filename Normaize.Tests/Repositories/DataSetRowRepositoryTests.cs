@@ -20,7 +20,7 @@ public class DataSetRowRepositoryTests : IDisposable
 
         _context = new NormaizeContext(options);
         _repository = new DataSetRowRepository(_context);
-        
+
         // Seed test data
         SeedTestData();
     }
@@ -33,7 +33,7 @@ public class DataSetRowRepositoryTests : IDisposable
             Id = 1,
             Name = "Test Dataset",
             FileName = "test.csv",
-                            FileType = Normaize.Core.DTOs.FileType.CSV,
+            FileType = Normaize.Core.DTOs.FileType.CSV,
             FileSize = 1024,
             UserId = "user1",
             UploadedAt = DateTime.UtcNow.AddDays(-1),
@@ -317,4 +317,4 @@ public class DataSetRowRepositoryTests : IDisposable
         _context?.Dispose();
         GC.SuppressFinalize(this);
     }
-} 
+}

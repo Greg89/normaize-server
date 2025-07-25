@@ -58,4 +58,4 @@ public class IConfigurationValidationServiceTests
             method.GetParameters()[0].ParameterType.Should().Be<CancellationToken>();
         }
     }
-} 
+}

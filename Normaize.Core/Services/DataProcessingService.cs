@@ -45,8 +45,8 @@ public class DataProcessingService : IDataProcessingService
     {
         var correlationId = GetCorrelationId();
         var context = _infrastructure.StructuredLogging.CreateContext(
-            nameof(UploadDataSetAsync), 
-            correlationId, 
+            nameof(UploadDataSetAsync),
+            correlationId,
             createDto?.UserId,
             new Dictionary<string, object>
             {
@@ -55,7 +55,7 @@ public class DataProcessingService : IDataProcessingService
 
         // Validate inputs first (before try-catch so exceptions are thrown)
         ValidateUploadInputs(fileRequest!, createDto!);
-        
+
         try
         {
             // Chaos engineering: Simulate processing delay
@@ -112,7 +112,7 @@ public class DataProcessingService : IDataProcessingService
                 ["ColumnCount"] = dataSet.ColumnCount,
                 ["FileSize"] = dataSet.FileSize
             });
-            
+
             // Update with user-provided information
             dataSet.Name = createDto!.Name ?? "Unnamed Dataset";
             dataSet.Description = createDto.Description ?? string.Empty;
@@ -137,7 +137,8 @@ public class DataProcessingService : IDataProcessingService
                     savedDataSet.Id,
                     createDto.UserId ?? AppConstants.Messages.UNKNOWN,
                     "Created",
-                    new { 
+                    new
+                    {
                         fileName = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN,
                         fileSize = dataSet.FileSize,
                         rowCount = dataSet.RowCount,
@@ -195,18 +196,18 @@ public class DataProcessingService : IDataProcessingService
                 [AppConstants.DataStructures.PAGE] = page,
                 [AppConstants.DataStructures.PAGE_SIZE] = pageSize
             },
-            validation: () => 
+            validation: () =>
             {
                 ValidatePaginationInputs(page, pageSize);
                 ValidateUserId(userId);
             },
             operation: async (context) =>
             {
-                            var dataSets = await ExecuteWithTimeoutAsync(
-                () => _dataSetRepository.GetByUserIdAsync(userId, false),
-                _infrastructure.QuickTimeout,
-                GetCorrelationId(),
-                context.OperationName);
+                var dataSets = await ExecuteWithTimeoutAsync(
+    () => _dataSetRepository.GetByUserIdAsync(userId, false),
+    _infrastructure.QuickTimeout,
+    GetCorrelationId(),
+    context.OperationName);
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
                 {
@@ -227,21 +228,21 @@ public class DataProcessingService : IDataProcessingService
             validation: () => ValidateDeleteInputs(id, userId),
             operation: async (context) =>
             {
-                            // Chaos engineering: Simulate deletion failure
-            await _infrastructure.ChaosEngineering.ExecuteChaosAsync("DeletionFailure", () =>
-            {
-                _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating deletion failure", new Dictionary<string, object>
+                // Chaos engineering: Simulate deletion failure
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("DeletionFailure", () =>
                 {
-                    ["ChaosType"] = "DeletionFailure"
-                });
-                throw new InvalidOperationException("Simulated deletion failure (chaos engineering)");
-            }, new Dictionary<string, object> { ["UserId"] = userId });
+                    _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating deletion failure", new Dictionary<string, object>
+                    {
+                        ["ChaosType"] = "DeletionFailure"
+                    });
+                    throw new InvalidOperationException("Simulated deletion failure (chaos engineering)");
+                }, new Dictionary<string, object> { ["UserId"] = userId });
 
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
                 if (dataSet == null) return false;
 
                 await DeleteDataSetFileAsync(dataSet, context);
-                
+
                 var result = await ExecuteWithTimeoutAsync(
                     () => _dataSetRepository.DeleteAsync(id),
                     _infrastructure.QuickTimeout,
@@ -375,7 +376,7 @@ public class DataProcessingService : IDataProcessingService
                 [AppConstants.DataStructures.PAGE] = page,
                 [AppConstants.DataStructures.PAGE_SIZE] = pageSize
             },
-            validation: () => 
+            validation: () =>
             {
                 ValidatePaginationInputs(page, pageSize);
                 ValidateUserId(userId);
@@ -449,7 +450,7 @@ public class DataProcessingService : IDataProcessingService
                 [AppConstants.DataStructures.PAGE] = page,
                 [AppConstants.DataStructures.PAGE_SIZE] = pageSize
             },
-            validation: () => 
+            validation: () =>
             {
                 ValidatePaginationInputs(page, pageSize);
                 ValidateUserId(userId);
@@ -524,7 +525,7 @@ public class DataProcessingService : IDataProcessingService
                 }, new Dictionary<string, object> { ["UserId"] = userId });
 
                 var cacheKey = $"stats_{userId}";
-                
+
                 _infrastructure.StructuredLogging.LogStep(context, "Cache lookup started");
                 if (_infrastructure.Cache.TryGetValue(cacheKey, out DataSetStatisticsDto? cachedStats))
                 {
@@ -656,7 +657,8 @@ public class DataProcessingService : IDataProcessingService
         _infrastructure.Cache.Remove($"stats_{userId}");
         _infrastructure.StructuredLogging.LogStep(context, "Cache clearing completed");
 
-        await LogAuditActionAsync(id, userId, "Deleted", context, new { 
+        await LogAuditActionAsync(id, userId, "Deleted", context, new
+        {
             fileName = dataSet.FileName,
             fileSize = dataSet.FileSize,
             rowCount = dataSet.RowCount
@@ -678,7 +680,8 @@ public class DataProcessingService : IDataProcessingService
         _infrastructure.Cache.Remove($"stats_{userId}");
         _infrastructure.StructuredLogging.LogStep(context, "Cache clearing completed");
 
-        await LogAuditActionAsync(id, userId, "HardDeleted", context, new { 
+        await LogAuditActionAsync(id, userId, "HardDeleted", context, new
+        {
             fileName = dataSet.FileName,
             fileSize = dataSet.FileSize,
             rowCount = dataSet.RowCount
@@ -713,14 +716,14 @@ public class DataProcessingService : IDataProcessingService
     private async Task<T> ExecuteWithTimeoutAsync<T>(Func<Task<T>> operation, TimeSpan timeout, string correlationId, string operationName)
     {
         using var cts = new CancellationTokenSource(timeout);
-        
+
         try
         {
             return await operation().WaitAsync(cts.Token);
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _infrastructure.Logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
+            _infrastructure.Logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}",
                 operationName, timeout, correlationId);
             throw new TimeoutException($"Operation {operationName} timed out after {timeout}");
         }
@@ -729,14 +732,14 @@ public class DataProcessingService : IDataProcessingService
     private async Task ExecuteWithTimeoutAsync(Func<Task> operation, TimeSpan timeout, string correlationId, string operationName)
     {
         using var cts = new CancellationTokenSource(timeout);
-        
+
         try
         {
             await operation().WaitAsync(cts.Token);
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _infrastructure.Logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
+            _infrastructure.Logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}",
                 operationName, timeout, correlationId);
             throw new TimeoutException($"Operation {operationName} timed out after {timeout}");
         }
@@ -750,7 +753,7 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (JsonException jsonEx)
         {
-            _infrastructure.Logger.LogWarning(jsonEx, "Failed to deserialize schema for dataset {DataSetId}. CorrelationId: {CorrelationId}", 
+            _infrastructure.Logger.LogWarning(jsonEx, "Failed to deserialize schema for dataset {DataSetId}. CorrelationId: {CorrelationId}",
                 dataSetId, correlationId);
             return null;
         }
@@ -785,7 +788,7 @@ public class DataProcessingService : IDataProcessingService
     {
         if (id <= 0)
             throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
-        
+
         ValidateUserId(userId);
     }
 
@@ -801,10 +804,10 @@ public class DataProcessingService : IDataProcessingService
     {
         if (id <= 0)
             throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
-        
+
         if (rows <= 0 || rows > 1000)
             throw new ArgumentException("Rows must be between 1 and 1000", nameof(rows));
-        
+
         ValidateUserId(userId);
     }
 
@@ -814,10 +817,10 @@ public class DataProcessingService : IDataProcessingService
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
             throw new ArgumentException("Search term is required", nameof(searchTerm));
-        
+
         if (searchTerm.Length > 100)
             throw new ArgumentException("Search term cannot exceed 100 characters", nameof(searchTerm));
-        
+
         ValidateUserId(userId);
         ValidatePaginationInputs(page, pageSize);
     }
@@ -826,13 +829,13 @@ public class DataProcessingService : IDataProcessingService
     {
         if (startDate >= endDate)
             throw new ArgumentException("Start date must be before end date");
-        
+
         if (endDate > DateTime.UtcNow.AddDays(1))
             throw new ArgumentException("End date cannot be in the future");
-        
+
         if (startDate < DateTime.UtcNow.AddYears(-10))
             throw new ArgumentException("Start date cannot be more than 10 years ago");
-        
+
         ValidateUserId(userId);
         ValidatePaginationInputs(page, pageSize);
     }
@@ -841,7 +844,7 @@ public class DataProcessingService : IDataProcessingService
     {
         if (page <= 0)
             throw new ArgumentException("Page must be positive", nameof(page));
-        
+
         if (pageSize <= 0 || pageSize > 100)
             throw new ArgumentException("Page size must be between 1 and 100", nameof(pageSize));
     }
@@ -850,10 +853,10 @@ public class DataProcessingService : IDataProcessingService
     {
         if (string.IsNullOrWhiteSpace(userId))
             throw new ArgumentException("User ID is required", nameof(userId));
-        
+
         if (userId.Length > 100)
             throw new ArgumentException("User ID cannot exceed 100 characters", nameof(userId));
     }
 
     #endregion
-} 
+}

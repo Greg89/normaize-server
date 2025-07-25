@@ -12,4 +12,4 @@ public interface IDataAnalysisService
     Task<AnalysisResultDto> GetAnalysisResultAsync(int analysisId);
     Task<bool> DeleteAnalysisAsync(int id);
     Task<AnalysisDto> RunAnalysisAsync(int analysisId);
-} 
+}

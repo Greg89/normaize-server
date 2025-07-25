@@ -13,17 +13,17 @@ public static class Auth0Middleware
         {
             var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
             var logger = loggerFactory.CreateLogger("Auth0Middleware");
-            
+
             // Extract user information from JWT token
             if (context.User.Identity?.IsAuthenticated == true)
             {
-                var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                             ?? context.User.FindFirst("sub")?.Value;
                 var email = context.User.FindFirst(ClaimTypes.Email)?.Value;
                 var name = context.User.FindFirst(ClaimTypes.Name)?.Value;
 
                 // Log successful authentication
-                logger.LogDebug("User authenticated: UserId={UserId}, Email={Email}, Name={Name}", 
+                logger.LogDebug("User authenticated: UserId={UserId}, Email={Email}, Name={Name}",
                     userId, email, name);
 
                 // Add user info to context for use in controllers
@@ -39,4 +39,4 @@ public static class Auth0Middleware
             await next();
         });
     }
-} 
+}

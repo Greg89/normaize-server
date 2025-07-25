@@ -74,7 +74,7 @@ public class DataAnalysisService : IDataAnalysisService
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
                 var result = _mapper.Map<AnalysisDto>(savedAnalysis);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
-                
+
                 return result;
             });
     }
@@ -118,7 +118,7 @@ public class DataAnalysisService : IDataAnalysisService
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
                 var result = _mapper.Map<AnalysisDto>(analysis);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
-                
+
                 return result;
             });
     }
@@ -155,7 +155,7 @@ public class DataAnalysisService : IDataAnalysisService
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
                 var result = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
-                
+
                 return result;
             });
     }
@@ -192,7 +192,7 @@ public class DataAnalysisService : IDataAnalysisService
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
                 var result = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
-                
+
                 return result;
             });
     }
@@ -229,7 +229,7 @@ public class DataAnalysisService : IDataAnalysisService
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
                 var result = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
-                
+
                 return result;
             });
     }
@@ -288,7 +288,7 @@ public class DataAnalysisService : IDataAnalysisService
                     Results = deserializedResults,
                     ErrorMessage = analysis.ErrorMessage
                 };
-                
+
                 return result;
             });
     }
@@ -321,7 +321,7 @@ public class DataAnalysisService : IDataAnalysisService
                 {
                     ["DeletionResult"] = result
                 });
-                
+
                 if (result)
                 {
                     _infrastructure.StructuredLogging.LogSummary(context, true);
@@ -330,7 +330,7 @@ public class DataAnalysisService : IDataAnalysisService
                 {
                     _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND_OR_DELETED);
                 }
-                
+
                 return result;
             });
     }
@@ -395,7 +395,7 @@ public class DataAnalysisService : IDataAnalysisService
                 });
                 var result = await ExecuteAnalysisWithStateManagementAsync(analysis, context);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_EXECUTION_COMPLETED);
-                
+
                 return result;
             });
     }
@@ -424,7 +424,7 @@ public class DataAnalysisService : IDataAnalysisService
         catch (Exception ex)
         {
             _infrastructure.StructuredLogging.LogSummary(context, false, ex.Message);
-            
+
             // Create detailed error message based on operation type and metadata
             var errorMessage = CreateDetailedErrorMessage(operationName, additionalMetadata);
             throw new InvalidOperationException(errorMessage, ex);
@@ -441,7 +441,7 @@ public class DataAnalysisService : IDataAnalysisService
             case nameof(CreateAnalysisAsync):
                 var analysisName = metadata.TryGetValue("AnalysisName", out var name) ? name?.ToString() : "unknown";
                 return $"Failed to complete {operationName} for analysis '{analysisName}'";
-                
+
             case nameof(GetAnalysisAsync):
             case nameof(DeleteAnalysisAsync):
             case nameof(RunAnalysisAsync):
@@ -460,19 +460,19 @@ public class DataAnalysisService : IDataAnalysisService
                     analysisId = AppConstants.Messages.UNKNOWN;
                 }
                 return $"Failed to complete {operationName} for analysis ID {analysisId}";
-                
+
             case nameof(GetAnalysesByDataSetAsync):
                 var dataSetId = metadata.TryGetValue("DataSetId", out var dsId) ? dsId?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for dataset ID {dataSetId}";
-                
+
             case nameof(GetAnalysesByStatusAsync):
                 var status = metadata.TryGetValue(AppConstants.DataStructures.STATUS, out var statusValue) ? statusValue?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for status {status}";
-                
+
             case nameof(GetAnalysesByTypeAsync):
                 var type = metadata.TryGetValue("Type", out var typeValue) ? typeValue?.ToString() : "unknown";
                 return $"Failed to complete {operationName} for type {type}";
-                
+
             default:
                 return $"Failed to complete {operationName}";
         }
@@ -529,19 +529,19 @@ public class DataAnalysisService : IDataAnalysisService
             // Update with failure state
             analysis.Status = AnalysisStatus.Failed;
             analysis.ErrorMessage = ex.Message;
-            
+
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_FAILED, new Dictionary<string, object>
             {
                 [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id,
                 ["ErrorMessage"] = ex.Message
             });
-            
+
             await ExecuteWithTimeoutAsync(
                 () => _analysisRepository.UpdateAsync(analysis),
                 _infrastructure.QuickTimeout,
                 context.CorrelationId,
                 $"{context.OperationName}_UpdateFailure");
-            
+
             throw new InvalidOperationException($"Failed to execute analysis of type {analysis.Type} for ID {analysis.Id}", ex);
         }
     }
@@ -549,14 +549,14 @@ public class DataAnalysisService : IDataAnalysisService
     private async Task<T> ExecuteWithTimeoutAsync<T>(Func<Task<T>> operation, TimeSpan timeout, string correlationId, string operationName)
     {
         using var cts = new CancellationTokenSource(timeout);
-        
+
         try
         {
             return await operation().WaitAsync(cts.Token);
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _infrastructure.Logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
+            _infrastructure.Logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}",
                 operationName, timeout, correlationId);
             throw new TimeoutException($"Operation {operationName} timed out after {timeout}");
         }
@@ -573,7 +573,7 @@ public class DataAnalysisService : IDataAnalysisService
         }
         catch (JsonException jsonEx)
         {
-            _infrastructure.Logger.LogWarning(jsonEx, "Failed to deserialize results for analysis ID: {AnalysisId}. CorrelationId: {CorrelationId}", 
+            _infrastructure.Logger.LogWarning(jsonEx, "Failed to deserialize results for analysis ID: {AnalysisId}. CorrelationId: {CorrelationId}",
                 analysisId, correlationId);
             return null;
         }
@@ -657,10 +657,10 @@ public class DataAnalysisService : IDataAnalysisService
     private async Task<object> ExecuteNormalizationAnalysisAsync(Analysis analysis)
     {
         _infrastructure.Logger.LogDebug("Executing normalization analysis for ID: {AnalysisId}", analysis.Id);
-        
+
         // FUTURE: Implement normalization logic
         await Task.Delay(1000); // Simulate processing time
-        
+
         return new
         {
             Type = "Normalization",
@@ -674,10 +674,10 @@ public class DataAnalysisService : IDataAnalysisService
     private async Task<object> ExecuteComparisonAnalysisAsync(Analysis analysis)
     {
         _infrastructure.Logger.LogDebug("Executing comparison analysis for ID: {AnalysisId}", analysis.Id);
-        
+
         // FUTURE: Implement comparison logic
         await Task.Delay(1000); // Simulate processing time
-        
+
         return new
         {
             Type = "Comparison",
@@ -691,10 +691,10 @@ public class DataAnalysisService : IDataAnalysisService
     private async Task<object> ExecuteStatisticalAnalysisAsync(Analysis analysis)
     {
         _infrastructure.Logger.LogDebug("Executing statistical analysis for ID: {AnalysisId}", analysis.Id);
-        
+
         // FUTURE: Implement statistical analysis logic
         await Task.Delay(1000); // Simulate processing time
-        
+
         return new
         {
             Type = "Statistical",
@@ -708,10 +708,10 @@ public class DataAnalysisService : IDataAnalysisService
     private async Task<object> ExecuteDataCleaningAnalysisAsync(Analysis analysis)
     {
         _infrastructure.Logger.LogDebug("Executing data cleaning analysis for ID: {AnalysisId}", analysis.Id);
-        
+
         // FUTURE: Implement data cleaning logic
         await Task.Delay(1000); // Simulate processing time
-        
+
         return new
         {
             Type = "DataCleaning",
@@ -726,10 +726,10 @@ public class DataAnalysisService : IDataAnalysisService
     private async Task<object> ExecuteOutlierDetectionAnalysisAsync(Analysis analysis)
     {
         _infrastructure.Logger.LogDebug("Executing outlier detection analysis for ID: {AnalysisId}", analysis.Id);
-        
+
         // FUTURE: Implement outlier detection logic
         await Task.Delay(1000); // Simulate processing time
-        
+
         return new
         {
             Type = "OutlierDetection",
@@ -743,10 +743,10 @@ public class DataAnalysisService : IDataAnalysisService
     private async Task<object> ExecuteCorrelationAnalysisAsync(Analysis analysis)
     {
         _infrastructure.Logger.LogDebug("Executing correlation analysis for ID: {AnalysisId}", analysis.Id);
-        
+
         // FUTURE: Implement correlation analysis logic
         await Task.Delay(1000); // Simulate processing time
-        
+
         return new
         {
             Type = "CorrelationAnalysis",
@@ -765,10 +765,10 @@ public class DataAnalysisService : IDataAnalysisService
     private async Task<object> ExecuteTrendAnalysisAsync(Analysis analysis)
     {
         _infrastructure.Logger.LogDebug("Executing trend analysis for ID: {AnalysisId}", analysis.Id);
-        
+
         // FUTURE: Implement trend analysis logic
         await Task.Delay(1000); // Simulate processing time
-        
+
         return new
         {
             Type = "TrendAnalysis",
@@ -783,10 +783,10 @@ public class DataAnalysisService : IDataAnalysisService
     private async Task<object> ExecuteCustomAnalysisAsync(Analysis analysis)
     {
         _infrastructure.Logger.LogDebug("Executing custom analysis for ID: {AnalysisId}", analysis.Id);
-        
+
         // FUTURE: Implement custom analysis logic based on configuration
         await Task.Delay(1000); // Simulate processing time
-        
+
         return new
         {
             Type = "Custom",
@@ -798,6 +798,6 @@ public class DataAnalysisService : IDataAnalysisService
     }
 
     #endregion
-} 
+}
 
 

@@ -241,4 +241,4 @@ public class MigrationServiceTests
         result2.Should().NotBeNull();
         result1.Success.Should().Be(result2.Success);
     }
-} 
+}

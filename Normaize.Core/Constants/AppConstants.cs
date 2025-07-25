@@ -211,29 +211,29 @@ public static class AppConstants
         public const int DATA_START_ROW_INDEX = 2;
         public const string DEFAULT_COLUMN_PREFIX = "Column";
         public const string DEFAULT_DELIMITER = ",";
-        
+
         // Collection capacity defaults
         public const int DEFAULT_RECORDS_CAPACITY = 1000;
-        
+
         // Text file processing
         public const string LINE_NUMBER_COLUMN = "LineNumber";
         public const string CONTENT_COLUMN = "Content";
-        
+
         // File type identifiers
         public const string CSV_FILE_TYPE = "CSV";
         public const string EXCEL_FILE_TYPE = "Excel";
         public const string XML_FILE_TYPE = "XML";
         public const string TEXT_FILE_TYPE = "text";
-        
+
         // Chaos engineering scenario names
         public const string STORAGE_FAILURE_SCENARIO = "StorageFailure";
         public const string PROCESSING_DELAY_SCENARIO = "ProcessingDelay";
-        
+
         // Context keys for structured logging
         public const string FILE_NAME_KEY = "FileName";
         public const string FILE_TYPE_KEY = "FileType";
         public const string FILE_PATH_KEY = "FilePath";
-        
+
         // Size conversion constants
         public const int BYTES_PER_MEGABYTE = 1024 * 1024;
         public const int BYTES_PER_KILOBYTE = 1024;
@@ -264,4 +264,4 @@ public static class AppConstants
         public const string CONFIGURATION_VALIDATION_FAILED = "Configuration validation failed";
         public const string ALLOWED_EXTENSIONS_CONFLICT = "AllowedExtensions cannot contain blocked extensions";
     }
-} 
+}

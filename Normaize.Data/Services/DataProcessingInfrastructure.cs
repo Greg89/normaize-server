@@ -33,4 +33,4 @@ public class DataProcessingInfrastructure : IDataProcessingInfrastructure
         StructuredLogging = structuredLogging;
         ChaosEngineering = chaosEngineering;
     }
-} 
+}

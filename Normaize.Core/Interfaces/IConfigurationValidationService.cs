@@ -19,4 +19,4 @@ public class ConfigurationValidationResult
     public List<string> Warnings { get; set; } = new();
     public Dictionary<string, object> Details { get; set; } = new();
     public TimeSpan ValidationDuration { get; set; }
-} 
+}

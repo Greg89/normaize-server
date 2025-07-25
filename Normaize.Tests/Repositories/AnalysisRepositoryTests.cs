@@ -21,7 +21,7 @@ public class AnalysisRepositoryTests : IDisposable
 
         _context = new NormaizeContext(options);
         _repository = new AnalysisRepository(_context);
-        
+
         // Seed test data
         SeedTestData();
     }
@@ -438,4 +438,4 @@ public class AnalysisRepositoryTests : IDisposable
         _context?.Dispose();
         GC.SuppressFinalize(this);
     }
-} 
+}

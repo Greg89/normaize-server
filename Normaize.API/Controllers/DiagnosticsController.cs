@@ -16,7 +16,7 @@ public class DiagnosticsController : ControllerBase
     private readonly IStorageConfigurationService _storageConfigService;
 
     public DiagnosticsController(
-        IStructuredLoggingService loggingService, 
+        IStructuredLoggingService loggingService,
         IStorageConfigurationService storageConfigService)
     {
         _loggingService = loggingService;
@@ -29,15 +29,16 @@ public class DiagnosticsController : ControllerBase
         try
         {
             _loggingService.LogUserAction("Storage diagnostics requested", new { UserId = User.Identity?.Name });
-            
+
             var diagnostics = _storageConfigService.GetDiagnostics();
-            
-            _loggingService.LogUserAction("Storage diagnostics retrieved successfully", new { 
+
+            _loggingService.LogUserAction("Storage diagnostics retrieved successfully", new
+            {
                 StorageProvider = diagnostics.StorageProvider,
                 S3Configured = diagnostics.S3Configured,
                 Environment = diagnostics.Environment
             });
-            
+
             return Ok(diagnostics);
         }
         catch (Exception ex)
@@ -53,17 +54,17 @@ public class DiagnosticsController : ControllerBase
         try
         {
             _loggingService.LogUserAction("Storage test requested", new { UserId = User.Identity?.Name });
-            
+
             // Get the storage service from DI
             var storageService = HttpContext.RequestServices.GetRequiredService<IStorageService>();
             var storageType = storageService.GetType().Name;
-            
+
             // Test file operations
             var testFileName = $"test_{Guid.NewGuid()}.txt";
             var testContent = "This is a test file to verify storage connectivity.";
-            
+
             using var testStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testContent));
-            
+
             var fileRequest = new FileUploadRequest
             {
                 FileName = testFileName,
@@ -71,23 +72,23 @@ public class DiagnosticsController : ControllerBase
                 FileSize = testContent.Length,
                 FileStream = testStream
             };
-            
+
             try
             {
                 // Test save
                 var filePath = await storageService.SaveFileAsync(fileRequest);
-                
+
                 // Test exists
                 var exists = await storageService.FileExistsAsync(filePath);
-                
+
                 // Test get
                 using var retrievedStream = await storageService.GetFileAsync(filePath);
                 using var reader = new StreamReader(retrievedStream);
                 var retrievedContent = await reader.ReadToEndAsync(cancellationToken);
-                
+
                 // Test delete
                 await storageService.DeleteFileAsync(filePath);
-                
+
                 var result = new StorageTestResultDto
                 {
                     StorageType = storageType,
@@ -97,13 +98,14 @@ public class DiagnosticsController : ControllerBase
                     ContentMatch = retrievedContent == testContent,
                     Message = "Storage service is working correctly"
                 };
-                
-                _loggingService.LogUserAction("Storage test completed successfully", new { 
+
+                _loggingService.LogUserAction("Storage test completed successfully", new
+                {
                     StorageType = storageType,
                     FilePath = filePath,
                     ContentMatch = result.ContentMatch
                 });
-                
+
                 return Ok(result);
             }
             catch (Exception ex)
@@ -115,9 +117,9 @@ public class DiagnosticsController : ControllerBase
                     Error = ex.Message,
                     Message = "Storage service test failed"
                 };
-                
+
                 _loggingService.LogException(ex, "Storage test failed");
-                
+
                 return Ok(result);
             }
         }
@@ -127,4 +129,4 @@ public class DiagnosticsController : ControllerBase
             return StatusCode(500, "Error testing storage");
         }
     }
-} 
+}

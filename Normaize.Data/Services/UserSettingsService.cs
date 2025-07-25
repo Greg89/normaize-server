@@ -39,7 +39,7 @@ public class UserSettingsService : IUserSettingsService
         try
         {
             var existingSettings = await _repository.GetByUserIdAsync(userId);
-            
+
             if (existingSettings == null)
             {
                 // Create new settings
@@ -47,7 +47,7 @@ public class UserSettingsService : IUserSettingsService
                 {
                     UserId = userId
                 };
-                
+
                 ApplyUpdates(newSettings, updateDto);
                 var created = await _repository.CreateAsync(newSettings);
                 return MapToDto(created);
@@ -100,10 +100,10 @@ public class UserSettingsService : IUserSettingsService
                 UserId = userId
                 // All other properties will use their default values
             };
-            
+
             var created = await _repository.CreateAsync(settings);
             _loggingService.LogUserAction("User settings initialized", new { UserId = userId });
-            
+
             return MapToDto(created);
         }
         catch (Exception ex)
@@ -159,12 +159,12 @@ public class UserSettingsService : IUserSettingsService
         {
             var updateDto = new UpdateUserSettingsDto();
             var property = typeof(UpdateUserSettingsDto).GetProperty(settingName);
-            
+
             if (property == null)
                 return false;
 
             property.SetValue(updateDto, value);
-            
+
             await SaveUserSettingsAsync(userId, updateDto);
             return true;
         }
@@ -226,4 +226,4 @@ public class UserSettingsService : IUserSettingsService
             UpdatedAt = settings.UpdatedAt
         };
     }
-} 
+}

@@ -25,23 +25,23 @@ public static class ServiceConfiguration
     {
         var correlationId = GenerateCorrelationId();
         var logger = CreateLogger(builder);
-        
+
         try
         {
             logger.LogInformation("Starting service configuration. CorrelationId: {CorrelationId}", correlationId);
-            
+
             // Phase 1: Core Configuration (must succeed)
             ConfigureCoreServices(builder, logger, correlationId);
-            
+
             // Phase 2: Infrastructure Services (with fallbacks)
             ConfigureInfrastructureServices(builder, logger, correlationId);
-            
+
             // Phase 3: Application Services (with resilience)
             ConfigureApplicationServices(builder, logger, correlationId);
-            
+
             // Phase 4: Performance and Monitoring
             ConfigurePerformanceServices(builder, logger, correlationId);
-            
+
             logger.LogInformation("Service configuration completed successfully. CorrelationId: {CorrelationId}", correlationId);
         }
         catch (Exception ex)
@@ -56,7 +56,7 @@ public static class ServiceConfiguration
     private static void ConfigureCoreServices(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogInformation("Configuring core services. CorrelationId: {CorrelationId}", correlationId);
-        
+
         ConfigureConfigurationValidation(builder, logger, correlationId);
         ConfigureControllers(builder, logger, correlationId);
         ConfigureSwagger(builder, logger, correlationId);
@@ -68,7 +68,7 @@ public static class ServiceConfiguration
     private static void ConfigureConfigurationValidation(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring configuration validation. CorrelationId: {CorrelationId}", correlationId);
-        
+
         // Configure and validate service configuration options
         builder.Services.Configure<ServiceConfigurationOptions>(
             builder.Configuration.GetSection(ServiceConfigurationOptions.SectionName));
@@ -87,20 +87,20 @@ public static class ServiceConfiguration
 
         // Register configuration validation service
         builder.Services.AddScoped<IConfigurationValidationService, ConfigurationValidationService>();
-        
+
         // Register IAppConfigurationService early so it's available for other configuration methods
         builder.Services.AddSingleton<IAppConfigurationService, AppConfigurationService>();
-        
+
         // Register storage configuration service
         builder.Services.AddScoped<IStorageConfigurationService, StorageConfigurationService>();
-        
+
         logger.LogDebug("Configuration validation services registered. CorrelationId: {CorrelationId}", correlationId);
     }
 
     private static void ConfigureControllers(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring controllers. CorrelationId: {CorrelationId}", correlationId);
-        
+
         builder.Services.AddControllers()
             .AddJsonOptions(options =>
             {
@@ -112,19 +112,19 @@ public static class ServiceConfiguration
     private static void ConfigureSwagger(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring Swagger. CorrelationId: {CorrelationId}", correlationId);
-        
+
         // Only enable Swagger in development environment
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
-        
+
         if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
         {
             logger.LogInformation("Enabling Swagger for development environment. CorrelationId: {CorrelationId}", correlationId);
-            
+
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new() { Title = "Normaize API", Version = "v1" });
-                
+
                 // Add JWT authentication to Swagger
                 c.AddSecurityDefinition(AppConstants.Auth.BEARER, new Microsoft.OpenApi.Models.OpenApiSecurityScheme
                 {
@@ -134,7 +134,7 @@ public static class ServiceConfiguration
                     Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
                     Scheme = AppConstants.Auth.JWT_SCHEME
                 });
-                
+
                 c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
                 {
                     {
@@ -160,7 +160,7 @@ public static class ServiceConfiguration
     private static void ConfigureHealthChecks(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring health checks. CorrelationId: {CorrelationId}", correlationId);
-        
+
         builder.Services.AddHealthChecks()
             .AddCheck("startup", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Application started successfully"));
     }
@@ -168,7 +168,7 @@ public static class ServiceConfiguration
     private static void ConfigureAuthentication(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring authentication. CorrelationId: {CorrelationId}", correlationId);
-        
+
         var issuer = Environment.GetEnvironmentVariable("AUTH0_ISSUER");
         var audience = Environment.GetEnvironmentVariable("AUTH0_AUDIENCE");
 
@@ -195,10 +195,10 @@ public static class ServiceConfiguration
     private static void ConfigureForwardedHeaders(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring forwarded headers. CorrelationId: {CorrelationId}", correlationId);
-        
+
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
         {
-            options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | 
+            options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
                                        Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
             options.KnownNetworks.Clear();
             options.KnownProxies.Clear();
@@ -212,7 +212,7 @@ public static class ServiceConfiguration
     private static void ConfigureInfrastructureServices(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogInformation("Configuring infrastructure services. CorrelationId: {CorrelationId}", correlationId);
-        
+
         ConfigureDatabase(builder, logger, correlationId);
         ConfigureCors(builder, logger, correlationId);
         ConfigureAutoMapper(builder, logger, correlationId);
@@ -223,33 +223,33 @@ public static class ServiceConfiguration
     private static void ConfigureDatabase(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring database. CorrelationId: {CorrelationId}", correlationId);
-        
+
         // Get environment directly instead of using service provider
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
-        
+
         // Check for database connection directly
         var mysqlHost = Environment.GetEnvironmentVariable("MYSQLHOST");
         var mysqlDatabase = Environment.GetEnvironmentVariable("MYSQLDATABASE");
         var mysqlUser = Environment.GetEnvironmentVariable("MYSQLUSER");
         var mysqlPassword = Environment.GetEnvironmentVariable("MYSQLPASSWORD");
         var mysqlPort = Environment.GetEnvironmentVariable("MYSQLPORT") ?? "3306";
-        
-        var hasDatabaseConnection = !string.IsNullOrEmpty(mysqlHost) && 
-                                   !string.IsNullOrEmpty(mysqlDatabase) && 
-                                   !string.IsNullOrEmpty(mysqlUser) && 
+
+        var hasDatabaseConnection = !string.IsNullOrEmpty(mysqlHost) &&
+                                   !string.IsNullOrEmpty(mysqlDatabase) &&
+                                   !string.IsNullOrEmpty(mysqlUser) &&
                                    !string.IsNullOrEmpty(mysqlPassword);
-        
+
         if (hasDatabaseConnection)
         {
-            logger.LogInformation("Configuring MySQL database connection. Environment: {Environment}, CorrelationId: {CorrelationId}", 
+            logger.LogInformation("Configuring MySQL database connection. Environment: {Environment}, CorrelationId: {CorrelationId}",
                 environment, correlationId);
-            
+
             var connectionString = $"Server={mysqlHost};Database={mysqlDatabase};User={mysqlUser};Password={mysqlPassword};Port={mysqlPort};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
-            
+
             builder.Services.AddDbContext<NormaizeContext>(options =>
             {
                 options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 0)));
-                
+
                 // Configure based on environment
                 if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
                 {
@@ -269,18 +269,18 @@ public static class ServiceConfiguration
     private static void ConfigureCors(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring CORS. CorrelationId: {CorrelationId}", correlationId);
-        
+
         // Get environment directly instead of using service provider
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
-        
+
         builder.Services.AddCors(options =>
         {
             // Use environment-specific CORS configuration
             if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
             {
-                logger.LogInformation("Configuring development CORS for {Environment} environment. CorrelationId: {CorrelationId}", 
+                logger.LogInformation("Configuring development CORS for {Environment} environment. CorrelationId: {CorrelationId}",
                     environment, correlationId);
-                
+
                 // Development policy - localhost only for local development
                 options.AddPolicy("Development", policy =>
                 {
@@ -300,9 +300,9 @@ public static class ServiceConfiguration
             }
             else if (environment.Equals("Beta", StringComparison.OrdinalIgnoreCase))
             {
-                logger.LogInformation("Configuring beta CORS for {Environment} environment. CorrelationId: {CorrelationId}", 
+                logger.LogInformation("Configuring beta CORS for {Environment} environment. CorrelationId: {CorrelationId}",
                     environment, correlationId);
-                
+
                 // Beta policy - allows beta.normaize.com and localhost for testing
                 options.AddPolicy("Beta", policy =>
                 {
@@ -323,9 +323,9 @@ public static class ServiceConfiguration
             }
             else
             {
-                logger.LogInformation("Configuring production CORS for {Environment} environment. CorrelationId: {CorrelationId}", 
+                logger.LogInformation("Configuring production CORS for {Environment} environment. CorrelationId: {CorrelationId}",
                     environment, correlationId);
-                
+
                 // Production policy - strict origin control
                 options.AddPolicy("Production", policy =>
                 {
@@ -345,19 +345,19 @@ public static class ServiceConfiguration
     private static void ConfigureAutoMapper(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring AutoMapper. CorrelationId: {CorrelationId}", correlationId);
-        
+
         builder.Services.AddAutoMapper(typeof(Program), typeof(Core.Mapping.MappingProfile));
     }
 
     private static void ConfigureStorageService(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring storage service. CorrelationId: {CorrelationId}", correlationId);
-        
+
         // Get environment directly instead of using service provider
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
         var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER")?.ToLowerInvariant();
 
-        logger.LogInformation("Configuring storage service. Environment: {Environment}, Provider: {Provider}, CorrelationId: {CorrelationId}", 
+        logger.LogInformation("Configuring storage service. Environment: {Environment}, Provider: {Provider}, CorrelationId: {CorrelationId}",
             environment, storageProvider ?? "default", correlationId);
 
         // Force in-memory storage for Test environment
@@ -378,7 +378,7 @@ public static class ServiceConfiguration
             {
                 var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
                 var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
-                
+
                 if (string.IsNullOrEmpty(awsAccessKey) || string.IsNullOrEmpty(awsSecretKey))
                 {
                     logger.LogWarning("S3 storage provider selected but AWS credentials not found. Falling back to in-memory storage. CorrelationId: {CorrelationId}", correlationId);
@@ -401,7 +401,7 @@ public static class ServiceConfiguration
     private static void ConfigureRepositories(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring repositories. CorrelationId: {CorrelationId}", correlationId);
-        
+
         builder.Services.AddScoped<IDataSetRepository, DataSetRepository>();
         builder.Services.AddScoped<IAnalysisRepository, AnalysisRepository>();
         builder.Services.AddScoped<IDataSetRowRepository, DataSetRowRepository>();
@@ -415,18 +415,18 @@ public static class ServiceConfiguration
     private static void ConfigureApplicationServices(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogInformation("Configuring application services. CorrelationId: {CorrelationId}", correlationId);
-        
+
         // Add memory cache
         builder.Services.AddMemoryCache();
-        
+
         // Configure chaos engineering
         builder.Services.Configure<ChaosEngineeringOptions>(
             builder.Configuration.GetSection(ChaosEngineeringOptions.SectionName));
         builder.Services.AddSingleton<IChaosEngineeringService, ChaosEngineeringService>();
-        
+
         // Register infrastructure services first
         builder.Services.AddScoped<IDataProcessingInfrastructure, DataProcessingInfrastructure>();
-        
+
         builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
         builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();
         builder.Services.AddScoped<IDataVisualizationService, DataVisualizationService>();
@@ -438,7 +438,7 @@ public static class ServiceConfiguration
         builder.Services.AddScoped<IStartupService, StartupService>();
         builder.Services.AddScoped<IUserSettingsService, UserSettingsService>();
         builder.Services.AddHttpContextAccessor();
-        
+
         logger.LogInformation("Application services configured successfully. CorrelationId: {CorrelationId}", correlationId);
     }
 
@@ -449,7 +449,7 @@ public static class ServiceConfiguration
     private static void ConfigurePerformanceServices(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogInformation("Configuring performance and monitoring services. CorrelationId: {CorrelationId}", correlationId);
-        
+
         ConfigureHttpClient(builder, logger, correlationId);
         ConfigureCaching(logger, correlationId);
         ConfigurePerformance(builder, logger, correlationId);
@@ -458,14 +458,14 @@ public static class ServiceConfiguration
     private static void ConfigureHttpClient(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring HTTP client. CorrelationId: {CorrelationId}", correlationId);
-        
+
         builder.Services.AddHttpClient();
     }
 
     private static void ConfigureCaching(ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring caching services. CorrelationId: {CorrelationId}", correlationId);
-        
+
         // Memory cache is already configured in ConfigureApplicationServices
         // To enable Redis, add: Microsoft.Extensions.Caching.StackExchangeRedis package
         var redisConnectionString = Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING");
@@ -482,7 +482,7 @@ public static class ServiceConfiguration
     private static void ConfigurePerformance(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
         logger.LogDebug("Configuring performance optimizations. CorrelationId: {CorrelationId}", correlationId);
-        
+
         // Configure response compression
         builder.Services.AddResponseCompression(options =>
         {
@@ -490,10 +490,10 @@ public static class ServiceConfiguration
             options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
             options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
         });
-        
+
         // Configure response caching
         builder.Services.AddResponseCaching();
-        
+
         logger.LogInformation("Performance optimizations configured successfully. CorrelationId: {CorrelationId}", correlationId);
     }
 
@@ -511,4 +511,4 @@ public static class ServiceConfiguration
     private static string GenerateCorrelationId() => Activity.Current?.Id ?? Guid.NewGuid().ToString();
 
     #endregion
-} 
+}

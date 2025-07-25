@@ -159,4 +159,4 @@ public class IStorageServiceTests
         method.Should().NotBeNull();
         method!.ReturnType.Should().Be<Task<bool>>();
     }
-} 
+}

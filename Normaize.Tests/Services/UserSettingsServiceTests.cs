@@ -29,7 +29,7 @@ public class UserSettingsServiceTests
         // Arrange
         var userId = "auth0|123456789";
         var userSettings = CreateTestUserSettings(userId);
-        
+
         _mockRepository.Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(userSettings);
 
@@ -85,7 +85,7 @@ public class UserSettingsServiceTests
         result.Theme.Should().Be("dark");
         result.Language.Should().Be("es");
         result.EmailNotificationsEnabled.Should().BeFalse();
-        
+
         _mockRepository.Verify(r => r.CreateAsync(It.IsAny<UserSettings>()), Times.Once);
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<UserSettings>()), Times.Never);
     }
@@ -116,7 +116,7 @@ public class UserSettingsServiceTests
         result.Language.Should().Be("en");
         // Other settings should remain unchanged
         result.EmailNotificationsEnabled.Should().BeFalse();
-        
+
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<UserSettings>()), Times.Once);
         _mockRepository.Verify(r => r.CreateAsync(It.IsAny<UserSettings>()), Times.Never);
     }
@@ -127,7 +127,7 @@ public class UserSettingsServiceTests
         // Arrange
         var userId = "auth0|123456789";
         var userSettings = CreateTestUserSettings(userId);
-        
+
         _mockRepository.Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(userSettings);
 
@@ -173,7 +173,7 @@ public class UserSettingsServiceTests
         result.Theme.Should().Be("light"); // Default value
         result.Language.Should().Be("en"); // Default value
         result.EmailNotificationsEnabled.Should().BeTrue(); // Default value
-        
+
         _mockRepository.Verify(r => r.CreateAsync(It.IsAny<UserSettings>()), Times.Once);
         _mockLoggingService.Verify(l => l.LogUserAction("User settings initialized", It.IsAny<object>()), Times.Once);
     }
@@ -216,7 +216,7 @@ public class UserSettingsServiceTests
         // Arrange
         var userId = "auth0|123456789";
         var userSettings = CreateTestUserSettings(userId);
-        
+
         _mockRepository.Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(userSettings);
 
@@ -233,7 +233,7 @@ public class UserSettingsServiceTests
         // Arrange
         var userId = "auth0|123456789";
         var userSettings = CreateTestUserSettings(userId);
-        
+
         _mockRepository.Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(userSettings);
 
@@ -265,7 +265,7 @@ public class UserSettingsServiceTests
         // Arrange
         var userId = "auth0|123456789";
         var userSettings = CreateTestUserSettings(userId);
-        
+
         _mockRepository.Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(userSettings);
         _mockRepository.Setup(r => r.UpdateAsync(It.IsAny<UserSettings>()))
@@ -285,7 +285,7 @@ public class UserSettingsServiceTests
         // Arrange
         var userId = "auth0|123456789";
         var userSettings = CreateTestUserSettings(userId);
-        
+
         _mockRepository.Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(userSettings);
 
@@ -304,14 +304,14 @@ public class UserSettingsServiceTests
         var userId = "auth0|123456789";
         var updateDto = new UpdateUserSettingsDto { Theme = "dark" };
         var exception = new Exception("Database error");
-        
+
         _mockRepository.Setup(r => r.GetByUserIdAsync(userId))
             .ThrowsAsync(exception);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(() => 
+        await Assert.ThrowsAsync<Exception>(() =>
             _service.SaveUserSettingsAsync(userId, updateDto));
-        
+
         _mockLoggingService.Verify(l => l.LogException(exception, It.IsAny<string>()), Times.Once);
     }
 
@@ -347,4 +347,4 @@ public class UserSettingsServiceTests
             UpdatedAt = DateTime.UtcNow
         };
     }
-} 
+}

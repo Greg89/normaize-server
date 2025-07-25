@@ -363,4 +363,4 @@ public static class S3StorageServiceTestsHelper
         if (string.IsNullOrWhiteSpace(filePath))
             throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
     }
-} 
+}

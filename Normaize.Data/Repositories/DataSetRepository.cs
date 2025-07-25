@@ -44,7 +44,7 @@ public class DataSetRepository : IDataSetRepository
     {
         dataSet.LastModifiedAt = DateTime.UtcNow;
         dataSet.LastModifiedBy = dataSet.UserId;
-        
+
         _context.DataSets.Add(dataSet);
         await _context.SaveChangesAsync();
         return dataSet;
@@ -62,7 +62,7 @@ public class DataSetRepository : IDataSetRepository
         dataSet.DeletedBy = dataSet.UserId; // This will be updated by the service layer
         dataSet.LastModifiedAt = DateTime.UtcNow;
         dataSet.LastModifiedBy = dataSet.DeletedBy;
-        
+
         await _context.SaveChangesAsync();
         return true;
     }
@@ -90,7 +90,7 @@ public class DataSetRepository : IDataSetRepository
         dataSet.DeletedBy = null;
         dataSet.LastModifiedAt = DateTime.UtcNow;
         dataSet.LastModifiedBy = dataSet.UserId; // This will be updated by the service layer
-        
+
         await _context.SaveChangesAsync();
         return true;
     }
@@ -99,7 +99,7 @@ public class DataSetRepository : IDataSetRepository
     {
         dataSet.LastModifiedAt = DateTime.UtcNow;
         dataSet.LastModifiedBy = dataSet.UserId;
-        
+
         _context.DataSets.Update(dataSet);
         await _context.SaveChangesAsync();
         return dataSet;
@@ -121,12 +121,12 @@ public class DataSetRepository : IDataSetRepository
     public async Task<IEnumerable<DataSet>> GetByUserIdAsync(string userId, bool includeDeleted = false)
     {
         var query = _context.DataSets.Where(d => d.UserId == userId);
-        
+
         if (!includeDeleted)
         {
             query = query.Where(d => !d.IsDeleted);
         }
-        
+
         return await query
             .OrderByDescending(d => d.UploadedAt)
             .ToListAsync();
@@ -136,7 +136,7 @@ public class DataSetRepository : IDataSetRepository
     {
         return await _context.DataSets
             .Where(d => d.UserId == userId && !d.IsDeleted)
-            .Where(d => d.Name.Contains(searchTerm) || 
+            .Where(d => d.Name.Contains(searchTerm) ||
                        (d.Description != null && d.Description.Contains(searchTerm)) ||
                        d.FileName.Contains(searchTerm))
             .OrderByDescending(d => d.UploadedAt)
@@ -154,7 +154,7 @@ public class DataSetRepository : IDataSetRepository
     public async Task<IEnumerable<DataSet>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, string userId)
     {
         return await _context.DataSets
-            .Where(d => d.UserId == userId && !d.IsDeleted && 
+            .Where(d => d.UserId == userId && !d.IsDeleted &&
                        d.UploadedAt >= startDate && d.UploadedAt <= endDate)
             .OrderByDescending(d => d.UploadedAt)
             .ToListAsync();
@@ -326,4 +326,4 @@ public class DataSetRepository : IDataSetRepository
         await _context.SaveChangesAsync();
         return oldSoftDeleted.Count;
     }
-} 
+}

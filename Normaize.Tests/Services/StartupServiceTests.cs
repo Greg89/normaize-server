@@ -25,10 +25,10 @@ public class StartupServiceTests
         _mockMigrationService = new Mock<IMigrationService>();
         _mockAppConfigService = new Mock<IAppConfigurationService>();
         _startupConfig = CreateValidStartupConfiguration();
-        
+
         var mockOptions = new Mock<IOptions<StartupConfigurationOptions>>();
         mockOptions.Setup(x => x.Value).Returns(_startupConfig);
-        
+
         _service = new StartupService(
             _mockLogger.Object,
             _mockHealthCheckService.Object,
@@ -62,7 +62,7 @@ public class StartupServiceTests
                 MigrationTimeoutSeconds = -1 // Invalid negative timeout
             }
         };
-        
+
         var mockOptions = new Mock<IOptions<StartupConfigurationOptions>>();
         mockOptions.Setup(x => x.Value).Returns(invalidConfig);
 
@@ -73,7 +73,7 @@ public class StartupServiceTests
             _mockMigrationService.Object,
             mockOptions.Object,
             _mockAppConfigService.Object);
-        
+
         // The configuration validation might not throw for negative timeout, so we'll just verify it creates the service
         action.Should().NotThrow();
     }
@@ -310,7 +310,7 @@ public class StartupServiceTests
         // Arrange
         SetupForStartupChecks();
         _startupConfig.HealthCheck.RunHealthChecksInParallel = true;
-        
+
         _mockMigrationService.Setup(x => x.ApplyMigrations())
             .ReturnsAsync(new MigrationResult { Success = true });
         _mockHealthCheckService.Setup(x => x.CheckReadinessAsync(It.IsAny<CancellationToken>()))
@@ -330,7 +330,7 @@ public class StartupServiceTests
         // Arrange
         SetupForStartupChecks();
         _startupConfig.HealthCheck.RunHealthChecksInParallel = false;
-        
+
         _mockMigrationService.Setup(x => x.ApplyMigrations())
             .ReturnsAsync(new MigrationResult { Success = true });
         _mockHealthCheckService.Setup(x => x.CheckReadinessAsync(It.IsAny<CancellationToken>()))
@@ -358,7 +358,7 @@ public class StartupServiceTests
             _mockMigrationService.Object,
             mockOptions.Object,
             _mockAppConfigService.Object);
-        
+
         action.Should().Throw<ArgumentNullException>()
             .WithParameterName("logger");
     }
@@ -377,7 +377,7 @@ public class StartupServiceTests
             _mockMigrationService.Object,
             mockOptions.Object,
             _mockAppConfigService.Object);
-        
+
         action.Should().Throw<ArgumentNullException>()
             .WithParameterName("healthCheckService");
     }
@@ -396,7 +396,7 @@ public class StartupServiceTests
             null!,
             mockOptions.Object,
             _mockAppConfigService.Object);
-        
+
         action.Should().Throw<ArgumentNullException>()
             .WithParameterName("migrationService");
     }
@@ -411,7 +411,7 @@ public class StartupServiceTests
             _mockMigrationService.Object,
             null!,
             _mockAppConfigService.Object);
-        
+
         action.Should().Throw<ArgumentNullException>()
             .WithParameterName("startupConfig");
     }
@@ -430,7 +430,7 @@ public class StartupServiceTests
             _mockMigrationService.Object,
             mockOptions.Object,
             null!);
-        
+
         action.Should().Throw<ArgumentNullException>()
             .WithParameterName("appConfigService");
     }
@@ -479,4 +479,4 @@ public class StartupServiceTests
             }
         };
     }
-} 
+}

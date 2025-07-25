@@ -19,7 +19,7 @@ public class UserSettingsRepositoryTests : IDisposable
         _options = new DbContextOptionsBuilder<NormaizeContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
-        
+
         _context = new NormaizeContext(_options);
         _repository = new UserSettingsRepository(_context);
     }
@@ -64,7 +64,7 @@ public class UserSettingsRepositoryTests : IDisposable
         var userSettings = CreateTestUserSettings(userId);
         userSettings.IsDeleted = true;
         userSettings.DeletedAt = DateTime.UtcNow;
-        
+
         await _context.UserSettings.AddAsync(userSettings);
         await _context.SaveChangesAsync();
 
@@ -171,7 +171,7 @@ public class UserSettingsRepositoryTests : IDisposable
         var userSettings = CreateTestUserSettings(userId);
         userSettings.IsDeleted = true;
         userSettings.DeletedAt = DateTime.UtcNow;
-        
+
         await _context.UserSettings.AddAsync(userSettings);
         await _context.SaveChangesAsync();
 
@@ -219,7 +219,7 @@ public class UserSettingsRepositoryTests : IDisposable
         var userSettings = CreateTestUserSettings(userId);
         userSettings.IsDeleted = true;
         userSettings.DeletedAt = DateTime.UtcNow;
-        
+
         await _context.UserSettings.AddAsync(userSettings);
         await _context.SaveChangesAsync();
 
@@ -327,4 +327,4 @@ public class UserSettingsRepositoryTests : IDisposable
     {
         _context?.Dispose();
     }
-} 
+}

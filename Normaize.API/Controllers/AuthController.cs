@@ -30,8 +30,8 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var auth0Domain = Environment.GetEnvironmentVariable("AUTH0_DOMAIN") ?? 
-                             Environment.GetEnvironmentVariable("AUTH0_ISSUER")?.Replace("https://", "").Replace("/", "") ?? 
+            var auth0Domain = Environment.GetEnvironmentVariable("AUTH0_DOMAIN") ??
+                             Environment.GetEnvironmentVariable("AUTH0_ISSUER")?.Replace("https://", "").Replace("/", "") ??
                              "dev-0kihwasowi558bwz.us.auth0.com";
             var clientId = Environment.GetEnvironmentVariable("SWAGGER_AUTH0_CLIENT_ID") ?? "zGQjzMlakCdootkguZtLs4MKCRkL9yPC";
             var clientSecret = Environment.GetEnvironmentVariable("SWAGGER_AUTH0_CLIENT_SECRET") ?? "SjcKzfbVcL_sUlvHhnUFlOkV_pHJGGtNa8pagL7kvEzhfcuJTSFexBiJtBjAs0ph";
@@ -52,14 +52,14 @@ public class AuthController : ControllerBase
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync($"https://{auth0Domain}/oauth/token", content);
-            
+
             var responseContent = await response.Content.ReadAsStringAsync();
             _logger.LogInformation("Auth0 login response status: {StatusCode}", response.StatusCode);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Auth0 client credentials failed: {StatusCode}, {Error}", response.StatusCode, responseContent);
-                
+
                 // Fallback: Try password grant if client credentials fails
                 _logger.LogInformation("Trying password grant as fallback...");
                 var passwordRequest = new
@@ -78,13 +78,13 @@ public class AuthController : ControllerBase
 
                 var passwordResponse = await _httpClient.PostAsync($"https://{auth0Domain}/oauth/token", passwordContent);
                 var passwordResponseContent = await passwordResponse.Content.ReadAsStringAsync();
-                
+
                 if (!passwordResponse.IsSuccessStatusCode)
                 {
                     _logger.LogWarning("Auth0 password grant also failed: {StatusCode}, {Error}", passwordResponse.StatusCode, passwordResponseContent);
                     return BadRequest(new { message = "Login failed", error = passwordResponseContent });
                 }
-                
+
                 responseContent = passwordResponseContent;
             }
 
@@ -122,7 +122,7 @@ public class AuthController : ControllerBase
         var userId = User.GetUserIdWithFallback();
         var grantType = User.GetGrantType();
         var isClientCredentials = User.IsClientCredentialsToken();
-        
+
         return Ok(new
         {
             message = "Authentication successful",
@@ -145,10 +145,10 @@ public class Auth0TokenResponse
 {
     [System.Text.Json.Serialization.JsonPropertyName("access_token")]
     public string AccessToken { get; set; } = string.Empty;
-    
+
     [System.Text.Json.Serialization.JsonPropertyName("expires_in")]
     public int ExpiresIn { get; set; }
-    
+
     [System.Text.Json.Serialization.JsonPropertyName("token_type")]
     public string TokenType { get; set; } = string.Empty;
 }
@@ -158,4 +158,4 @@ public class TokenResponse
     public string Token { get; set; } = string.Empty;
     public int ExpiresIn { get; set; }
     public string TokenType { get; set; } = string.Empty;
-} 
+}

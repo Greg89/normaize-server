@@ -34,7 +34,7 @@ public class DataVisualizationService : IDataVisualizationService
         _options = options.Value;
         _infrastructure = infrastructure;
         _random = new Random();
-        
+
         _infrastructure.Logger.LogInformation("DataVisualizationService initialized with configuration: CacheExpiration={CacheExpiration}, MaxDataPoints={MaxDataPoints}, ChaosProcessingDelayProbability={ChaosProcessingDelayProbability}",
             _options.CacheExpiration, _options.MaxDataPoints, _options.ChaosProcessingDelayProbability);
     }
@@ -69,7 +69,7 @@ public class DataVisualizationService : IDataVisualizationService
                     GetCorrelationId(),
                     $"{context.OperationName}_Internal");
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.CHART_GENERATION_COMPLETED);
-                
+
                 return result;
             });
     }
@@ -105,7 +105,7 @@ public class DataVisualizationService : IDataVisualizationService
                     GetCorrelationId(),
                     $"{context.OperationName}_Internal");
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.COMPARISON_CHART_GENERATION_COMPLETED);
-                
+
                 return result;
             });
     }
@@ -138,7 +138,7 @@ public class DataVisualizationService : IDataVisualizationService
                     GetCorrelationId(),
                     $"{context.OperationName}_Internal");
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.DATA_SUMMARY_GENERATION_COMPLETED);
-                
+
                 return result;
             });
     }
@@ -178,7 +178,7 @@ public class DataVisualizationService : IDataVisualizationService
                     GetCorrelationId(),
                     $"{context.OperationName}_Internal");
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.STATISTICAL_SUMMARY_GENERATION_COMPLETED);
-                
+
                 return result;
             });
     }
@@ -217,7 +217,7 @@ public class DataVisualizationService : IDataVisualizationService
         catch (Exception ex)
         {
             _infrastructure.StructuredLogging.LogSummary(context, false, ex.Message);
-            
+
             // Create detailed error message based on operation type and metadata
             var errorMessage = CreateDetailedErrorMessage(operationName, additionalMetadata);
             throw new InvalidOperationException(errorMessage, ex);
@@ -280,10 +280,10 @@ public class DataVisualizationService : IDataVisualizationService
     {
         if (dataSetId <= 0)
             throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId));
-        
+
         if (string.IsNullOrWhiteSpace(userId))
             throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
-        
+
         ValidateChartConfigurationInternal(chartType, configuration);
     }
 
@@ -291,16 +291,16 @@ public class DataVisualizationService : IDataVisualizationService
     {
         if (dataSetId1 <= 0)
             throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId1));
-        
+
         if (dataSetId2 <= 0)
             throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId2));
-        
+
         if (dataSetId1 == dataSetId2)
             throw new ArgumentException("Dataset IDs must be different for comparison", nameof(dataSetId2));
-        
+
         if (string.IsNullOrWhiteSpace(userId))
             throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
-        
+
         ValidateChartConfigurationInternal(chartType, configuration);
     }
 
@@ -308,7 +308,7 @@ public class DataVisualizationService : IDataVisualizationService
     {
         if (dataSetId <= 0)
             throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId));
-        
+
         if (string.IsNullOrWhiteSpace(userId))
             throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
     }
@@ -335,7 +335,7 @@ public class DataVisualizationService : IDataVisualizationService
                     // Log warning but don't throw - this is a validation warning, not an error
                 }
                 break;
-                
+
             case ChartType.Scatter:
             case ChartType.Bubble:
                 if (string.IsNullOrEmpty(configuration.XAxisLabel) || string.IsNullOrEmpty(configuration.YAxisLabel))
@@ -355,7 +355,7 @@ public class DataVisualizationService : IDataVisualizationService
     private async Task<ChartDataDto> GenerateChartInternalAsync(int dataSetId, ChartType chartType, ChartConfigurationDto? configuration, string userId, string correlationId)
     {
         var stopwatch = Stopwatch.StartNew();
-        
+
         // Chaos engineering: Simulate processing delay
         if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
         {
@@ -364,7 +364,7 @@ public class DataVisualizationService : IDataVisualizationService
         }
 
         var cacheKey = GenerateCacheKey($"chart_{dataSetId}_{chartType}", configuration);
-        
+
         if (_cache.TryGetValue(cacheKey, out ChartDataDto? cachedChart))
         {
             _infrastructure.Logger.LogDebug("Retrieved chart from cache. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}",
@@ -377,7 +377,7 @@ public class DataVisualizationService : IDataVisualizationService
 
         var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, correlationId);
         var data = ExtractDataSetData(dataSet, correlationId);
-        
+
         var chartData = GenerateChartData(dataSet, data, chartType, configuration, correlationId);
         chartData.ProcessingTime = stopwatch.Elapsed;
 
@@ -392,7 +392,7 @@ public class DataVisualizationService : IDataVisualizationService
     private async Task<ComparisonChartDto> GenerateComparisonChartInternalAsync(int dataSetId1, int dataSetId2, ChartType chartType, ChartConfigurationDto? configuration, string userId, string correlationId)
     {
         var stopwatch = Stopwatch.StartNew();
-        
+
         // Chaos engineering: Simulate processing delay
         if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
         {
@@ -401,7 +401,7 @@ public class DataVisualizationService : IDataVisualizationService
         }
 
         var cacheKey = GenerateCacheKey($"comparison_{dataSetId1}_{dataSetId2}_{chartType}", configuration);
-        
+
         if (_cache.TryGetValue(cacheKey, out ComparisonChartDto? cachedChart))
         {
             _infrastructure.Logger.LogDebug("Retrieved comparison chart from cache. CorrelationId: {CorrelationId}, DataSetId1: {DataSetId1}, DataSetId2: {DataSetId2}",
@@ -414,7 +414,7 @@ public class DataVisualizationService : IDataVisualizationService
 
         var dataSet1 = await GetAndValidateDataSetAsync(dataSetId1, userId, correlationId);
         var dataSet2 = await GetAndValidateDataSetAsync(dataSetId2, userId, correlationId);
-        
+
         var data1 = ExtractDataSetData(dataSet1, correlationId);
         var data2 = ExtractDataSetData(dataSet2, correlationId);
 
@@ -432,7 +432,7 @@ public class DataVisualizationService : IDataVisualizationService
     private async Task<DataSummaryDto> GetDataSummaryInternalAsync(int dataSetId, string userId, string correlationId)
     {
         var stopwatch = Stopwatch.StartNew();
-        
+
         // Chaos engineering: Simulate processing delay
         if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
         {
@@ -441,7 +441,7 @@ public class DataVisualizationService : IDataVisualizationService
         }
 
         var cacheKey = $"summary_{dataSetId}";
-        
+
         if (_cache.TryGetValue(cacheKey, out DataSummaryDto? cachedSummary))
         {
             _infrastructure.Logger.LogDebug("Retrieved data summary from cache. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
@@ -454,7 +454,7 @@ public class DataVisualizationService : IDataVisualizationService
 
         var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, correlationId);
         var data = ExtractDataSetData(dataSet, correlationId);
-        
+
         var summary = GenerateDataSummary(dataSet, data);
         summary.ProcessingTime = stopwatch.Elapsed;
 
@@ -469,7 +469,7 @@ public class DataVisualizationService : IDataVisualizationService
     private async Task<StatisticalSummaryDto> GetStatisticalSummaryInternalAsync(int dataSetId, string userId, string correlationId)
     {
         var stopwatch = Stopwatch.StartNew();
-        
+
         // Chaos engineering: Simulate processing delay
         if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
         {
@@ -478,7 +478,7 @@ public class DataVisualizationService : IDataVisualizationService
         }
 
         var cacheKey = $"stats_{dataSetId}";
-        
+
         if (_cache.TryGetValue(cacheKey, out StatisticalSummaryDto? cachedStats))
         {
             _infrastructure.Logger.LogDebug("Retrieved statistical summary from cache. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
@@ -491,7 +491,7 @@ public class DataVisualizationService : IDataVisualizationService
 
         var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, correlationId);
         var data = ExtractDataSetData(dataSet, correlationId);
-        
+
         var stats = GenerateStatisticalSummary(dataSet, data);
         stats.ProcessingTime = stopwatch.Elapsed;
 
@@ -510,14 +510,14 @@ public class DataVisualizationService : IDataVisualizationService
     private async Task<T> ExecuteWithTimeoutAsync<T>(Func<Task<T>> operation, TimeSpan timeout, string correlationId, string operationName)
     {
         using var cts = new CancellationTokenSource(timeout);
-        
+
         try
         {
             return await operation().WaitAsync(cts.Token);
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _infrastructure.Logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
+            _infrastructure.Logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}",
                 operationName, timeout, correlationId);
             throw new TimeoutException($"Operation {operationName} timed out after {timeout}");
         }
@@ -526,7 +526,7 @@ public class DataVisualizationService : IDataVisualizationService
     private async Task<DataSet> GetAndValidateDataSetAsync(int dataSetId, string userId, string correlationId)
     {
         var dataSet = await _dataSetRepository.GetByIdAsync(dataSetId);
-        
+
         if (dataSet == null)
         {
             _infrastructure.Logger.LogWarning("Dataset not found. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
@@ -563,7 +563,7 @@ public class DataVisualizationService : IDataVisualizationService
             }
 
             var data = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(dataSet.ProcessedData);
-            
+
             if (data == null)
             {
                 _infrastructure.Logger.LogWarning("Failed to deserialize dataset JSON data. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
@@ -587,7 +587,7 @@ public class DataVisualizationService : IDataVisualizationService
     private static double ExtractDouble(object? value, double fallback = 0)
     {
         if (value == null) return fallback;
-        
+
         return value switch
         {
             double d => d,
@@ -603,7 +603,7 @@ public class DataVisualizationService : IDataVisualizationService
     private static string GenerateCacheKey(string baseKey, ChartConfigurationDto? configuration)
     {
         if (configuration == null) return baseKey;
-        
+
         var configHash = JsonSerializer.Serialize(configuration);
         var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(configHash));
         return $"{baseKey}_{Convert.ToBase64String(hash)[..8]}";
@@ -642,17 +642,17 @@ public class DataVisualizationService : IDataVisualizationService
             case ChartType.Area:
                 GenerateBarLineAreaChart(limitedData, labels, series, correlationId);
                 break;
-                
+
             case ChartType.Pie:
             case ChartType.Donut:
                 GeneratePieDonutChart(limitedData, labels, series, correlationId);
                 break;
-                
+
             case ChartType.Scatter:
             case ChartType.Bubble:
                 GenerateScatterBubbleChart(limitedData, labels, series, correlationId);
                 break;
-                
+
             default:
                 _infrastructure.Logger.LogWarning("Unsupported chart type. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}",
                     correlationId, dataSet.Id, chartType);
@@ -679,7 +679,7 @@ public class DataVisualizationService : IDataVisualizationService
         if (numericColumns.Count == 0)
         {
             _infrastructure.Logger.LogWarning("No numeric columns found for chart. Using fallback data. CorrelationId: {CorrelationId}", correlationId);
-            
+
             // Fallback: use row indices as labels and data
             labels.AddRange(data.Select((_, index) => $"Row {index + 1}"));
             series.Add(new ChartSeriesDto
@@ -715,7 +715,7 @@ public class DataVisualizationService : IDataVisualizationService
         if (numericColumns.Count == 0)
         {
             _infrastructure.Logger.LogWarning("No numeric columns found for pie/donut chart. Using fallback data. CorrelationId: {CorrelationId}", correlationId);
-            
+
             // Fallback: use row indices as labels and data
             labels.AddRange(data.Select((_, index) => $"Row {index + 1}"));
             series.Add(new ChartSeriesDto
@@ -749,7 +749,7 @@ public class DataVisualizationService : IDataVisualizationService
         if (numericColumns.Count < 2)
         {
             _infrastructure.Logger.LogWarning("Insufficient numeric columns for scatter/bubble chart. Using fallback data. CorrelationId: {CorrelationId}", correlationId);
-            
+
             // Fallback: use row indices as labels and data
             labels.AddRange(data.Select((_, index) => $"Row {index + 1}"));
             series.Add(new ChartSeriesDto
@@ -803,16 +803,16 @@ public class DataVisualizationService : IDataVisualizationService
     {
         if (data.Count == 0)
         {
-                    return new DataSummaryDto
-        {
-            DataSetId = dataSet.Id,
-            TotalRows = 0,
-            TotalColumns = 0,
-            MissingValues = 0,
-            DuplicateRows = 0,
-            ColumnSummaries = [],
-            ProcessingTime = TimeSpan.Zero
-        };
+            return new DataSummaryDto
+            {
+                DataSetId = dataSet.Id,
+                TotalRows = 0,
+                TotalColumns = 0,
+                MissingValues = 0,
+                DuplicateRows = 0,
+                ColumnSummaries = [],
+                ProcessingTime = TimeSpan.Zero
+            };
         }
 
         var columns = data[0].Keys.ToList();
@@ -855,12 +855,12 @@ public class DataVisualizationService : IDataVisualizationService
     {
         if (data.Count == 0)
         {
-                    return new StatisticalSummaryDto
-        {
-            DataSetId = dataSet.Id,
-            ColumnStatistics = [],
-            ProcessingTime = TimeSpan.Zero
-        };
+            return new StatisticalSummaryDto
+            {
+                DataSetId = dataSet.Id,
+                ColumnStatistics = [],
+                ProcessingTime = TimeSpan.Zero
+            };
         }
 
         var columns = data[0].Keys.ToList();
@@ -869,11 +869,11 @@ public class DataVisualizationService : IDataVisualizationService
         foreach (var column in columns)
         {
             var columnData = data.Select(row => row.GetValueOrDefault(column)).ToList();
-            
+
             if (IsNumericColumn(columnData))
             {
                 var numericData = columnData.Select(v => ExtractDouble(v)).Where(v => !double.IsNaN(v)).ToList();
-                
+
                 if (numericData.Count > 0)
                 {
                     columnStatistics[column] = new ColumnStatisticsDto
@@ -936,19 +936,19 @@ public class DataVisualizationService : IDataVisualizationService
     private static double CalculateMedian(List<double> data)
     {
         if (data.Count == 0) return 0;
-        
+
         var sorted = data.OrderBy(x => x).ToList();
         var mid = sorted.Count / 2;
-        
-        return sorted.Count % 2 == 0 
-            ? (sorted[mid - 1] + sorted[mid]) / 2 
+
+        return sorted.Count % 2 == 0
+            ? (sorted[mid - 1] + sorted[mid]) / 2
             : sorted[mid];
     }
 
     private static double CalculateStandardDeviation(List<double> data)
     {
         if (data.Count <= 1) return 0;
-        
+
         var mean = data.Average();
         var variance = data.Select(x => Math.Pow(x - mean, 2)).Average();
         return Math.Sqrt(variance);
@@ -957,23 +957,23 @@ public class DataVisualizationService : IDataVisualizationService
     private static double CalculateQuartile(List<double> data, double percentile)
     {
         if (data.Count == 0) return 0;
-        
+
         var sorted = data.OrderBy(x => x).ToList();
         var index = (percentile * (sorted.Count - 1));
         var lower = sorted[(int)Math.Floor(index)];
         var upper = sorted[(int)Math.Ceiling(index)];
-        
+
         return lower + (upper - lower) * (index - Math.Floor(index));
     }
 
     private static double CalculateSkewness(List<double> data)
     {
         if (data.Count <= 2) return 0;
-        
+
         var mean = data.Average();
         var stdDev = CalculateStandardDeviation(data);
         if (Math.Abs(stdDev) < double.Epsilon) return 0;
-        
+
         var skewness = data.Select(x => Math.Pow((x - mean) / stdDev, 3)).Average();
         return skewness * Math.Sqrt(data.Count * (data.Count - 1)) / (data.Count - 2);
     }
@@ -981,11 +981,11 @@ public class DataVisualizationService : IDataVisualizationService
     private static double CalculateKurtosis(List<double> data)
     {
         if (data.Count <= 3) return 0;
-        
+
         var mean = data.Average();
         var stdDev = CalculateStandardDeviation(data);
         if (Math.Abs(stdDev) < double.Epsilon) return 0;
-        
+
         var kurtosis = data.Select(x => Math.Pow((x - mean) / stdDev, 4)).Average();
         return (kurtosis - 3) * Math.Sqrt(data.Count * (data.Count - 1)) / ((data.Count - 2) * (data.Count - 3));
     }
@@ -1002,4 +1002,4 @@ public class DataVisualizationOptions
     public TimeSpan SummaryGenerationTimeout { get; set; } = TimeSpan.FromMinutes(1);
     public TimeSpan StatisticalSummaryTimeout { get; set; } = TimeSpan.FromMinutes(2);
     public double ChaosProcessingDelayProbability { get; set; } = 0.001; // 0.1%
-} 
+}

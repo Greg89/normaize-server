@@ -14,8 +14,8 @@ public class AuditController(IAuditService auditService, IStructuredLoggingServi
 
     [HttpGet("datasets/{dataSetId}")]
     public async Task<ActionResult<IEnumerable<DataSetAuditLog>>> GetDataSetAuditLogs(
-        int dataSetId, 
-        [FromQuery] int skip = 0, 
+        int dataSetId,
+        [FromQuery] int skip = 0,
         [FromQuery] int take = 50)
     {
         try
@@ -36,7 +36,7 @@ public class AuditController(IAuditService auditService, IStructuredLoggingServi
 
     [HttpGet("user")]
     public async Task<ActionResult<IEnumerable<DataSetAuditLog>>> GetUserAuditLogs(
-        [FromQuery] int skip = 0, 
+        [FromQuery] int skip = 0,
         [FromQuery] int take = 50)
     {
         try
@@ -59,7 +59,7 @@ public class AuditController(IAuditService auditService, IStructuredLoggingServi
     [HttpGet("actions/{action}")]
     public async Task<ActionResult<IEnumerable<DataSetAuditLog>>> GetAuditLogsByAction(
         string action,
-        [FromQuery] int skip = 0, 
+        [FromQuery] int skip = 0,
         [FromQuery] int take = 50)
     {
         try
@@ -78,4 +78,4 @@ public class AuditController(IAuditService auditService, IStructuredLoggingServi
     {
         return User.GetUserId();
     }
-} 
+}

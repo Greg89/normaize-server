@@ -75,7 +75,7 @@ public class DataSetsControllerTests
         result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
         statusResult.StatusCode.Should().Be(500);
-        
+
         _mockLoggingService.Verify(
             x => x.LogException(exception, "GetDataSets"),
             Times.Once);
@@ -86,11 +86,11 @@ public class DataSetsControllerTests
     {
         // Arrange
         var datasetId = 1;
-        var expectedDataSet = new DataSetDto 
-        { 
-            Id = datasetId, 
-            Name = "Test Dataset", 
-            Description = "Test Description" 
+        var expectedDataSet = new DataSetDto
+        {
+            Id = datasetId,
+            Name = "Test Dataset",
+            Description = "Test Description"
         };
 
         _mockDataProcessingService
@@ -141,7 +141,7 @@ public class DataSetsControllerTests
         result.Should().BeOfType<ActionResult<DataSetDto>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
         statusResult.StatusCode.Should().Be(500);
-        
+
         _mockLoggingService.Verify(
             x => x.LogException(exception, $"GetDataSet({datasetId})"),
             Times.Once);
@@ -196,7 +196,7 @@ public class DataSetsControllerTests
         result.Should().BeOfType<ObjectResult>();
         var statusResult = result.Should().BeOfType<ObjectResult>().Subject!;
         statusResult.StatusCode.Should().Be(500);
-        
+
         _mockLoggingService.Verify(
             x => x.LogException(exception, $"DeleteDataSet({datasetId})"),
             Times.Once);
@@ -463,7 +463,7 @@ public class DataSetsControllerTests
         result.Should().BeOfType<ActionResult<DataSetUploadResponse>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
         statusResult.StatusCode.Should().Be(500);
-        
+
         _mockLoggingService.Verify(
             x => x.LogException(exception, "UploadDataSet"),
             Times.Once);
@@ -510,7 +510,7 @@ public class DataSetsControllerTests
         result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
         statusResult.StatusCode.Should().Be(500);
-        
+
         _mockLoggingService.Verify(
             x => x.LogException(exception, "GetDeletedDataSets"),
             Times.Once);
@@ -559,7 +559,7 @@ public class DataSetsControllerTests
         result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
         statusResult.StatusCode.Should().Be(500);
-        
+
         _mockLoggingService.Verify(
             x => x.LogException(exception, $"SearchDataSets({searchQuery})"),
             Times.Once);
@@ -608,7 +608,7 @@ public class DataSetsControllerTests
         result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
         statusResult.StatusCode.Should().Be(500);
-        
+
         _mockLoggingService.Verify(
             x => x.LogException(exception, $"GetDataSetsByFileType({fileType})"),
             Times.Once);
@@ -659,7 +659,7 @@ public class DataSetsControllerTests
         result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
         statusResult.StatusCode.Should().Be(500);
-        
+
         _mockLoggingService.Verify(
             x => x.LogException(exception, $"GetDataSetsByDateRange({startDate}, {endDate})"),
             Times.Once);
@@ -710,7 +710,7 @@ public class DataSetsControllerTests
         result.Should().BeOfType<ActionResult<DataSetStatisticsDto>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
         statusResult.StatusCode.Should().Be(500);
-        
+
         _mockLoggingService.Verify(
             x => x.LogException(exception, "GetDataSetStatistics"),
             Times.Once);
@@ -726,4 +726,4 @@ public class DataSetsControllerTests
             ContentType = contentType
         };
     }
-} 
+}

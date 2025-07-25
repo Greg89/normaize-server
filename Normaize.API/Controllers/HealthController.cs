@@ -21,7 +21,7 @@ public class HealthController : ControllerBase
     public IActionResult Get()
     {
         _loggingService.LogUserAction("Health check requested", null);
-        
+
         return Ok(new HealthResponseDto
         {
             Status = "healthy",
@@ -31,4 +31,4 @@ public class HealthController : ControllerBase
             Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown"
         });
     }
-} 
+}

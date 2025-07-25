@@ -23,20 +23,20 @@ public class UserSettingsRepository : IUserSettingsRepository
     {
         settings.CreatedAt = DateTime.UtcNow;
         settings.UpdatedAt = DateTime.UtcNow;
-        
+
         _context.UserSettings.Add(settings);
         await _context.SaveChangesAsync();
-        
+
         return settings;
     }
 
     public async Task<UserSettings> UpdateAsync(UserSettings settings)
     {
         settings.UpdatedAt = DateTime.UtcNow;
-        
+
         _context.UserSettings.Update(settings);
         await _context.SaveChangesAsync();
-        
+
         return settings;
     }
 
@@ -49,7 +49,7 @@ public class UserSettingsRepository : IUserSettingsRepository
         settings.IsDeleted = true;
         settings.DeletedAt = DateTime.UtcNow;
         settings.UpdatedAt = DateTime.UtcNow;
-        
+
         await _context.SaveChangesAsync();
         return true;
     }
@@ -59,4 +59,4 @@ public class UserSettingsRepository : IUserSettingsRepository
         return await _context.UserSettings
             .AnyAsync(s => s.UserId == userId && !s.IsDeleted);
     }
-} 
+}

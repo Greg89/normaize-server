@@ -45,7 +45,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         // Set test mode to prevent ServiceConfiguration.ConfigureServices from being called
         Environment.SetEnvironmentVariable("TEST_MODE", "true");
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Test");
-        
+
         // Ensure environment variables are cleared before host is built
         Environment.SetEnvironmentVariable("MYSQLHOST", null);
         Environment.SetEnvironmentVariable("MYSQLDATABASE", null);
@@ -54,17 +54,17 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("MYSQLPORT", null);
         Environment.SetEnvironmentVariable("STORAGE_PROVIDER", null);
         Environment.SetEnvironmentVariable("SFTP_HOST", null);
-        
+
         // Set test environment
         builder.UseEnvironment("Test");
-        
+
         // Configure services for testing
         builder.ConfigureServices(services =>
         {
             // Add in-memory database
             services.AddDbContext<NormaizeContext>(options =>
                 options.UseInMemoryDatabase("TestDatabase"));
-            
+
             // Add required services for testing
             services.AddScoped<IUserSettingsRepository, UserSettingsRepository>();
             services.AddScoped<IUserSettingsService, UserSettingsService>();
@@ -83,20 +83,20 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IStorageService, InMemoryStorageService>();
             services.AddScoped<IStorageConfigurationService, StorageConfigurationService>();
             services.AddScoped<IConfigurationValidationService, ConfigurationValidationService>();
-            
+
             // Mock the IAppConfigurationService to return test environment
             var mockAppConfig = new Mock<IAppConfigurationService>();
             mockAppConfig.Setup(x => x.GetEnvironment()).Returns("Test");
             mockAppConfig.Setup(x => x.GetDatabaseConfig()).Returns(new DatabaseConfig());
             mockAppConfig.Setup(x => x.HasDatabaseConnection()).Returns(false);
             services.AddSingleton(mockAppConfig.Object);
-            
+
             // Add AutoMapper
             services.AddAutoMapper(typeof(Core.Mapping.MappingProfile));
-            
+
             // Add HttpContextAccessor
             services.AddHttpContextAccessor();
-            
+
             // Add CORS
             services.AddCors(options =>
             {
@@ -107,21 +107,21 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                           .AllowAnyHeader();
                 });
             });
-            
+
             // Add authentication (simplified for testing)
             services.AddAuthentication("Test")
                 .AddScheme<TestAuthenticationSchemeOptions, TestAuthenticationHandler>("Test", options => { });
-            
+
             services.AddAuthorization();
-            
+
             // Add controllers
             services.AddControllers();
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
-            
+
             // Add health checks
             services.AddHealthChecks();
-            
+
             // Add HttpClientFactory
             services.AddHttpClient();
         });
@@ -152,11 +152,11 @@ public class TestAuthenticationHandler : Microsoft.AspNetCore.Authentication.Aut
             new Claim(ClaimTypes.Name, "Test User"),
             new Claim(ClaimTypes.Email, "test@example.com")
         };
-        
+
         var identity = new ClaimsIdentity(claims, "Test");
         var principal = new ClaimsPrincipal(identity);
         var ticket = new Microsoft.AspNetCore.Authentication.AuthenticationTicket(principal, "Test");
-        
+
         return Task.FromResult(Microsoft.AspNetCore.Authentication.AuthenticateResult.Success(ticket));
     }
-} 
+}

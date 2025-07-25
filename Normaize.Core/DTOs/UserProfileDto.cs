@@ -8,4 +8,4 @@ public class UserProfileDto
     public string? Picture { get; set; }
     public bool EmailVerified { get; set; }
     public UserSettingsDto Settings { get; set; } = new();
-} 
+}

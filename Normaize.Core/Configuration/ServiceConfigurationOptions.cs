@@ -110,27 +110,27 @@ public class StorageConfiguration
     public bool EnableCompression { get; set; } = true;
 
     public string? S3BucketName { get; set; }
-    
+
     public string? S3Bucket { get; set; }
-    
+
     public string? S3AccessKey { get; set; }
-    
+
     public string? S3SecretKey { get; set; }
-    
+
     public string? S3ServiceUrl { get; set; }
-    
+
     public string? S3Region { get; set; }
-    
+
     public string? AzureConnectionString { get; set; }
-    
+
     public string? AzureContainer { get; set; }
-    
+
     public int MaxFileSizeBytes { get; set; } = 100 * 1024 * 1024; // 100MB default
-    
+
     public int RetryAttempts { get; set; } = 3;
-    
+
     public int RetryDelayMs { get; set; } = 1000;
-    
+
     public int TimeoutSeconds { get; set; } = 30;
 }
 
@@ -169,4 +169,4 @@ public class PerformanceConfiguration
 
     [Range(1, 300, ErrorMessage = "Health check timeout must be between 1 and 300 seconds")]
     public int HealthCheckTimeoutSeconds { get; set; } = 30;
-} 
+}

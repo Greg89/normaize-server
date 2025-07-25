@@ -25,4 +25,4 @@ public class FileTypeConverter : ValueConverter<FileType, string>
             _ => Enum.TryParse<FileType>(value, true, out var result) ? result : FileType.Custom
         };
     }
-} 
+}

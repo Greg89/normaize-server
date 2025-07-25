@@ -26,10 +26,10 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
         try
         {
             var userId = GetCurrentUserId();
-                       
+
             IEnumerable<DataSetDto> dataSets;
             dataSets = await _dataProcessingService.GetDataSetsByUserAsync(userId);
-            
+
             return Ok(dataSets?.ToList());
         }
         catch (UnauthorizedAccessException)
@@ -92,7 +92,7 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
             };
 
             var result = await _dataProcessingService.UploadDataSetAsync(fileRequest, createDto);
-            
+
             if (!result.Success)
                 return BadRequest(result.Message);
 
@@ -246,8 +246,8 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
 
     [HttpGet("search")]
     public async Task<ActionResult<IEnumerable<DataSetDto>>> SearchDataSets(
-        [FromQuery] string q, 
-        [FromQuery] int page = 1, 
+        [FromQuery] string q,
+        [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
         try
@@ -295,7 +295,7 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
 
     [HttpGet("date-range")]
     public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDataSetsByDateRange(
-        [FromQuery] DateTime startDate, 
+        [FromQuery] DateTime startDate,
         [FromQuery] DateTime endDate,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
@@ -337,4 +337,4 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
         }
     }
 
-} 
+}

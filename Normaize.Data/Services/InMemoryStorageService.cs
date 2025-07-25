@@ -28,10 +28,10 @@ public class InMemoryStorageService : IStorageService, IDisposable
         _options = options.Value;
         _storageSemaphore = new SemaphoreSlim(_options.MaxConcurrentOperations, _options.MaxConcurrentOperations);
         _chaosRandom = new Random();
-        
+
         // Start cleanup timer for memory management
         _cleanupTimer = new Timer(CleanupExpiredFiles, null, _options.CleanupInterval, _options.CleanupInterval);
-        
+
         _logger.LogInformation("InMemoryStorageService initialized with max file size: {MaxFileSizeMB}MB, Max files: {MaxFiles}, Cleanup interval: {CleanupInterval}",
             _options.MaxFileSizeBytes / (1024 * 1024), _options.MaxFiles, _options.CleanupInterval);
     }
@@ -39,10 +39,10 @@ public class InMemoryStorageService : IStorageService, IDisposable
     public async Task<string> SaveFileAsync(FileUploadRequest fileRequest)
     {
         ThrowIfDisposed();
-        
+
         var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
         var operationName = "SaveFileAsync";
-        
+
         _logger.LogInformation("Starting file save operation. CorrelationId: {CorrelationId}, FileName: {FileName}, FileSize: {FileSize}",
             correlationId, fileRequest?.FileName, fileRequest?.FileSize);
 
@@ -68,10 +68,10 @@ public class InMemoryStorageService : IStorageService, IDisposable
     public async Task<Stream> GetFileAsync(string filePath)
     {
         ThrowIfDisposed();
-        
+
         var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
         var operationName = "GetFileAsync";
-        
+
         _logger.LogInformation("Starting file retrieval operation. CorrelationId: {CorrelationId}, FilePath: {FilePath}",
             correlationId, filePath);
 
@@ -97,10 +97,10 @@ public class InMemoryStorageService : IStorageService, IDisposable
     public async Task DeleteFileAsync(string filePath)
     {
         ThrowIfDisposed();
-        
+
         var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
         var operationName = "DeleteFileAsync";
-        
+
         _logger.LogInformation("Starting file deletion operation. CorrelationId: {CorrelationId}, FilePath: {FilePath}",
             correlationId, filePath);
 
@@ -126,10 +126,10 @@ public class InMemoryStorageService : IStorageService, IDisposable
     public async Task<bool> FileExistsAsync(string filePath)
     {
         ThrowIfDisposed();
-        
+
         var correlationId = Activity.Current?.Id ?? Guid.NewGuid().ToString();
         var operationName = "FileExistsAsync";
-        
+
         _logger.LogDebug("Checking file existence. CorrelationId: {CorrelationId}, FilePath: {FilePath}",
             correlationId, filePath);
 
@@ -155,7 +155,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
     private async Task<string> SaveFileInternalAsync(FileUploadRequest fileRequest, string correlationId)
     {
         await _storageSemaphore.WaitAsync();
-        
+
         try
         {
             // Chaos engineering: Simulate storage full condition
@@ -179,9 +179,9 @@ public class InMemoryStorageService : IStorageService, IDisposable
 
             using var memoryStream = new MemoryStream();
             await fileRequest.FileStream.CopyToAsync(memoryStream);
-            
+
             var fileData = memoryStream.ToArray();
-            
+
             // Validate file size
             if (fileData.Length > _options.MaxFileSizeBytes)
             {
@@ -192,7 +192,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
 
             // Calculate file hash for integrity
             var fileHash = CalculateFileHash(fileData);
-            
+
             var metadata = new FileMetadata
             {
                 Data = fileData,
@@ -204,10 +204,10 @@ public class InMemoryStorageService : IStorageService, IDisposable
             };
 
             _fileStorage[filePath] = metadata;
-            
+
             _logger.LogInformation("File saved successfully. CorrelationId: {CorrelationId}, FilePath: {FilePath}, Size: {FileSize} bytes, Hash: {FileHash}",
                 correlationId, filePath, fileData.Length, fileHash);
-            
+
             return filePath;
         }
         finally
@@ -219,7 +219,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
     private async Task<Stream> GetFileInternalAsync(string filePath, string correlationId)
     {
         await _storageSemaphore.WaitAsync();
-        
+
         try
         {
             // Chaos engineering: Simulate file corruption
@@ -250,10 +250,10 @@ public class InMemoryStorageService : IStorageService, IDisposable
 
             // Return a new MemoryStream with the file data to avoid disposal issues
             var stream = new MemoryStream(metadata.Data, false);
-            
+
             _logger.LogDebug("File retrieved successfully. CorrelationId: {CorrelationId}, FilePath: {FilePath}, Size: {FileSize} bytes",
                 correlationId, filePath, metadata.Data.Length);
-            
+
             return stream;
         }
         finally
@@ -265,7 +265,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
     private async Task DeleteFileInternalAsync(string filePath, string correlationId)
     {
         await _storageSemaphore.WaitAsync();
-        
+
         try
         {
             if (_fileStorage.TryRemove(filePath, out var removedMetadata))
@@ -288,17 +288,17 @@ public class InMemoryStorageService : IStorageService, IDisposable
     private async Task<bool> FileExistsInternalAsync(string filePath)
     {
         await _storageSemaphore.WaitAsync();
-        
+
         try
         {
             var exists = _fileStorage.ContainsKey(filePath);
-            
+
             if (exists && _fileStorage.TryGetValue(filePath, out var metadata))
             {
                 // Update last accessed time for existing files
                 metadata.LastAccessed = DateTime.UtcNow;
             }
-            
+
             return exists;
         }
         finally
@@ -310,14 +310,14 @@ public class InMemoryStorageService : IStorageService, IDisposable
     private async Task<T> ExecuteWithTimeoutAsync<T>(Func<Task<T>> operation, TimeSpan timeout, string correlationId, string operationName)
     {
         using var cts = new CancellationTokenSource(timeout);
-        
+
         try
         {
             return await operation().WaitAsync(cts.Token);
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}",
                 operationName, timeout, correlationId);
             throw new TimeoutException($"Operation {operationName} timed out after {timeout}");
         }
@@ -326,14 +326,14 @@ public class InMemoryStorageService : IStorageService, IDisposable
     private async Task ExecuteWithTimeoutAsync(Func<Task> operation, TimeSpan timeout, string correlationId, string operationName)
     {
         using var cts = new CancellationTokenSource(timeout);
-        
+
         try
         {
             await operation().WaitAsync(cts.Token);
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}",
                 operationName, timeout, correlationId);
             throw new TimeoutException($"Operation {operationName} timed out after {timeout}");
         }
@@ -342,13 +342,13 @@ public class InMemoryStorageService : IStorageService, IDisposable
     private static void ValidateSaveFileInputs(FileUploadRequest? fileRequest)
     {
         ArgumentNullException.ThrowIfNull(fileRequest);
-        
+
         if (string.IsNullOrWhiteSpace(fileRequest.FileName))
             throw new ArgumentException("FileName cannot be null or empty", nameof(fileRequest));
-        
+
         if (fileRequest.FileStream == null)
             throw new ArgumentException("FileStream cannot be null", nameof(fileRequest));
-        
+
         if (!fileRequest.FileStream.CanRead)
             throw new ArgumentException("FileStream must be readable", nameof(fileRequest));
     }
@@ -357,7 +357,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
     {
         if (string.IsNullOrWhiteSpace(filePath))
             throw new ArgumentException("FilePath cannot be null or empty", nameof(filePath));
-        
+
         if (!filePath.StartsWith("memory://", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("FilePath must start with 'memory://'", nameof(filePath));
     }
@@ -387,7 +387,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
     private void CleanupExpiredFiles(object? state)
     {
         var correlationId = Guid.NewGuid().ToString();
-        
+
         _logger.LogDebug("Starting memory cleanup. CorrelationId: {CorrelationId}, Current files: {FileCount}",
             correlationId, _fileStorage.Count);
 
@@ -395,10 +395,10 @@ public class InMemoryStorageService : IStorageService, IDisposable
         {
             var currentTime = DateTime.UtcNow;
             var filesToRemove = new List<string>();
-            
+
             // Remove files that haven't been accessed recently
             var cutoffTime = currentTime.AddMinutes(-_options.FileRetentionMinutes);
-            
+
             foreach (var kvp in _fileStorage)
             {
                 if (kvp.Value.LastAccessed < cutoffTime)
@@ -406,7 +406,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
                     filesToRemove.Add(kvp.Key);
                 }
             }
-            
+
             // If still too many files, remove oldest ones
             if (_fileStorage.Count > _options.MaxFiles)
             {
@@ -416,10 +416,10 @@ public class InMemoryStorageService : IStorageService, IDisposable
                     .Select(kvp => kvp.Key)
                     .Where(key => !filesToRemove.Contains(key))
                     .ToList();
-                
+
                 filesToRemove.AddRange(oldestFiles);
             }
-            
+
             var removedCount = 0;
             foreach (var filePath in filesToRemove)
             {
@@ -430,7 +430,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
                         correlationId, filePath, removedMetadata.Data.Length);
                 }
             }
-            
+
             if (removedCount > 0)
             {
                 _logger.LogInformation("Memory cleanup completed. CorrelationId: {CorrelationId}, Removed: {RemovedCount}, Remaining: {RemainingCount}",
@@ -447,7 +447,7 @@ public class InMemoryStorageService : IStorageService, IDisposable
     public (int FileCount, long TotalSizeBytes) GetStorageStatistics()
     {
         ThrowIfDisposed();
-        
+
         var totalSize = _fileStorage.Values.Sum(metadata => metadata.Data.Length);
         return (_fileStorage.Count, totalSize);
     }
@@ -455,12 +455,12 @@ public class InMemoryStorageService : IStorageService, IDisposable
     public void ClearAllFiles()
     {
         ThrowIfDisposed();
-        
+
         var fileCount = _fileStorage.Count;
         var totalSize = _fileStorage.Values.Sum(metadata => metadata.Data.Length);
-        
+
         _fileStorage.Clear();
-        
+
         _logger.LogInformation("Cleared all files from memory. FileCount: {FileCount}, TotalSize: {TotalSize} bytes",
             fileCount, totalSize);
     }
@@ -474,16 +474,16 @@ public class InMemoryStorageService : IStorageService, IDisposable
     protected virtual void Dispose(bool disposing)
     {
         if (_disposed) return;
-        
+
         if (disposing)
         {
             // Dispose managed resources
             _cleanupTimer?.Dispose();
             _storageSemaphore?.Dispose();
         }
-        
+
         // Dispose unmanaged resources (none in this case)
-        
+
         _disposed = true;
     }
 
@@ -519,4 +519,4 @@ public class InMemoryStorageOptions
     public int FileRetentionMinutes { get; set; } = 60; // 1 hour
     public double ChaosStorageFullProbability { get; set; } = 0.001; // 0.1%
     public double ChaosFileCorruptionProbability { get; set; } = 0.0005; // 0.05%
-} 
+}

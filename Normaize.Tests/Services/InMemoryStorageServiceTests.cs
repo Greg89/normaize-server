@@ -18,10 +18,10 @@ public class InMemoryStorageServiceTests
     {
         _mockLogger = new Mock<ILogger<InMemoryStorageService>>();
         _mockOptions = new Mock<IOptions<InMemoryStorageOptions>>();
-        
+
         var options = new InMemoryStorageOptions();
         _mockOptions.Setup(x => x.Value).Returns(options);
-        
+
         _service = new InMemoryStorageService(_mockLogger.Object, _mockOptions.Object);
     }
 
@@ -32,7 +32,7 @@ public class InMemoryStorageServiceTests
         var fileName = "test.csv";
         var fileContent = "test,data,content";
         var fileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(fileContent));
-        
+
         var fileRequest = new FileUploadRequest
         {
             FileName = fileName,
@@ -45,7 +45,7 @@ public class InMemoryStorageServiceTests
         // Assert
         result.Should().StartWith("memory://");
         result.Should().Contain(fileName);
-        
+
         // Verify file was actually saved
         var exists = await _service.FileExistsAsync(result);
         exists.Should().BeTrue();
@@ -60,7 +60,7 @@ public class InMemoryStorageServiceTests
             FileName = "file1.csv",
             FileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("content1"))
         };
-        
+
         var file2 = new FileUploadRequest
         {
             FileName = "file2.csv",
@@ -73,10 +73,10 @@ public class InMemoryStorageServiceTests
 
         // Assert
         path1.Should().NotBe(path2);
-        
+
         var exists1 = await _service.FileExistsAsync(path1);
         var exists2 = await _service.FileExistsAsync(path2);
-        
+
         exists1.Should().BeTrue();
         exists2.Should().BeTrue();
     }
@@ -88,7 +88,7 @@ public class InMemoryStorageServiceTests
         var fileName = "test.csv";
         var fileContent = "test,data,content";
         var fileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(fileContent));
-        
+
         var fileRequest = new FileUploadRequest
         {
             FileName = fileName,
@@ -126,7 +126,7 @@ public class InMemoryStorageServiceTests
         // Arrange
         var fileName = "test.csv";
         var fileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("content"));
-        
+
         var fileRequest = new FileUploadRequest
         {
             FileName = fileName,
@@ -134,7 +134,7 @@ public class InMemoryStorageServiceTests
         };
 
         var savedPath = await _service.SaveFileAsync(fileRequest);
-        
+
         // Verify file exists before deletion
         var existsBefore = await _service.FileExistsAsync(savedPath);
         existsBefore.Should().BeTrue();
@@ -164,7 +164,7 @@ public class InMemoryStorageServiceTests
         // Arrange
         var fileName = "test.csv";
         var fileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("content"));
-        
+
         var fileRequest = new FileUploadRequest
         {
             FileName = fileName,
@@ -200,7 +200,7 @@ public class InMemoryStorageServiceTests
         var largeContent = new string('x', 1024 * 1024); // 1MB
         var fileName = "large.csv";
         var fileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(largeContent));
-        
+
         var fileRequest = new FileUploadRequest
         {
             FileName = fileName,
@@ -212,11 +212,11 @@ public class InMemoryStorageServiceTests
 
         // Assert
         result.Should().StartWith("memory://");
-        
+
         var retrievedStream = await _service.GetFileAsync(result);
         using var reader = new StreamReader(retrievedStream);
         var retrievedContent = await reader.ReadToEndAsync();
-        
+
         retrievedContent.Should().Be(largeContent);
         retrievedContent.Length.Should().Be(1024 * 1024);
     }
@@ -227,7 +227,7 @@ public class InMemoryStorageServiceTests
         // Arrange
         var fileName = "empty.csv";
         var fileStream = new MemoryStream();
-        
+
         var fileRequest = new FileUploadRequest
         {
             FileName = fileName,
@@ -239,11 +239,11 @@ public class InMemoryStorageServiceTests
 
         // Assert
         result.Should().StartWith("memory://");
-        
+
         var retrievedStream = await _service.GetFileAsync(result);
         using var reader = new StreamReader(retrievedStream);
         var retrievedContent = await reader.ReadToEndAsync();
-        
+
         retrievedContent.Should().BeEmpty();
     }
 
@@ -253,7 +253,7 @@ public class InMemoryStorageServiceTests
         // Arrange
         var fileName = "test.csv";
         var fileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("content"));
-        
+
         var fileRequest = new FileUploadRequest
         {
             FileName = fileName,
@@ -285,7 +285,7 @@ public class InMemoryStorageServiceTests
                 FileName = $"file{i}.csv",
                 FileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"content{i}"))
             };
-            
+
             tasks.Add(_service.SaveFileAsync(fileRequest));
         }
 
@@ -321,7 +321,7 @@ public class InMemoryStorageServiceTests
         var fileName = "test.csv";
         var fileContent = "test,data,content";
         var fileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(fileContent));
-        
+
         var fileRequest = new FileUploadRequest
         {
             FileName = fileName,
@@ -330,7 +330,7 @@ public class InMemoryStorageServiceTests
 
         // Act
         var result = await _service.SaveFileAsync(fileRequest);
-        
+
         // Dispose the original stream
         fileStream.Dispose();
 
@@ -338,7 +338,7 @@ public class InMemoryStorageServiceTests
         var retrievedStream = await _service.GetFileAsync(result);
         using var reader = new StreamReader(retrievedStream);
         var retrievedContent = await reader.ReadToEndAsync();
-        
+
         retrievedContent.Should().Be(fileContent);
     }
 
@@ -349,7 +349,7 @@ public class InMemoryStorageServiceTests
         var fileName = "test.csv";
         var fileContent = "test,data,content";
         var fileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(fileContent));
-        
+
         var fileRequest = new FileUploadRequest
         {
             FileName = fileName,
@@ -364,13 +364,13 @@ public class InMemoryStorageServiceTests
 
         // Assert - Both streams should be independent
         stream1.Should().NotBeSameAs(stream2);
-        
+
         using var reader1 = new StreamReader(stream1);
         using var reader2 = new StreamReader(stream2);
-        
+
         var content1 = await reader1.ReadToEndAsync();
         var content2 = await reader2.ReadToEndAsync();
-        
+
         content1.Should().Be(fileContent);
         content2.Should().Be(fileContent);
     }
@@ -382,7 +382,7 @@ public class InMemoryStorageServiceTests
         var largeContent = new string('x', 101 * 1024 * 1024); // 101MB (exceeds 100MB limit)
         var fileName = "large.csv";
         var fileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(largeContent));
-        
+
         var fileRequest = new FileUploadRequest
         {
             FileName = fileName,
@@ -494,7 +494,7 @@ public class InMemoryStorageServiceTests
             FileName = "file1.csv",
             FileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("content1"))
         };
-        
+
         var file2 = new FileUploadRequest
         {
             FileName = "file2.csv",
@@ -521,7 +521,7 @@ public class InMemoryStorageServiceTests
             FileName = "file1.csv",
             FileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("content1"))
         };
-        
+
         var file2 = new FileUploadRequest
         {
             FileName = "file2.csv",
@@ -557,7 +557,7 @@ public class InMemoryStorageServiceTests
         // Arrange
         var fileStream = new MemoryStream();
         fileStream.Close(); // Make stream not readable
-        
+
         var fileRequest = new FileUploadRequest
         {
             FileName = "test.csv",
@@ -569,4 +569,4 @@ public class InMemoryStorageServiceTests
         await action.Should().ThrowAsync<ArgumentException>()
             .WithMessage("*FileStream must be readable*");
     }
-} 
+}

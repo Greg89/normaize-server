@@ -37,7 +37,7 @@ public class DataProcessingServiceTests
         _mockStructuredLogging = new Mock<IStructuredLoggingService>();
         _mockChaosEngineering = new Mock<IChaosEngineeringService>();
         _mockInfrastructure = new Mock<IDataProcessingInfrastructure>();
-        
+
         // Setup infrastructure mock
         _mockInfrastructure.Setup(i => i.Logger).Returns(_mockLogger.Object);
         _mockInfrastructure.Setup(i => i.Cache).Returns(_cache);
@@ -46,14 +46,14 @@ public class DataProcessingServiceTests
         _mockInfrastructure.Setup(i => i.CacheExpiration).Returns(TimeSpan.FromMinutes(5));
         _mockInfrastructure.Setup(i => i.DefaultTimeout).Returns(TimeSpan.FromMinutes(10));
         _mockInfrastructure.Setup(i => i.QuickTimeout).Returns(TimeSpan.FromSeconds(30));
-        
+
         _service = new DataProcessingService(
-            _mockRepository.Object, 
-            _mockFileUploadService.Object, 
-            _mockAuditService.Object, 
-            _mockMapper.Object, 
+            _mockRepository.Object,
+            _mockFileUploadService.Object,
+            _mockAuditService.Object,
+            _mockMapper.Object,
             _mockInfrastructure.Object);
-        
+
         // Setup default structured logging mocks
         SetupStructuredLoggingMocks();
     }
@@ -68,7 +68,7 @@ public class DataProcessingServiceTests
         mockContext.Setup(c => c.Steps).Returns(new List<string>());
         mockContext.Setup(c => c.Stopwatch).Returns(Stopwatch.StartNew());
         mockContext.Setup(c => c.SetMetadata(It.IsAny<string>(), It.IsAny<object>()));
-        
+
         _mockStructuredLogging.Setup(s => s.CreateContext(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
             .Returns(mockContext.Object);
         _mockStructuredLogging.Setup(s => s.LogStep(It.IsAny<IOperationContext>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()));
@@ -79,14 +79,14 @@ public class DataProcessingServiceTests
     public void Constructor_WithNullRepository_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => 
+        var exception = Assert.Throws<ArgumentNullException>(() =>
             new DataProcessingService(
-                null!, 
-                _mockFileUploadService.Object, 
-                _mockAuditService.Object, 
-                _mockMapper.Object, 
+                null!,
+                _mockFileUploadService.Object,
+                _mockAuditService.Object,
+                _mockMapper.Object,
                 _mockInfrastructure.Object));
-        
+
         exception.ParamName.Should().Be("dataSetRepository");
     }
 
@@ -94,14 +94,14 @@ public class DataProcessingServiceTests
     public void Constructor_WithNullFileUploadService_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => 
+        var exception = Assert.Throws<ArgumentNullException>(() =>
             new DataProcessingService(
-                _mockRepository.Object, 
-                null!, 
-                _mockAuditService.Object, 
-                _mockMapper.Object, 
+                _mockRepository.Object,
+                null!,
+                _mockAuditService.Object,
+                _mockMapper.Object,
                 _mockInfrastructure.Object));
-        
+
         exception.ParamName.Should().Be("fileUploadService");
     }
 
@@ -109,14 +109,14 @@ public class DataProcessingServiceTests
     public void Constructor_WithNullAuditService_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => 
+        var exception = Assert.Throws<ArgumentNullException>(() =>
             new DataProcessingService(
-                _mockRepository.Object, 
-                _mockFileUploadService.Object, 
-                null!, 
-                _mockMapper.Object, 
+                _mockRepository.Object,
+                _mockFileUploadService.Object,
+                null!,
+                _mockMapper.Object,
                 _mockInfrastructure.Object));
-        
+
         exception.ParamName.Should().Be("auditService");
     }
 
@@ -124,14 +124,14 @@ public class DataProcessingServiceTests
     public void Constructor_WithNullMapper_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => 
+        var exception = Assert.Throws<ArgumentNullException>(() =>
             new DataProcessingService(
-                _mockRepository.Object, 
-                _mockFileUploadService.Object, 
-                _mockAuditService.Object, 
-                null!, 
+                _mockRepository.Object,
+                _mockFileUploadService.Object,
+                _mockAuditService.Object,
+                null!,
                 _mockInfrastructure.Object));
-        
+
         exception.ParamName.Should().Be("mapper");
     }
 
@@ -139,14 +139,14 @@ public class DataProcessingServiceTests
     public void Constructor_WithNullInfrastructure_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => 
+        var exception = Assert.Throws<ArgumentNullException>(() =>
             new DataProcessingService(
-                _mockRepository.Object, 
-                _mockFileUploadService.Object, 
-                _mockAuditService.Object, 
-                _mockMapper.Object, 
+                _mockRepository.Object,
+                _mockFileUploadService.Object,
+                _mockAuditService.Object,
+                _mockMapper.Object,
                 null!));
-        
+
         exception.ParamName.Should().Be("infrastructure");
     }
 
@@ -193,7 +193,7 @@ public class DataProcessingServiceTests
         result.Success.Should().BeTrue();
         result.DataSetId.Should().Be(1);
         result.Message.Should().Be("Dataset uploaded successfully");
-        
+
         _mockFileUploadService.Verify(f => f.ValidateFileAsync(fileRequest), Times.Once);
         _mockFileUploadService.Verify(f => f.SaveFileAsync(fileRequest), Times.Once);
         _mockFileUploadService.Verify(f => f.ProcessFileAsync("/uploads/test.csv", ".csv"), Times.Once);
@@ -212,9 +212,9 @@ public class DataProcessingServiceTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentNullException>(() => 
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(() =>
             _service.UploadDataSetAsync(null!, createDto));
-        
+
         exception.ParamName.Should().Be("fileRequest");
     }
 
@@ -231,9 +231,9 @@ public class DataProcessingServiceTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentNullException>(() => 
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(() =>
             _service.UploadDataSetAsync(fileRequest, null!));
-        
+
         exception.ParamName.Should().Be("createDto");
     }
 
@@ -259,9 +259,9 @@ public class DataProcessingServiceTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.UploadDataSetAsync(fileRequest, createDto));
-        
+
         exception.Message.Should().Contain("File name is required");
     }
 
@@ -287,9 +287,9 @@ public class DataProcessingServiceTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.UploadDataSetAsync(fileRequest, createDto));
-        
+
         exception.Message.Should().Contain("Dataset name is required");
     }
 
@@ -315,9 +315,9 @@ public class DataProcessingServiceTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.UploadDataSetAsync(fileRequest, createDto));
-        
+
         exception.Message.Should().Contain("User ID is required");
     }
 
@@ -343,9 +343,9 @@ public class DataProcessingServiceTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.UploadDataSetAsync(fileRequest, createDto));
-        
+
         exception.Message.Should().Contain("Invalid file name");
     }
 
@@ -376,7 +376,7 @@ public class DataProcessingServiceTests
         result.Should().NotBeNull();
         result.Success.Should().BeFalse();
         result.Message.Should().Be("Invalid file format or size");
-        
+
         _mockFileUploadService.Verify(f => f.ValidateFileAsync(fileRequest), Times.Once);
         _mockFileUploadService.Verify(f => f.SaveFileAsync(It.IsAny<FileUploadRequest>()), Times.Never);
     }
@@ -410,7 +410,7 @@ public class DataProcessingServiceTests
         result.Should().NotBeNull();
         result!.Id.Should().Be(1);
         result.Name.Should().Be("Test Dataset");
-        
+
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
         _mockMapper.Verify(m => m.Map<DataSetDto>(dataSet), Times.Once);
         _mockAuditService.Verify(a => a.LogDataSetActionAsync(1, "user123", "Viewed", null, null, null), Times.Once);
@@ -427,7 +427,7 @@ public class DataProcessingServiceTests
 
         // Assert
         result.Should().BeNull();
-        
+
         _mockRepository.Verify(r => r.GetByIdAsync(999), Times.Once);
         _mockMapper.Verify(m => m.Map<DataSetDto>(It.IsAny<DataSet>()), Times.Never);
     }
@@ -450,7 +450,7 @@ public class DataProcessingServiceTests
 
         // Assert
         result.Should().BeNull();
-        
+
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
         _mockMapper.Verify(m => m.Map<DataSetDto>(It.IsAny<DataSet>()), Times.Never);
         _mockAuditService.Verify(a => a.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null), Times.Never);
@@ -484,7 +484,7 @@ public class DataProcessingServiceTests
         // Assert
         result.Should().NotBeNull();
         result.Should().HaveCount(2);
-        
+
         _mockRepository.Verify(r => r.GetByUserIdAsync("user123", false), Times.Once);
         _mockMapper.Verify(m => m.Map<IEnumerable<DataSetDto>>(It.IsAny<IEnumerable<DataSet>>()), Times.Once);
     }
@@ -512,7 +512,7 @@ public class DataProcessingServiceTests
 
         // Assert
         result.Should().BeTrue();
-        
+
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
         _mockRepository.Verify(r => r.DeleteAsync(1), Times.Once);
         _mockFileUploadService.Verify(f => f.DeleteFileAsync("/uploads/test.csv"), Times.Once);
@@ -530,7 +530,7 @@ public class DataProcessingServiceTests
 
         // Assert
         result.Should().BeFalse();
-        
+
         _mockRepository.Verify(r => r.GetByIdAsync(999), Times.Once);
         _mockRepository.Verify(r => r.DeleteAsync(It.IsAny<int>()), Times.Never);
     }
@@ -553,7 +553,7 @@ public class DataProcessingServiceTests
 
         // Assert
         result.Should().BeFalse();
-        
+
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
         _mockRepository.Verify(r => r.DeleteAsync(It.IsAny<int>()), Times.Never);
     }
@@ -578,7 +578,7 @@ public class DataProcessingServiceTests
         result.Should().NotBeNull();
         result.TotalCount.Should().Be(5);
         result.TotalSize.Should().Be(1024);
-        
+
         _mockRepository.Verify(r => r.GetTotalCountAsync(It.IsAny<string>()), Times.Never);
         _mockRepository.Verify(r => r.GetTotalSizeAsync(It.IsAny<string>()), Times.Never);
     }
@@ -618,7 +618,7 @@ public class DataProcessingServiceTests
         result.TotalCount.Should().Be(3);
         result.TotalSize.Should().Be(512);
         result.RecentlyModified.Should().HaveCount(2);
-        
+
         _mockRepository.Verify(r => r.GetTotalCountAsync("user123"), Times.Once);
         _mockRepository.Verify(r => r.GetTotalSizeAsync("user123"), Times.Once);
         _mockRepository.Verify(r => r.GetRecentlyModifiedAsync("user123", 5), Times.Once);
@@ -631,9 +631,9 @@ public class DataProcessingServiceTests
     public async Task GetDataSetAsync_WithInvalidId_ShouldThrowArgumentException(int id)
     {
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.GetDataSetAsync(id, "user123"));
-        
+
         exception.Message.Should().Contain("Failed to complete GetDataSetAsync for user user123");
         exception.InnerException.Should().BeOfType<ArgumentException>();
         exception.InnerException!.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
@@ -646,9 +646,9 @@ public class DataProcessingServiceTests
     public async Task GetDataSetAsync_WithInvalidUserId_ShouldThrowArgumentException(string? userId)
     {
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.GetDataSetAsync(1, userId!));
-        
+
         exception.Message.Should().Contain("Failed to complete GetDataSetAsync for user");
         exception.InnerException.Should().BeOfType<ArgumentException>();
         exception.InnerException!.Message.Should().Contain("User ID is required");
@@ -660,9 +660,9 @@ public class DataProcessingServiceTests
     public async Task GetDataSetsByUserAsync_WithInvalidPage_ShouldThrowArgumentException(int page)
     {
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.GetDataSetsByUserAsync("user123", page));
-        
+
         exception.Message.Should().Contain("Failed to complete GetDataSetsByUserAsync for user user123");
         exception.InnerException.Should().BeOfType<ArgumentException>();
         exception.InnerException!.Message.Should().Contain("Page must be positive");
@@ -675,11 +675,11 @@ public class DataProcessingServiceTests
     public async Task GetDataSetsByUserAsync_WithInvalidPageSize_ShouldThrowArgumentException(int pageSize)
     {
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.GetDataSetsByUserAsync("user123", 1, pageSize));
-        
+
         exception.Message.Should().Contain("Failed to complete GetDataSetsByUserAsync for user user123");
         exception.InnerException.Should().BeOfType<ArgumentException>();
         exception.InnerException!.Message.Should().Contain("Page size must be between 1 and 100");
     }
-} 
+}

@@ -180,4 +180,4 @@ public class IDataProcessingInfrastructureTests
         // Assert
         properties.Should().HaveCount(7);
     }
-} 
+}

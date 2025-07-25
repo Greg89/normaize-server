@@ -8,4 +8,4 @@ public interface IAuditService
     Task<IEnumerable<DataSetAuditLog>> GetDataSetAuditLogsAsync(int dataSetId, int skip = 0, int take = 50);
     Task<IEnumerable<DataSetAuditLog>> GetUserAuditLogsAsync(string userId, int skip = 0, int take = 50);
     Task<IEnumerable<DataSetAuditLog>> GetAuditLogsByActionAsync(string action, int skip = 0, int take = 50);
-} 
+}

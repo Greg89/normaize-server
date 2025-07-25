@@ -72,4 +72,4 @@ public record DatabaseConfig
 
     public string ToConnectionString() =>
         $"Server={Host};Database={Database};User={User};Password={Password};Port={Port};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
-} 
+}

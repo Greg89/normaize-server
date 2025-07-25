@@ -11,9 +11,9 @@ public class MappingProfile : Profile
         // DataSet mappings
         CreateMap<DataSet, DataSetDto>();
         CreateMap<CreateDataSetDto, DataSet>();
-        
+
         // Analysis mappings
         CreateMap<Analysis, AnalysisDto>();
         CreateMap<CreateAnalysisDto, Analysis>();
     }
-} 
+}

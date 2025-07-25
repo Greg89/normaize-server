@@ -14,4 +14,4 @@ public interface IAnalysisRepository
     Task<bool> ExistsAsync(int id);
     Task<IEnumerable<Analysis>> GetByStatusAsync(AnalysisStatus status);
     Task<IEnumerable<Analysis>> GetByTypeAsync(AnalysisType type);
-} 
+}

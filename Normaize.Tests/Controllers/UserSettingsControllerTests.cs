@@ -29,7 +29,7 @@ public class UserSettingsControllerTests
         // Arrange
         var userId = "auth0|123456789";
         var userSettings = CreateTestUserSettingsDto(userId);
-        
+
         SetupAuthenticatedUser(userId);
         _mockUserSettingsService.Setup(s => s.GetUserSettingsAsync(userId))
             .ReturnsAsync(userSettings);
@@ -50,7 +50,7 @@ public class UserSettingsControllerTests
         // Arrange
         var userId = "auth0|123456789";
         var userSettings = CreateTestUserSettingsDto(userId);
-        
+
         SetupAuthenticatedUser(userId);
         _mockUserSettingsService.Setup(s => s.GetUserSettingsAsync(userId))
             .ReturnsAsync((UserSettingsDto?)null);
@@ -64,7 +64,7 @@ public class UserSettingsControllerTests
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedSettings = okResult.Value.Should().BeOfType<UserSettingsDto>().Subject;
         returnedSettings.UserId.Should().Be(userId);
-        
+
         _mockUserSettingsService.Verify(s => s.InitializeUserSettingsAsync(userId), Times.Once);
     }
 
@@ -99,7 +99,7 @@ public class UserSettingsControllerTests
         var statusResult = result.Should().BeOfType<ObjectResult>().Subject;
         statusResult.StatusCode.Should().Be(500);
         statusResult.Value.Should().Be("Error retrieving user settings");
-        
+
         _mockLoggingService.Verify(l => l.LogException(It.IsAny<Exception>(), "GetUserSettings"), Times.Once);
     }
 
@@ -115,7 +115,7 @@ public class UserSettingsControllerTests
             EmailNotificationsEnabled = false
         };
         var updatedSettings = CreateTestUserSettingsDto(userId);
-        
+
         SetupAuthenticatedUser(userId);
         _mockUserSettingsService.Setup(s => s.SaveUserSettingsAsync(userId, updateDto))
             .ReturnsAsync(updatedSettings);
@@ -127,7 +127,7 @@ public class UserSettingsControllerTests
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedSettings = okResult.Value.Should().BeOfType<UserSettingsDto>().Subject;
         returnedSettings.UserId.Should().Be(userId);
-        
+
         _mockLoggingService.Verify(l => l.LogUserAction("User settings updated", It.IsAny<object>()), Times.Once);
     }
 
@@ -153,7 +153,7 @@ public class UserSettingsControllerTests
         // Arrange
         var userId = "auth0|123456789";
         var userProfile = CreateTestUserProfileDto(userId);
-        
+
         SetupAuthenticatedUser(userId);
         _mockUserSettingsService.Setup(s => s.GetUserProfileAsync(userId))
             .ReturnsAsync(userProfile);
@@ -174,7 +174,7 @@ public class UserSettingsControllerTests
         // Arrange
         var userId = "auth0|123456789";
         var userSettings = CreateTestUserSettingsDto(userId);
-        
+
         SetupAuthenticatedUser(userId);
         _mockUserSettingsService.Setup(s => s.GetUserProfileAsync(userId))
             .ReturnsAsync((UserProfileDto?)null);
@@ -189,7 +189,7 @@ public class UserSettingsControllerTests
         var returnedProfile = okResult.Value.Should().BeOfType<UserProfileDto>().Subject;
         returnedProfile.UserId.Should().Be(userId);
         returnedProfile.Settings.Should().NotBeNull();
-        
+
         _mockUserSettingsService.Verify(s => s.InitializeUserSettingsAsync(userId), Times.Once);
     }
 
@@ -200,7 +200,7 @@ public class UserSettingsControllerTests
         var userId = "auth0|123456789";
         var settingName = "Theme";
         var settingValue = "dark";
-        
+
         SetupAuthenticatedUser(userId);
         _mockUserSettingsService.Setup(s => s.GetSettingValueAsync<object>(userId, settingName))
             .ReturnsAsync(settingValue);
@@ -220,7 +220,7 @@ public class UserSettingsControllerTests
         // Arrange
         var userId = "auth0|123456789";
         var settingName = "NonExistentSetting";
-        
+
         SetupAuthenticatedUser(userId);
         _mockUserSettingsService.Setup(s => s.GetSettingValueAsync<object>(userId, settingName))
             .ReturnsAsync((object?)null);
@@ -240,7 +240,7 @@ public class UserSettingsControllerTests
         var userId = "auth0|123456789";
         var settingName = "Theme";
         var settingValue = "light";
-        
+
         SetupAuthenticatedUser(userId);
         // Ensure the mock returns true for a valid setting
         // Use It.IsAny<object>() to match the generic type parameter used by the controller
@@ -254,7 +254,7 @@ public class UserSettingsControllerTests
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         // The controller returns an anonymous type { Message = "Setting updated successfully" }
         okResult.Value.Should().NotBeNull();
-        
+
         _mockLoggingService.Verify(l => l.LogUserAction("Setting value updated", It.IsAny<object>()), Times.Once);
     }
 
@@ -265,7 +265,7 @@ public class UserSettingsControllerTests
         var userId = "auth0|123456789";
         var settingName = "InvalidSetting";
         var settingValue = "value";
-        
+
         SetupAuthenticatedUser(userId);
         _mockUserSettingsService.Setup(s => s.UpdateSettingValueAsync(userId, settingName, settingValue))
             .ReturnsAsync(false);
@@ -284,7 +284,7 @@ public class UserSettingsControllerTests
         // Arrange
         var userId = "auth0|123456789";
         var newSettings = CreateTestUserSettingsDto(userId);
-        
+
         SetupAuthenticatedUser(userId);
         _mockUserSettingsService.Setup(s => s.DeleteUserSettingsAsync(userId))
             .ReturnsAsync(true);
@@ -298,7 +298,7 @@ public class UserSettingsControllerTests
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedSettings = okResult.Value.Should().BeOfType<UserSettingsDto>().Subject;
         returnedSettings.UserId.Should().Be(userId);
-        
+
         _mockUserSettingsService.Verify(s => s.DeleteUserSettingsAsync(userId), Times.Once);
         _mockUserSettingsService.Verify(s => s.InitializeUserSettingsAsync(userId), Times.Once);
         _mockLoggingService.Verify(l => l.LogUserAction("User settings reset to defaults", It.IsAny<object>()), Times.Once);
@@ -320,7 +320,7 @@ public class UserSettingsControllerTests
         var statusResult = result.Should().BeOfType<ObjectResult>().Subject;
         statusResult.StatusCode.Should().Be(500);
         statusResult.Value.Should().Be("Error resetting user settings");
-        
+
         _mockLoggingService.Verify(l => l.LogException(It.IsAny<Exception>(), "ResetUserSettings"), Times.Once);
     }
 
@@ -332,10 +332,10 @@ public class UserSettingsControllerTests
             new(ClaimTypes.Email, "user@example.com"),
             new(ClaimTypes.Name, "Test User")
         };
-        
+
         var identity = new ClaimsIdentity(claims, "Bearer");
         var principal = new ClaimsPrincipal(identity);
-        
+
         _controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
@@ -349,7 +349,7 @@ public class UserSettingsControllerTests
     {
         var identity = new ClaimsIdentity();
         var principal = new ClaimsPrincipal(identity);
-        
+
         _controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
@@ -404,4 +404,4 @@ public class UserSettingsControllerTests
             Settings = CreateTestUserSettingsDto(userId)
         };
     }
-} 
+}

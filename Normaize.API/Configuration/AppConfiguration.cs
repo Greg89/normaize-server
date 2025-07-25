@@ -9,7 +9,7 @@ public static class AppConfiguration
     {
         var currentDir = Directory.GetCurrentDirectory();
         var projectRoot = currentDir;
-        
+
         while (!File.Exists(Path.Combine(projectRoot, ".env")) && Directory.GetParent(projectRoot) != null)
         {
             projectRoot = Directory.GetParent(projectRoot)?.FullName ?? projectRoot;
@@ -26,32 +26,32 @@ public static class AppConfiguration
         }
     }
 
-    public static string GetEnvironment() => 
+    public static string GetEnvironment() =>
         Environment.GetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT) ?? AppConstants.Environment.DEVELOPMENT;
 
-    public static string? GetSeqUrl() => 
+    public static string? GetSeqUrl() =>
         Environment.GetEnvironmentVariable("SEQ_URL");
 
-    public static string? GetSeqApiKey() => 
+    public static string? GetSeqApiKey() =>
         Environment.GetEnvironmentVariable("SEQ_API_KEY");
 
     public static DatabaseConfig GetDatabaseConfig()
     {
-        var mysqlHost = Environment.GetEnvironmentVariable("MYSQLHOST") ?? 
-                        Environment.GetEnvironmentVariable("MYSQL_HOST") ?? 
+        var mysqlHost = Environment.GetEnvironmentVariable("MYSQLHOST") ??
+                        Environment.GetEnvironmentVariable("MYSQL_HOST") ??
                         Environment.GetEnvironmentVariable("DB_HOST");
-        var mysqlDatabase = Environment.GetEnvironmentVariable("MYSQLDATABASE") ?? 
-                           Environment.GetEnvironmentVariable("MYSQL_DATABASE") ?? 
+        var mysqlDatabase = Environment.GetEnvironmentVariable("MYSQLDATABASE") ??
+                           Environment.GetEnvironmentVariable("MYSQL_DATABASE") ??
                            Environment.GetEnvironmentVariable("DB_NAME");
-        var mysqlUser = Environment.GetEnvironmentVariable("MYSQLUSER") ?? 
-                       Environment.GetEnvironmentVariable("MYSQL_USER") ?? 
+        var mysqlUser = Environment.GetEnvironmentVariable("MYSQLUSER") ??
+                       Environment.GetEnvironmentVariable("MYSQL_USER") ??
                        Environment.GetEnvironmentVariable("DB_USER");
-        var mysqlPassword = Environment.GetEnvironmentVariable("MYSQLPASSWORD") ?? 
-                           Environment.GetEnvironmentVariable("MYSQL_PASSWORD") ?? 
+        var mysqlPassword = Environment.GetEnvironmentVariable("MYSQLPASSWORD") ??
+                           Environment.GetEnvironmentVariable("MYSQL_PASSWORD") ??
                            Environment.GetEnvironmentVariable("DB_PASSWORD");
-        var mysqlPort = Environment.GetEnvironmentVariable("MYSQLPORT") ?? 
-                       Environment.GetEnvironmentVariable("MYSQL_PORT") ?? 
-                       Environment.GetEnvironmentVariable("DB_PORT") ?? 
+        var mysqlPort = Environment.GetEnvironmentVariable("MYSQLPORT") ??
+                       Environment.GetEnvironmentVariable("MYSQL_PORT") ??
+                       Environment.GetEnvironmentVariable("DB_PORT") ??
                        "3306";
 
         return new DatabaseConfig
@@ -67,9 +67,9 @@ public static class AppConfiguration
     public static bool HasDatabaseConnection()
     {
         var config = GetDatabaseConfig();
-        return !string.IsNullOrEmpty(config.Host) && 
-               !string.IsNullOrEmpty(config.Database) && 
-               !string.IsNullOrEmpty(config.User) && 
+        return !string.IsNullOrEmpty(config.Host) &&
+               !string.IsNullOrEmpty(config.Database) &&
+               !string.IsNullOrEmpty(config.User) &&
                !string.IsNullOrEmpty(config.Password);
     }
 
@@ -88,10 +88,10 @@ public static class AppConfiguration
                Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
     }
 
-    public static string GetPort() => 
+    public static string GetPort() =>
         Environment.GetEnvironmentVariable("PORT") ?? "5000";
 
-    public static string? GetHttpsPort() => 
+    public static string? GetHttpsPort() =>
         Environment.GetEnvironmentVariable("HTTPS_PORT");
 }
 
@@ -105,4 +105,4 @@ public record DatabaseConfig
 
     public string ToConnectionString() =>
         $"Server={Host};Database={Database};User={User};Password={Password};Port={Port};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
-} 
+}

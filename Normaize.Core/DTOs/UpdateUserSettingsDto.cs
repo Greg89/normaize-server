@@ -10,7 +10,7 @@ public class UpdateUserSettingsDto
     public bool? ProcessingCompleteNotifications { get; set; }
     public bool? ErrorNotifications { get; set; }
     public bool? WeeklyDigestEnabled { get; set; }
-    
+
     // UI/UX Preferences
     public string? Theme { get; set; }
     public string? Language { get; set; }
@@ -29,4 +29,4 @@ public class UpdateUserSettingsDto
     public string? TimeZone { get; set; }
     public string? DateFormat { get; set; }
     public string? TimeFormat { get; set; }
-} 
+}

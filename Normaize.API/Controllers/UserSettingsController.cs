@@ -29,13 +29,13 @@ public class UserSettingsController(
         {
             var userId = GetCurrentUserId();
             var settings = await _userSettingsService.GetUserSettingsAsync(userId);
-            
+
             if (settings == null)
             {
                 // Initialize default settings for new user
                 settings = await _userSettingsService.InitializeUserSettingsAsync(userId);
             }
-            
+
             return Ok(settings);
         }
         catch (UnauthorizedAccessException)
@@ -59,9 +59,9 @@ public class UserSettingsController(
         {
             var userId = GetCurrentUserId();
             var updatedSettings = await _userSettingsService.SaveUserSettingsAsync(userId, updateDto);
-            
+
             _loggingService.LogUserAction("User settings updated", new { UserId = userId });
-            
+
             return Ok(updatedSettings);
         }
         catch (UnauthorizedAccessException)
@@ -85,7 +85,7 @@ public class UserSettingsController(
         {
             var userId = GetCurrentUserId();
             var profile = await _userSettingsService.GetUserProfileAsync(userId);
-            
+
             if (profile == null)
             {
                 // Initialize settings and create profile
@@ -96,7 +96,7 @@ public class UserSettingsController(
                     Settings = settings
                 };
             }
-            
+
             return Ok(profile);
         }
         catch (UnauthorizedAccessException)
@@ -120,10 +120,10 @@ public class UserSettingsController(
         {
             var userId = GetCurrentUserId();
             var value = await _userSettingsService.GetSettingValueAsync<object>(userId, settingName);
-            
+
             if (value == null)
                 return NotFound($"Setting '{settingName}' not found");
-            
+
             return Ok(new { SettingName = settingName, Value = value });
         }
         catch (UnauthorizedAccessException)
@@ -147,12 +147,12 @@ public class UserSettingsController(
         {
             var userId = GetCurrentUserId();
             var success = await _userSettingsService.UpdateSettingValueAsync(userId, settingName, value);
-            
+
             if (!success)
                 return BadRequest($"Invalid setting name: {settingName}");
-            
+
             _loggingService.LogUserAction("Setting value updated", new { UserId = userId, SettingName = settingName });
-            
+
             return Ok(new { Message = "Setting updated successfully" });
         }
         catch (UnauthorizedAccessException)
@@ -175,15 +175,15 @@ public class UserSettingsController(
         try
         {
             var userId = GetCurrentUserId();
-            
+
             // Delete existing settings
             await _userSettingsService.DeleteUserSettingsAsync(userId);
-            
+
             // Initialize new default settings
             var newSettings = await _userSettingsService.InitializeUserSettingsAsync(userId);
-            
+
             _loggingService.LogUserAction("User settings reset to defaults", new { UserId = userId });
-            
+
             return Ok(newSettings);
         }
         catch (UnauthorizedAccessException)
@@ -196,4 +196,4 @@ public class UserSettingsController(
             return StatusCode(500, "Error resetting user settings");
         }
     }
-} 
+}

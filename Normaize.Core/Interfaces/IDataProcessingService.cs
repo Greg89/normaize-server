@@ -18,4 +18,4 @@ public interface IDataProcessingService
     Task<IEnumerable<DataSetDto>> GetDataSetsByFileTypeAsync(FileType fileType, string userId, int page = 1, int pageSize = 20);
     Task<IEnumerable<DataSetDto>> GetDataSetsByDateRangeAsync(DateTime startDate, DateTime endDate, string userId, int page = 1, int pageSize = 20);
     Task<DataSetStatisticsDto> GetDataSetStatisticsAsync(string userId);
-} 
+}

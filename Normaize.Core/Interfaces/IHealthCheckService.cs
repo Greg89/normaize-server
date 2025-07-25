@@ -26,4 +26,4 @@ public class ComponentHealth
     public Dictionary<string, object>? Details { get; set; }
     public TimeSpan Duration { get; set; }
     public string? CorrelationId { get; set; }
-} 
+}

@@ -39,7 +39,7 @@ public class FileUploadService : IFileUploadService
         _dataProcessingConfig = dataProcessingConfig.Value;
         _storageService = storageService;
         _infrastructure = infrastructure;
-        
+
         ValidateConfiguration();
         LogConfiguration();
     }
@@ -48,22 +48,22 @@ public class FileUploadService : IFileUploadService
     {
         var validationResults = new List<ValidationResult>();
         var validationContext = new ValidationContext(_fileUploadConfig);
-        
+
         if (!Validator.TryValidateObject(_fileUploadConfig, validationContext, validationResults, true))
         {
             var errors = string.Join(", ", validationResults.Select(r => r.ErrorMessage));
             throw new InvalidOperationException($"{AppConstants.FileUploadMessages.CONFIGURATION_VALIDATION_FAILED}: {errors}");
         }
-        
+
         validationResults.Clear();
         validationContext = new ValidationContext(_dataProcessingConfig);
-        
+
         if (!Validator.TryValidateObject(_dataProcessingConfig, validationContext, validationResults, true))
         {
             var errors = string.Join(", ", validationResults.Select(r => r.ErrorMessage));
             throw new InvalidOperationException($"{AppConstants.FileUploadMessages.CONFIGURATION_VALIDATION_FAILED}: {errors}");
         }
-        
+
         // Additional cross-validation
         if (_fileUploadConfig.AllowedExtensions.Any(ext => _fileUploadConfig.BlockedExtensions.Contains(ext)))
         {
@@ -98,10 +98,10 @@ public class FileUploadService : IFileUploadService
 
                 // Apply chaos engineering for file upload
                 await _infrastructure.ChaosEngineering.ExecuteChaosAsync(
-                    AppConstants.FileProcessing.STORAGE_FAILURE_SCENARIO, 
-                    GetCorrelationId(), 
-                    context.OperationName, 
-                    async () => await Task.Delay(100), 
+                    AppConstants.FileProcessing.STORAGE_FAILURE_SCENARIO,
+                    GetCorrelationId(),
+                    context.OperationName,
+                    async () => await Task.Delay(100),
                     new Dictionary<string, object> { [AppConstants.FileProcessing.FILE_NAME_KEY] = fileRequest!.FileName });
 
                 // Validate file before saving
@@ -115,9 +115,9 @@ public class FileUploadService : IFileUploadService
                 try
                 {
                     var filePath = await _storageService.SaveFileAsync(fileRequest!);
-                    
+
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_UPLOAD_SUCCESS);
-                    
+
                     return filePath;
                 }
                 catch (Exception ex)
@@ -149,7 +149,7 @@ public class FileUploadService : IFileUploadService
                 }
 
                 var fileExtension = GetFileExtension(fileRequest.FileName);
-                
+
                 if (!IsFileExtensionValid(fileExtension, GetCorrelationId(), fileRequest.FileName))
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_EXTENSION_VALIDATION_FAILED);
@@ -157,7 +157,7 @@ public class FileUploadService : IFileUploadService
                 }
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_VALIDATION_PASSED);
-                
+
                 return Task.FromResult(true);
             });
     }
@@ -178,10 +178,10 @@ public class FileUploadService : IFileUploadService
 
                 // Apply chaos engineering for file processing
                 await _infrastructure.ChaosEngineering.ExecuteChaosAsync(
-                    AppConstants.FileProcessing.PROCESSING_DELAY_SCENARIO, 
-                    GetCorrelationId(), 
-                    context.OperationName, 
-                    async () => await Task.Delay(100), 
+                    AppConstants.FileProcessing.PROCESSING_DELAY_SCENARIO,
+                    GetCorrelationId(),
+                    context.OperationName,
+                    async () => await Task.Delay(100),
                     new Dictionary<string, object> { [AppConstants.FileProcessing.FILE_TYPE_KEY] = fileType });
 
                 // Validate file exists
@@ -193,7 +193,7 @@ public class FileUploadService : IFileUploadService
                 await FinalizeDataSetAsync(filePath, dataSet);
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_PROCESSED_SUCCESS);
-                
+
                 return dataSet;
             });
     }
@@ -210,16 +210,16 @@ public class FileUploadService : IFileUploadService
 
                 // Apply chaos engineering for file deletion
                 await _infrastructure.ChaosEngineering.ExecuteChaosAsync(
-                    AppConstants.FileProcessing.STORAGE_FAILURE_SCENARIO, 
-                    GetCorrelationId(), 
-                    context.OperationName, 
-                    async () => await Task.Delay(100), 
+                    AppConstants.FileProcessing.STORAGE_FAILURE_SCENARIO,
+                    GetCorrelationId(),
+                    context.OperationName,
+                    async () => await Task.Delay(100),
                     new Dictionary<string, object> { [AppConstants.FileProcessing.FILE_PATH_KEY] = filePath });
 
                 try
                 {
                     await _storageService.DeleteFileAsync(filePath);
-                    
+
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_DELETED_SUCCESS);
                 }
                 catch (Exception)
@@ -227,7 +227,7 @@ public class FileUploadService : IFileUploadService
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_DELETION_FAILED);
                     // Don't re-throw - log and continue (as per original behavior)
                 }
-                
+
                 return true; // Return value for consistency
             });
     }
@@ -256,15 +256,15 @@ public class FileUploadService : IFileUploadService
         catch (Exception ex)
         {
             _infrastructure.StructuredLogging.LogSummary(context, false, ex.Message);
-            
+
             // Preserve specific exception types for better error handling
-            if (ex is FileNotFoundException || ex is UnsupportedFileTypeException || 
-                ex is FileUploadException || ex is FileProcessingException || 
+            if (ex is FileNotFoundException || ex is UnsupportedFileTypeException ||
+                ex is FileUploadException || ex is FileProcessingException ||
                 ex is FileValidationException)
             {
                 throw; // Re-throw specific exceptions as-is
             }
-            
+
             // Create detailed error message based on operation type and metadata
             var errorMessage = CreateDetailedErrorMessage(operationName, additionalMetadata);
             throw new InvalidOperationException(errorMessage, ex);
@@ -281,20 +281,20 @@ public class FileUploadService : IFileUploadService
             case nameof(SaveFileAsync):
                 var fileName = metadata.TryGetValue(AppConstants.FileProcessing.FILE_NAME_KEY, out var name) ? name?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{fileName}'";
-                
+
             case nameof(ValidateFileAsync):
                 var validateFileName = metadata.TryGetValue(AppConstants.FileProcessing.FILE_NAME_KEY, out var validateName) ? validateName?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{validateFileName}'";
-                
+
             case nameof(ProcessFileAsync):
                 var filePath = metadata.TryGetValue(AppConstants.FileProcessing.FILE_PATH_KEY, out var path) ? path?.ToString() : AppConstants.Messages.UNKNOWN;
                 var fileType = metadata.TryGetValue("FileType", out var type) ? type?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{filePath}' of type '{fileType}'";
-                
+
             case nameof(DeleteFileAsync):
                 var deleteFilePath = metadata.TryGetValue(AppConstants.FileProcessing.FILE_PATH_KEY, out var deletePath) ? deletePath?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{deleteFilePath}'";
-                
+
             default:
                 return $"Failed to complete {operationName}";
         }
@@ -339,13 +339,13 @@ public class FileUploadService : IFileUploadService
     private bool IsFileSizeValid(long fileSize, string correlationId, string fileName)
     {
         if (fileSize <= _fileUploadConfig.MaxFileSize) return true;
-        
-        _infrastructure.Logger.LogWarning("File size exceeds limit. CorrelationId: {CorrelationId}, FileName: {FileName}, FileSize: {FileSize}, MaxSize: {MaxSize}", 
+
+        _infrastructure.Logger.LogWarning("File size exceeds limit. CorrelationId: {CorrelationId}, FileName: {FileName}, FileSize: {FileSize}, MaxSize: {MaxSize}",
             correlationId, fileName, fileSize, _fileUploadConfig.MaxFileSize);
         return false;
     }
 
-    private static string GetFileExtension(string fileName) => 
+    private static string GetFileExtension(string fileName) =>
         Path.GetExtension(fileName).ToLowerInvariant();
 
     private bool IsFileExtensionValid(string fileExtension, string correlationId, string fileName)
@@ -353,15 +353,15 @@ public class FileUploadService : IFileUploadService
         // Check if extension is blocked
         if (_fileUploadConfig.BlockedExtensions.Contains(fileExtension))
         {
-            _infrastructure.Logger.LogWarning("File extension is blocked. CorrelationId: {CorrelationId}, FileName: {FileName}, Extension: {Extension}", 
+            _infrastructure.Logger.LogWarning("File extension is blocked. CorrelationId: {CorrelationId}, FileName: {FileName}, Extension: {Extension}",
                 correlationId, fileName, fileExtension);
             return false;
         }
-        
+
         // Check if extension is allowed
         if (!_fileUploadConfig.AllowedExtensions.Contains(fileExtension))
         {
-            _infrastructure.Logger.LogWarning("File extension not allowed. CorrelationId: {CorrelationId}, FileName: {FileName}, Extension: {Extension}, AllowedExtensions: {AllowedExtensions}", 
+            _infrastructure.Logger.LogWarning("File extension not allowed. CorrelationId: {CorrelationId}, FileName: {FileName}, Extension: {Extension}, AllowedExtensions: {AllowedExtensions}",
                 correlationId, fileName, fileExtension, string.Join(", ", _fileUploadConfig.AllowedExtensions));
             return false;
         }
@@ -375,7 +375,7 @@ public class FileUploadService : IFileUploadService
         if (!fileExists)
         {
             var error = $"File not found: {filePath}";
-            _infrastructure.Logger.LogError("File not found during processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+            _infrastructure.Logger.LogError("File not found during processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}",
                 correlationId, filePath);
             throw new FileNotFoundException(error);
         }
@@ -413,7 +413,7 @@ public class FileUploadService : IFileUploadService
     {
         // Generate data hash for change detection
         dataSet.DataHash = await GenerateDataHashAsync(filePath);
-        
+
         // Determine storage strategy
         dataSet.UseSeparateTable = ShouldUseSeparateTable(dataSet);
 
@@ -426,15 +426,15 @@ public class FileUploadService : IFileUploadService
     }
 
     private bool ShouldUseSeparateTable(DataSet dataSet) =>
-        dataSet.RowCount >= _dataProcessingConfig.MaxRowsPerDataset || 
+        dataSet.RowCount >= _dataProcessingConfig.MaxRowsPerDataset ||
         dataSet.FileSize > _fileUploadConfig.MaxFileSize;
 
     private void HandleProcessingError(string filePath, string fileType, DataSet dataSet, string correlationId, Exception ex)
     {
         var error = $"Error processing file {filePath}: {ex.Message}";
-        _infrastructure.Logger.LogError(ex, "Unexpected error during file processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}, FileType: {FileType}", 
+        _infrastructure.Logger.LogError(ex, "Unexpected error during file processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}, FileType: {FileType}",
             correlationId, filePath, fileType);
-        
+
         dataSet.IsProcessed = false;
         dataSet.ProcessingErrors = error;
     }
@@ -488,20 +488,20 @@ public class FileUploadService : IFileUploadService
         {
             csv.ReadHeader();
             headers = csv.HeaderRecord?.ToList() ?? [];
-            
+
             if (headers.Count == 0)
             {
-                _infrastructure.Logger.LogWarning("CSV file has no headers. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+                _infrastructure.Logger.LogWarning("CSV file has no headers. CorrelationId: {CorrelationId}, FilePath: {FilePath}",
                     correlationId, filePath);
             }
         }
 
         var rowCount = 0;
         var maxRows = _dataProcessingConfig.MaxRowsPerDataset;
-        
+
         // Pre-allocate capacity for better performance
         records.Capacity = Math.Min(maxRows, AppConstants.FileProcessing.DEFAULT_RECORDS_CAPACITY); // Reasonable initial capacity
-        
+
         while (await csv.ReadAsync() && rowCount < maxRows)
         {
             var record = new Dictionary<string, object>(headers.Count); // Pre-allocate dictionary size
@@ -519,44 +519,44 @@ public class FileUploadService : IFileUploadService
 
     private List<string> LimitColumns(List<string> headers, string correlationId, string filePath)
     {
-        if (headers.Count <= _dataProcessingConfig.MaxColumnsPerDataset) 
+        if (headers.Count <= _dataProcessingConfig.MaxColumnsPerDataset)
             return headers;
 
-        _infrastructure.Logger.LogWarning("File has too many columns. CorrelationId: {CorrelationId}, FilePath: {FilePath}, ColumnCount: {ColumnCount}, MaxColumns: {MaxColumns}", 
+        _infrastructure.Logger.LogWarning("File has too many columns. CorrelationId: {CorrelationId}, FilePath: {FilePath}, ColumnCount: {ColumnCount}, MaxColumns: {MaxColumns}",
             correlationId, filePath, headers.Count, _dataProcessingConfig.MaxColumnsPerDataset);
         return headers.Take(_dataProcessingConfig.MaxColumnsPerDataset).ToList();
     }
 
-    private void PopulateDataSet(DataSet dataSet, List<string> headers, List<Dictionary<string, object>> records, 
+    private void PopulateDataSet(DataSet dataSet, List<string> headers, List<Dictionary<string, object>> records,
         long fileSize, string correlationId, string filePath)
     {
         dataSet.ColumnCount = headers.Count;
         dataSet.RowCount = records.Count;
         dataSet.FileSize = fileSize;
-        
+
         // Optimize JSON serialization with reusable options
         var jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = false, // Smaller output
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
-        
+
         dataSet.Schema = JsonSerializer.Serialize(headers, jsonOptions);
-        
+
         // Only serialize preview data if needed
         if (records.Count > 0)
         {
             var previewRecords = records.Take(_dataProcessingConfig.MaxPreviewRows).ToList();
             dataSet.PreviewData = JsonSerializer.Serialize(previewRecords, jsonOptions);
         }
-        
+
         // Only serialize full data if within limits
         if (records.Count < _dataProcessingConfig.MaxRowsPerDataset)
         {
             dataSet.ProcessedData = JsonSerializer.Serialize(records, jsonOptions);
         }
 
-        _infrastructure.Logger.LogDebug("File processing completed. CorrelationId: {CorrelationId}, FilePath: {FilePath}, Rows: {RowCount}, Columns: {ColumnCount}", 
+        _infrastructure.Logger.LogDebug("File processing completed. CorrelationId: {CorrelationId}, FilePath: {FilePath}, Rows: {RowCount}, Columns: {ColumnCount}",
             correlationId, filePath, records.Count, headers.Count);
     }
 
@@ -564,7 +564,7 @@ public class FileUploadService : IFileUploadService
     {
         // Use string interpolation for better performance
         var error = $"CSV parsing error: {ex.Message}";
-        _infrastructure.Logger.LogError(ex, "CSV parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+        _infrastructure.Logger.LogError(ex, "CSV parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}",
             correlationId, filePath);
         throw new FileProcessingException(error, ex);
     }
@@ -573,7 +573,7 @@ public class FileUploadService : IFileUploadService
     {
         // Use string interpolation for better performance
         var error = $"JSON serialization error during {fileType} processing: {ex.Message}";
-        _infrastructure.Logger.LogError(ex, "JSON serialization failed during {FileType} processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+        _infrastructure.Logger.LogError(ex, "JSON serialization failed during {FileType} processing. CorrelationId: {CorrelationId}, FilePath: {FilePath}",
             fileType, correlationId, filePath);
         throw new FileProcessingException(error, ex);
     }
@@ -595,7 +595,7 @@ public class FileUploadService : IFileUploadService
         catch (JsonException ex)
         {
             var error = $"JSON parsing error: {ex.Message}";
-            _infrastructure.Logger.LogError(ex, "JSON parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+            _infrastructure.Logger.LogError(ex, "JSON parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}",
                 correlationId, filePath);
             throw new FileProcessingException(error, ex);
         }
@@ -617,7 +617,7 @@ public class FileUploadService : IFileUploadService
                 break;
             default:
                 var error = $"Unsupported JSON structure: {jsonElement.ValueKind}";
-                _infrastructure.Logger.LogWarning("Unsupported JSON structure. CorrelationId: {CorrelationId}, FilePath: {FilePath}, ValueKind: {ValueKind}", 
+                _infrastructure.Logger.LogWarning("Unsupported JSON structure. CorrelationId: {CorrelationId}, FilePath: {FilePath}, ValueKind: {ValueKind}",
                     correlationId, filePath, jsonElement.ValueKind);
                 throw new FileProcessingException(error);
         }
@@ -629,7 +629,7 @@ public class FileUploadService : IFileUploadService
     {
         var maxRows = _dataProcessingConfig.MaxRowsPerDataset;
         records.Capacity = Math.Min(maxRows, AppConstants.FileProcessing.DEFAULT_RECORDS_CAPACITY); // Pre-allocate capacity
-        
+
         foreach (var item in jsonElement.EnumerateArray().Take(maxRows))
         {
             if (item.ValueKind == JsonValueKind.Object)
@@ -676,7 +676,7 @@ public class FileUploadService : IFileUploadService
         catch (InvalidOperationException ex)
         {
             var error = $"Excel processing error: {ex.Message}";
-            _infrastructure.Logger.LogError(ex, "Excel processing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+            _infrastructure.Logger.LogError(ex, "Excel processing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}",
                 correlationId, filePath);
             throw new FileProcessingException(error, ex);
         }
@@ -699,7 +699,7 @@ public class FileUploadService : IFileUploadService
     {
         var headers = new List<string>();
         var headerRow = worksheet.Cells[AppConstants.FileProcessing.HEADER_ROW_INDEX, AppConstants.FileProcessing.DEFAULT_COLUMN_INDEX, AppConstants.FileProcessing.HEADER_ROW_INDEX, worksheet.Dimension?.Columns ?? AppConstants.FileProcessing.DEFAULT_COLUMN_INDEX];
-        
+
         foreach (var cell in headerRow)
         {
             headers.Add(cell.Value?.ToString() ?? $"{AppConstants.FileProcessing.DEFAULT_COLUMN_PREFIX}{cell.Start.Column}");
@@ -714,17 +714,17 @@ public class FileUploadService : IFileUploadService
         var rowCount = 0;
         var maxRows = _dataProcessingConfig.MaxRowsPerDataset;
         var maxCols = headers.Count;
-        
+
         // Pre-allocate capacity for better performance
         records.Capacity = Math.Min(maxRows, AppConstants.FileProcessing.DEFAULT_RECORDS_CAPACITY);
-        
+
         // Optimize by reading entire range at once when possible
-        var dataRange = worksheet.Cells[AppConstants.FileProcessing.DATA_START_ROW_INDEX, AppConstants.FileProcessing.DEFAULT_COLUMN_INDEX, 
-            Math.Min(worksheet.Dimension?.Rows ?? AppConstants.FileProcessing.DEFAULT_COLUMN_INDEX, AppConstants.FileProcessing.DATA_START_ROW_INDEX + maxRows - 1), 
+        var dataRange = worksheet.Cells[AppConstants.FileProcessing.DATA_START_ROW_INDEX, AppConstants.FileProcessing.DEFAULT_COLUMN_INDEX,
+            Math.Min(worksheet.Dimension?.Rows ?? AppConstants.FileProcessing.DEFAULT_COLUMN_INDEX, AppConstants.FileProcessing.DATA_START_ROW_INDEX + maxRows - 1),
             maxCols];
-        
+
         var dataValues = dataRange.Value as object[,];
-        
+
         if (dataValues != null)
         {
             // Process data as 2D array for better performance
@@ -767,7 +767,7 @@ public class FileUploadService : IFileUploadService
             using var reader = new StreamReader(fileStream);
             var xmlContent = await reader.ReadToEndAsync();
             var doc = XDocument.Parse(xmlContent);
-            
+
             var (headers, records) = ExtractXmlData(doc);
             var limitedHeaders = LimitColumns(headers.ToList(), correlationId, filePath);
 
@@ -776,7 +776,7 @@ public class FileUploadService : IFileUploadService
         catch (XmlException ex)
         {
             var error = $"XML parsing error: {ex.Message}";
-            _infrastructure.Logger.LogError(ex, "XML parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}", 
+            _infrastructure.Logger.LogError(ex, "XML parsing failed. CorrelationId: {CorrelationId}, FilePath: {FilePath}",
                 correlationId, filePath);
             throw new FileProcessingException(error, ex);
         }
@@ -811,17 +811,17 @@ public class FileUploadService : IFileUploadService
     {
         var maxRows = _dataProcessingConfig.MaxRowsPerDataset;
         records.Capacity = Math.Min(maxRows, AppConstants.FileProcessing.DEFAULT_RECORDS_CAPACITY); // Pre-allocate capacity
-        
+
         // Assume first child is the template for data rows
         var firstChild = children.First();
         var childElements = firstChild.Elements().ToList();
-        
+
         // Extract headers from first element
         foreach (var element in childElements)
         {
             headers.Add(element.Name.LocalName);
         }
-        
+
         // Process all child elements as data rows
         foreach (var child in children.Take(maxRows))
         {
@@ -859,7 +859,7 @@ public class FileUploadService : IFileUploadService
             using var reader = new StreamReader(fileStream);
             var content = await reader.ReadToEndAsync();
             var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            
+
             var headers = new List<string> { AppConstants.FileProcessing.LINE_NUMBER_COLUMN, AppConstants.FileProcessing.CONTENT_COLUMN };
             var records = ExtractTextData(lines);
 
@@ -959,4 +959,4 @@ public class UnsupportedFileTypeException : Exception
 {
     public UnsupportedFileTypeException(string message) : base(message) { }
     public UnsupportedFileTypeException(string message, Exception innerException) : base(message, innerException) { }
-} 
+}

@@ -26,4 +26,4 @@ public class ComponentNames
 {
     public string Database { get; set; } = "database";
     public string Application { get; set; } = "application";
-} 
+}

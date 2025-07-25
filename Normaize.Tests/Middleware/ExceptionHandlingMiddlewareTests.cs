@@ -39,7 +39,7 @@ public class ExceptionHandlingMiddlewareTests
     {
         // Arrange
         var nextCalled = false;
-        RequestDelegate next = async (ctx) => 
+        RequestDelegate next = async (ctx) =>
         {
             nextCalled = true;
             await Task.CompletedTask;
@@ -95,7 +95,7 @@ public class ExceptionHandlingMiddlewareTests
 
         // Assert
         _context.Response.StatusCode.Should().Be((int)HttpStatusCode.Unauthorized);
-        
+
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("You are not authorized to perform this action");
         responseBody.Should().Contain("UnauthorizedAccessException");
@@ -115,7 +115,7 @@ public class ExceptionHandlingMiddlewareTests
 
         // Assert
         _context.Response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
-        
+
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("The requested operation cannot be completed");
         responseBody.Should().Contain("InvalidOperationException");
@@ -135,7 +135,7 @@ public class ExceptionHandlingMiddlewareTests
 
         // Assert
         _context.Response.StatusCode.Should().Be((int)HttpStatusCode.NotFound);
-        
+
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("The requested resource was not found");
         responseBody.Should().Contain("KeyNotFoundException");
@@ -155,7 +155,7 @@ public class ExceptionHandlingMiddlewareTests
 
         // Assert
         _context.Response.StatusCode.Should().Be((int)HttpStatusCode.MethodNotAllowed);
-        
+
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("This operation is not supported");
         responseBody.Should().Contain("NotSupportedException");
@@ -175,7 +175,7 @@ public class ExceptionHandlingMiddlewareTests
 
         // Assert
         _context.Response.StatusCode.Should().Be((int)HttpStatusCode.RequestTimeout);
-        
+
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("The operation timed out. Please try again");
         responseBody.Should().Contain("TimeoutException");
@@ -195,7 +195,7 @@ public class ExceptionHandlingMiddlewareTests
 
         // Assert
         _context.Response.StatusCode.Should().Be((int)HttpStatusCode.InternalServerError);
-        
+
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("An unexpected error occurred while processing your request");
         responseBody.Should().Contain("DivideByZeroException");
@@ -217,7 +217,7 @@ public class ExceptionHandlingMiddlewareTests
         // Assert
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("correlationId");
-        
+
         // Should contain either a trace identifier format or a GUID format correlation ID
         responseBody.Should().MatchRegex(@"""correlationId"":""[0-9A-Z]{13}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}""");
     }
@@ -260,10 +260,10 @@ public class ExceptionHandlingMiddlewareTests
         // Assert
         _mockLoggingService.Verify(
             x => x.LogException(
-                exception, 
-                It.Is<string>(s => 
-                    s.Contains("Global exception handler") && 
-                    s.Contains("PUT") && 
+                exception,
+                It.Is<string>(s =>
+                    s.Contains("Global exception handler") &&
+                    s.Contains("PUT") &&
                     s.Contains("/api/test") &&
                     s.Contains("test-trace-id"))),
             Times.Once);
@@ -283,11 +283,11 @@ public class ExceptionHandlingMiddlewareTests
 
         // Assert
         var responseBody = await GetResponseBody();
-        
+
         // Should be valid JSON
         Action parseJson = () => JsonDocument.Parse(responseBody);
         parseJson.Should().NotThrow();
-        
+
         // Should have expected structure
         var jsonDoc = JsonDocument.Parse(responseBody);
         jsonDoc.RootElement.TryGetProperty("error", out var errorElement).Should().BeTrue();
@@ -306,4 +306,4 @@ public class ExceptionHandlingMiddlewareTests
         using var reader = new StreamReader(_context.Response.Body, leaveOpen: true);
         return await reader.ReadToEndAsync();
     }
-} 
+}

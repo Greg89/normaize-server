@@ -12,10 +12,10 @@ public class AppConfigurationTests
     {
         // Arrange
         Environment.SetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT, null);
-        
+
         // Act
         var result = AppConfiguration.GetEnvironment();
-        
+
         // Assert
         result.Should().Be(AppConstants.Environment.DEVELOPMENT);
     }
@@ -25,13 +25,13 @@ public class AppConfigurationTests
     {
         // Arrange
         Environment.SetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT, "Production");
-        
+
         // Act
         var result = AppConfiguration.GetEnvironment();
-        
+
         // Assert
         result.Should().Be("Production");
-        
+
         // Cleanup
         Environment.SetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT, null);
     }
@@ -41,10 +41,10 @@ public class AppConfigurationTests
     {
         // Arrange
         ClearDatabaseEnvironmentVariables();
-        
+
         // Act
         var result = AppConfiguration.GetDatabaseConfig();
-        
+
         // Assert
         result.Host.Should().BeNull();
         result.Database.Should().BeNull();
@@ -58,17 +58,17 @@ public class AppConfigurationTests
     {
         // Arrange
         SetDatabaseEnvironmentVariables("testhost", "testdb", "testuser", "testpass", "3307");
-        
+
         // Act
         var result = AppConfiguration.GetDatabaseConfig();
-        
+
         // Assert
         result.Host.Should().Be("testhost");
         result.Database.Should().Be("testdb");
         result.User.Should().Be("testuser");
         result.Password.Should().Be("testpass");
         result.Port.Should().Be("3307");
-        
+
         // Cleanup
         ClearDatabaseEnvironmentVariables();
     }
@@ -80,13 +80,13 @@ public class AppConfigurationTests
         Environment.SetEnvironmentVariable("MYSQLHOST", "primary");
         Environment.SetEnvironmentVariable("MYSQL_HOST", "secondary");
         Environment.SetEnvironmentVariable("DB_HOST", "tertiary");
-        
+
         // Act
         var result = AppConfiguration.GetDatabaseConfig();
-        
+
         // Assert
         result.Host.Should().Be("primary");
-        
+
         // Cleanup
         ClearDatabaseEnvironmentVariables();
     }
@@ -96,13 +96,13 @@ public class AppConfigurationTests
     {
         // Arrange
         SetDatabaseEnvironmentVariables("host", "db", "user", "pass", "3306");
-        
+
         // Act
         var result = AppConfiguration.HasDatabaseConnection();
-        
+
         // Assert
         result.Should().BeTrue();
-        
+
         // Cleanup
         ClearDatabaseEnvironmentVariables();
     }
@@ -114,13 +114,13 @@ public class AppConfigurationTests
         Environment.SetEnvironmentVariable("MYSQLHOST", "host");
         Environment.SetEnvironmentVariable("MYSQLDATABASE", "db");
         // Missing user and password
-        
+
         // Act
         var result = AppConfiguration.HasDatabaseConnection();
-        
+
         // Assert
         result.Should().BeFalse();
-        
+
         // Cleanup
         ClearDatabaseEnvironmentVariables();
     }
@@ -135,13 +135,13 @@ public class AppConfigurationTests
     {
         // Arrange
         Environment.SetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT, environment);
-        
+
         // Act
         var result = AppConfiguration.IsProductionLike();
-        
+
         // Assert
         result.Should().Be(expected);
-        
+
         // Cleanup
         Environment.SetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT, null);
     }
@@ -151,13 +151,13 @@ public class AppConfigurationTests
     {
         // Arrange
         Environment.SetEnvironmentVariable("PORT", "8080");
-        
+
         // Act
         var result = AppConfiguration.IsContainerized();
-        
+
         // Assert
         result.Should().BeTrue();
-        
+
         // Cleanup
         Environment.SetEnvironmentVariable("PORT", null);
     }
@@ -167,13 +167,13 @@ public class AppConfigurationTests
     {
         // Arrange
         Environment.SetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER", "true");
-        
+
         // Act
         var result = AppConfiguration.IsContainerized();
-        
+
         // Assert
         result.Should().BeTrue();
-        
+
         // Cleanup
         Environment.SetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER", null);
     }
@@ -183,10 +183,10 @@ public class AppConfigurationTests
     {
         // Arrange
         Environment.SetEnvironmentVariable("PORT", null);
-        
+
         // Act
         var result = AppConfiguration.GetPort();
-        
+
         // Assert
         result.Should().Be("5000");
     }
@@ -196,13 +196,13 @@ public class AppConfigurationTests
     {
         // Arrange
         Environment.SetEnvironmentVariable("PORT", "8080");
-        
+
         // Act
         var result = AppConfiguration.GetPort();
-        
+
         // Assert
         result.Should().Be("8080");
-        
+
         // Cleanup
         Environment.SetEnvironmentVariable("PORT", null);
     }
@@ -219,10 +219,10 @@ public class AppConfigurationTests
             Password = "testpass",
             Port = "3306"
         };
-        
+
         // Act
         var result = config.ToConnectionString();
-        
+
         // Assert
         result.Should().Contain("Server=testhost");
         result.Should().Contain("Database=testdb");
@@ -258,4 +258,4 @@ public class AppConfigurationTests
         Environment.SetEnvironmentVariable("DB_PASSWORD", null);
         Environment.SetEnvironmentVariable("DB_PORT", null);
     }
-} 
+}

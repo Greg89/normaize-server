@@ -12,4 +12,4 @@ public class DatabaseHealthResult
     public List<string> MissingColumns { get; set; } = [];
     public string? ErrorMessage { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-} 
+}

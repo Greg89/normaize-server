@@ -37,7 +37,7 @@ public class MigrationService : IMigrationService
             if (pendingMigrations.Count > 0)
             {
                 result.PendingMigrations = pendingMigrations;
-                _logger.LogInformation("Found {Count} pending migrations: {Migrations}", 
+                _logger.LogInformation("Found {Count} pending migrations: {Migrations}",
                     pendingMigrations.Count, string.Join(", ", pendingMigrations));
             }
             else
@@ -48,7 +48,7 @@ public class MigrationService : IMigrationService
             // Apply migrations using EF Core's built-in mechanism
             // This handles all the complexity internally
             _context.Database.Migrate();
-            
+
             result.Success = true;
             result.Message = "Database migrations applied successfully";
             _logger.LogInformation("Database migration completed: {Message}", result.Message);
@@ -87,7 +87,7 @@ public class MigrationService : IMigrationService
             // Simple schema verification - just check if critical tables exist
             var dataSetsTableExists = await _context.Database.ExecuteSqlRawAsync(
                 "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'DataSets'");
-            
+
             var dataSetRowsTableExists = await _context.Database.ExecuteSqlRawAsync(
                 "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'DataSetRows'");
 
@@ -111,4 +111,4 @@ public class MigrationService : IMigrationService
             return result;
         }
     }
-} 
+}

@@ -215,4 +215,4 @@ public class AppConfigurationServiceTests
         connectionString.Should().Contain("Password=");
         connectionString.Should().Contain("Port=3306");
     }
-} 
+}

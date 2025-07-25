@@ -18,7 +18,7 @@ public class ConfigurationValidationService(
     {
         var correlationId = Guid.NewGuid().ToString();
         var stopwatch = Stopwatch.StartNew();
-        
+
         _logger.LogInformation("Starting configuration validation. CorrelationId: {CorrelationId}", correlationId);
 
         try
@@ -57,12 +57,12 @@ public class ConfigurationValidationService(
 
             if (overallResult.IsValid)
             {
-                _logger.LogInformation("Configuration validation completed successfully. Duration: {Duration}ms, CorrelationId: {CorrelationId}", 
+                _logger.LogInformation("Configuration validation completed successfully. Duration: {Duration}ms, CorrelationId: {CorrelationId}",
                     overallResult.ValidationDuration.TotalMilliseconds, correlationId);
             }
             else
             {
-                _logger.LogWarning("Configuration validation failed with {ErrorCount} errors and {WarningCount} warnings. Duration: {Duration}ms, CorrelationId: {CorrelationId}", 
+                _logger.LogWarning("Configuration validation failed with {ErrorCount} errors and {WarningCount} warnings. Duration: {Duration}ms, CorrelationId: {CorrelationId}",
                     overallResult.Errors.Count, overallResult.Warnings.Count, overallResult.ValidationDuration.TotalMilliseconds, correlationId);
             }
 
@@ -72,7 +72,7 @@ public class ConfigurationValidationService(
         {
             stopwatch.Stop();
             _logger.LogError(ex, "Unexpected error during configuration validation. CorrelationId: {CorrelationId}", correlationId);
-            
+
             return new ConfigurationValidationResult
             {
                 IsValid = false,
@@ -380,4 +380,4 @@ public class ConfigurationValidationService(
 
     private static bool IsProductionEnvironment() =>
         Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Production", StringComparison.OrdinalIgnoreCase) == true;
-} 
+}

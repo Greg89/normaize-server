@@ -112,7 +112,7 @@ public class StartupService : IStartupService
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _logger.LogError(ex, "Database migration timed out after {Timeout} seconds. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, "Database migration timed out after {Timeout} seconds. CorrelationId: {CorrelationId}",
                 _startupConfig.Database.MigrationTimeoutSeconds, correlationId);
             throw new TimeoutException($"Database migration timed out after {_startupConfig.Database.MigrationTimeoutSeconds} seconds");
         }
@@ -155,7 +155,7 @@ public class StartupService : IStartupService
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _logger.LogError(ex, "Health check timed out after {Timeout} seconds. CorrelationId: {CorrelationId}", 
+            _logger.LogError(ex, "Health check timed out after {Timeout} seconds. CorrelationId: {CorrelationId}",
                 _startupConfig.HealthCheck.HealthCheckTimeoutSeconds, correlationId);
             throw new TimeoutException($"Health check timed out after {_startupConfig.HealthCheck.HealthCheckTimeoutSeconds} seconds");
         }
@@ -215,13 +215,13 @@ public class StartupService : IStartupService
 
                 if (attempt > maxRetries)
                 {
-                    _logger.LogError(ex, "{Operation} failed after {Attempts} attempts. CorrelationId: {CorrelationId}", 
+                    _logger.LogError(ex, "{Operation} failed after {Attempts} attempts. CorrelationId: {CorrelationId}",
                         operationName, attempt, correlationId);
                     break;
                 }
 
                 var delay = CalculateDelay(attempt, baseDelay);
-                _logger.LogWarning(ex, "{Operation} failed (attempt {Attempt}/{MaxAttempts}). Retrying in {Delay}ms. CorrelationId: {CorrelationId}", 
+                _logger.LogWarning(ex, "{Operation} failed (attempt {Attempt}/{MaxAttempts}). Retrying in {Delay}ms. CorrelationId: {CorrelationId}",
                     operationName, attempt, maxRetries + 1, delay.TotalMilliseconds, correlationId);
 
                 await Task.Delay(delay, cancellationToken);
@@ -260,7 +260,7 @@ public class StartupService : IStartupService
     private void HandleMigrationFailure(Exception ex, string correlationId)
     {
         var environment = _appConfigService.GetEnvironment();
-        
+
         if (IsProductionEnvironment(environment) && _startupConfig.Database.FailOnMigrationError)
         {
             _logger.LogCritical(ex, "Database migration failed in production environment. Application will not start. CorrelationId: {CorrelationId}", correlationId);
@@ -275,7 +275,7 @@ public class StartupService : IStartupService
     private void HandleHealthCheckFailure(Exception ex, string correlationId)
     {
         var environment = _appConfigService.GetEnvironment();
-        
+
         if (IsProductionEnvironment(environment) && _startupConfig.HealthCheck.FailOnHealthCheckError)
         {
             _logger.LogCritical(ex, "Health check failed in production environment. Application will not start. CorrelationId: {CorrelationId}", correlationId);
@@ -290,7 +290,7 @@ public class StartupService : IStartupService
     private void HandleStartupError(Exception ex, string correlationId)
     {
         var environment = _appConfigService.GetEnvironment();
-        
+
         if (IsProductionEnvironment(environment))
         {
             _logger.LogCritical(ex, "Startup configuration failed in production environment. Application will not start. CorrelationId: {CorrelationId}", correlationId);
@@ -306,7 +306,7 @@ public class StartupService : IStartupService
     {
         var validationResults = new List<ValidationResult>();
         var validationContext = new ValidationContext(_startupConfig);
-        
+
         if (!Validator.TryValidateObject(_startupConfig, validationContext, validationResults, true))
         {
             var errors = string.Join(", ", validationResults.Select(r => r.ErrorMessage));
@@ -326,4 +326,4 @@ public class StartupService : IStartupService
     }
 
     private static string GenerateCorrelationId() => Guid.NewGuid().ToString();
-} 
+}

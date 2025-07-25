@@ -110,4 +110,4 @@ public class DatabaseHealthServiceTests
         Assert.Equal("unhealthy", result.Status);
         Assert.NotNull(result.ErrorMessage);
     }
-} 
+}

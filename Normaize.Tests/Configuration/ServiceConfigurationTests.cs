@@ -31,7 +31,7 @@ public class ServiceConfigurationTests : IDisposable
     public ServiceConfigurationTests()
     {
         _builder = WebApplication.CreateBuilder();
-        
+
         // Store original environment variables to restore them later
         _originalEnvironmentVariables = new Dictionary<string, string?>
         {
@@ -47,10 +47,10 @@ public class ServiceConfigurationTests : IDisposable
             ["AUTH0_ISSUER"] = Environment.GetEnvironmentVariable("AUTH0_ISSUER"),
             ["AUTH0_AUDIENCE"] = Environment.GetEnvironmentVariable("AUTH0_AUDIENCE")
         };
-        
+
         // Clear all environment variables to start with a clean slate
         ClearAllEnvironmentVariables();
-        
+
         // Add basic services required for testing
         _builder.Services.AddLogging();
         _builder.Services.AddSingleton<IAppConfigurationService, AppConfigurationService>();
@@ -78,7 +78,7 @@ public class ServiceConfigurationTests : IDisposable
 
         // Assert
         using var scope = app.Services.CreateScope();
-        
+
         // Core services
         scope.ServiceProvider.GetService<IConfigurationValidationService>().Should().NotBeNull();
         scope.ServiceProvider.GetService<IAppConfigurationService>().Should().NotBeNull();
@@ -111,7 +111,7 @@ public class ServiceConfigurationTests : IDisposable
         // Arrange
         var problematicBuilder = WebApplication.CreateBuilder();
         problematicBuilder.Services.AddLogging();
-        
+
         // Act & Assert
         var action = () => ServiceConfiguration.ConfigureServices(problematicBuilder);
         action.Should().NotThrow();
@@ -129,10 +129,10 @@ public class ServiceConfigurationTests : IDisposable
 
         // Assert
         using var scope = app.Services.CreateScope();
-        
+
         var context = scope.ServiceProvider.GetService<NormaizeContext>();
         context.Should().NotBeNull();
-        
+
         // Verify it's using in-memory database
         var storageService = scope.ServiceProvider.GetService<IStorageService>();
         storageService.Should().BeOfType<InMemoryStorageService>();
@@ -150,7 +150,7 @@ public class ServiceConfigurationTests : IDisposable
 
         // Assert
         using var scope = app.Services.CreateScope();
-        
+
         var storageService = scope.ServiceProvider.GetService<IStorageService>();
         storageService.Should().BeOfType<InMemoryStorageService>();
     }
@@ -168,13 +168,13 @@ public class ServiceConfigurationTests : IDisposable
         {
             ServiceConfiguration.ConfigureServices(builder);
         };
-        
+
         action.Should().NotThrow("Service configuration should handle missing environment variables gracefully");
-        
+
         // Verify fallback behavior
         var app = builder.Build();
         using var scope = app.Services.CreateScope();
-        
+
         // Should still have core services available
         scope.ServiceProvider.GetService<IAppConfigurationService>().Should().NotBeNull();
         scope.ServiceProvider.GetService<NormaizeContext>().Should().NotBeNull();
@@ -221,14 +221,14 @@ public class ServiceConfigurationTests : IDisposable
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         Environment.SetEnvironmentVariable("STORAGE_PROVIDER", "s3");
-        
+
         // Clear all AWS-related environment variables to ensure no credentials are available
         Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", null);
         Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", null);
         Environment.SetEnvironmentVariable("AWS_REGION", null);
         Environment.SetEnvironmentVariable("AWS_S3_BUCKET", null);
         Environment.SetEnvironmentVariable("AWS_SERVICE_URL", null);
-        
+
         Environment.SetEnvironmentVariable("AUTH0_ISSUER", "https://test.auth0.com/");
         Environment.SetEnvironmentVariable("AUTH0_AUDIENCE", "test-audience");
     }
@@ -272,4 +272,4 @@ public class ServiceConfigurationTests : IDisposable
     }
 
     #endregion
-} 
+}

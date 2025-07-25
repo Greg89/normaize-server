@@ -44,7 +44,7 @@ public class Auth0MiddlewareTests
             new(ClaimTypes.Email, "user@example.com"),
             new(ClaimTypes.Name, "John Doe")
         };
-        
+
         var identity = new ClaimsIdentity(claims, "Bearer");
         context.User = new ClaimsPrincipal(identity);
 
@@ -72,7 +72,7 @@ public class Auth0MiddlewareTests
             new(ClaimTypes.Email, "user@example.com"),
             new(ClaimTypes.Name, "Jane Doe")
         };
-        
+
         var identity = new ClaimsIdentity(claims, "Bearer");
         context.User = new ClaimsPrincipal(identity);
 
@@ -99,7 +99,7 @@ public class Auth0MiddlewareTests
             new(ClaimTypes.NameIdentifier, "auth0|123456789")
             // Missing email and name claims
         };
-        
+
         var identity = new ClaimsIdentity(claims, "Bearer");
         context.User = new ClaimsPrincipal(identity);
 
@@ -146,7 +146,7 @@ public class Auth0MiddlewareTests
             new(ClaimTypes.Email, "user@example.com"),
             new(ClaimTypes.Name, "John Doe")
         };
-        
+
         var identity = new ClaimsIdentity(claims, "Bearer");
         context.User = new ClaimsPrincipal(identity);
 
@@ -216,15 +216,15 @@ public class Auth0MiddlewareTests
     {
         var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
         var logger = loggerFactory.CreateLogger("Auth0Middleware");
-        
+
         if (context.User.Identity?.IsAuthenticated == true)
         {
-            var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+            var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                         ?? context.User.FindFirst("sub")?.Value;
             var email = context.User.FindFirst(ClaimTypes.Email)?.Value;
             var name = context.User.FindFirst(ClaimTypes.Name)?.Value;
 
-            logger.LogDebug("User authenticated: UserId={UserId}, Email={Email}, Name={Name}", 
+            logger.LogDebug("User authenticated: UserId={UserId}, Email={Email}, Name={Name}",
                 userId, email, name);
 
             context.Items["UserId"] = userId;
@@ -241,4 +241,4 @@ public class Auth0MiddlewareTests
             await next(context);
         }
     }
-} 
+}

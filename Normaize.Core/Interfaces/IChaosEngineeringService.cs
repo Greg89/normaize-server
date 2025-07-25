@@ -15,7 +15,7 @@ public interface IChaosEngineeringService
     /// <param name="context">Additional context for the scenario</param>
     /// <returns>True if the scenario should be triggered</returns>
     bool ShouldTriggerChaos(string scenarioName, IDictionary<string, object>? context = null);
-    
+
     /// <summary>
     /// Determines if a chaos scenario should be triggered with correlation info
     /// </summary>
@@ -25,7 +25,7 @@ public interface IChaosEngineeringService
     /// <param name="context">Additional context for the scenario</param>
     /// <returns>True if the scenario should be triggered</returns>
     bool ShouldTriggerChaos(string scenarioName, string correlationId, string operationName, IDictionary<string, object>? context = null);
-    
+
     /// <summary>
     /// Executes a chaos scenario if conditions are met
     /// </summary>
@@ -34,7 +34,7 @@ public interface IChaosEngineeringService
     /// <param name="context">Additional context for the scenario</param>
     /// <returns>True if chaos was triggered and executed</returns>
     Task<bool> ExecuteChaosAsync(string scenarioName, Func<Task> action, IDictionary<string, object>? context = null);
-    
+
     /// <summary>
     /// Executes a chaos scenario with correlation info
     /// </summary>
@@ -45,7 +45,7 @@ public interface IChaosEngineeringService
     /// <param name="context">Additional context for the scenario</param>
     /// <returns>True if chaos was triggered and executed</returns>
     Task<bool> ExecuteChaosAsync(string scenarioName, string correlationId, string operationName, Func<Task> action, IDictionary<string, object>? context = null);
-    
+
     /// <summary>
     /// Executes a chaos scenario with a return value
     /// </summary>
@@ -55,7 +55,7 @@ public interface IChaosEngineeringService
     /// <param name="context">Additional context for the scenario</param>
     /// <returns>Result of the chaos action or default value</returns>
     Task<T?> ExecuteChaosAsync<T>(string scenarioName, Func<Task<T>> action, IDictionary<string, object>? context = null);
-    
+
     /// <summary>
     /// Executes a chaos scenario with a return value and correlation info
     /// </summary>
@@ -67,7 +67,7 @@ public interface IChaosEngineeringService
     /// <param name="context">Additional context for the scenario</param>
     /// <returns>Result of the chaos action or default value</returns>
     Task<T?> ExecuteChaosAsync<T>(string scenarioName, string correlationId, string operationName, Func<Task<T>> action, IDictionary<string, object>? context = null);
-    
+
     /// <summary>
     /// Registers a custom chaos scenario
     /// </summary>
@@ -75,7 +75,7 @@ public interface IChaosEngineeringService
     /// <param name="triggerCondition">Function that determines when to trigger</param>
     /// <param name="chaosAction">Action to execute when triggered</param>
     void RegisterChaosScenario(string scenarioName, Func<IDictionary<string, object>?, bool> triggerCondition, Func<Task> chaosAction);
-    
+
     /// <summary>
     /// Gets current chaos engineering statistics
     /// </summary>
@@ -92,4 +92,4 @@ public class ChaosEngineeringStats
     public int TriggeredScenarios { get; set; }
     public ConcurrentDictionary<string, int> ScenarioCounts { get; set; } = new();
     public DateTime LastTriggered { get; set; }
-} 
+}

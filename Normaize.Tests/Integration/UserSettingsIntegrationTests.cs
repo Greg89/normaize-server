@@ -22,11 +22,11 @@ public class UserSettingsIntegrationTests : IClassFixture<TestWebApplicationFact
     public UserSettingsIntegrationTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
-        
+
         // Get the database context from the factory
         var scope = _factory.Services.CreateScope();
         _context = scope.ServiceProvider.GetRequiredService<NormaizeContext>();
-        
+
         // Ensure database is created
         _context.Database.EnsureCreated();
     }
@@ -36,7 +36,7 @@ public class UserSettingsIntegrationTests : IClassFixture<TestWebApplicationFact
     {
         // Arrange
         var client = _factory.CreateClient();
-        
+
         // Add authentication header
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
 
@@ -60,10 +60,10 @@ public class UserSettingsIntegrationTests : IClassFixture<TestWebApplicationFact
             Language = "en",
             TimeZone = "UTC"
         };
-        
+
         var json = JsonSerializer.Serialize(updateDto);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
-        
+
         // Add authentication header
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
 
@@ -80,7 +80,7 @@ public class UserSettingsIntegrationTests : IClassFixture<TestWebApplicationFact
         // Arrange
         var client = _factory.CreateClient();
         var settingName = "Theme";
-        
+
         // Add authentication header
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
 
@@ -100,11 +100,11 @@ public class UserSettingsIntegrationTests : IClassFixture<TestWebApplicationFact
         var client = _factory.CreateClient();
         var settingName = "Theme";
         var settingValue = "light";
-        
+
         // Send the value as a JSON string, not as a JSON object
         var json = $"\"{settingValue}\"";
         var content = new StringContent(json, Encoding.UTF8, "application/json");
-        
+
         // Add authentication header
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-token");
 
@@ -120,4 +120,4 @@ public class UserSettingsIntegrationTests : IClassFixture<TestWebApplicationFact
         _context?.Dispose();
         GC.SuppressFinalize(this);
     }
-} 
+}

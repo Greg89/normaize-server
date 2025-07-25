@@ -38,7 +38,7 @@ public class RequestLoggingMiddlewareTests
     {
         // Arrange
         var nextCalled = false;
-        RequestDelegate next = async (ctx) => 
+        RequestDelegate next = async (ctx) =>
         {
             nextCalled = true;
             await Task.CompletedTask;
@@ -118,7 +118,7 @@ public class RequestLoggingMiddlewareTests
         // Arrange
         var claimsUserId = "user-from-claims";
         var itemsUserId = "user-from-items";
-        
+
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, claimsUserId)
@@ -214,7 +214,7 @@ public class RequestLoggingMiddlewareTests
     public async Task InvokeAsync_WhenNonSuccessStatusCode_ShouldLogCorrectly()
     {
         // Arrange
-        RequestDelegate next = async (ctx) => 
+        RequestDelegate next = async (ctx) =>
         {
             ctx.Response.StatusCode = 404;
             await Task.CompletedTask;
@@ -239,7 +239,7 @@ public class RequestLoggingMiddlewareTests
     public async Task InvokeAsync_ShouldMeasureRequestDuration()
     {
         // Arrange
-        RequestDelegate next = async (ctx) => 
+        RequestDelegate next = async (ctx) =>
         {
             await Task.Delay(50); // Simulate some processing time
         };
@@ -260,7 +260,7 @@ public class RequestLoggingMiddlewareTests
     {
         // Arrange
         var exception = new Exception("Test exception");
-        RequestDelegate next = async (ctx) => 
+        RequestDelegate next = async (ctx) =>
         {
             await Task.Delay(25);
             throw exception;
@@ -276,4 +276,4 @@ public class RequestLoggingMiddlewareTests
             x => x.LogException(exception, It.Is<string>(s => s.Contains("Request processing failed"))),
             Times.Once);
     }
-} 
+}

@@ -314,4 +314,4 @@ public class HealthCheckServiceTests : IDisposable
     {
         GC.SuppressFinalize(this);
     }
-} 
+}

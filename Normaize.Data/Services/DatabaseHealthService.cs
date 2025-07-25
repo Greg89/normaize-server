@@ -58,7 +58,7 @@ public class DatabaseHealthService : IDatabaseHealthService
 
             var foundColumns = await GetExistingColumnsAsync(cancellationToken);
             var missingColumns = _config.CriticalColumns.Except(foundColumns).ToList();
-            
+
             if (missingColumns.Count > 0)
             {
                 _logger.LogWarning("Database missing critical columns: {Columns}", string.Join(", ", missingColumns));
@@ -97,10 +97,10 @@ public class DatabaseHealthService : IDatabaseHealthService
     private async Task<List<string>> GetExistingColumnsAsync(CancellationToken cancellationToken)
     {
         var providerName = _context.Database.ProviderName ?? string.Empty;
-        
+
         if (providerName.Contains("Sqlite"))
             return await GetSqliteColumnsAsync(cancellationToken);
-        
+
         return await GetStandardColumnsAsync(cancellationToken);
     }
 
@@ -108,20 +108,20 @@ public class DatabaseHealthService : IDatabaseHealthService
     {
         var foundColumns = new List<string>();
         var sql = "PRAGMA table_info(DataSets)";
-        
+
         using var command = _context.Database.GetDbConnection().CreateCommand();
         command.CommandText = sql;
-        
+
         if (command.Connection?.State != System.Data.ConnectionState.Open)
             await command.Connection!.OpenAsync(cancellationToken);
-            
+
         using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
             var columnName = reader.GetString(1); // Column name is at index 1
             foundColumns.Add(columnName);
         }
-        
+
         return foundColumns;
     }
 
@@ -131,9 +131,9 @@ public class DatabaseHealthService : IDatabaseHealthService
         var sqlBuilder = new System.Text.StringBuilder(@"
             SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_NAME = 'DataSets' AND COLUMN_NAME IN (");
-        
+
         using var command = _context.Database.GetDbConnection().CreateCommand();
-        
+
         // Build parameterized query with proper parameters
         var parameters = new List<System.Data.Common.DbParameter>();
         for (int i = 0; i < _config.CriticalColumns.Length; i++)
@@ -141,7 +141,7 @@ public class DatabaseHealthService : IDatabaseHealthService
             if (i > 0) sqlBuilder.Append(',');
             var paramName = $"@column{i}";
             sqlBuilder.Append(paramName);
-            
+
             var parameter = command.CreateParameter();
             parameter.ParameterName = paramName;
             parameter.Value = _config.CriticalColumns[i];
@@ -149,19 +149,19 @@ public class DatabaseHealthService : IDatabaseHealthService
         }
         sqlBuilder.Append(')');
         var sql = sqlBuilder.ToString();
-        
+
         command.CommandText = sql;
         command.Parameters.AddRange(parameters.ToArray());
-        
+
         if (command.Connection?.State != System.Data.ConnectionState.Open)
             await command.Connection!.OpenAsync(cancellationToken);
-            
+
         using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
             foundColumns.Add(reader.GetString(0));
         }
-        
+
         return foundColumns;
     }
 
@@ -185,4 +185,4 @@ public class DatabaseHealthService : IDatabaseHealthService
             MissingColumns = missingColumns ?? []
         };
     }
-} 
+}

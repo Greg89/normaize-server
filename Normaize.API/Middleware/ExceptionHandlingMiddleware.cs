@@ -27,13 +27,13 @@ public class ExceptionHandlingMiddleware
         {
             // Get logging service from service provider
             var loggingService = context.RequestServices.GetRequiredService<IStructuredLoggingService>();
-            
+
             // Generate correlation ID for request tracking
             var correlationId = context.TraceIdentifier ?? Guid.NewGuid().ToString();
-            
+
             // Log the exception with full context
             loggingService.LogException(ex, $"Global exception handler - {context.Request.Method} {context.Request.Path} [CorrelationId: {correlationId}]");
-            
+
             await HandleExceptionAsync(context, ex, correlationId);
         }
     }
@@ -41,7 +41,7 @@ public class ExceptionHandlingMiddleware
     private static async Task HandleExceptionAsync(HttpContext context, Exception exception, string correlationId)
     {
         context.Response.ContentType = "application/json";
-        
+
         var response = new
         {
             Error = new
@@ -89,4 +89,4 @@ public class ExceptionHandlingMiddleware
             _ => (int)HttpStatusCode.InternalServerError
         };
     }
-} 
+}

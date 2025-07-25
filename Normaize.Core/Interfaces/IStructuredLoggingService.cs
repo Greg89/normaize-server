@@ -108,4 +108,4 @@ public interface IOperationContext
     /// <param name="defaultValue">Default value if key doesn't exist</param>
     /// <returns>The metadata value or default</returns>
     T? GetMetadata<T>(string key, T? defaultValue = default);
-} 
+}

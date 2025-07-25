@@ -8,4 +8,4 @@ public interface IFileUploadService
     Task<bool> ValidateFileAsync(FileUploadRequest fileRequest);
     Task<DataSet> ProcessFileAsync(string filePath, string fileType);
     Task DeleteFileAsync(string filePath);
-} 
+}

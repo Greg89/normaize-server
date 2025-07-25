@@ -16,10 +16,10 @@ public static class ClaimsPrincipalExtensions
     public static string GetUserId(this ClaimsPrincipal user)
     {
         // Get user ID from JWT token (Auth0 sub claim)
-        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                    ?? user.FindFirst("sub")?.Value 
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? user.FindFirst("sub")?.Value
                     ?? throw new UnauthorizedAccessException("User ID not found in token");
-        
+
         return userId;
     }
 
@@ -43,7 +43,7 @@ public static class ClaimsPrincipalExtensions
             {
                 return fallbackUserId ?? "client-credentials-user";
             }
-            
+
             // For test scenarios or unauthenticated contexts, return null instead of throwing
             return null;
         }
@@ -77,7 +77,7 @@ public static class ClaimsPrincipalExtensions
     /// <returns>The user email or null if not found</returns>
     public static string? GetUserEmail(this ClaimsPrincipal user)
     {
-        return user.FindFirst(ClaimTypes.Email)?.Value 
+        return user.FindFirst(ClaimTypes.Email)?.Value
                ?? user.FindFirst("email")?.Value;
     }
-} 
+}

@@ -20,7 +20,7 @@ public class ConfigurationIntegrationTests : IClassFixture<TestWebApplicationFac
         // Arrange & Act
         var environment = AppConfiguration.GetEnvironment();
         var port = AppConfiguration.GetPort();
-        
+
         // Assert
         environment.Should().NotBeNullOrEmpty();
         port.Should().NotBeNullOrEmpty();
@@ -31,7 +31,7 @@ public class ConfigurationIntegrationTests : IClassFixture<TestWebApplicationFac
     {
         // Arrange & Act
         var dbConfig = AppConfiguration.GetDatabaseConfig();
-        
+
         // Assert
         dbConfig.Should().NotBeNull();
     }
@@ -41,15 +41,15 @@ public class ConfigurationIntegrationTests : IClassFixture<TestWebApplicationFac
     {
         // Arrange
         using var client = _factory.CreateClient();
-        
+
         // Act
         var services = _factory.Services;
-        
+
         // Assert
         services.Should().NotBeNull();
-        
+
         // Verify key services are registered
         var httpClientFactory = services.GetService<IHttpClientFactory>();
         httpClientFactory.Should().NotBeNull();
     }
-} 
+}
