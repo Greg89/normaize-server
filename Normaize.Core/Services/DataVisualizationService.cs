@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Normaize.Core.Interfaces;
 using Normaize.Core.DTOs;
@@ -6,14 +5,12 @@ using Normaize.Core.Models;
 using Normaize.Core.Constants;
 using System.Text.Json;
 using System.Diagnostics;
-using System.Security.Cryptography;
 
 namespace Normaize.Core.Services;
 
 public class DataVisualizationService : IDataVisualizationService
 {
     private readonly IDataSetRepository _dataSetRepository;
-    private readonly IMemoryCache _cache;
     private readonly DataVisualizationOptions _options;
     private readonly IDataProcessingInfrastructure _infrastructure;
     private readonly IVisualizationServices _visualizationServices;
@@ -21,19 +18,16 @@ public class DataVisualizationService : IDataVisualizationService
 
     public DataVisualizationService(
         IDataSetRepository dataSetRepository,
-        IMemoryCache cache,
         IOptions<DataVisualizationOptions> options,
         IDataProcessingInfrastructure infrastructure,
         IVisualizationServices visualizationServices)
     {
         ArgumentNullException.ThrowIfNull(dataSetRepository);
-        ArgumentNullException.ThrowIfNull(cache);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(infrastructure);
         ArgumentNullException.ThrowIfNull(visualizationServices);
 
         _dataSetRepository = dataSetRepository;
-        _cache = cache;
         _options = options.Value;
         _infrastructure = infrastructure;
         _visualizationServices = visualizationServices;
@@ -347,9 +341,9 @@ public class DataVisualizationService : IDataVisualizationService
     {
         var stopwatch = Stopwatch.StartNew();
 
-        var cacheKey = GenerateCacheKey($"chart_{dataSetId}_{chartType}", configuration);
+        var cacheKey = _visualizationServices.CacheManagement.GenerateChartCacheKey(dataSetId, chartType, configuration);
 
-        if (_cache.TryGetValue(cacheKey, out ChartDataDto? cachedChart))
+        if (_visualizationServices.CacheManagement.TryGetValue(cacheKey, out ChartDataDto? cachedChart))
         {
             _infrastructure.StructuredLogging.LogStep(context, "Retrieved chart from cache");
             return cachedChart!;
@@ -363,7 +357,7 @@ public class DataVisualizationService : IDataVisualizationService
         var chartData = _visualizationServices.ChartGeneration.GenerateChartData(dataSet, data, chartType, configuration, context);
         chartData.ProcessingTime = stopwatch.Elapsed;
 
-        _cache.Set(cacheKey, chartData, _options.CacheExpiration);
+        _visualizationServices.CacheManagement.Set(cacheKey, chartData, _options.CacheExpiration);
 
         _infrastructure.StructuredLogging.LogStep(context, "Generated chart successfully", new Dictionary<string, object>
         {
@@ -377,9 +371,9 @@ public class DataVisualizationService : IDataVisualizationService
     {
         var stopwatch = Stopwatch.StartNew();
 
-        var cacheKey = GenerateCacheKey($"comparison_{dataSetId1}_{dataSetId2}_{chartType}", configuration);
+        var cacheKey = _visualizationServices.CacheManagement.GenerateComparisonChartCacheKey(dataSetId1, dataSetId2, chartType, configuration);
 
-        if (_cache.TryGetValue(cacheKey, out ComparisonChartDto? cachedChart))
+        if (_visualizationServices.CacheManagement.TryGetValue(cacheKey, out ComparisonChartDto? cachedChart))
         {
             _infrastructure.StructuredLogging.LogStep(context, "Retrieved comparison chart from cache");
             return cachedChart!;
@@ -396,7 +390,7 @@ public class DataVisualizationService : IDataVisualizationService
         var comparisonChart = _visualizationServices.ChartGeneration.GenerateComparisonChartData(dataSet1, dataSet2, data1, data2, chartType, configuration, context);
         comparisonChart.ProcessingTime = stopwatch.Elapsed;
 
-        _cache.Set(cacheKey, comparisonChart, _options.CacheExpiration);
+        _visualizationServices.CacheManagement.Set(cacheKey, comparisonChart, _options.CacheExpiration);
 
         _infrastructure.StructuredLogging.LogStep(context, "Generated comparison chart successfully", new Dictionary<string, object>
         {
@@ -410,9 +404,9 @@ public class DataVisualizationService : IDataVisualizationService
     {
         var stopwatch = Stopwatch.StartNew();
 
-        var cacheKey = $"summary_{dataSetId}";
+        var cacheKey = _visualizationServices.CacheManagement.GenerateDataSummaryCacheKey(dataSetId);
 
-        if (_cache.TryGetValue(cacheKey, out DataSummaryDto? cachedSummary))
+        if (_visualizationServices.CacheManagement.TryGetValue(cacheKey, out DataSummaryDto? cachedSummary))
         {
             _infrastructure.StructuredLogging.LogStep(context, "Retrieved data summary from cache");
             return cachedSummary!;
@@ -426,7 +420,7 @@ public class DataVisualizationService : IDataVisualizationService
         var summary = _visualizationServices.StatisticalCalculation.GenerateDataSummary(dataSet, data);
         summary.ProcessingTime = stopwatch.Elapsed;
 
-        _cache.Set(cacheKey, summary, _options.CacheExpiration);
+        _visualizationServices.CacheManagement.Set(cacheKey, summary, _options.CacheExpiration);
 
         _infrastructure.StructuredLogging.LogStep(context, "Generated data summary successfully", new Dictionary<string, object>
         {
@@ -440,9 +434,9 @@ public class DataVisualizationService : IDataVisualizationService
     {
         var stopwatch = Stopwatch.StartNew();
 
-        var cacheKey = $"stats_{dataSetId}";
+        var cacheKey = _visualizationServices.CacheManagement.GenerateStatisticalSummaryCacheKey(dataSetId);
 
-        if (_cache.TryGetValue(cacheKey, out StatisticalSummaryDto? cachedStats))
+        if (_visualizationServices.CacheManagement.TryGetValue(cacheKey, out StatisticalSummaryDto? cachedStats))
         {
             _infrastructure.StructuredLogging.LogStep(context, "Retrieved statistical summary from cache");
             return cachedStats!;
@@ -456,7 +450,7 @@ public class DataVisualizationService : IDataVisualizationService
         var stats = _visualizationServices.StatisticalCalculation.GenerateStatisticalSummary(dataSet, data);
         stats.ProcessingTime = stopwatch.Elapsed;
 
-        _cache.Set(cacheKey, stats, _options.CacheExpiration);
+        _visualizationServices.CacheManagement.Set(cacheKey, stats, _options.CacheExpiration);
 
         _infrastructure.StructuredLogging.LogStep(context, "Generated statistical summary successfully", new Dictionary<string, object>
         {
@@ -587,14 +581,7 @@ public class DataVisualizationService : IDataVisualizationService
         };
     }
 
-    private static string GenerateCacheKey(string baseKey, ChartConfigurationDto? configuration)
-    {
-        if (configuration == null) return baseKey;
 
-        var configHash = JsonSerializer.Serialize(configuration);
-        var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(configHash));
-        return $"{baseKey}_{Convert.ToBase64String(hash)[..AppConstants.DataProcessing.CACHE_KEY_HASH_LENGTH]}";
-    }
 
     #endregion
 

@@ -19,7 +19,7 @@ public class DataVisualizationServiceTests
     private readonly Mock<IStatisticalCalculationService> _mockStatisticalCalculationService = new();
     private readonly Mock<IChartGenerationService> _mockChartGenerationService = new();
     private readonly Mock<IVisualizationServices> _mockVisualizationServices = new();
-    private readonly IMemoryCache _memoryCache = new MemoryCache(new MemoryCacheOptions());
+    private readonly Mock<ICacheManagementService> _mockCacheManagement = new();
     private readonly DataVisualizationService _service;
 
     public DataVisualizationServiceTests()
@@ -33,8 +33,9 @@ public class DataVisualizationServiceTests
         // Setup visualization services mock
         _mockVisualizationServices.Setup(x => x.StatisticalCalculation).Returns(_mockStatisticalCalculationService.Object);
         _mockVisualizationServices.Setup(x => x.ChartGeneration).Returns(_mockChartGenerationService.Object);
+        _mockVisualizationServices.Setup(x => x.CacheManagement).Returns(_mockCacheManagement.Object);
 
-        _service = new DataVisualizationService(_mockRepo.Object, _memoryCache, _mockOptions.Object, _mockInfrastructure.Object, _mockVisualizationServices.Object);
+        _service = new DataVisualizationService(_mockRepo.Object, _mockOptions.Object, _mockInfrastructure.Object, _mockVisualizationServices.Object);
     }
 
     private void SetupInfrastructureMocks()
@@ -108,13 +109,8 @@ public class DataVisualizationServiceTests
         var config = new ChartConfigurationDto { Title = "Pie Chart" };
         var expected = new ChartDataDto { DataSetId = dataSetId, ChartType = chartType, Labels = new List<string> { "A" }, Series = new List<ChartSeriesDto> { new ChartSeriesDto { Name = "S", Data = new List<object> { 1 } } } };
 
-        // Use the same cache key generation logic as the service
-        var baseKey = $"chart_{dataSetId}_{chartType}";
-        var configHash = System.Text.Json.JsonSerializer.Serialize(config);
-        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(configHash));
-        var cacheKey = $"{baseKey}_{Convert.ToBase64String(hash)[..8]}";
-
-        _memoryCache.Set(cacheKey, expected);
+        // Setup cache management mock to return cached value
+        _mockCacheManagement.Setup(x => x.TryGetValue(It.IsAny<string>(), out expected)).Returns(true);
 
         // Setup dataset for validation
         var dataSet = new DataSet { Id = dataSetId, UserId = userId, ProcessedData = "[{\"label\": \"A\", \"value\": 1}]", UseSeparateTable = false };

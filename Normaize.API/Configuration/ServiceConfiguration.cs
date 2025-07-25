@@ -431,6 +431,7 @@ public static class ServiceConfiguration
         // Register visualization services
         builder.Services.AddScoped<IStatisticalCalculationService, StatisticalCalculationService>();
         builder.Services.AddScoped<IChartGenerationService, ChartGenerationService>();
+        builder.Services.AddScoped<ICacheManagementService, CacheManagementService>();
         builder.Services.AddScoped<IVisualizationServices, VisualizationServices>();
 
         builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
