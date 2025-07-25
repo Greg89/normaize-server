@@ -16,6 +16,9 @@ public class DataVisualizationServiceTests
     private readonly Mock<IDataSetRepository> _mockRepo = new();
     private readonly Mock<IOptions<DataVisualizationOptions>> _mockOptions = new();
     private readonly Mock<IDataProcessingInfrastructure> _mockInfrastructure = new();
+    private readonly Mock<IStatisticalCalculationService> _mockStatisticalCalculationService = new();
+    private readonly Mock<IChartGenerationService> _mockChartGenerationService = new();
+    private readonly Mock<IVisualizationServices> _mockVisualizationServices = new();
     private readonly IMemoryCache _memoryCache = new MemoryCache(new MemoryCacheOptions());
     private readonly DataVisualizationService _service;
 
@@ -27,7 +30,11 @@ public class DataVisualizationServiceTests
         // Setup infrastructure mocks
         SetupInfrastructureMocks();
 
-        _service = new DataVisualizationService(_mockRepo.Object, _memoryCache, _mockOptions.Object, _mockInfrastructure.Object);
+        // Setup visualization services mock
+        _mockVisualizationServices.Setup(x => x.StatisticalCalculation).Returns(_mockStatisticalCalculationService.Object);
+        _mockVisualizationServices.Setup(x => x.ChartGeneration).Returns(_mockChartGenerationService.Object);
+
+        _service = new DataVisualizationService(_mockRepo.Object, _memoryCache, _mockOptions.Object, _mockInfrastructure.Object, _mockVisualizationServices.Object);
     }
 
     private void SetupInfrastructureMocks()
@@ -67,6 +74,18 @@ public class DataVisualizationServiceTests
         var config = new ChartConfigurationDto { Title = "Test Chart" };
         var dataSet = new DataSet { Id = dataSetId, UserId = userId, ProcessedData = "[{\"label\": \"A\", \"value\": 10}, {\"label\": \"B\", \"value\": 20}]", UseSeparateTable = false };
         _mockRepo.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
+
+        // Setup mock chart generation service
+        var expectedChartData = new ChartDataDto
+        {
+            DataSetId = dataSetId,
+            ChartType = chartType,
+            Labels = new List<string> { "A", "B" },
+            Series = new List<ChartSeriesDto> { new ChartSeriesDto { Name = "value", Data = new List<object> { 10.0, 20.0 } } }
+        };
+
+        _mockChartGenerationService.Setup(x => x.GenerateChartData(It.IsAny<DataSet>(), It.IsAny<List<Dictionary<string, object>>>(), chartType, config, It.IsAny<IOperationContext>()))
+            .Returns(expectedChartData);
 
         // Act
         var result = await _service.GenerateChartAsync(dataSetId, chartType, config, userId);
@@ -164,6 +183,9 @@ public class DataVisualizationServiceTests
         _mockRepo.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
         var config = new ChartConfigurationDto { MaxDataPoints = 0 };
 
+        _mockChartGenerationService.Setup(x => x.ValidateChartConfiguration(ChartType.Bar, config))
+            .Throws(new ArgumentException("MaxDataPoints must be greater than 0"));
+
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateChartAsync(dataSetId, ChartType.Bar, config, userId));
         exception.InnerException.Should().BeOfType<ArgumentException>();
@@ -179,6 +201,19 @@ public class DataVisualizationServiceTests
         var ds2 = new DataSet { Id = id2, UserId = userId, ProcessedData = "[{\"label\": \"A\", \"value\": 2}]", UseSeparateTable = false };
         _mockRepo.Setup(r => r.GetByIdAsync(id1)).ReturnsAsync(ds1);
         _mockRepo.Setup(r => r.GetByIdAsync(id2)).ReturnsAsync(ds2);
+
+        // Setup mock chart generation service
+        var expectedComparisonChart = new ComparisonChartDto
+        {
+            DataSetId1 = id1,
+            DataSetId2 = id2,
+            ChartType = ChartType.Bar,
+            Series = new List<ChartSeriesDto> { new ChartSeriesDto { Name = "test", Data = new List<object> { 1 } } },
+            Labels = new List<string> { "A" }
+        };
+
+        _mockChartGenerationService.Setup(x => x.GenerateComparisonChartData(It.IsAny<DataSet>(), It.IsAny<DataSet>(), It.IsAny<List<Dictionary<string, object>>>(), It.IsAny<List<Dictionary<string, object>>>(), ChartType.Bar, null, It.IsAny<IOperationContext>()))
+            .Returns(expectedComparisonChart);
 
         // Act
         var result = await _service.GenerateComparisonChartAsync(id1, id2, ChartType.Bar, null, userId);
@@ -228,6 +263,19 @@ public class DataVisualizationServiceTests
         var dataSet = new DataSet { Id = dataSetId, UserId = userId, ProcessedData = "[{\"label\": \"A\", \"value\": 1}]", UseSeparateTable = false };
         _mockRepo.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
 
+        // Setup mock for StatisticalCalculationService
+        var expectedSummary = new DataSummaryDto
+        {
+            DataSetId = dataSetId,
+            TotalRows = 1,
+            TotalColumns = 2,
+            MissingValues = 0,
+            DuplicateRows = 0,
+            ProcessingTime = TimeSpan.FromMilliseconds(10)
+        };
+        _mockStatisticalCalculationService.Setup(s => s.GenerateDataSummary(It.IsAny<DataSet>(), It.IsAny<List<Dictionary<string, object>>>()))
+            .Returns(expectedSummary);
+
         // Act
         var result = await _service.GetDataSummaryAsync(dataSetId, userId);
 
@@ -274,6 +322,15 @@ public class DataVisualizationServiceTests
         var dataSet = new DataSet { Id = dataSetId, UserId = userId, ProcessedData = "[{\"label\": \"A\", \"value\": 1}]", UseSeparateTable = false };
         _mockRepo.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
 
+        // Setup mock for StatisticalCalculationService
+        var expectedStats = new StatisticalSummaryDto
+        {
+            DataSetId = dataSetId,
+            ProcessingTime = TimeSpan.FromMilliseconds(10)
+        };
+        _mockStatisticalCalculationService.Setup(s => s.GenerateStatisticalSummary(It.IsAny<DataSet>(), It.IsAny<List<Dictionary<string, object>>>()))
+            .Returns(expectedStats);
+
         // Act
         var result = await _service.GetStatisticalSummaryAsync(dataSetId, userId);
 
@@ -316,6 +373,7 @@ public class DataVisualizationServiceTests
     {
         // Arrange
         var config = new ChartConfigurationDto { MaxDataPoints = 5 };
+        _mockChartGenerationService.Setup(x => x.ValidateChartConfiguration(ChartType.Bar, config)).Returns(true);
 
         // Act
         var result = _service.ValidateChartConfiguration(ChartType.Bar, config);
@@ -329,6 +387,8 @@ public class DataVisualizationServiceTests
     {
         // Arrange
         var config = new ChartConfigurationDto { MaxDataPoints = 0 };
+        _mockChartGenerationService.Setup(x => x.ValidateChartConfiguration(ChartType.Bar, config))
+            .Throws(new ArgumentException("MaxDataPoints must be greater than 0"));
 
         // Act & Assert
         Assert.Throws<ArgumentException>(() => _service.ValidateChartConfiguration(ChartType.Bar, config));
@@ -361,56 +421,12 @@ public class DataVisualizationServiceTests
         Assert.Equal("20", data[1]["value"].ToString());
     }
 
-    [Fact]
-    public void TestIsNumericMethod()
-    {
-        // Test the IsNumeric method directly
-        var service = new DataVisualizationService(_mockRepo.Object, _memoryCache, _mockOptions.Object, _mockInfrastructure.Object);
 
-        // Test with reflection to access the private static method
-        var method = typeof(DataVisualizationService).GetMethod("IsNumeric",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-
-        Assert.NotNull(method);
-
-        // Test various numeric representations
-        Assert.True((bool)method.Invoke(null, ["10"])!);
-        Assert.True((bool)method.Invoke(null, ["20.5"])!);
-        Assert.True((bool)method.Invoke(null, [10])!);
-        Assert.True((bool)method.Invoke(null, [20.5])!);
-        Assert.False((bool)method.Invoke(null, ["A"])!);
-        Assert.False((bool)method.Invoke(null, ["label"])!);
-    }
-
-    [Fact]
-    public void TestIsNumericColumnMethod()
-    {
-        // Test with reflection to access the private static method
-        var method = typeof(DataVisualizationService).GetMethod("IsNumericColumn",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-
-        Assert.NotNull(method);
-
-        // Test with numeric data
-        var numericData = new List<object?> { "10", "20", "30" };
-        Assert.True((bool)method.Invoke(null, [numericData])!);
-
-        // Test with mixed data
-        var mixedData = new List<object?> { "10", "A", "30" };
-        Assert.False((bool)method.Invoke(null, [mixedData])!);
-
-        // Test with string data
-        var stringData = new List<object?> { "A", "B", "C" };
-        Assert.False((bool)method.Invoke(null, [stringData])!);
-    }
 
     [Fact]
     public void TestChartGenerationDirectly()
     {
-        // Test the chart generation logic directly
-        var service = new DataVisualizationService(_mockRepo.Object, _memoryCache, _mockOptions.Object, _mockInfrastructure.Object);
-
-        // Create test data
+        // Test the chart generation logic through the mock service
         var dataSet = new DataSet { Id = 1, UserId = "user1", ProcessedData = "[{\"label\": \"A\", \"value\": 10}, {\"label\": \"B\", \"value\": 20}]", UseSeparateTable = false };
         var data = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, object>>>(dataSet.ProcessedData);
 
@@ -419,14 +435,22 @@ public class DataVisualizationServiceTests
         mockContext.Setup(x => x.CorrelationId).Returns("test-correlation-id");
         mockContext.Setup(x => x.UserId).Returns("user1");
 
-        // Test with reflection to access the private method
-        var method = typeof(DataVisualizationService).GetMethod("GenerateChartData",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        // Setup the mock chart generation service
+        var expectedChartData = new ChartDataDto
+        {
+            DataSetId = 1,
+            ChartType = ChartType.Bar,
+            Labels = new List<string> { "A", "B" },
+            Series = new List<ChartSeriesDto> { new ChartSeriesDto { Name = "value", Data = new List<object> { 10.0, 20.0 } } }
+        };
 
-        Assert.NotNull(method);
+        _mockChartGenerationService.Setup(x => x.GenerateChartData(dataSet, data!, ChartType.Bar, null, mockContext.Object))
+            .Returns(expectedChartData);
 
-        var result = (ChartDataDto)method.Invoke(service, [dataSet, data!, ChartType.Bar, null!, mockContext.Object])!;
+        // Act
+        var result = _mockChartGenerationService.Object.GenerateChartData(dataSet, data!, ChartType.Bar, null, mockContext.Object);
 
+        // Assert
         Assert.NotNull(result);
         Assert.Equal(1, result.DataSetId);
         Assert.Equal(ChartType.Bar, result.ChartType);

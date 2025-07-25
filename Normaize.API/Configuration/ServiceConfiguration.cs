@@ -6,6 +6,7 @@ using Normaize.Data;
 using Normaize.Data.Repositories;
 using Normaize.Data.Services;
 using Normaize.Core.Services;
+using Normaize.Core.Services.Visualization;
 using System.Diagnostics;
 
 namespace Normaize.API.Configuration;
@@ -426,6 +427,11 @@ public static class ServiceConfiguration
 
         // Register infrastructure services first
         builder.Services.AddScoped<IDataProcessingInfrastructure, DataProcessingInfrastructure>();
+
+        // Register visualization services
+        builder.Services.AddScoped<IStatisticalCalculationService, StatisticalCalculationService>();
+        builder.Services.AddScoped<IChartGenerationService, ChartGenerationService>();
+        builder.Services.AddScoped<IVisualizationServices, VisualizationServices>();
 
         builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
         builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();
