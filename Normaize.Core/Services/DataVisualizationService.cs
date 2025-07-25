@@ -35,10 +35,6 @@ public class DataVisualizationService : IDataVisualizationService
         _options = options.Value;
         _infrastructure = infrastructure;
         _random = new Random();
-
-        _infrastructure.Logger.LogInformation(
-            "DataVisualizationService initialized with configuration: CacheExpiration={CacheExpiration}, MaxDataPoints={MaxDataPoints}, ChaosProcessingDelayProbability={ChaosProcessingDelayProbability}",
-            _options.CacheExpiration, _options.MaxDataPoints, _options.ChaosProcessingDelayProbability);
     }
 
     public async Task<ChartDataDto> GenerateChartAsync(int dataSetId, ChartType chartType, ChartConfigurationDto? configuration, string userId)

@@ -314,5 +314,44 @@ public static class AppConstants
         // Chart and data constants
         public const string FALLBACK_SERIES_NAME = "Count";
         public const string CONFIGURATION_KEY = "Configuration";
+
+        // Data processing operation constants
+        public const string DELETION_FAILURE = "DeletionFailure";
+        public const string CACHE_CORRUPTION = "CacheCorruption";
+        public const string UNNAMED_DATASET = "Unnamed Dataset";
+        public const string STATS_CACHE_KEY_PREFIX = "stats_";
+        public const string DATASET_UPLOADED_SUCCESSFULLY = "Dataset uploaded successfully";
+        public const string ERROR_UPLOADING_DATASET = "Error uploading dataset: ";
+        public const string INVALID_FILE_FORMAT_OR_SIZE = "Invalid file format or size";
+        public const string FILE_DELETION_FAILED_CONTINUING = "File deletion failed, continuing with database deletion";
+        public const string NO_FILE_PATH_TO_DELETE = "No file path to delete";
+        public const string ACCESS_DENIED_OR_NO_PREVIEW_DATA = "Access denied or no preview data";
+        public const string ACCESS_DENIED_OR_NO_SCHEMA = "Access denied or no schema";
+        public const string FILTERING_DELETED_DATASETS_COMPLETED = "Filtering deleted datasets completed";
+        public const string SEARCH_OPERATION_COMPLETED = "Search operation completed";
+        public const string DATABASE_RETRIEVAL_BY_FILE_TYPE_COMPLETED = "Database retrieval by file type completed";
+        public const string DATABASE_RETRIEVAL_BY_DATE_RANGE_COMPLETED = "Database retrieval by date range completed";
+        public const string CACHE_LOOKUP_STARTED = "Cache lookup started";
+        public const string STATISTICS_RETRIEVED_FROM_CACHE = "Statistics retrieved from cache";
+        public const string CACHE_MISS_CALCULATING_STATISTICS = "Cache miss - calculating statistics";
+        public const string CACHE_STORAGE_STARTED = "Cache storage started";
+        public const string CACHE_STORAGE_COMPLETED = "Cache storage completed";
+        public const string CACHE_CLEARING_STARTED = "Cache clearing started";
+        public const string CACHE_CLEARING_COMPLETED = "Cache clearing completed";
+        public const string DATASET_RETRIEVAL_STARTED = "Dataset retrieval started";
+        public const string DATASET_RETRIEVAL_COMPLETED = "Dataset retrieval completed";
+        public const string FILE_DELETION_STARTED = "File deletion started";
+        public const string FILE_DELETION_COMPLETED_SUCCESSFULLY = "File deletion completed successfully";
+        public const string FILE_SAVE_STARTED = "File save started";
+        public const string FILE_SAVED = "File saved";
+        public const string FILE_PROCESSING_STARTED = "File processing started";
+        public const string FILE_PROCESSING_COMPLETED = "File processing completed";
+        public const string DATABASE_SAVE_STARTED = "Database save started";
+        public const string DATABASE_SAVE_COMPLETED = "Database save completed";
+        public const string CHAOS_ENGINEERING_DELAY = "Chaos engineering delay";
+        public const string CHAOS_ENGINEERING_SIMULATING_DELETION_FAILURE = "Chaos engineering: Simulating deletion failure";
+        public const string CHAOS_ENGINEERING_SIMULATING_CACHE_CORRUPTION = "Chaos engineering: Simulating cache corruption";
+        public const string ACCESS_DENIED_USER_MISMATCH = "Access denied - user mismatch";
+        public const string SIMULATED_DELETION_FAILURE_MESSAGE = "Simulated deletion failure (chaos engineering)";
     }
 }
