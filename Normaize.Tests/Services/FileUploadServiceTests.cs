@@ -533,10 +533,6 @@ public class FileUploadServiceTests
 
     private void SetupInfrastructureMocks()
     {
-        // Setup logger mock
-        var mockLogger = new Mock<ILogger<FileUploadService>>();
-        _mockInfrastructure.Setup(x => x.Logger).Returns(mockLogger.Object);
-
         // Setup structured logging mock
         var mockStructuredLogging = new Mock<IStructuredLoggingService>();
         _mockInfrastructure.Setup(x => x.StructuredLogging).Returns(mockStructuredLogging.Object);
@@ -557,8 +553,8 @@ public class FileUploadServiceTests
                 mockContext.Setup(c => c.OperationName).Returns(operationName);
                 mockContext.Setup(c => c.CorrelationId).Returns(correlationId);
                 mockContext.Setup(c => c.UserId).Returns(userId);
-                mockContext.Setup(c => c.Metadata).Returns(metadata ?? new Dictionary<string, object>());
-                mockContext.Setup(c => c.Steps).Returns(new List<string>());
+                mockContext.Setup(c => c.Metadata).Returns(metadata ?? []);
+                mockContext.Setup(c => c.Steps).Returns([]);
                 mockContext.Setup(c => c.Stopwatch).Returns(System.Diagnostics.Stopwatch.StartNew());
                 return mockContext.Object;
             });

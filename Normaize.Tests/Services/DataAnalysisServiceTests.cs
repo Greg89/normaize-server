@@ -47,8 +47,8 @@ public class DataAnalysisServiceTests
                 mockContext.Setup(c => c.OperationName).Returns(operationName);
                 mockContext.Setup(c => c.CorrelationId).Returns(correlationId);
                 mockContext.Setup(c => c.UserId).Returns(userId);
-                mockContext.Setup(c => c.Metadata).Returns(metadata ?? new Dictionary<string, object>());
-                mockContext.Setup(c => c.Steps).Returns(new List<string>());
+                mockContext.Setup(c => c.Metadata).Returns(metadata ?? []);
+                mockContext.Setup(c => c.Steps).Returns([]);
                 mockContext.Setup(c => c.Stopwatch).Returns(System.Diagnostics.Stopwatch.StartNew());
                 mockContext.Setup(c => c.SetMetadata(It.IsAny<string>(), It.IsAny<object>()));
                 return mockContext.Object;
@@ -64,9 +64,6 @@ public class DataAnalysisServiceTests
         // Setup timeouts
         _mockInfrastructure.Setup(i => i.DefaultTimeout).Returns(TimeSpan.FromMinutes(5));
         _mockInfrastructure.Setup(i => i.QuickTimeout).Returns(TimeSpan.FromSeconds(30));
-
-        // Setup logger
-        _mockInfrastructure.Setup(i => i.Logger).Returns(new Mock<ILogger>().Object);
     }
 
     [Fact]

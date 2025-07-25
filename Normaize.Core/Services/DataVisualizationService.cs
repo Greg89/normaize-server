@@ -51,8 +51,7 @@ public class DataVisualizationService : IDataVisualizationService
                 var result = await ExecuteWithTimeoutAsync(
                     () => GenerateChartInternalAsync(dataSetId, chartType, configuration, userId, context),
                     _options.ChartGenerationTimeout,
-                    context.CorrelationId,
-                    $"{context.OperationName}_Internal");
+                    context);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.CHART_GENERATION_COMPLETED);
 
                 return result;
@@ -73,8 +72,7 @@ public class DataVisualizationService : IDataVisualizationService
                 var result = await ExecuteWithTimeoutAsync(
                     () => GenerateComparisonChartInternalAsync(dataSetId1, dataSetId2, chartType, configuration, userId, context),
                     _options.ComparisonChartTimeout,
-                    context.CorrelationId,
-                    $"{context.OperationName}_Internal");
+                    context);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.COMPARISON_CHART_GENERATION_COMPLETED);
 
                 return result;
@@ -95,8 +93,7 @@ public class DataVisualizationService : IDataVisualizationService
                 var result = await ExecuteWithTimeoutAsync(
                     () => GetDataSummaryInternalAsync(dataSetId, userId, context),
                     _options.SummaryGenerationTimeout,
-                    context.CorrelationId,
-                    $"{context.OperationName}_Internal");
+                    context);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.DATA_SUMMARY_GENERATION_COMPLETED);
 
                 return result;
@@ -117,8 +114,7 @@ public class DataVisualizationService : IDataVisualizationService
                 var result = await ExecuteWithTimeoutAsync(
                     () => GetStatisticalSummaryInternalAsync(dataSetId, userId, context),
                     _options.StatisticalSummaryTimeout,
-                    context.CorrelationId,
-                    $"{context.OperationName}_Internal");
+                    context);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.STATISTICAL_SUMMARY_GENERATION_COMPLETED);
 
                 return result;
@@ -502,7 +498,7 @@ public class DataVisualizationService : IDataVisualizationService
 
     #region Utility Methods
 
-    private async Task<T> ExecuteWithTimeoutAsync<T>(Func<Task<T>> operation, TimeSpan timeout, string correlationId, string operationName)
+    private async Task<T> ExecuteWithTimeoutAsync<T>(Func<Task<T>> operation, TimeSpan timeout, IOperationContext context)
     {
         using var cts = new CancellationTokenSource(timeout);
 
@@ -512,9 +508,13 @@ public class DataVisualizationService : IDataVisualizationService
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _infrastructure.Logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}",
-                operationName, timeout, correlationId);
-            throw new TimeoutException($"Operation {operationName} timed out after {timeout}");
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.OPERATION_TIMED_OUT, new Dictionary<string, object>
+            {
+                ["Timeout"] = timeout.ToString(),
+                ["OperationName"] = context.OperationName,
+                ["ErrorMessage"] = ex.Message
+            });
+            throw new TimeoutException($"Operation {context.OperationName} timed out after {timeout}");
         }
     }
 

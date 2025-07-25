@@ -39,7 +39,6 @@ public class DataProcessingServiceTests
         _mockInfrastructure = new Mock<IDataProcessingInfrastructure>();
 
         // Setup infrastructure mock
-        _mockInfrastructure.Setup(i => i.Logger).Returns(_mockLogger.Object);
         _mockInfrastructure.Setup(i => i.Cache).Returns(_cache);
         _mockInfrastructure.Setup(i => i.StructuredLogging).Returns(_mockStructuredLogging.Object);
         _mockInfrastructure.Setup(i => i.ChaosEngineering).Returns(_mockChaosEngineering.Object);

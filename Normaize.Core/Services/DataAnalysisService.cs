@@ -64,8 +64,7 @@ public class DataAnalysisService : IDataAnalysisService
                 var savedAnalysis = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.AddAsync(analysis),
                     _infrastructure.DefaultTimeout,
-                    GetCorrelationId(),
-                    $"{context.OperationName}_SaveToDatabase");
+                    context);
                 _infrastructure.StructuredLogging.LogStep(context, "Database save completed", new Dictionary<string, object>
                 {
                     [AppConstants.DataStructures.ANALYSIS_ID] = savedAnalysis.Id
@@ -101,8 +100,7 @@ public class DataAnalysisService : IDataAnalysisService
                 var analysis = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.GetByIdAsync(id),
                     _infrastructure.QuickTimeout,
-                    GetCorrelationId(),
-                    $"{context.OperationName}_GetFromDatabase");
+                    context);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED);
 
                 if (analysis == null)
@@ -145,8 +143,7 @@ public class DataAnalysisService : IDataAnalysisService
                 var analyses = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.GetByDataSetIdAsync(dataSetId),
                     _infrastructure.QuickTimeout,
-                    GetCorrelationId(),
-                    $"{context.OperationName}_GetFromDatabase");
+                    context);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
                 {
                     ["AnalysisCount"] = analyses.Count()
@@ -182,8 +179,7 @@ public class DataAnalysisService : IDataAnalysisService
                 var analyses = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.GetByStatusAsync(status),
                     _infrastructure.QuickTimeout,
-                    GetCorrelationId(),
-                    $"{context.OperationName}_GetFromDatabase");
+                    context);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
                 {
                     ["AnalysisCount"] = analyses.Count()
@@ -219,8 +215,7 @@ public class DataAnalysisService : IDataAnalysisService
                 var analyses = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.GetByTypeAsync(type),
                     _infrastructure.QuickTimeout,
-                    GetCorrelationId(),
-                    $"{context.OperationName}_GetFromDatabase");
+                    context);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
                 {
                     ["AnalysisCount"] = analyses.Count()
@@ -263,8 +258,7 @@ public class DataAnalysisService : IDataAnalysisService
                 var analysis = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.GetByIdAsync(analysisId),
                     _infrastructure.QuickTimeout,
-                    GetCorrelationId(),
-                    $"{context.OperationName}_GetFromDatabase");
+                    context);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED);
 
                 if (analysis == null)
@@ -278,7 +272,7 @@ public class DataAnalysisService : IDataAnalysisService
                 }
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.RESULTS_DESERIALIZATION_STARTED);
-                var deserializedResults = await DeserializeResultsSafelyAsync(analysis.Results, analysisId, GetCorrelationId());
+                var deserializedResults = await DeserializeResultsSafelyAsync(analysis.Results, analysisId, context);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.RESULTS_DESERIALIZATION_COMPLETED);
 
                 var result = new AnalysisResultDto
@@ -315,8 +309,7 @@ public class DataAnalysisService : IDataAnalysisService
                 var result = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.DeleteAsync(id),
                     _infrastructure.QuickTimeout,
-                    GetCorrelationId(),
-                    $"{context.OperationName}_DeleteFromDatabase");
+                    context);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.DATABASE_DELETION_COMPLETED, new Dictionary<string, object>
                 {
                     ["DeletionResult"] = result
@@ -357,8 +350,7 @@ public class DataAnalysisService : IDataAnalysisService
                 var analysis = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.GetByIdAsync(analysisId),
                     _infrastructure.QuickTimeout,
-                    GetCorrelationId(),
-                    $"{context.OperationName}_GetAnalysis");
+                    context);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED);
 
                 if (analysis == null)
@@ -486,8 +478,7 @@ public class DataAnalysisService : IDataAnalysisService
         await ExecuteWithTimeoutAsync(
             () => _analysisRepository.UpdateAsync(analysis),
             _infrastructure.QuickTimeout,
-            context.CorrelationId,
-            $"{context.OperationName}_UpdateStatus");
+            context);
 
         try
         {
@@ -501,8 +492,7 @@ public class DataAnalysisService : IDataAnalysisService
             var results = await ExecuteWithTimeoutAsync(
                 () => ExecuteAnalysisByTypeAsync(analysis, context),
                 _infrastructure.DefaultTimeout,
-                context.CorrelationId,
-                $"{context.OperationName}_ExecuteAnalysis");
+                context);
 
             // Update with success state
             analysis.Status = AnalysisStatus.Completed;
@@ -519,8 +509,7 @@ public class DataAnalysisService : IDataAnalysisService
             var updatedAnalysis = await ExecuteWithTimeoutAsync(
                 () => _analysisRepository.UpdateAsync(analysis),
                 _infrastructure.QuickTimeout,
-                context.CorrelationId,
-                $"{context.OperationName}_UpdateSuccess");
+                context);
 
             return _mapper.Map<AnalysisDto>(updatedAnalysis);
         }
@@ -539,14 +528,13 @@ public class DataAnalysisService : IDataAnalysisService
             await ExecuteWithTimeoutAsync(
                 () => _analysisRepository.UpdateAsync(analysis),
                 _infrastructure.QuickTimeout,
-                context.CorrelationId,
-                $"{context.OperationName}_UpdateFailure");
+                context);
 
             throw new InvalidOperationException($"Failed to execute analysis of type {analysis.Type} for ID {analysis.Id}", ex);
         }
     }
 
-    private async Task<T> ExecuteWithTimeoutAsync<T>(Func<Task<T>> operation, TimeSpan timeout, string correlationId, string operationName)
+    private async Task<T> ExecuteWithTimeoutAsync<T>(Func<Task<T>> operation, TimeSpan timeout, IOperationContext context)
     {
         using var cts = new CancellationTokenSource(timeout);
 
@@ -556,13 +544,17 @@ public class DataAnalysisService : IDataAnalysisService
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _infrastructure.Logger.LogError(ex, "Operation {OperationName} timed out after {Timeout}. CorrelationId: {CorrelationId}",
-                operationName, timeout, correlationId);
-            throw new TimeoutException($"Operation {operationName} timed out after {timeout}");
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.OPERATION_TIMED_OUT, new Dictionary<string, object>
+            {
+                ["Timeout"] = timeout.ToString(),
+                ["OperationName"] = context.OperationName,
+                ["ErrorMessage"] = ex.Message
+            });
+            throw new TimeoutException($"Operation {context.OperationName} timed out after {timeout}");
         }
     }
 
-    private async Task<object?> DeserializeResultsSafelyAsync(string? results, int analysisId, string correlationId)
+    private async Task<object?> DeserializeResultsSafelyAsync(string? results, int analysisId, IOperationContext context)
     {
         if (string.IsNullOrEmpty(results))
             return null;
@@ -573,8 +565,11 @@ public class DataAnalysisService : IDataAnalysisService
         }
         catch (JsonException jsonEx)
         {
-            _infrastructure.Logger.LogWarning(jsonEx, "Failed to deserialize results for analysis ID: {AnalysisId}. CorrelationId: {CorrelationId}",
-                analysisId, correlationId);
+            _infrastructure.StructuredLogging.LogStep(context, "Failed to deserialize results", new Dictionary<string, object>
+            {
+                [AppConstants.DataStructures.ANALYSIS_ID] = analysisId,
+                ["ErrorMessage"] = jsonEx.Message
+            });
             return null;
         }
     }

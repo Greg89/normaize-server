@@ -128,6 +128,7 @@ public static class AppConstants
         public const string DATABASE_RETRIEVAL_COMPLETED = "Database retrieval completed";
         public const string DTO_MAPPING_STARTED = "DTO mapping started";
         public const string DTO_MAPPING_COMPLETED = "DTO mapping completed";
+        public const string OPERATION_TIMED_OUT = "Operation timed out";
         public const string AUDIT_LOGGING_STARTED = "Audit logging started";
         public const string AUDIT_LOGGING_COMPLETED = "Audit logging completed";
         public const string PAGINATION_STARTED = "Pagination processing started";
