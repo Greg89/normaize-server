@@ -29,13 +29,15 @@ public class DataVisualizationService : IDataVisualizationService
         ArgumentNullException.ThrowIfNull(cache);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(infrastructure);
+
         _dataSetRepository = dataSetRepository;
         _cache = cache;
         _options = options.Value;
         _infrastructure = infrastructure;
         _random = new Random();
 
-        _infrastructure.Logger.LogInformation("DataVisualizationService initialized with configuration: CacheExpiration={CacheExpiration}, MaxDataPoints={MaxDataPoints}, ChaosProcessingDelayProbability={ChaosProcessingDelayProbability}",
+        _infrastructure.Logger.LogInformation(
+            "DataVisualizationService initialized with configuration: CacheExpiration={CacheExpiration}, MaxDataPoints={MaxDataPoints}, ChaosProcessingDelayProbability={ChaosProcessingDelayProbability}",
             _options.CacheExpiration, _options.MaxDataPoints, _options.ChaosProcessingDelayProbability);
     }
 
@@ -43,30 +45,17 @@ public class DataVisualizationService : IDataVisualizationService
     {
         return await ExecuteVisualizationOperationAsync(
             operationName: nameof(GenerateChartAsync),
-            additionalMetadata: new Dictionary<string, object>
-            {
-                [AppConstants.DataStructures.DATASETID] = dataSetId,
-                [AppConstants.DataStructures.CHART_TYPE] = chartType.ToString(),
-                ["Configuration"] = configuration?.ToString() ?? "null"
-            },
+            additionalMetadata: CreateChartMetadata(dataSetId, chartType, configuration),
             validation: () => ValidateGenerateChartInputs(dataSetId, chartType, configuration, userId),
             operation: async (context) =>
             {
-                // Chaos engineering: Simulate processing delay
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("ProcessingDelay", GetCorrelationId(), context.OperationName, async () =>
-                {
-                    _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating processing delay", new Dictionary<string, object>
-                    {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.PROCESSING_DELAY
-                    });
-                    await Task.Delay(_random.Next(1000, 5000));
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId });
+                await ExecuteChaosEngineeringAsync(context, AppConstants.ChaosEngineering.PROCESSING_DELAY, userId);
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.CHART_GENERATION_STARTED);
                 var result = await ExecuteWithTimeoutAsync(
-                    async () => await GenerateChartInternalAsync(dataSetId, chartType, configuration, userId, GetCorrelationId()),
+                    () => GenerateChartInternalAsync(dataSetId, chartType, configuration, userId, context),
                     _options.ChartGenerationTimeout,
-                    GetCorrelationId(),
+                    context.CorrelationId,
                     $"{context.OperationName}_Internal");
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.CHART_GENERATION_COMPLETED);
 
@@ -78,31 +67,17 @@ public class DataVisualizationService : IDataVisualizationService
     {
         return await ExecuteVisualizationOperationAsync(
             operationName: nameof(GenerateComparisonChartAsync),
-            additionalMetadata: new Dictionary<string, object>
-            {
-                ["DataSetId1"] = dataSetId1,
-                ["DataSetId2"] = dataSetId2,
-                [AppConstants.DataStructures.CHART_TYPE] = chartType.ToString(),
-                ["Configuration"] = configuration?.ToString() ?? "null"
-            },
+            additionalMetadata: CreateComparisonChartMetadata(dataSetId1, dataSetId2, chartType, configuration),
             validation: () => ValidateComparisonChartInputs(dataSetId1, dataSetId2, chartType, configuration, userId),
             operation: async (context) =>
             {
-                // Chaos engineering: Simulate network latency
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.NETWORK_LATENCY, GetCorrelationId(), context.OperationName, async () =>
-                {
-                    _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating network latency", new Dictionary<string, object>
-                    {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.NETWORK_LATENCY
-                    });
-                    await Task.Delay(_random.Next(500, 2000));
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId });
+                await ExecuteChaosEngineeringAsync(context, AppConstants.ChaosEngineering.NETWORK_LATENCY, userId);
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.COMPARISON_CHART_GENERATION_STARTED);
                 var result = await ExecuteWithTimeoutAsync(
-                    async () => await GenerateComparisonChartInternalAsync(dataSetId1, dataSetId2, chartType, configuration, userId, GetCorrelationId()),
+                    () => GenerateComparisonChartInternalAsync(dataSetId1, dataSetId2, chartType, configuration, userId, context),
                     _options.ComparisonChartTimeout,
-                    GetCorrelationId(),
+                    context.CorrelationId,
                     $"{context.OperationName}_Internal");
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.COMPARISON_CHART_GENERATION_COMPLETED);
 
@@ -114,28 +89,17 @@ public class DataVisualizationService : IDataVisualizationService
     {
         return await ExecuteVisualizationOperationAsync(
             operationName: nameof(GetDataSummaryAsync),
-            additionalMetadata: new Dictionary<string, object>
-            {
-                [AppConstants.DataStructures.DATASETID] = dataSetId
-            },
+            additionalMetadata: CreateDataSummaryMetadata(dataSetId),
             validation: () => ValidateDataSummaryInputs(dataSetId, userId),
             operation: async (context) =>
             {
-                // Chaos engineering: Simulate cache failure
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.CACHE_FAILURE, GetCorrelationId(), context.OperationName, () =>
-                {
-                    _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating cache failure", new Dictionary<string, object>
-                    {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.CACHE_FAILURE
-                    });
-                    throw new InvalidOperationException("Simulated cache failure (chaos engineering)");
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId });
+                await ExecuteChaosEngineeringAsync(context, AppConstants.ChaosEngineering.CACHE_FAILURE, userId);
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.DATA_SUMMARY_GENERATION_STARTED);
                 var result = await ExecuteWithTimeoutAsync(
-                    async () => await GetDataSummaryInternalAsync(dataSetId, userId, GetCorrelationId()),
+                    () => GetDataSummaryInternalAsync(dataSetId, userId, context),
                     _options.SummaryGenerationTimeout,
-                    GetCorrelationId(),
+                    context.CorrelationId,
                     $"{context.OperationName}_Internal");
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.DATA_SUMMARY_GENERATION_COMPLETED);
 
@@ -147,35 +111,17 @@ public class DataVisualizationService : IDataVisualizationService
     {
         return await ExecuteVisualizationOperationAsync(
             operationName: nameof(GetStatisticalSummaryAsync),
-            additionalMetadata: new Dictionary<string, object>
-            {
-                [AppConstants.DataStructures.DATASETID] = dataSetId
-            },
+            additionalMetadata: CreateDataSummaryMetadata(dataSetId),
             validation: () => ValidateStatisticalSummaryInputs(dataSetId, userId),
             operation: async (context) =>
             {
-                // Chaos engineering: Simulate memory pressure
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.MEMORY_PRESSURE, GetCorrelationId(), context.OperationName, async () =>
-                {
-                    _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating memory pressure", new Dictionary<string, object>
-                    {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.MEMORY_PRESSURE
-                    });
-                    // Simulate memory pressure by allocating temporary objects
-                    var tempObjects = new List<byte[]>();
-                    for (int i = 0; i < 30; i++)
-                    {
-                        tempObjects.Add(new byte[1024 * 1024]); // 1MB each
-                    }
-                    await Task.Delay(100);
-                    tempObjects.Clear();
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId });
+                await ExecuteChaosEngineeringAsync(context, AppConstants.ChaosEngineering.MEMORY_PRESSURE, userId);
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.STATISTICAL_SUMMARY_GENERATION_STARTED);
                 var result = await ExecuteWithTimeoutAsync(
-                    async () => await GetStatisticalSummaryInternalAsync(dataSetId, userId, GetCorrelationId()),
+                    () => GetStatisticalSummaryInternalAsync(dataSetId, userId, context),
                     _options.StatisticalSummaryTimeout,
-                    GetCorrelationId(),
+                    context.CorrelationId,
                     $"{context.OperationName}_Internal");
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.STATISTICAL_SUMMARY_GENERATION_COMPLETED);
 
@@ -217,11 +163,92 @@ public class DataVisualizationService : IDataVisualizationService
         catch (Exception ex)
         {
             _infrastructure.StructuredLogging.LogSummary(context, false, ex.Message);
-
-            // Create detailed error message based on operation type and metadata
             var errorMessage = CreateDetailedErrorMessage(operationName, additionalMetadata);
             throw new InvalidOperationException(errorMessage, ex);
         }
+    }
+
+    private async Task ExecuteChaosEngineeringAsync(IOperationContext context, string chaosType, string userId)
+    {
+        await _infrastructure.ChaosEngineering.ExecuteChaosAsync(
+            chaosType,
+            context.CorrelationId,
+            context.OperationName,
+            async () =>
+            {
+                _infrastructure.StructuredLogging.LogStep(context, $"Chaos engineering: Simulating {chaosType}", new Dictionary<string, object>
+                {
+                    [AppConstants.ChaosEngineering.CHAOS_TYPE] = chaosType
+                });
+
+                await SimulateChaosEffectAsync(chaosType);
+            },
+            new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId });
+    }
+
+    private async Task SimulateChaosEffectAsync(string chaosType)
+    {
+        switch (chaosType)
+        {
+            case AppConstants.ChaosEngineering.PROCESSING_DELAY:
+                await Task.Delay(_random.Next(AppConstants.ChaosEngineering.MIN_PROCESSING_DELAY_MS, AppConstants.ChaosEngineering.MAX_PROCESSING_DELAY_MS));
+                break;
+
+            case AppConstants.ChaosEngineering.NETWORK_LATENCY:
+                await Task.Delay(_random.Next(AppConstants.ChaosEngineering.MIN_NETWORK_LATENCY_MS, AppConstants.ChaosEngineering.MAX_NETWORK_LATENCY_MS));
+                break;
+
+            case AppConstants.ChaosEngineering.CACHE_FAILURE:
+                throw new InvalidOperationException("Simulated cache failure (chaos engineering)");
+
+            case AppConstants.ChaosEngineering.MEMORY_PRESSURE:
+                await SimulateMemoryPressureAsync();
+                break;
+
+            default:
+                await Task.Delay(_random.Next(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS, AppConstants.ChaosEngineering.MAX_CHAOS_DELAY_MS));
+                break;
+        }
+    }
+
+    private static async Task SimulateMemoryPressureAsync()
+    {
+        var tempObjects = new List<byte[]>();
+        for (int i = 0; i < AppConstants.ChaosEngineering.MEMORY_PRESSURE_OBJECT_COUNT; i++)
+        {
+            tempObjects.Add(new byte[AppConstants.ChaosEngineering.MEMORY_PRESSURE_OBJECT_SIZE_BYTES]);
+        }
+        await Task.Delay(AppConstants.ChaosEngineering.MEMORY_PRESSURE_DELAY_MS);
+        tempObjects.Clear();
+    }
+
+    private static Dictionary<string, object> CreateChartMetadata(int dataSetId, ChartType chartType, ChartConfigurationDto? configuration)
+    {
+        return new Dictionary<string, object>
+        {
+            [AppConstants.DataStructures.DATASETID] = dataSetId,
+            [AppConstants.DataStructures.CHART_TYPE] = chartType.ToString(),
+            [AppConstants.DataProcessing.CONFIGURATION_KEY] = configuration?.ToString() ?? AppConstants.DataProcessing.DATA_TYPE_NULL
+        };
+    }
+
+    private static Dictionary<string, object> CreateComparisonChartMetadata(int dataSetId1, int dataSetId2, ChartType chartType, ChartConfigurationDto? configuration)
+    {
+        return new Dictionary<string, object>
+        {
+            ["DataSetId1"] = dataSetId1,
+            ["DataSetId2"] = dataSetId2,
+            [AppConstants.DataStructures.CHART_TYPE] = chartType.ToString(),
+            [AppConstants.DataProcessing.CONFIGURATION_KEY] = configuration?.ToString() ?? AppConstants.DataProcessing.DATA_TYPE_NULL
+        };
+    }
+
+    private static Dictionary<string, object> CreateDataSummaryMetadata(int dataSetId)
+    {
+        return new Dictionary<string, object>
+        {
+            [AppConstants.DataStructures.DATASETID] = dataSetId
+        };
     }
 
     private static string CreateDetailedErrorMessage(string operationName, Dictionary<string, object>? metadata)
@@ -352,153 +379,125 @@ public class DataVisualizationService : IDataVisualizationService
 
     #region Internal Processing Methods
 
-    private async Task<ChartDataDto> GenerateChartInternalAsync(int dataSetId, ChartType chartType, ChartConfigurationDto? configuration, string userId, string correlationId)
+    private async Task<ChartDataDto> GenerateChartInternalAsync(int dataSetId, ChartType chartType, ChartConfigurationDto? configuration, string userId, IOperationContext context)
     {
         var stopwatch = Stopwatch.StartNew();
-
-        // Chaos engineering: Simulate processing delay
-        if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
-        {
-            _infrastructure.Logger.LogWarning(AppConstants.ChaosEngineering.SIMULATED_PROCESSING_DELAY_MESSAGE, correlationId);
-            await Task.Delay(_random.Next(1000, 5000)); // 1-5 second delay
-        }
 
         var cacheKey = GenerateCacheKey($"chart_{dataSetId}_{chartType}", configuration);
 
         if (_cache.TryGetValue(cacheKey, out ChartDataDto? cachedChart))
         {
-            _infrastructure.Logger.LogDebug("Retrieved chart from cache. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}",
-                correlationId, dataSetId, chartType);
+            _infrastructure.StructuredLogging.LogStep(context, "Retrieved chart from cache");
             return cachedChart!;
         }
 
-        _infrastructure.Logger.LogDebug("Cache miss, generating new chart. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}",
-            correlationId, dataSetId, chartType);
+        _infrastructure.StructuredLogging.LogStep(context, "Cache miss, generating new chart");
 
-        var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, correlationId);
-        var data = ExtractDataSetData(dataSet, correlationId);
+        var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, context);
+        var data = ExtractDataSetData(dataSet, context);
 
-        var chartData = GenerateChartData(dataSet, data, chartType, configuration, correlationId);
+        var chartData = GenerateChartData(dataSet, data, chartType, configuration, context);
         chartData.ProcessingTime = stopwatch.Elapsed;
 
         _cache.Set(cacheKey, chartData, _options.CacheExpiration);
 
-        _infrastructure.Logger.LogInformation("Generated chart successfully. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}, ProcessingTime: {ProcessingTime}ms",
-            correlationId, dataSetId, chartType, stopwatch.ElapsedMilliseconds);
+        _infrastructure.StructuredLogging.LogStep(context, "Generated chart successfully", new Dictionary<string, object>
+        {
+            ["ProcessingTimeMs"] = stopwatch.ElapsedMilliseconds
+        });
 
         return chartData;
     }
 
-    private async Task<ComparisonChartDto> GenerateComparisonChartInternalAsync(int dataSetId1, int dataSetId2, ChartType chartType, ChartConfigurationDto? configuration, string userId, string correlationId)
+    private async Task<ComparisonChartDto> GenerateComparisonChartInternalAsync(int dataSetId1, int dataSetId2, ChartType chartType, ChartConfigurationDto? configuration, string userId, IOperationContext context)
     {
         var stopwatch = Stopwatch.StartNew();
-
-        // Chaos engineering: Simulate processing delay
-        if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
-        {
-            _infrastructure.Logger.LogWarning(AppConstants.ChaosEngineering.SIMULATED_PROCESSING_DELAY_MESSAGE, correlationId);
-            await Task.Delay(_random.Next(1000, 5000)); // 1-5 second delay
-        }
 
         var cacheKey = GenerateCacheKey($"comparison_{dataSetId1}_{dataSetId2}_{chartType}", configuration);
 
         if (_cache.TryGetValue(cacheKey, out ComparisonChartDto? cachedChart))
         {
-            _infrastructure.Logger.LogDebug("Retrieved comparison chart from cache. CorrelationId: {CorrelationId}, DataSetId1: {DataSetId1}, DataSetId2: {DataSetId2}",
-                correlationId, dataSetId1, dataSetId2);
+            _infrastructure.StructuredLogging.LogStep(context, "Retrieved comparison chart from cache");
             return cachedChart!;
         }
 
-        _infrastructure.Logger.LogDebug("Cache miss, generating new comparison chart. CorrelationId: {CorrelationId}, DataSetId1: {DataSetId1}, DataSetId2: {DataSetId2}",
-            correlationId, dataSetId1, dataSetId2);
+        _infrastructure.StructuredLogging.LogStep(context, "Cache miss, generating new comparison chart");
 
-        var dataSet1 = await GetAndValidateDataSetAsync(dataSetId1, userId, correlationId);
-        var dataSet2 = await GetAndValidateDataSetAsync(dataSetId2, userId, correlationId);
+        var dataSet1 = await GetAndValidateDataSetAsync(dataSetId1, userId, context);
+        var dataSet2 = await GetAndValidateDataSetAsync(dataSetId2, userId, context);
 
-        var data1 = ExtractDataSetData(dataSet1, correlationId);
-        var data2 = ExtractDataSetData(dataSet2, correlationId);
+        var data1 = ExtractDataSetData(dataSet1, context);
+        var data2 = ExtractDataSetData(dataSet2, context);
 
-        var comparisonChart = GenerateComparisonChartData(dataSet1, dataSet2, data1, data2, chartType, configuration, correlationId);
+        var comparisonChart = GenerateComparisonChartData(dataSet1, dataSet2, data1, data2, chartType, configuration, context);
         comparisonChart.ProcessingTime = stopwatch.Elapsed;
 
         _cache.Set(cacheKey, comparisonChart, _options.CacheExpiration);
 
-        _infrastructure.Logger.LogInformation("Generated comparison chart successfully. CorrelationId: {CorrelationId}, DataSetId1: {DataSetId1}, DataSetId2: {DataSetId2}, ProcessingTime: {ProcessingTime}ms",
-            correlationId, dataSetId1, dataSetId2, stopwatch.ElapsedMilliseconds);
+        _infrastructure.StructuredLogging.LogStep(context, "Generated comparison chart successfully", new Dictionary<string, object>
+        {
+            ["ProcessingTimeMs"] = stopwatch.ElapsedMilliseconds
+        });
 
         return comparisonChart;
     }
 
-    private async Task<DataSummaryDto> GetDataSummaryInternalAsync(int dataSetId, string userId, string correlationId)
+    private async Task<DataSummaryDto> GetDataSummaryInternalAsync(int dataSetId, string userId, IOperationContext context)
     {
         var stopwatch = Stopwatch.StartNew();
-
-        // Chaos engineering: Simulate processing delay
-        if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
-        {
-            _infrastructure.Logger.LogWarning(AppConstants.ChaosEngineering.SIMULATED_PROCESSING_DELAY_MESSAGE, correlationId);
-            await Task.Delay(_random.Next(500, 2000)); // 0.5-2 second delay
-        }
 
         var cacheKey = $"summary_{dataSetId}";
 
         if (_cache.TryGetValue(cacheKey, out DataSummaryDto? cachedSummary))
         {
-            _infrastructure.Logger.LogDebug("Retrieved data summary from cache. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
-                correlationId, dataSetId);
+            _infrastructure.StructuredLogging.LogStep(context, "Retrieved data summary from cache");
             return cachedSummary!;
         }
 
-        _infrastructure.Logger.LogDebug("Cache miss, generating new data summary. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
-            correlationId, dataSetId);
+        _infrastructure.StructuredLogging.LogStep(context, "Cache miss, generating new data summary");
 
-        var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, correlationId);
-        var data = ExtractDataSetData(dataSet, correlationId);
+        var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, context);
+        var data = ExtractDataSetData(dataSet, context);
 
         var summary = GenerateDataSummary(dataSet, data);
         summary.ProcessingTime = stopwatch.Elapsed;
 
         _cache.Set(cacheKey, summary, _options.CacheExpiration);
 
-        _infrastructure.Logger.LogInformation("Generated data summary successfully. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ProcessingTime: {ProcessingTime}ms",
-            correlationId, dataSetId, stopwatch.ElapsedMilliseconds);
+        _infrastructure.StructuredLogging.LogStep(context, "Generated data summary successfully", new Dictionary<string, object>
+        {
+            ["ProcessingTimeMs"] = stopwatch.ElapsedMilliseconds
+        });
 
         return summary;
     }
 
-    private async Task<StatisticalSummaryDto> GetStatisticalSummaryInternalAsync(int dataSetId, string userId, string correlationId)
+    private async Task<StatisticalSummaryDto> GetStatisticalSummaryInternalAsync(int dataSetId, string userId, IOperationContext context)
     {
         var stopwatch = Stopwatch.StartNew();
-
-        // Chaos engineering: Simulate processing delay
-        if (_random.NextDouble() < _options.ChaosProcessingDelayProbability)
-        {
-            _infrastructure.Logger.LogWarning(AppConstants.ChaosEngineering.SIMULATED_PROCESSING_DELAY_MESSAGE, correlationId);
-            await Task.Delay(_random.Next(1000, 3000)); // 1-3 second delay
-        }
 
         var cacheKey = $"stats_{dataSetId}";
 
         if (_cache.TryGetValue(cacheKey, out StatisticalSummaryDto? cachedStats))
         {
-            _infrastructure.Logger.LogDebug("Retrieved statistical summary from cache. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
-                correlationId, dataSetId);
+            _infrastructure.StructuredLogging.LogStep(context, "Retrieved statistical summary from cache");
             return cachedStats!;
         }
 
-        _infrastructure.Logger.LogDebug("Cache miss, generating new statistical summary. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
-            correlationId, dataSetId);
+        _infrastructure.StructuredLogging.LogStep(context, "Cache miss, generating new statistical summary");
 
-        var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, correlationId);
-        var data = ExtractDataSetData(dataSet, correlationId);
+        var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, context);
+        var data = ExtractDataSetData(dataSet, context);
 
         var stats = GenerateStatisticalSummary(dataSet, data);
         stats.ProcessingTime = stopwatch.Elapsed;
 
         _cache.Set(cacheKey, stats, _options.CacheExpiration);
 
-        _infrastructure.Logger.LogInformation("Generated statistical summary successfully. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ProcessingTime: {ProcessingTime}ms",
-            correlationId, dataSetId, stopwatch.ElapsedMilliseconds);
+        _infrastructure.StructuredLogging.LogStep(context, "Generated statistical summary successfully", new Dictionary<string, object>
+        {
+            ["ProcessingTimeMs"] = stopwatch.ElapsedMilliseconds
+        });
 
         return stats;
     }
@@ -523,42 +522,54 @@ public class DataVisualizationService : IDataVisualizationService
         }
     }
 
-    private async Task<DataSet> GetAndValidateDataSetAsync(int dataSetId, string userId, string correlationId)
+    private async Task<DataSet> GetAndValidateDataSetAsync(int dataSetId, string userId, IOperationContext context)
     {
         var dataSet = await _dataSetRepository.GetByIdAsync(dataSetId);
 
         if (dataSet == null)
         {
-            _infrastructure.Logger.LogWarning("Dataset not found. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
-                correlationId, dataSetId, userId);
+            _infrastructure.StructuredLogging.LogStep(context, "Dataset not found", new Dictionary<string, object>
+            {
+                [AppConstants.DataStructures.DATASETID] = dataSetId,
+                [AppConstants.DataStructures.USER_ID] = userId
+            });
             throw new ArgumentException($"{AppConstants.VisualizationMessages.DATASET_NOT_FOUND} with ID {dataSetId}", nameof(dataSetId));
         }
 
         if (dataSet.UserId != userId)
         {
-            _infrastructure.Logger.LogWarning("Unauthorized access attempt. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, RequestedUserId: {RequestedUserId}, ActualUserId: {ActualUserId}",
-                correlationId, dataSetId, userId, dataSet.UserId);
+            _infrastructure.StructuredLogging.LogStep(context, "Unauthorized access attempt", new Dictionary<string, object>
+            {
+                [AppConstants.DataStructures.DATASETID] = dataSetId,
+                [AppConstants.DataStructures.USER_ID] = userId,
+                [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet.UserId
+            });
             throw new UnauthorizedAccessException($"{AppConstants.VisualizationMessages.DATASET_ACCESS_DENIED} - User {userId} is not authorized to access dataset {dataSetId}");
         }
 
         if (dataSet.IsDeleted)
         {
-            _infrastructure.Logger.LogWarning("Attempted to access deleted dataset. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, UserId: {UserId}",
-                correlationId, dataSetId, userId);
+            _infrastructure.StructuredLogging.LogStep(context, "Attempted to access deleted dataset", new Dictionary<string, object>
+            {
+                [AppConstants.DataStructures.DATASETID] = dataSetId,
+                [AppConstants.DataStructures.USER_ID] = userId
+            });
             throw new ArgumentException($"Dataset {dataSetId} has been deleted", nameof(dataSetId));
         }
 
         return dataSet;
     }
 
-    private List<Dictionary<string, object>> ExtractDataSetData(DataSet dataSet, string correlationId)
+    private List<Dictionary<string, object>> ExtractDataSetData(DataSet dataSet, IOperationContext context)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(dataSet.ProcessedData))
             {
-                _infrastructure.Logger.LogWarning("Dataset has no processed data. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
-                    correlationId, dataSet.Id);
+                _infrastructure.StructuredLogging.LogStep(context, "Dataset has no processed data", new Dictionary<string, object>
+                {
+                    [AppConstants.DataStructures.DATASETID] = dataSet.Id
+                });
                 return [];
             }
 
@@ -566,20 +577,28 @@ public class DataVisualizationService : IDataVisualizationService
 
             if (data == null)
             {
-                _infrastructure.Logger.LogWarning("Failed to deserialize dataset JSON data. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
-                    correlationId, dataSet.Id);
+                _infrastructure.StructuredLogging.LogStep(context, "Failed to deserialize dataset JSON data", new Dictionary<string, object>
+                {
+                    [AppConstants.DataStructures.DATASETID] = dataSet.Id
+                });
                 return [];
             }
 
-            _infrastructure.Logger.LogDebug("Extracted {RowCount} rows from dataset. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
-                data.Count, correlationId, dataSet.Id);
+            _infrastructure.StructuredLogging.LogStep(context, "Extracted rows from dataset", new Dictionary<string, object>
+            {
+                [AppConstants.DataStructures.DATASETID] = dataSet.Id,
+                ["RowCount"] = data.Count
+            });
 
             return data;
         }
         catch (JsonException ex)
         {
-            _infrastructure.Logger.LogError(ex, "Failed to parse dataset JSON data. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}",
-                correlationId, dataSet.Id);
+            _infrastructure.StructuredLogging.LogStep(context, "Failed to parse dataset JSON data", new Dictionary<string, object>
+            {
+                [AppConstants.DataStructures.DATASETID] = dataSet.Id,
+                ["ErrorMessage"] = ex.Message
+            });
             throw new InvalidOperationException($"Failed to parse dataset {dataSet.Id} data: {ex.Message}", ex);
         }
     }
@@ -606,19 +625,22 @@ public class DataVisualizationService : IDataVisualizationService
 
         var configHash = JsonSerializer.Serialize(configuration);
         var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(configHash));
-        return $"{baseKey}_{Convert.ToBase64String(hash)[..8]}";
+        return $"{baseKey}_{Convert.ToBase64String(hash)[..AppConstants.DataProcessing.CACHE_KEY_HASH_LENGTH]}";
     }
 
     #endregion
 
     #region Chart Generation Methods
 
-    private ChartDataDto GenerateChartData(DataSet dataSet, List<Dictionary<string, object>> data, ChartType chartType, ChartConfigurationDto? configuration, string correlationId)
+    private ChartDataDto GenerateChartData(DataSet dataSet, List<Dictionary<string, object>> data, ChartType chartType, ChartConfigurationDto? configuration, IOperationContext context)
     {
         if (data.Count == 0)
         {
-            _infrastructure.Logger.LogWarning("No data available for chart generation. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}",
-                correlationId, dataSet.Id, chartType);
+            _infrastructure.StructuredLogging.LogStep(context, "No data available for chart generation", new Dictionary<string, object>
+            {
+                [AppConstants.DataStructures.DATASETID] = dataSet.Id,
+                [AppConstants.DataStructures.CHART_TYPE] = chartType.ToString()
+            });
             return new ChartDataDto
             {
                 DataSetId = dataSet.Id,
@@ -640,22 +662,25 @@ public class DataVisualizationService : IDataVisualizationService
             case ChartType.Bar:
             case ChartType.Line:
             case ChartType.Area:
-                GenerateBarLineAreaChart(limitedData, labels, series, correlationId);
+                GenerateBarLineAreaChart(limitedData, labels, series, context);
                 break;
 
             case ChartType.Pie:
             case ChartType.Donut:
-                GeneratePieDonutChart(limitedData, labels, series, correlationId);
+                GeneratePieDonutChart(limitedData, labels, series, context);
                 break;
 
             case ChartType.Scatter:
             case ChartType.Bubble:
-                GenerateScatterBubbleChart(limitedData, labels, series, correlationId);
+                GenerateScatterBubbleChart(limitedData, labels, series, context);
                 break;
 
             default:
-                _infrastructure.Logger.LogWarning("Unsupported chart type. CorrelationId: {CorrelationId}, DataSetId: {DataSetId}, ChartType: {ChartType}",
-                    correlationId, dataSet.Id, chartType);
+                _infrastructure.StructuredLogging.LogStep(context, "Unsupported chart type", new Dictionary<string, object>
+                {
+                    [AppConstants.DataStructures.DATASETID] = dataSet.Id,
+                    [AppConstants.DataStructures.CHART_TYPE] = chartType.ToString()
+                });
                 break;
         }
 
@@ -669,7 +694,7 @@ public class DataVisualizationService : IDataVisualizationService
         };
     }
 
-    private void GenerateBarLineAreaChart(List<Dictionary<string, object>> data, List<string> labels, List<ChartSeriesDto> series, string correlationId)
+    private void GenerateBarLineAreaChart(List<Dictionary<string, object>> data, List<string> labels, List<ChartSeriesDto> series, IOperationContext context)
     {
         if (data.Count == 0) return;
 
@@ -678,13 +703,13 @@ public class DataVisualizationService : IDataVisualizationService
 
         if (numericColumns.Count == 0)
         {
-            _infrastructure.Logger.LogWarning("No numeric columns found for chart. Using fallback data. CorrelationId: {CorrelationId}", correlationId);
+            _infrastructure.StructuredLogging.LogStep(context, "No numeric columns found for chart. Using fallback data");
 
             // Fallback: use row indices as labels and data
             labels.AddRange(data.Select((_, index) => $"Row {index + 1}"));
             series.Add(new ChartSeriesDto
             {
-                Name = "Count",
+                Name = AppConstants.DataProcessing.FALLBACK_SERIES_NAME,
                 Data = data.Select((_, index) => (object)(index + 1)).ToList()
             });
             return;
@@ -705,7 +730,7 @@ public class DataVisualizationService : IDataVisualizationService
         }
     }
 
-    private void GeneratePieDonutChart(List<Dictionary<string, object>> data, List<string> labels, List<ChartSeriesDto> series, string correlationId)
+    private void GeneratePieDonutChart(List<Dictionary<string, object>> data, List<string> labels, List<ChartSeriesDto> series, IOperationContext context)
     {
         if (data.Count == 0) return;
 
@@ -714,13 +739,13 @@ public class DataVisualizationService : IDataVisualizationService
 
         if (numericColumns.Count == 0)
         {
-            _infrastructure.Logger.LogWarning("No numeric columns found for pie/donut chart. Using fallback data. CorrelationId: {CorrelationId}", correlationId);
+            _infrastructure.StructuredLogging.LogStep(context, "No numeric columns found for pie/donut chart. Using fallback data");
 
             // Fallback: use row indices as labels and data
             labels.AddRange(data.Select((_, index) => $"Row {index + 1}"));
             series.Add(new ChartSeriesDto
             {
-                Name = "Count",
+                Name = AppConstants.DataProcessing.FALLBACK_SERIES_NAME,
                 Data = data.Select((_, index) => (object)(index + 1)).ToList()
             });
             return;
@@ -739,7 +764,7 @@ public class DataVisualizationService : IDataVisualizationService
         });
     }
 
-    private void GenerateScatterBubbleChart(List<Dictionary<string, object>> data, List<string> labels, List<ChartSeriesDto> series, string correlationId)
+    private void GenerateScatterBubbleChart(List<Dictionary<string, object>> data, List<string> labels, List<ChartSeriesDto> series, IOperationContext context)
     {
         if (data.Count == 0) return;
 
@@ -748,13 +773,13 @@ public class DataVisualizationService : IDataVisualizationService
 
         if (numericColumns.Count < 2)
         {
-            _infrastructure.Logger.LogWarning("Insufficient numeric columns for scatter/bubble chart. Using fallback data. CorrelationId: {CorrelationId}", correlationId);
+            _infrastructure.StructuredLogging.LogStep(context, "Insufficient numeric columns for scatter/bubble chart. Using fallback data");
 
             // Fallback: use row indices as labels and data
             labels.AddRange(data.Select((_, index) => $"Row {index + 1}"));
             series.Add(new ChartSeriesDto
             {
-                Name = "Count",
+                Name = AppConstants.DataProcessing.FALLBACK_SERIES_NAME,
                 Data = data.Select((_, index) => (object)(index + 1)).ToList()
             });
             return;
@@ -779,10 +804,10 @@ public class DataVisualizationService : IDataVisualizationService
         });
     }
 
-    private ComparisonChartDto GenerateComparisonChartData(DataSet dataSet1, DataSet dataSet2, List<Dictionary<string, object>> data1, List<Dictionary<string, object>> data2, ChartType chartType, ChartConfigurationDto? configuration, string correlationId)
+    private ComparisonChartDto GenerateComparisonChartData(DataSet dataSet1, DataSet dataSet2, List<Dictionary<string, object>> data1, List<Dictionary<string, object>> data2, ChartType chartType, ChartConfigurationDto? configuration, IOperationContext context)
     {
-        var chart1 = GenerateChartData(dataSet1, data1, chartType, configuration, correlationId);
-        var chart2 = GenerateChartData(dataSet2, data2, chartType, configuration, correlationId);
+        var chart1 = GenerateChartData(dataSet1, data1, chartType, configuration, context);
+        var chart2 = GenerateChartData(dataSet2, data2, chartType, configuration, context);
 
         return new ComparisonChartDto
         {
@@ -833,7 +858,7 @@ public class DataVisualizationService : IDataVisualizationService
                 NonNullCount = columnData.Count - nullCount,
                 NullCount = nullCount,
                 UniqueCount = columnData.Distinct().Count(),
-                SampleValues = columnData.Take(5).Select(x => x?.ToString() ?? "null").Cast<object>().ToList()
+                SampleValues = columnData.Take(AppConstants.DataProcessing.SAMPLE_VALUES_COUNT).Select(x => x?.ToString() ?? AppConstants.DataProcessing.DATA_TYPE_NULL).Cast<object>().ToList()
             });
         }
 
@@ -884,9 +909,9 @@ public class DataVisualizationService : IDataVisualizationService
                         StandardDeviation = CalculateStandardDeviation(numericData),
                         Min = numericData.Min(),
                         Max = numericData.Max(),
-                        Q1 = CalculateQuartile(numericData, 0.25),
-                        Q2 = CalculateQuartile(numericData, 0.5),
-                        Q3 = CalculateQuartile(numericData, 0.75),
+                        Q1 = CalculateQuartile(numericData, AppConstants.DataProcessing.Q1_PERCENTILE),
+                        Q2 = CalculateQuartile(numericData, AppConstants.DataProcessing.Q2_PERCENTILE),
+                        Q3 = CalculateQuartile(numericData, AppConstants.DataProcessing.Q3_PERCENTILE),
                         Skewness = CalculateSkewness(numericData),
                         Kurtosis = CalculateKurtosis(numericData)
                     };
@@ -911,10 +936,10 @@ public class DataVisualizationService : IDataVisualizationService
         var nonNullData = data.Where(v => v != null).ToList();
         if (nonNullData.Count == 0) return AppConstants.Messages.UNKNOWN;
 
-        if (nonNullData.All(v => IsNumeric(v))) return "Numeric";
-        if (nonNullData.All(v => v is DateTime)) return "DateTime";
-        if (nonNullData.All(v => v is bool)) return "Boolean";
-        return "String";
+        if (nonNullData.All(IsNumeric)) return AppConstants.DataProcessing.DATA_TYPE_NUMERIC;
+        if (nonNullData.All(v => v is DateTime)) return AppConstants.DataProcessing.DATA_TYPE_DATETIME;
+        if (nonNullData.All(v => v is bool)) return AppConstants.DataProcessing.DATA_TYPE_BOOLEAN;
+        return AppConstants.DataProcessing.DATA_TYPE_STRING;
     }
 
     private static bool IsNumeric(object? value)
@@ -930,7 +955,7 @@ public class DataVisualizationService : IDataVisualizationService
     private static bool IsNumericColumn(List<object?> data)
     {
         var nonNullData = data.Where(v => v != null).ToList();
-        return nonNullData.Count > 0 && nonNullData.All(v => IsNumeric(v));
+        return nonNullData.Count > 0 && nonNullData.All(IsNumeric);
     }
 
     private static double CalculateMedian(List<double> data)
@@ -959,7 +984,7 @@ public class DataVisualizationService : IDataVisualizationService
         if (data.Count == 0) return 0;
 
         var sorted = data.OrderBy(x => x).ToList();
-        var index = (percentile * (sorted.Count - 1));
+        var index = percentile * (sorted.Count - 1);
         var lower = sorted[(int)Math.Floor(index)];
         var upper = sorted[(int)Math.Ceiling(index)];
 
@@ -987,7 +1012,7 @@ public class DataVisualizationService : IDataVisualizationService
         if (Math.Abs(stdDev) < double.Epsilon) return 0;
 
         var kurtosis = data.Select(x => Math.Pow((x - mean) / stdDev, 4)).Average();
-        return (kurtosis - 3) * Math.Sqrt(data.Count * (data.Count - 1)) / ((data.Count - 2) * (data.Count - 3));
+        return (kurtosis - AppConstants.DataProcessing.KURTOSIS_ADJUSTMENT) * Math.Sqrt(data.Count * (data.Count - 1)) / ((data.Count - 2) * (data.Count - 3));
     }
 
     #endregion
@@ -995,11 +1020,11 @@ public class DataVisualizationService : IDataVisualizationService
 
 public class DataVisualizationOptions
 {
-    public TimeSpan CacheExpiration { get; set; } = TimeSpan.FromMinutes(30);
-    public int MaxDataPoints { get; set; } = 1000;
-    public TimeSpan ChartGenerationTimeout { get; set; } = TimeSpan.FromMinutes(2);
-    public TimeSpan ComparisonChartTimeout { get; set; } = TimeSpan.FromMinutes(3);
-    public TimeSpan SummaryGenerationTimeout { get; set; } = TimeSpan.FromMinutes(1);
-    public TimeSpan StatisticalSummaryTimeout { get; set; } = TimeSpan.FromMinutes(2);
-    public double ChaosProcessingDelayProbability { get; set; } = 0.001; // 0.1%
+    public TimeSpan CacheExpiration { get; set; } = TimeSpan.FromMinutes(AppConstants.DataProcessing.DEFAULT_CACHE_EXPIRATION_MINUTES);
+    public int MaxDataPoints { get; set; } = AppConstants.DataProcessing.DEFAULT_MAX_DATA_POINTS;
+    public TimeSpan ChartGenerationTimeout { get; set; } = TimeSpan.FromMinutes(AppConstants.DataProcessing.DEFAULT_CHART_GENERATION_TIMEOUT_MINUTES);
+    public TimeSpan ComparisonChartTimeout { get; set; } = TimeSpan.FromMinutes(AppConstants.DataProcessing.DEFAULT_COMPARISON_CHART_TIMEOUT_MINUTES);
+    public TimeSpan SummaryGenerationTimeout { get; set; } = TimeSpan.FromMinutes(AppConstants.DataProcessing.DEFAULT_SUMMARY_GENERATION_TIMEOUT_MINUTES);
+    public TimeSpan StatisticalSummaryTimeout { get; set; } = TimeSpan.FromMinutes(AppConstants.DataProcessing.DEFAULT_STATISTICAL_SUMMARY_TIMEOUT_MINUTES);
+    public double ChaosProcessingDelayProbability { get; set; } = AppConstants.DataProcessing.DEFAULT_CHAOS_PROCESSING_DELAY_PROBABILITY;
 }

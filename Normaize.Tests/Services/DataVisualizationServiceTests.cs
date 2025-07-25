@@ -414,13 +414,18 @@ public class DataVisualizationServiceTests
         var dataSet = new DataSet { Id = 1, UserId = "user1", ProcessedData = "[{\"label\": \"A\", \"value\": 10}, {\"label\": \"B\", \"value\": 20}]", UseSeparateTable = false };
         var data = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, object>>>(dataSet.ProcessedData);
 
+        // Create a mock operation context for testing
+        var mockContext = new Mock<IOperationContext>();
+        mockContext.Setup(x => x.CorrelationId).Returns("test-correlation-id");
+        mockContext.Setup(x => x.UserId).Returns("user1");
+
         // Test with reflection to access the private method
         var method = typeof(DataVisualizationService).GetMethod("GenerateChartData",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
         Assert.NotNull(method);
 
-        var result = (ChartDataDto)method.Invoke(service, [dataSet, data!, ChartType.Bar, null!, "test-correlation-id"])!;
+        var result = (ChartDataDto)method.Invoke(service, [dataSet, data!, ChartType.Bar, null!, mockContext.Object])!;
 
         Assert.NotNull(result);
         Assert.Equal(1, result.DataSetId);

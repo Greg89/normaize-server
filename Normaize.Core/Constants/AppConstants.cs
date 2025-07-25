@@ -38,7 +38,7 @@ public static class AppConstants
         public const string LOCAL = "local";
     }
     /// <summary>
-    /// Storage provider constants
+    /// Chaos engineering constants
     /// </summary>
     public static class ChaosEngineering
     {
@@ -49,7 +49,22 @@ public static class AppConstants
         public const string MEMORY_PRESSURE = "MemoryPressure";
         public const string SIMULATED_PROCESSING_DELAY_MESSAGE = "Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}";
 
+        // Chaos engineering delay constants
+        public const int MIN_PROCESSING_DELAY_MS = 1000;
+        public const int MAX_PROCESSING_DELAY_MS = 5000;
+        public const int MIN_NETWORK_LATENCY_MS = 500;
+        public const int MAX_NETWORK_LATENCY_MS = 2000;
+        public const int MIN_SUMMARY_DELAY_MS = 500;
+        public const int MAX_SUMMARY_DELAY_MS = 2000;
+        public const int MIN_STATS_DELAY_MS = 1000;
+        public const int MAX_STATS_DELAY_MS = 3000;
+        public const int DEFAULT_CHAOS_DELAY_MS = 100;
+        public const int MAX_CHAOS_DELAY_MS = 500;
 
+        // Memory pressure simulation constants
+        public const int MEMORY_PRESSURE_OBJECT_COUNT = 30;
+        public const int MEMORY_PRESSURE_OBJECT_SIZE_BYTES = 1024 * 1024; // 1MB
+        public const int MEMORY_PRESSURE_DELAY_MS = 100;
     }
 
     /// <summary>
@@ -263,5 +278,41 @@ public static class AppConstants
         public const string UNSUPPORTED_FILE_TYPE = "Unsupported file type";
         public const string CONFIGURATION_VALIDATION_FAILED = "Configuration validation failed";
         public const string ALLOWED_EXTENSIONS_CONFLICT = "AllowedExtensions cannot contain blocked extensions";
+    }
+
+    /// <summary>
+    /// Data processing and visualization constants
+    /// </summary>
+    public static class DataProcessing
+    {
+        // Data processing constants
+        public const int SAMPLE_VALUES_COUNT = 5;
+        public const int CACHE_KEY_HASH_LENGTH = 8;
+
+        // Statistical calculation constants
+        public const double Q1_PERCENTILE = 0.25;
+        public const double Q2_PERCENTILE = 0.5;
+        public const double Q3_PERCENTILE = 0.75;
+        public const double KURTOSIS_ADJUSTMENT = 3.0;
+
+        // Default timeout values (in minutes)
+        public const int DEFAULT_CACHE_EXPIRATION_MINUTES = 30;
+        public const int DEFAULT_MAX_DATA_POINTS = 1000;
+        public const int DEFAULT_CHART_GENERATION_TIMEOUT_MINUTES = 2;
+        public const int DEFAULT_COMPARISON_CHART_TIMEOUT_MINUTES = 3;
+        public const int DEFAULT_SUMMARY_GENERATION_TIMEOUT_MINUTES = 1;
+        public const int DEFAULT_STATISTICAL_SUMMARY_TIMEOUT_MINUTES = 2;
+        public const double DEFAULT_CHAOS_PROCESSING_DELAY_PROBABILITY = 0.001; // 0.1%
+
+        // Data type constants
+        public const string DATA_TYPE_NUMERIC = "Numeric";
+        public const string DATA_TYPE_DATETIME = "DateTime";
+        public const string DATA_TYPE_BOOLEAN = "Boolean";
+        public const string DATA_TYPE_STRING = "String";
+        public const string DATA_TYPE_NULL = "null";
+
+        // Chart and data constants
+        public const string FALLBACK_SERIES_NAME = "Count";
+        public const string CONFIGURATION_KEY = "Configuration";
     }
 }
