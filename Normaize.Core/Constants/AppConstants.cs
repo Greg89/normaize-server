@@ -354,4 +354,48 @@ public static class AppConstants
         public const string ACCESS_DENIED_USER_MISMATCH = "Access denied - user mismatch";
         public const string SIMULATED_DELETION_FAILURE_MESSAGE = "Simulated deletion failure (chaos engineering)";
     }
+
+    /// <summary>
+    /// File upload and processing constants
+    /// </summary>
+    public static class FileUpload
+    {
+        // File upload operation constants
+        public const string FILE_NAME_REQUIRED = "File name is required";
+        public const string FILE_SIZE_MUST_BE_POSITIVE = "File size must be positive";
+        public const string FILE_PATH_REQUIRED = "File path is required";
+        public const string FILE_TYPE_REQUIRED = "File type is required";
+        public const string FILE_NOT_FOUND_ERROR = "File not found: {0}";
+        public const string UNSUPPORTED_FILE_TYPE_ERROR = "File type {0} is not supported";
+        public const string CSV_PARSING_ERROR = "CSV parsing error: {0}";
+        public const string JSON_PARSING_ERROR = "JSON parsing error: {0}";
+        public const string JSON_SERIALIZATION_ERROR = "JSON serialization error during {0} processing: {1}";
+        public const string EXCEL_PROCESSING_ERROR = "Excel processing error: {0}";
+        public const string XML_PARSING_ERROR = "XML parsing error: {0}";
+        public const string UNSUPPORTED_JSON_STRUCTURE = "Unsupported JSON structure: {0}";
+        public const string NO_WORKSHEET_FOUND = "No worksheet found in Excel file";
+        public const string CSV_NO_HEADERS_WARNING = "CSV file has no headers";
+        public const string FILE_TOO_MANY_COLUMNS_WARNING = "File has too many columns";
+        public const string FILE_SIZE_EXCEEDS_LIMIT_WARNING = "File size exceeds limit";
+        public const string FILE_EXTENSION_BLOCKED_WARNING = "File extension is blocked";
+        public const string FILE_EXTENSION_NOT_ALLOWED_WARNING = "File extension not allowed";
+        public const string FILE_NOT_FOUND_PROCESSING_WARNING = "File not found during processing";
+        public const string FILE_PROCESSING_COMPLETED_DEBUG = "File processing completed";
+        public const string CSV_PARSING_FAILED_ERROR = "CSV parsing failed";
+        public const string JSON_SERIALIZATION_FAILED_ERROR = "JSON serialization failed during {0} processing";
+        public const string JSON_PARSING_FAILED_ERROR = "JSON parsing failed";
+        public const string EXCEL_PROCESSING_FAILED_ERROR = "Excel processing failed";
+        public const string XML_PARSING_FAILED_ERROR = "XML parsing failed";
+        public const string UNSUPPORTED_JSON_STRUCTURE_WARNING = "Unsupported JSON structure";
+        public const string FAILED_GENERATE_DATA_HASH_WARNING = "Failed to generate data hash for file {0}";
+        public const string ERROR_PROCESSING_FILE = "Error processing file {0}: {1}";
+        public const string UNEXPECTED_ERROR_FILE_PROCESSING = "Unexpected error during file processing";
+        public const string FILE_VALIDATION_FAILED_ERROR = "File validation failed for {0}";
+        public const string FAILED_SAVE_FILE_ERROR = "Failed to save file {0}";
+
+        // Chaos engineering constants for file operations
+        public const int FILE_UPLOAD_CHAOS_DELAY_MS = 100;
+        public const int FILE_PROCESSING_CHAOS_DELAY_MS = 100;
+        public const int FILE_DELETION_CHAOS_DELAY_MS = 100;
+    }
 }
