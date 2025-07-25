@@ -38,15 +38,25 @@ var builder = WebApplication.CreateBuilder(args);
 // Configure Serilog for dependency injection
 builder.Host.UseSerilog();
 
-// Configure all services
-ServiceConfiguration.ConfigureServices(builder);
+// Check if we're running in test mode
+var isTestMode = Environment.GetEnvironmentVariable("TEST_MODE") == "true" || 
+                 Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Test";
+
+if (!isTestMode)
+{
+    // Configure all services only if not in test mode
+    ServiceConfiguration.ConfigureServices(builder);
+}
 
 var app = builder.Build();
 
-// Configure startup (migrations, health checks)
-using var scope = app.Services.CreateScope();
-var startupService = scope.ServiceProvider.GetRequiredService<IStartupService>();
-await startupService.ConfigureStartupAsync();
+// Configure startup (migrations, health checks) only if not in test mode
+if (!isTestMode)
+{
+    using var scope = app.Services.CreateScope();
+    var startupService = scope.ServiceProvider.GetRequiredService<IStartupService>();
+    await startupService.ConfigureStartupAsync();
+}
 
 // Configure middleware pipeline
 MiddlewareConfiguration.ConfigureMiddleware(app);

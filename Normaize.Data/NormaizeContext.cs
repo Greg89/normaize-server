@@ -14,6 +14,7 @@ public class NormaizeContext : DbContext
     public DbSet<Analysis> Analyses { get; set; }
     public DbSet<DataSetRow> DataSetRows { get; set; }
     public DbSet<DataSetAuditLog> DataSetAuditLogs { get; set; }
+    public DbSet<UserSettings> UserSettings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -135,6 +136,58 @@ public class NormaizeContext : DbContext
             entity.HasIndex(e => e.Action);
             entity.HasIndex(e => e.Timestamp);
             entity.HasIndex(e => new { e.DataSetId, e.Timestamp }).HasDatabaseName("idx_audit_dataset_timestamp");
+        });
+
+        // UserSettings configuration
+        modelBuilder.Entity<UserSettings>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(255);
+            
+            // Notification settings
+            entity.Property(e => e.EmailNotificationsEnabled).HasDefaultValue(true);
+            entity.Property(e => e.PushNotificationsEnabled).HasDefaultValue(true);
+            entity.Property(e => e.ProcessingCompleteNotifications).HasDefaultValue(true);
+            entity.Property(e => e.ErrorNotifications).HasDefaultValue(true);
+            entity.Property(e => e.WeeklyDigestEnabled).HasDefaultValue(false);
+            
+            // UI/UX preferences
+            entity.Property(e => e.Theme).HasMaxLength(20).HasDefaultValue("light");
+            entity.Property(e => e.Language).HasMaxLength(10).HasDefaultValue("en");
+            entity.Property(e => e.DefaultPageSize).HasDefaultValue(20);
+            entity.Property(e => e.ShowTutorials).HasDefaultValue(true);
+            entity.Property(e => e.CompactMode).HasDefaultValue(false);
+            
+            // Data processing preferences
+            entity.Property(e => e.AutoProcessUploads).HasDefaultValue(true);
+            entity.Property(e => e.MaxPreviewRows).HasDefaultValue(100);
+            entity.Property(e => e.DefaultFileType).HasMaxLength(20).HasDefaultValue("CSV");
+            entity.Property(e => e.EnableDataValidation).HasDefaultValue(true);
+            entity.Property(e => e.EnableSchemaInference).HasDefaultValue(true);
+            
+            // Privacy settings
+            entity.Property(e => e.ShareAnalytics).HasDefaultValue(true);
+            entity.Property(e => e.AllowDataUsageForImprovement).HasDefaultValue(false);
+            entity.Property(e => e.ShowProcessingTime).HasDefaultValue(true);
+            
+            // Account information
+            entity.Property(e => e.DisplayName).HasMaxLength(255);
+            entity.Property(e => e.TimeZone).HasMaxLength(50).HasDefaultValue("UTC");
+            entity.Property(e => e.DateFormat).HasMaxLength(20).HasDefaultValue("MM/dd/yyyy");
+            entity.Property(e => e.TimeFormat).HasMaxLength(10).HasDefaultValue("12h");
+            
+            // Timestamps
+            entity.Property(e => e.CreatedAt);
+            entity.Property(e => e.UpdatedAt);
+            
+            // Soft delete
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.DeletedAt);
+            
+            // Indexes
+            entity.HasIndex(e => e.UserId).IsUnique();
+            entity.HasIndex(e => e.IsDeleted);
+            entity.HasIndex(e => e.UpdatedAt);
         });
     }
 } 
