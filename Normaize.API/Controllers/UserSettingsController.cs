@@ -9,19 +9,11 @@ namespace Normaize.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class UserSettingsController : ControllerBase
+public class UserSettingsController(
+    IUserSettingsService _userSettingsService,
+    IStructuredLoggingService _loggingService
+) : ControllerBase
 {
-    private readonly IUserSettingsService _userSettingsService;
-    private readonly IStructuredLoggingService _loggingService;
-
-    public UserSettingsController(
-        IUserSettingsService userSettingsService,
-        IStructuredLoggingService loggingService)
-    {
-        _userSettingsService = userSettingsService;
-        _loggingService = loggingService;
-    }
-
     private string GetCurrentUserId()
     {
         return User.GetUserId();

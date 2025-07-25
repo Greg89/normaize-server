@@ -1,22 +1,12 @@
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Normaize.API;
 using Normaize.Core.DTOs;
-using Normaize.Core.Interfaces;
 using Normaize.Data;
-using Normaize.Data.Repositories;
-using Normaize.Data.Services;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Xunit;
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
-using Moq;
 
 namespace Normaize.Tests.Integration;
 
@@ -128,5 +118,6 @@ public class UserSettingsIntegrationTests : IClassFixture<TestWebApplicationFact
     public void Dispose()
     {
         _context?.Dispose();
+        GC.SuppressFinalize(this);
     }
 } 

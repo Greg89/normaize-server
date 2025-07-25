@@ -4,7 +4,6 @@ using Normaize.Core.Interfaces;
 using Normaize.Core.Extensions;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
-using System.Security.Claims;
 
 namespace Normaize.Data.Services;
 
