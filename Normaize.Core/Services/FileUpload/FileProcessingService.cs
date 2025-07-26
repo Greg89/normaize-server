@@ -11,7 +11,6 @@ using CsvHelper.Configuration;
 using System.Text.Json;
 using System.Xml;
 using System.Xml.Linq;
-using System.Security.Cryptography;
 using System.Diagnostics;
 
 namespace Normaize.Core.Services.FileUpload;
@@ -125,7 +124,7 @@ public class FileProcessingService : IFileProcessingService
             var jsonElement = JsonSerializer.Deserialize<JsonElement>(jsonContent);
 
             var (headers, records) = ExtractJsonData(jsonElement, context, filePath);
-            var limitedHeaders = LimitColumns(headers.ToList(), context, filePath);
+            var limitedHeaders = LimitColumns([.. headers], context, filePath);
 
             PopulateDataSet(dataSet, limitedHeaders, records, fileStream.Length, context, filePath);
         }
@@ -183,7 +182,7 @@ public class FileProcessingService : IFileProcessingService
             var doc = XDocument.Parse(xmlContent);
 
             var (headers, records) = ExtractXmlData(doc);
-            var limitedHeaders = LimitColumns(headers.ToList(), context, filePath);
+            var limitedHeaders = LimitColumns([.. headers], context, filePath);
 
             PopulateDataSet(dataSet, limitedHeaders, records, fileStream.Length, context, filePath);
         }

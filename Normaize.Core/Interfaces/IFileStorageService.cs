@@ -14,14 +14,14 @@ public interface IFileStorageService : IStorageService
     /// </summary>
     /// <param name="fileRequest">The file upload request containing the file data</param>
     /// <returns>The path where the file was saved</returns>
-    Task<string> SaveFileAsync(FileUploadRequest fileRequest);
+    new Task<string> SaveFileAsync(FileUploadRequest fileRequest);
 
     /// <summary>
     /// Deletes a file at the specified path with chaos engineering and logging.
     /// </summary>
     /// <param name="filePath">The path to the file to delete</param>
     /// <returns>Task that completes when deletion is done</returns>
-    Task DeleteFileAsync(string filePath);
+    new Task DeleteFileAsync(string filePath);
 
     /// <summary>
     /// Determines the storage provider from a file path.

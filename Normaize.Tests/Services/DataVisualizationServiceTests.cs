@@ -401,10 +401,10 @@ public class DataVisualizationServiceTests
 
         Assert.NotNull(data);
         Assert.Equal(2, data.Count);
-        Assert.Equal("A", data[0]["label"].ToString());
-        Assert.Equal("10", data[0]["value"].ToString()); // JSON numbers are parsed as strings by default
-        Assert.Equal("B", data[1]["label"].ToString());
-        Assert.Equal("20", data[1]["value"].ToString());
+        Assert.Equal("A", data[0]["label"]?.ToString());
+        Assert.Equal("10", data[0]["value"]?.ToString()); // JSON numbers are parsed as strings by default
+        Assert.Equal("B", data[1]["label"]?.ToString());
+        Assert.Equal("20", data[1]["value"]?.ToString());
     }
 
 
