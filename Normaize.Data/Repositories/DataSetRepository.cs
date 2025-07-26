@@ -2,19 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using Normaize.Core.DTOs;
-using Normaize.Data;
 using System.Text.Json;
 
 namespace Normaize.Data.Repositories;
 
-public class DataSetRepository : IDataSetRepository
+public class DataSetRepository(NormaizeContext context) : IDataSetRepository
 {
-    private readonly NormaizeContext _context;
-
-    public DataSetRepository(NormaizeContext context)
-    {
-        _context = context;
-    }
+    private readonly NormaizeContext _context = context;
 
     public async Task<DataSet?> GetByIdAsync(int id)
     {
@@ -59,7 +53,7 @@ public class DataSetRepository : IDataSetRepository
         // Soft delete
         dataSet.IsDeleted = true;
         dataSet.DeletedAt = DateTime.UtcNow;
-        dataSet.DeletedBy = dataSet.UserId; // This will be updated by the service layer
+        dataSet.DeletedBy = dataSet.UserId;
         dataSet.LastModifiedAt = DateTime.UtcNow;
         dataSet.LastModifiedBy = dataSet.DeletedBy;
 
