@@ -10,7 +10,6 @@ env:
 jobs:
   build-test-coverage:
     runs-on: ubuntu-latest
-    # Skip this job if commit message contains [skip ci] or is a version-bump branch or is a create-pull-request bot merge
     if: |
       !contains(github.event.head_commit.message, '[skip ci]') &&
       !startsWith(github.ref, 'refs/heads/version-bump/') &&
@@ -150,14 +149,13 @@ jobs:
           echo "Generating report without history (first run or no history available)..."
           reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html
         fi
-        
-        # Generate summary and badges
+        # Always generate summary and badges
         reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-summary" -reporttypes:"TextSummary;Badges"
 
-    - name: Debug coverage report directory before upload
+    - name: Debug coverage history directory before upload
       run: |
-        echo "Listing contents of ./coverage-report/"
-        ls -al ./coverage-report/
+        echo "Listing contents of ./coverage-history/"
+        ls -al ./coverage-history/
 
     - name: Upload coverage report
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
@@ -180,7 +178,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: coverage-history-${{ github.ref_name }}
-        path: ./coverage-report/
+        path: ./coverage-history/
         retention-days: 90
 
     - name: End SonarQube Analysis
