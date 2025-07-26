@@ -7,6 +7,7 @@ using Normaize.Data.Repositories;
 using Normaize.Data.Services;
 using Normaize.Core.Services;
 using Normaize.Core.Services.Visualization;
+using Normaize.Core.Services.FileUpload;
 using System.Diagnostics;
 
 namespace Normaize.API.Configuration;
@@ -434,6 +435,14 @@ public static class ServiceConfiguration
         builder.Services.AddScoped<ICacheManagementService, CacheManagementService>();
         builder.Services.AddScoped<IVisualizationValidationService, VisualizationValidationService>();
         builder.Services.AddScoped<IVisualizationServices, VisualizationServices>();
+
+        // Register file upload sub-services
+        builder.Services.AddScoped<IFileValidationService, FileValidationService>();
+        builder.Services.AddScoped<IFileProcessingService, FileProcessingService>();
+        builder.Services.AddScoped<IFileConfigurationService, FileConfigurationService>();
+        builder.Services.AddScoped<IFileUtilityService, FileUtilityService>();
+        builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+        builder.Services.AddScoped<IFileUploadServices, FileUploadServices>();
 
         builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
         builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();

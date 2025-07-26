@@ -250,7 +250,7 @@ public class DataSetRepository : IDataSetRepository
         if (!dataSet.UseSeparateTable && !string.IsNullOrEmpty(dataSet.ProcessedData))
         {
             // Analyze inline data
-            var data = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(dataSet.ProcessedData);
+            var data = JsonSerializer.Deserialize<List<Dictionary<string, object?>>>(dataSet.ProcessedData);
             return data != null ? AnalyzeData(data.Cast<Dictionary<string, object>?>().ToList()) : null;
         }
         else

@@ -15,7 +15,7 @@ public interface IStatisticalCalculationService
     /// <param name="dataSet">The dataset to analyze</param>
     /// <param name="data">The processed data from the dataset</param>
     /// <returns>Data summary containing basic statistics</returns>
-    DataSummaryDto GenerateDataSummary(DataSet dataSet, List<Dictionary<string, object>> data);
+    DataSummaryDto GenerateDataSummary(DataSet dataSet, List<Dictionary<string, object?>> data);
 
     /// <summary>
     /// Generates a comprehensive statistical summary for the given dataset.
@@ -23,7 +23,7 @@ public interface IStatisticalCalculationService
     /// <param name="dataSet">The dataset to analyze</param>
     /// <param name="data">The processed data from the dataset</param>
     /// <returns>Statistical summary containing advanced statistics</returns>
-    StatisticalSummaryDto GenerateStatisticalSummary(DataSet dataSet, List<Dictionary<string, object>> data);
+    StatisticalSummaryDto GenerateStatisticalSummary(DataSet dataSet, List<Dictionary<string, object?>> data);
 
     /// <summary>
     /// Calculates the median of a list of numeric values.

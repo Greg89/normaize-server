@@ -21,7 +21,7 @@ public class StatisticalCalculationServiceTests
     {
         // Arrange
         var dataSet = new DataSet { Id = 1, UserId = "user1" };
-        var data = new List<Dictionary<string, object>>();
+        var data = new List<Dictionary<string, object?>>();
 
         // Act
         var result = _service.GenerateDataSummary(dataSet, data);
@@ -42,11 +42,11 @@ public class StatisticalCalculationServiceTests
     {
         // Arrange
         var dataSet = new DataSet { Id = 1, UserId = "user1" };
-        var data = new List<Dictionary<string, object>>
+        var data = new List<Dictionary<string, object?>>
         {
             new() { ["name"] = "John", ["age"] = 25, ["city"] = "NYC" },
             new() { ["name"] = "Jane", ["age"] = 30, ["city"] = "LA" },
-            new() { ["name"] = "Bob", ["age"] = (object?)null, ["city"] = "Chicago" }
+            new() { ["name"] = "Bob", ["age"] = null, ["city"] = "Chicago" }
         };
 
         // Act
@@ -80,7 +80,7 @@ public class StatisticalCalculationServiceTests
     {
         // Arrange
         var dataSet = new DataSet { Id = 1, UserId = "user1" };
-        var data = new List<Dictionary<string, object>>
+        var data = new List<Dictionary<string, object?>>
         {
             new() { ["name"] = "John", ["age"] = 25 },
             new() { ["name"] = "Jane", ["age"] = 30 },
@@ -99,7 +99,7 @@ public class StatisticalCalculationServiceTests
     {
         // Arrange
         var dataSet = new DataSet { Id = 1, UserId = "user1" };
-        var data = new List<Dictionary<string, object>>();
+        var data = new List<Dictionary<string, object?>>();
 
         // Act
         var result = _service.GenerateStatisticalSummary(dataSet, data);
@@ -116,7 +116,7 @@ public class StatisticalCalculationServiceTests
     {
         // Arrange
         var dataSet = new DataSet { Id = 1, UserId = "user1" };
-        var data = new List<Dictionary<string, object>>
+        var data = new List<Dictionary<string, object?>>
         {
             new() { ["name"] = "John", ["age"] = 25, ["salary"] = 50000 },
             new() { ["name"] = "Jane", ["age"] = 30, ["salary"] = 60000 },

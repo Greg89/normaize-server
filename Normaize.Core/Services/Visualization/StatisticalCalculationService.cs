@@ -12,7 +12,7 @@ namespace Normaize.Core.Services.Visualization;
 /// </summary>
 public class StatisticalCalculationService : IStatisticalCalculationService
 {
-    public DataSummaryDto GenerateDataSummary(DataSet dataSet, List<Dictionary<string, object>> data)
+    public DataSummaryDto GenerateDataSummary(DataSet dataSet, List<Dictionary<string, object?>> data)
     {
         if (data.Count == 0)
         {
@@ -64,7 +64,7 @@ public class StatisticalCalculationService : IStatisticalCalculationService
         };
     }
 
-    public StatisticalSummaryDto GenerateStatisticalSummary(DataSet dataSet, List<Dictionary<string, object>> data)
+    public StatisticalSummaryDto GenerateStatisticalSummary(DataSet dataSet, List<Dictionary<string, object?>> data)
     {
         if (data.Count == 0)
         {

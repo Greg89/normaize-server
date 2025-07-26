@@ -87,7 +87,7 @@ public class DataVisualizationServiceTests
             Series = new List<ChartSeriesDto> { new ChartSeriesDto { Name = "value", Data = new List<object> { 10.0, 20.0 } } }
         };
 
-        _mockChartGenerationService.Setup(x => x.GenerateChartData(It.IsAny<DataSet>(), It.IsAny<List<Dictionary<string, object>>>(), chartType, config, It.IsAny<IOperationContext>()))
+        _mockChartGenerationService.Setup(x => x.GenerateChartData(It.IsAny<DataSet>(), It.IsAny<List<Dictionary<string, object?>>>(), chartType, config, It.IsAny<IOperationContext>()))
             .Returns(expectedChartData);
 
         // Act
@@ -213,7 +213,7 @@ public class DataVisualizationServiceTests
             Labels = new List<string> { "A" }
         };
 
-        _mockChartGenerationService.Setup(x => x.GenerateComparisonChartData(It.IsAny<DataSet>(), It.IsAny<DataSet>(), It.IsAny<List<Dictionary<string, object>>>(), It.IsAny<List<Dictionary<string, object>>>(), ChartType.Bar, null, It.IsAny<IOperationContext>()))
+        _mockChartGenerationService.Setup(x => x.GenerateComparisonChartData(It.IsAny<DataSet>(), It.IsAny<DataSet>(), It.IsAny<List<Dictionary<string, object?>>>(), It.IsAny<List<Dictionary<string, object?>>>(), ChartType.Bar, null, It.IsAny<IOperationContext>()))
             .Returns(expectedComparisonChart);
 
         // Act
@@ -277,7 +277,7 @@ public class DataVisualizationServiceTests
             DuplicateRows = 0,
             ProcessingTime = TimeSpan.FromMilliseconds(10)
         };
-        _mockStatisticalCalculationService.Setup(s => s.GenerateDataSummary(It.IsAny<DataSet>(), It.IsAny<List<Dictionary<string, object>>>()))
+        _mockStatisticalCalculationService.Setup(s => s.GenerateDataSummary(It.IsAny<DataSet>(), It.IsAny<List<Dictionary<string, object?>>>()))
             .Returns(expectedSummary);
 
         // Act
@@ -335,7 +335,7 @@ public class DataVisualizationServiceTests
             DataSetId = dataSetId,
             ProcessingTime = TimeSpan.FromMilliseconds(10)
         };
-        _mockStatisticalCalculationService.Setup(s => s.GenerateStatisticalSummary(It.IsAny<DataSet>(), It.IsAny<List<Dictionary<string, object>>>()))
+        _mockStatisticalCalculationService.Setup(s => s.GenerateStatisticalSummary(It.IsAny<DataSet>(), It.IsAny<List<Dictionary<string, object?>>>()))
             .Returns(expectedStats);
 
         // Act
@@ -397,7 +397,7 @@ public class DataVisualizationServiceTests
     {
         // Test the JSON parsing logic directly
         var jsonData = "[{\"label\": \"A\", \"value\": 10}, {\"label\": \"B\", \"value\": 20}]";
-        var data = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonData);
+        var data = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, object?>>>(jsonData);
 
         Assert.NotNull(data);
         Assert.Equal(2, data.Count);

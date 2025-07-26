@@ -43,7 +43,7 @@ public class ChartGenerationServiceTests
     {
         // Arrange
         var dataSet = new DataSet { Id = 1, UserId = "user1", ProcessedData = "[]", UseSeparateTable = false };
-        var data = new List<Dictionary<string, object>>();
+        var data = new List<Dictionary<string, object?>>();
         var mockContext = new Mock<IOperationContext>();
 
         // Act
@@ -62,7 +62,7 @@ public class ChartGenerationServiceTests
     {
         // Arrange
         var dataSet = new DataSet { Id = 1, UserId = "user1", ProcessedData = "[{\"label\": \"A\", \"value\": 10}, {\"label\": \"B\", \"value\": 20}]", UseSeparateTable = false };
-        var data = new List<Dictionary<string, object>>
+        var data = new List<Dictionary<string, object?>>
         {
             new() { ["label"] = "A", ["value"] = 10 },
             new() { ["label"] = "B", ["value"] = 20 }
@@ -93,7 +93,7 @@ public class ChartGenerationServiceTests
     {
         // Arrange
         var dataSet = new DataSet { Id = 1, UserId = "user1", ProcessedData = "[{\"category\": \"A\", \"value\": 10}, {\"category\": \"B\", \"value\": 20}]", UseSeparateTable = false };
-        var data = new List<Dictionary<string, object>>
+        var data = new List<Dictionary<string, object?>>
         {
             new() { ["category"] = "A", ["value"] = 10 },
             new() { ["category"] = "B", ["value"] = 20 }
@@ -124,7 +124,7 @@ public class ChartGenerationServiceTests
     {
         // Arrange
         var dataSet = new DataSet { Id = 1, UserId = "user1", ProcessedData = "[{\"point\": \"A\", \"x\": 10, \"y\": 20}, {\"point\": \"B\", \"x\": 30, \"y\": 40}]", UseSeparateTable = false };
-        var data = new List<Dictionary<string, object>>
+        var data = new List<Dictionary<string, object?>>
         {
             new() { ["point"] = "A", ["x"] = 10, ["y"] = 20 },
             new() { ["point"] = "B", ["x"] = 30, ["y"] = 40 }
@@ -156,8 +156,8 @@ public class ChartGenerationServiceTests
         // Arrange
         var dataSet1 = new DataSet { Id = 1, UserId = "user1", ProcessedData = "[{\"label\": \"A\", \"value\": 10}]", UseSeparateTable = false };
         var dataSet2 = new DataSet { Id = 2, UserId = "user1", ProcessedData = "[{\"label\": \"A\", \"value\": 20}]", UseSeparateTable = false };
-        var data1 = new List<Dictionary<string, object>> { new() { ["label"] = "A", ["value"] = 10 } };
-        var data2 = new List<Dictionary<string, object>> { new() { ["label"] = "A", ["value"] = 20 } };
+        var data1 = new List<Dictionary<string, object?>> { new() { ["label"] = "A", ["value"] = 10 } };
+        var data2 = new List<Dictionary<string, object?>> { new() { ["label"] = "A", ["value"] = 20 } };
         var mockContext = new Mock<IOperationContext>();
 
         _mockStatisticalCalculationService.Setup(x => x.IsNumericColumn(It.IsAny<List<object?>>()))

@@ -479,7 +479,7 @@ public class DataVisualizationService : IDataVisualizationService
         return dataSet;
     }
 
-    private List<Dictionary<string, object>> ExtractDataSetData(DataSet dataSet, IOperationContext context)
+    private List<Dictionary<string, object?>> ExtractDataSetData(DataSet dataSet, IOperationContext context)
     {
         try
         {
@@ -492,7 +492,7 @@ public class DataVisualizationService : IDataVisualizationService
                 return [];
             }
 
-            var data = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(dataSet.ProcessedData);
+            var data = JsonSerializer.Deserialize<List<Dictionary<string, object?>>>(dataSet.ProcessedData);
 
             if (data == null)
             {

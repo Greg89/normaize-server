@@ -30,7 +30,7 @@ public class ChartGenerationService : IChartGenerationService
         _infrastructure = infrastructure;
     }
 
-    public ChartDataDto GenerateChartData(DataSet dataSet, List<Dictionary<string, object>> data, ChartType chartType, ChartConfigurationDto? configuration, IOperationContext context)
+    public ChartDataDto GenerateChartData(DataSet dataSet, List<Dictionary<string, object?>> data, ChartType chartType, ChartConfigurationDto? configuration, IOperationContext context)
     {
         if (data.Count == 0)
         {
@@ -92,7 +92,7 @@ public class ChartGenerationService : IChartGenerationService
         };
     }
 
-    public ComparisonChartDto GenerateComparisonChartData(DataSet dataSet1, DataSet dataSet2, List<Dictionary<string, object>> data1, List<Dictionary<string, object>> data2, ChartType chartType, ChartConfigurationDto? configuration, IOperationContext context)
+    public ComparisonChartDto GenerateComparisonChartData(DataSet dataSet1, DataSet dataSet2, List<Dictionary<string, object?>> data1, List<Dictionary<string, object?>> data2, ChartType chartType, ChartConfigurationDto? configuration, IOperationContext context)
     {
         var chart1 = GenerateChartData(dataSet1, data1, chartType, configuration, context);
         var chart2 = GenerateChartData(dataSet2, data2, chartType, configuration, context);
@@ -115,7 +115,7 @@ public class ChartGenerationService : IChartGenerationService
 
     #region Private Chart Generation Methods
 
-    private void GenerateBarLineAreaChart(List<Dictionary<string, object>> data, List<string> labels, List<ChartSeriesDto> series, IOperationContext context)
+    private void GenerateBarLineAreaChart(List<Dictionary<string, object?>> data, List<string> labels, List<ChartSeriesDto> series, IOperationContext context)
     {
         if (data.Count == 0) return;
 
@@ -151,7 +151,7 @@ public class ChartGenerationService : IChartGenerationService
         }
     }
 
-    private void GeneratePieDonutChart(List<Dictionary<string, object>> data, List<string> labels, List<ChartSeriesDto> series, IOperationContext context)
+    private void GeneratePieDonutChart(List<Dictionary<string, object?>> data, List<string> labels, List<ChartSeriesDto> series, IOperationContext context)
     {
         if (data.Count == 0) return;
 
@@ -185,7 +185,7 @@ public class ChartGenerationService : IChartGenerationService
         });
     }
 
-    private void GenerateScatterBubbleChart(List<Dictionary<string, object>> data, List<string> labels, List<ChartSeriesDto> series, IOperationContext context)
+    private void GenerateScatterBubbleChart(List<Dictionary<string, object?>> data, List<string> labels, List<ChartSeriesDto> series, IOperationContext context)
     {
         if (data.Count == 0) return;
 
