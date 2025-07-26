@@ -411,4 +411,35 @@ public static class AppConstants
         public const int FILE_PROCESSING_CHAOS_DELAY_MS = 100;
         public const int FILE_DELETION_CHAOS_DELAY_MS = 100;
     }
+
+    /// <summary>
+    /// Database configuration constants
+    /// </summary>
+    public static class Database
+    {
+        // Default database configuration values
+        public const string DEFAULT_PORT = "3306";
+        public const string DEFAULT_HOST = "localhost";
+        public const string DEFAULT_DATABASE = "testdb";
+        public const string DEFAULT_USER = "testuser";
+        public const string DEFAULT_PASSWORD = "testpass";
+        public const string DEFAULT_CHARSET = "utf8mb4";
+
+        // Connection string parts
+        public const string SERVER_PREFIX = "Server=";
+        public const string DATABASE_PREFIX = "Database=";
+        public const string USER_PREFIX = "User=";
+        public const string PASSWORD_PREFIX = "Password=";
+        public const string PORT_PREFIX = "Port=";
+        public const string CHARSET_PREFIX = "CharSet=";
+    }
+
+    /// <summary>
+    /// Validation patterns and formats
+    /// </summary>
+    public static class Validation
+    {
+        // Regex patterns
+        public const string NUMERIC_ONLY_PATTERN = @"^\d+$";
+    }
 }
