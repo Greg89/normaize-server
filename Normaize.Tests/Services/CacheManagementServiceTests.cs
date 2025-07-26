@@ -7,8 +7,6 @@ using Normaize.Core.Services.Visualization;
 using Normaize.Core.Constants;
 using Normaize.Core.Services;
 using FluentAssertions;
-using System.Security.Cryptography;
-using System.Text.Json;
 
 namespace Normaize.Tests.Services;
 
@@ -260,21 +258,6 @@ public class CacheManagementServiceTests
     }
 
     [Fact]
-    public void Clear_CallsCompact_WhenCacheIsMemoryCache()
-    {
-        // Arrange
-        var mockMemoryCache = new Mock<MemoryCache>(new MemoryCacheOptions());
-        var service = new CacheManagementService(mockMemoryCache.Object, _mockOptions.Object);
-
-        // Act
-        service.Clear();
-
-        // Assert - Since Compact is not virtual, we can't verify it directly
-        // The test ensures the method doesn't throw an exception
-        // In a real scenario, we would test the behavior rather than the implementation
-    }
-
-    [Fact]
     public void Clear_DoesNotThrow_WhenCacheIsNotMemoryCache()
     {
         // Arrange
@@ -282,7 +265,7 @@ public class CacheManagementServiceTests
         var service = new CacheManagementService(mockGenericCache.Object, _mockOptions.Object);
 
         // Act & Assert
-        var exception = Record.Exception(() => service.Clear());
+        var exception = Record.Exception(service.Clear);
         exception.Should().BeNull();
     }
 

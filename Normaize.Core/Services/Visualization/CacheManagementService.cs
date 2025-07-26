@@ -12,18 +12,10 @@ namespace Normaize.Core.Services.Visualization;
 /// Service for managing cache operations in visualization services.
 /// Extracted from DataVisualizationService to follow single responsibility principle.
 /// </summary>
-public class CacheManagementService : ICacheManagementService
+public class CacheManagementService(IMemoryCache cache, IOptions<DataVisualizationOptions> options) : ICacheManagementService
 {
-    private readonly IMemoryCache _cache;
-    private readonly DataVisualizationOptions _options;
-
-    public CacheManagementService(
-        IMemoryCache cache,
-        IOptions<DataVisualizationOptions> options)
-    {
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-    }
+    private readonly IMemoryCache _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+    private readonly DataVisualizationOptions _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
 
     public bool TryGetValue<T>(string cacheKey, out T? value)
     {
@@ -33,6 +25,17 @@ public class CacheManagementService : ICacheManagementService
     public void Set<T>(string cacheKey, T value, TimeSpan expiration)
     {
         _cache.Set(cacheKey, value, expiration);
+    }
+
+    /// <summary>
+    /// Stores a value in cache with default expiration from configuration.
+    /// </summary>
+    /// <typeparam name="T">Type of the value to cache</typeparam>
+    /// <param name="cacheKey">The cache key</param>
+    /// <param name="value">The value to cache</param>
+    public void Set<T>(string cacheKey, T value)
+    {
+        _cache.Set(cacheKey, value, _options.CacheExpiration);
     }
 
     public string GenerateCacheKey(string baseKey, ChartConfigurationDto? configuration)
