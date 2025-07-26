@@ -90,10 +90,12 @@ jobs:
       run: |
         echo "## 📁 File Size Analysis" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        
+    
         # Find large files (>1000 lines)
-        large_files=$(find . -name "*.cs" -exec wc -l {} + | sort -nr | head -10 | awk '$1 > 1000 {print $1 " lines: " $2}')
-        
+        large_files=$(find . -name "*.cs" -exec wc -l {} + | sort -nr | awk '$1 > 1000 {print $1 " lines: " $2}')
+    
+        echo "::notice::large_files variable contents: '$large_files'"
+    
         if [ -z "$large_files" ]; then
           echo "✅ No excessively large files found" >> $GITHUB_STEP_SUMMARY
           echo "large_files_found=false" >> $GITHUB_OUTPUT
