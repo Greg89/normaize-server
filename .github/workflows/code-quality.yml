@@ -98,8 +98,6 @@ jobs:
           | awk '$2 != "total" && $1 > 1000 {print $1 " lines: " $2}'
         )
     
-        echo "::notice::large_files variable contents: '$large_files'"
-    
         if [ -z "$large_files" ]; then
           echo "✅ No excessively large files found" >> $GITHUB_STEP_SUMMARY
           echo "large_files_found=false" >> $GITHUB_OUTPUT

@@ -154,6 +154,11 @@ jobs:
         # Generate summary and badges
         reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-summary" -reporttypes:"TextSummary;Badges"
 
+    - name: Debug coverage report directory before upload
+      run: |
+        echo "Listing contents of ./coverage-report/"
+        ls -al ./coverage-report/
+
     - name: Upload coverage report
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
       uses: actions/upload-artifact@v4
