@@ -234,8 +234,6 @@ public class DataProcessingService : IDataProcessingService
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
                 if (dataSet == null) return false;
 
-                await DeleteDataSetFileAsync(dataSet, context);
-
                 var result = await ExecuteWithTimeoutAsync(
                     () => _dataSetRepository.DeleteAsync(id),
                     _infrastructure.QuickTimeout,

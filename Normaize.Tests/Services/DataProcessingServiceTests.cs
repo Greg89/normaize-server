@@ -502,7 +502,6 @@ public class DataProcessingServiceTests
 
         _mockRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(dataSet);
         _mockRepository.Setup(r => r.DeleteAsync(1)).ReturnsAsync(true);
-        _mockFileUploadService.Setup(f => f.DeleteFileAsync("/uploads/test.csv")).Returns(Task.CompletedTask);
         _mockAuditService.Setup(a => a.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null))
             .Returns(Task.CompletedTask);
 
@@ -514,7 +513,6 @@ public class DataProcessingServiceTests
 
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
         _mockRepository.Verify(r => r.DeleteAsync(1), Times.Once);
-        _mockFileUploadService.Verify(f => f.DeleteFileAsync("/uploads/test.csv"), Times.Once);
         _mockAuditService.Verify(a => a.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null), Times.Once);
     }
 

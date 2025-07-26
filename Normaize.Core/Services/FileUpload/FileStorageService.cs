@@ -71,10 +71,6 @@ public class FileStorageService : IFileStorageService
 
         try
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
-            // Validation handled by validation service
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
-
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_DELETION_STARTED);
 
             // Apply chaos engineering for file deletion
