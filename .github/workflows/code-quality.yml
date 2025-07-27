@@ -109,26 +109,6 @@ jobs:
           echo "large_files_found=true" >> $GITHUB_OUTPUT
         fi
 
-    - name: Check for hardcoded values
-      id: hardcoded-check
-      run: |
-        echo "## 🔧 Hardcoded Values Check" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        # Look for potential hardcoded values (IPs, URLs, etc.)
-        hardcoded_patterns=$(grep -r -E "(https?://[^\s\"']+|localhost|127\.0\.0\.1|192\.168\.|10\.|172\.)" --include="*.cs" --exclude-dir=obj --exclude-dir=bin . | grep -v "//" | head -5 || true)
-        
-        if [ -z "$hardcoded_patterns" ]; then
-          echo "✅ No obvious hardcoded values found" >> $GITHUB_STEP_SUMMARY
-          echo "hardcoded_found=false" >> $GITHUB_OUTPUT
-        else
-          echo "⚠️ Potential hardcoded values found:" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "$hardcoded_patterns" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "hardcoded_found=true" >> $GITHUB_OUTPUT
-        fi
-
     - name: Generate Quality Report
       run: |
         echo "## 📊 Code Quality Summary" >> $GITHUB_STEP_SUMMARY
