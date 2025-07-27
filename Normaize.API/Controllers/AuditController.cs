@@ -1,26 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
+using Normaize.Core.Extensions;
 
 namespace Normaize.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuditController : ControllerBase
+public class AuditController(IAuditService auditService, IStructuredLoggingService loggingService) : ControllerBase
 {
-    private readonly IAuditService _auditService;
-    private readonly IStructuredLoggingService _loggingService;
-
-    public AuditController(IAuditService auditService, IStructuredLoggingService loggingService)
-    {
-        _auditService = auditService;
-        _loggingService = loggingService;
-    }
+    private readonly IAuditService _auditService = auditService;
+    private readonly IStructuredLoggingService _loggingService = loggingService;
 
     [HttpGet("datasets/{dataSetId}")]
     public async Task<ActionResult<IEnumerable<DataSetAuditLog>>> GetDataSetAuditLogs(
-        int dataSetId, 
-        [FromQuery] int skip = 0, 
+        int dataSetId,
+        [FromQuery] int skip = 0,
         [FromQuery] int take = 50)
     {
         try
@@ -41,7 +36,7 @@ public class AuditController : ControllerBase
 
     [HttpGet("user")]
     public async Task<ActionResult<IEnumerable<DataSetAuditLog>>> GetUserAuditLogs(
-        [FromQuery] int skip = 0, 
+        [FromQuery] int skip = 0,
         [FromQuery] int take = 50)
     {
         try
@@ -64,7 +59,7 @@ public class AuditController : ControllerBase
     [HttpGet("actions/{action}")]
     public async Task<ActionResult<IEnumerable<DataSetAuditLog>>> GetAuditLogsByAction(
         string action,
-        [FromQuery] int skip = 0, 
+        [FromQuery] int skip = 0,
         [FromQuery] int take = 50)
     {
         try
@@ -81,11 +76,6 @@ public class AuditController : ControllerBase
 
     private string GetCurrentUserId()
     {
-        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
-        {
-            throw new UnauthorizedAccessException("User not authenticated");
-        }
-        return userId;
+        return User.GetUserId();
     }
-} 
+}

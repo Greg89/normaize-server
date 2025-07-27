@@ -49,17 +49,17 @@ public class HealthMonitoringControllerTests
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject!;
         okResult.Value.Should().NotBeNull();
-        
+
         var response = okResult.Value;
         var responseType = response!.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
         responseType.GetProperty("timestamp").Should().NotBeNull();
         responseType.GetProperty("duration").Should().NotBeNull();
         responseType.GetProperty("message").Should().NotBeNull();
-        
+
         var statusValue = responseType.GetProperty("status")!.GetValue(response);
         statusValue.Should().Be("alive");
-        
+
         var messageValue = responseType.GetProperty("message")!.GetValue(response);
         messageValue.Should().Be("Application is alive");
     }
@@ -87,12 +87,12 @@ public class HealthMonitoringControllerTests
         result.Should().BeOfType<ObjectResult>();
         var objectResult = result.Should().BeOfType<ObjectResult>().Subject!;
         objectResult.StatusCode.Should().Be(503);
-        
+
         var response = objectResult.Value;
         var responseType = response!.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
         responseType.GetProperty("issues").Should().NotBeNull();
-        
+
         var statusValue = responseType.GetProperty("status")!.GetValue(response);
         statusValue.Should().Be("not_alive");
     }
@@ -140,7 +140,7 @@ public class HealthMonitoringControllerTests
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject!;
         okResult.Value.Should().NotBeNull();
-        
+
         var response = okResult.Value;
         var responseType = response!.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
@@ -148,13 +148,13 @@ public class HealthMonitoringControllerTests
         responseType.GetProperty("timestamp").Should().NotBeNull();
         responseType.GetProperty("duration").Should().NotBeNull();
         responseType.GetProperty("message").Should().NotBeNull();
-        
+
         var statusValue = responseType.GetProperty("status")!.GetValue(response);
         statusValue.Should().Be("ready");
-        
+
         var messageValue = responseType.GetProperty("message")!.GetValue(response);
         messageValue.Should().Be("Application is ready to serve traffic");
-        
+
         var componentsValue = responseType.GetProperty("components")!.GetValue(response);
         componentsValue.Should().NotBeNull();
     }
@@ -192,13 +192,13 @@ public class HealthMonitoringControllerTests
         result.Should().BeOfType<ObjectResult>();
         var objectResult = result.Should().BeOfType<ObjectResult>().Subject!;
         objectResult.StatusCode.Should().Be(503);
-        
+
         var response = objectResult.Value;
         var responseType = response!.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
         responseType.GetProperty("components").Should().NotBeNull();
         responseType.GetProperty("issues").Should().NotBeNull();
-        
+
         var statusValue = responseType.GetProperty("status")!.GetValue(response);
         statusValue.Should().Be("not_ready");
     }
@@ -252,7 +252,7 @@ public class HealthMonitoringControllerTests
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject!;
         okResult.Value.Should().NotBeNull();
-        
+
         var response = okResult.Value;
         var responseType = response!.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
@@ -260,13 +260,13 @@ public class HealthMonitoringControllerTests
         responseType.GetProperty("timestamp").Should().NotBeNull();
         responseType.GetProperty("duration").Should().NotBeNull();
         responseType.GetProperty("message").Should().NotBeNull();
-        
+
         var statusValue = responseType.GetProperty("status")!.GetValue(response);
         statusValue.Should().Be("healthy");
-        
+
         var messageValue = responseType.GetProperty("message")!.GetValue(response);
         messageValue.Should().Be("All systems healthy");
-        
+
         var componentsValue = responseType.GetProperty("components")!.GetValue(response);
         componentsValue.Should().NotBeNull();
     }
@@ -311,13 +311,13 @@ public class HealthMonitoringControllerTests
         result.Should().BeOfType<ObjectResult>();
         var objectResult = result.Should().BeOfType<ObjectResult>().Subject!;
         objectResult.StatusCode.Should().Be(503);
-        
+
         var response = objectResult.Value;
         var responseType = response!.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
         responseType.GetProperty("components").Should().NotBeNull();
         responseType.GetProperty("issues").Should().NotBeNull();
-        
+
         var statusValue = responseType.GetProperty("status")!.GetValue(response);
         statusValue.Should().Be("unhealthy");
     }
@@ -366,4 +366,4 @@ public class HealthMonitoringControllerTests
         // Assert
         _mockHealthCheckService.Verify(x => x.CheckHealthAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
-} 
+}

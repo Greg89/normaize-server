@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Normaize.Core.Constants;
 using Normaize.Core.Interfaces;
 using Normaize.Data.Services;
 using Xunit;
@@ -44,15 +45,15 @@ public class AppConfigurationServiceTests
 
         // Assert
         interfaceType.GetMethod("LoadEnvironmentVariables")!.ReturnType.Should().Be(typeof(void));
-        interfaceType.GetMethod("GetEnvironment")!.ReturnType.Should().Be(typeof(string));
-        interfaceType.GetMethod("GetSeqUrl")!.ReturnType.Should().Be(typeof(string));
-        interfaceType.GetMethod("GetSeqApiKey")!.ReturnType.Should().Be(typeof(string));
-        interfaceType.GetMethod("GetDatabaseConfig")!.ReturnType.Should().Be(typeof(DatabaseConfig));
-        interfaceType.GetMethod("HasDatabaseConnection")!.ReturnType.Should().Be(typeof(bool));
-        interfaceType.GetMethod("IsProductionLike")!.ReturnType.Should().Be(typeof(bool));
-        interfaceType.GetMethod("IsContainerized")!.ReturnType.Should().Be(typeof(bool));
-        interfaceType.GetMethod("GetPort")!.ReturnType.Should().Be(typeof(string));
-        interfaceType.GetMethod("GetHttpsPort")!.ReturnType.Should().Be(typeof(string));
+        interfaceType.GetMethod("GetEnvironment")!.ReturnType.Should().Be<string>();
+        interfaceType.GetMethod("GetSeqUrl")!.ReturnType.Should().Be<string?>();
+        interfaceType.GetMethod("GetSeqApiKey")!.ReturnType.Should().Be<string?>();
+        interfaceType.GetMethod("GetDatabaseConfig")!.ReturnType.Should().Be<DatabaseConfig>();
+        interfaceType.GetMethod("HasDatabaseConnection")!.ReturnType.Should().Be<bool>();
+        interfaceType.GetMethod("IsProductionLike")!.ReturnType.Should().Be<bool>();
+        interfaceType.GetMethod("IsContainerized")!.ReturnType.Should().Be<bool>();
+        interfaceType.GetMethod("GetPort")!.ReturnType.Should().Be<string>();
+        interfaceType.GetMethod("GetHttpsPort")!.ReturnType.Should().Be<string?>();
     }
 
     [Fact]
@@ -73,7 +74,7 @@ public class AppConfigurationServiceTests
     public void LoadEnvironmentVariables_ShouldNotThrow()
     {
         // Act & Assert
-        var action = () => _service.LoadEnvironmentVariables();
+        var action = _service.LoadEnvironmentVariables;
         action.Should().NotThrow();
     }
 
@@ -85,7 +86,7 @@ public class AppConfigurationServiceTests
 
         // Assert
         environment.Should().NotBeNullOrEmpty();
-        environment.Should().BeOneOf("Development", "Staging", "Production", "Test");
+        environment.Should().BeOneOf(AppConstants.Environment.DEVELOPMENT, AppConstants.Environment.STAGING, AppConstants.Environment.PRODUCTION, AppConstants.Environment.TEST);
     }
 
     [Fact]
@@ -116,11 +117,9 @@ public class AppConfigurationServiceTests
 
         // Assert
         config.Should().NotBeNull();
-        config.Host.Should().NotBeNull(); // Can be null if not configured
-        config.Database.Should().NotBeNull(); // Can be null if not configured
-        config.User.Should().NotBeNull(); // Can be null if not configured
-        config.Password.Should().NotBeNull(); // Can be null if not configured
-        config.Port.Should().Be("3306"); // Default value
+        // These can be null if not configured in the environment
+        // config.Host, config.Database, config.User, config.Password can be null
+        config.Port.Should().Be(AppConstants.Database.DEFAULT_PORT); // Default value
     }
 
 
@@ -133,7 +132,7 @@ public class AppConfigurationServiceTests
 
         // Assert
         port.Should().NotBeNullOrEmpty();
-        port.Should().MatchRegex(@"^\d+$"); // Should be numeric
+        port.Should().MatchRegex(AppConstants.Validation.NUMERIC_ONLY_PATTERN); // Should be numeric
     }
 
     [Fact]
@@ -152,19 +151,19 @@ public class AppConfigurationServiceTests
         // Arrange
         var config = new DatabaseConfig
         {
-            Host = "localhost",
-            Database = "testdb",
-            User = "testuser",
-            Password = "testpass",
-            Port = "3306"
+            Host = AppConstants.Database.DEFAULT_HOST,
+            Database = AppConstants.Database.DEFAULT_DATABASE,
+            User = AppConstants.Database.DEFAULT_USER,
+            Password = AppConstants.Database.DEFAULT_PASSWORD,
+            Port = AppConstants.Database.DEFAULT_PORT
         };
 
         // Assert
-        config.Host.Should().Be("localhost");
-        config.Database.Should().Be("testdb");
-        config.User.Should().Be("testuser");
-        config.Password.Should().Be("testpass");
-        config.Port.Should().Be("3306");
+        config.Host.Should().Be(AppConstants.Database.DEFAULT_HOST);
+        config.Database.Should().Be(AppConstants.Database.DEFAULT_DATABASE);
+        config.User.Should().Be(AppConstants.Database.DEFAULT_USER);
+        config.Password.Should().Be(AppConstants.Database.DEFAULT_PASSWORD);
+        config.Port.Should().Be(AppConstants.Database.DEFAULT_PORT);
     }
 
     [Fact]
@@ -173,11 +172,11 @@ public class AppConfigurationServiceTests
         // Arrange
         var config = new DatabaseConfig
         {
-            Host = "localhost",
-            Database = "testdb",
-            User = "testuser",
-            Password = "testpass",
-            Port = "3306"
+            Host = AppConstants.Database.DEFAULT_HOST,
+            Database = AppConstants.Database.DEFAULT_DATABASE,
+            User = AppConstants.Database.DEFAULT_USER,
+            Password = AppConstants.Database.DEFAULT_PASSWORD,
+            Port = AppConstants.Database.DEFAULT_PORT
         };
 
         // Act
@@ -185,12 +184,12 @@ public class AppConfigurationServiceTests
 
         // Assert
         connectionString.Should().NotBeNullOrEmpty();
-        connectionString.Should().Contain("Server=localhost");
-        connectionString.Should().Contain("Database=testdb");
-        connectionString.Should().Contain("User=testuser");
-        connectionString.Should().Contain("Password=testpass");
-        connectionString.Should().Contain("Port=3306");
-        connectionString.Should().Contain("CharSet=utf8mb4");
+        connectionString.Should().Contain($"{AppConstants.Database.SERVER_PREFIX}{AppConstants.Database.DEFAULT_HOST}");
+        connectionString.Should().Contain($"{AppConstants.Database.DATABASE_PREFIX}{AppConstants.Database.DEFAULT_DATABASE}");
+        connectionString.Should().Contain($"{AppConstants.Database.USER_PREFIX}{AppConstants.Database.DEFAULT_USER}");
+        connectionString.Should().Contain($"{AppConstants.Database.PASSWORD_PREFIX}{AppConstants.Database.DEFAULT_PASSWORD}");
+        connectionString.Should().Contain($"{AppConstants.Database.PORT_PREFIX}{AppConstants.Database.DEFAULT_PORT}");
+        connectionString.Should().Contain($"{AppConstants.Database.CHARSET_PREFIX}{AppConstants.Database.DEFAULT_CHARSET}");
     }
 
     [Fact]
@@ -203,7 +202,7 @@ public class AppConfigurationServiceTests
             Database = null,
             User = null,
             Password = null,
-            Port = "3306"
+            Port = AppConstants.Database.DEFAULT_PORT
         };
 
         // Act
@@ -211,10 +210,10 @@ public class AppConfigurationServiceTests
 
         // Assert
         connectionString.Should().NotBeNullOrEmpty();
-        connectionString.Should().Contain("Server=");
-        connectionString.Should().Contain("Database=");
-        connectionString.Should().Contain("User=");
-        connectionString.Should().Contain("Password=");
-        connectionString.Should().Contain("Port=3306");
+        connectionString.Should().Contain(AppConstants.Database.SERVER_PREFIX);
+        connectionString.Should().Contain(AppConstants.Database.DATABASE_PREFIX);
+        connectionString.Should().Contain(AppConstants.Database.USER_PREFIX);
+        connectionString.Should().Contain(AppConstants.Database.PASSWORD_PREFIX);
+        connectionString.Should().Contain($"{AppConstants.Database.PORT_PREFIX}{AppConstants.Database.DEFAULT_PORT}");
     }
-} 
+}

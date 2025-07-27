@@ -26,7 +26,7 @@ public class StorageConfigurationService : IStorageConfigurationService
     {
         var environment = _appConfigService.GetEnvironment();
         var storageProvider = GetStorageProvider();
-        
+
         return new StorageDiagnosticsDto
         {
             StorageProvider = storageProvider,
@@ -41,14 +41,14 @@ public class StorageConfigurationService : IStorageConfigurationService
 
     public bool IsS3Configured()
     {
-        return !string.IsNullOrEmpty(_configuration.S3Bucket) && 
-               !string.IsNullOrEmpty(_configuration.S3AccessKey) && 
+        return !string.IsNullOrEmpty(_configuration.S3Bucket) &&
+               !string.IsNullOrEmpty(_configuration.S3AccessKey) &&
                !string.IsNullOrEmpty(_configuration.S3SecretKey);
     }
 
     public bool IsAzureConfigured()
     {
-        return !string.IsNullOrEmpty(_configuration.AzureConnectionString) && 
+        return !string.IsNullOrEmpty(_configuration.AzureConnectionString) &&
                !string.IsNullOrEmpty(_configuration.AzureContainer);
     }
 
@@ -62,4 +62,4 @@ public class StorageConfigurationService : IStorageConfigurationService
             _ => StorageProvider.Local
         };
     }
-} 
+}

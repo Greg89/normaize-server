@@ -12,4 +12,4 @@ public interface IDataSetRowRepository
     Task<bool> DeleteAsync(int id);
     Task<bool> DeleteByDataSetIdAsync(int dataSetId);
     Task<int> GetCountByDataSetIdAsync(int dataSetId);
-} 
+}

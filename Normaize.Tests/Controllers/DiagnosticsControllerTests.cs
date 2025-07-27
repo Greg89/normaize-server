@@ -21,7 +21,7 @@ public class DiagnosticsControllerTests
         _mockLoggingService = new Mock<IStructuredLoggingService>();
         _mockStorageConfigService = new Mock<IStorageConfigurationService>();
         _controller = new DiagnosticsController(_mockLoggingService.Object, _mockStorageConfigService.Object);
-        
+
         // Set up controller context to avoid null reference issues
         _controller.ControllerContext = new ControllerContext
         {
@@ -43,7 +43,7 @@ public class DiagnosticsControllerTests
             S3ServiceUrl = "SET",
             Environment = "Production"
         };
-        
+
         _mockStorageConfigService.Setup(x => x.GetDiagnostics()).Returns(expectedDiagnostics);
 
         // Act
@@ -61,7 +61,7 @@ public class DiagnosticsControllerTests
         diagnostics.S3SecretKey.Should().Be("SET");
         diagnostics.S3ServiceUrl.Should().Be("SET");
         diagnostics.Environment.Should().Be("Production");
-        
+
         // Verify logging was called
         _mockLoggingService.Verify(x => x.LogUserAction("Storage diagnostics requested", It.IsAny<object>()), Times.Once);
         _mockLoggingService.Verify(x => x.LogUserAction("Storage diagnostics retrieved successfully", It.IsAny<object>()), Times.Once);
@@ -90,12 +90,12 @@ public class DiagnosticsControllerTests
         // Arrange
         var controller = new DiagnosticsController(_mockLoggingService.Object, _mockStorageConfigService.Object);
         controller.ControllerContext = new ControllerContext();
-        
+
         // Mock the HttpContext.RequestServices to throw an exception when GetRequiredService is called
         var mockServiceProvider = new Mock<IServiceProvider>();
         mockServiceProvider.Setup(x => x.GetService(It.IsAny<Type>()))
             .Throws(new InvalidOperationException("Service not found"));
-        
+
         controller.ControllerContext.HttpContext = new DefaultHttpContext
         {
             RequestServices = mockServiceProvider.Object
@@ -127,7 +127,7 @@ public class DiagnosticsControllerTests
             S3ServiceUrl = "NOT SET",
             Environment = "NOT SET"
         };
-        
+
         _mockStorageConfigService.Setup(x => x.GetDiagnostics()).Returns(expectedDiagnostics);
 
         // Act
@@ -145,7 +145,7 @@ public class DiagnosticsControllerTests
         diagnostics.S3SecretKey.Should().Be("NOT SET");
         diagnostics.S3ServiceUrl.Should().Be("NOT SET");
         diagnostics.Environment.Should().Be("NOT SET");
-        
+
         // Verify logging was called
         _mockLoggingService.Verify(x => x.LogUserAction("Storage diagnostics requested", It.IsAny<object>()), Times.Once);
         _mockLoggingService.Verify(x => x.LogUserAction("Storage diagnostics retrieved successfully", It.IsAny<object>()), Times.Once);
@@ -169,7 +169,7 @@ public class DiagnosticsControllerTests
             S3ServiceUrl = provider == StorageProvider.S3 ? "SET" : "NOT SET",
             Environment = "Test"
         };
-        
+
         _mockStorageConfigService.Setup(x => x.GetDiagnostics()).Returns(expectedDiagnostics);
 
         // Act
@@ -181,7 +181,7 @@ public class DiagnosticsControllerTests
         var diagnostics = okResult!.Value as StorageDiagnosticsDto;
         diagnostics.Should().NotBeNull();
         diagnostics!.StorageProvider.Should().Be(provider);
-        
+
         // Verify logging was called
         _mockLoggingService.Verify(x => x.LogUserAction("Storage diagnostics requested", It.IsAny<object>()), Times.Once);
         _mockLoggingService.Verify(x => x.LogUserAction("Storage diagnostics retrieved successfully", It.IsAny<object>()), Times.Once);
@@ -201,7 +201,7 @@ public class DiagnosticsControllerTests
             S3ServiceUrl = "NOT SET",
             Environment = "Test"
         };
-        
+
         _mockStorageConfigService.Setup(x => x.GetDiagnostics()).Returns(expectedDiagnostics);
         var cancellationToken = new CancellationToken();
 
@@ -213,7 +213,7 @@ public class DiagnosticsControllerTests
         okResult.Should().NotBeNull();
         var diagnostics = okResult!.Value as StorageDiagnosticsDto;
         diagnostics.Should().NotBeNull();
-        
+
         // Verify logging was called
         _mockLoggingService.Verify(x => x.LogUserAction("Storage diagnostics requested", It.IsAny<object>()), Times.Once);
         _mockLoggingService.Verify(x => x.LogUserAction("Storage diagnostics retrieved successfully", It.IsAny<object>()), Times.Once);
@@ -226,7 +226,7 @@ public class DiagnosticsControllerTests
         var mockStorageService = new Mock<IStorageService>();
         var mockServiceProvider = new Mock<IServiceProvider>();
         mockServiceProvider.Setup(x => x.GetService(typeof(IStorageService))).Returns(mockStorageService.Object);
-        
+
         var controller = new DiagnosticsController(_mockLoggingService.Object, _mockStorageConfigService.Object);
         controller.ControllerContext = new ControllerContext
         {
@@ -260,9 +260,9 @@ public class DiagnosticsControllerTests
             S3ServiceUrl = "NOT SET",
             Environment = "Test"
         };
-        
+
         _mockStorageConfigService.Setup(x => x.GetDiagnostics()).Returns(expectedDiagnostics);
-        
+
         // Set up controller with null user identity
         _controller.ControllerContext = new ControllerContext
         {
@@ -275,7 +275,7 @@ public class DiagnosticsControllerTests
         // Assert
         var ok = result.Result as OkObjectResult;
         ok.Should().NotBeNull();
-        
+
         // Verify logging was called with null user
         _mockLoggingService.Verify(x => x.LogUserAction("Storage diagnostics requested", It.Is<object>(o => o != null && o.ToString() != null && o.ToString()!.Contains("UserId"))), Times.Once);
     }
@@ -287,7 +287,7 @@ public class DiagnosticsControllerTests
         var mockStorageService = new Mock<IStorageService>();
         var mockServiceProvider = new Mock<IServiceProvider>();
         mockServiceProvider.Setup(x => x.GetService(typeof(IStorageService))).Returns(mockStorageService.Object);
-        
+
         var controller = new DiagnosticsController(_mockLoggingService.Object, _mockStorageConfigService.Object);
         controller.ControllerContext = new ControllerContext
         {
@@ -304,4 +304,4 @@ public class DiagnosticsControllerTests
         result.Should().NotBeNull();
         _mockLoggingService.Verify(x => x.LogUserAction("Storage test requested", It.Is<object>(o => o != null && o.ToString() != null && o.ToString()!.Contains("UserId"))), Times.Once);
     }
-} 
+}

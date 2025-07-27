@@ -43,10 +43,10 @@ public class AuditServiceTests
         var interfaceType = typeof(IAuditService);
 
         // Assert
-        interfaceType.GetMethod("LogDataSetActionAsync", new[] { typeof(int), typeof(string), typeof(string), typeof(object), typeof(string), typeof(string) })!.ReturnType.Should().Be(typeof(Task));
-        interfaceType.GetMethod("GetDataSetAuditLogsAsync", new[] { typeof(int), typeof(int), typeof(int) })!.ReturnType.Should().Be(typeof(Task<IEnumerable<DataSetAuditLog>>));
-        interfaceType.GetMethod("GetUserAuditLogsAsync", new[] { typeof(string), typeof(int), typeof(int) })!.ReturnType.Should().Be(typeof(Task<IEnumerable<DataSetAuditLog>>));
-        interfaceType.GetMethod("GetAuditLogsByActionAsync", new[] { typeof(string), typeof(int), typeof(int) })!.ReturnType.Should().Be(typeof(Task<IEnumerable<DataSetAuditLog>>));
+        interfaceType.GetMethod("LogDataSetActionAsync", [typeof(int), typeof(string), typeof(string), typeof(object), typeof(string), typeof(string)])!.ReturnType.Should().Be<Task>();
+        interfaceType.GetMethod("GetDataSetAuditLogsAsync", [typeof(int), typeof(int), typeof(int)])!.ReturnType.Should().Be<Task<IEnumerable<DataSetAuditLog>>>();
+        interfaceType.GetMethod("GetUserAuditLogsAsync", [typeof(string), typeof(int), typeof(int)])!.ReturnType.Should().Be<Task<IEnumerable<DataSetAuditLog>>>();
+        interfaceType.GetMethod("GetAuditLogsByActionAsync", [typeof(string), typeof(int), typeof(int)])!.ReturnType.Should().Be<Task<IEnumerable<DataSetAuditLog>>>();
     }
 
     [Fact]
@@ -384,4 +384,4 @@ public class AuditServiceTests
         result.Should().NotBeNull();
         result.Should().BeEmpty();
     }
-} 
+}

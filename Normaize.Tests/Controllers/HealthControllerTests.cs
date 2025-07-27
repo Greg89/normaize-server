@@ -88,4 +88,4 @@ public class HealthControllerTests
         environmentValue.Should().NotBeNull();
         environmentValue!.ToString().Should().NotBeEmpty();
     }
-} 
+}

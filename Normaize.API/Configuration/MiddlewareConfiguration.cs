@@ -8,12 +8,16 @@ public static class MiddlewareConfiguration
 {
     public static void ConfigureMiddleware(WebApplication app)
     {
-        var loggingService = app.Services.GetService<IStructuredLoggingService>();
-        
+        IStructuredLoggingService? loggingService = null;
+
         try
         {
+            // Create a scope to resolve scoped services
+            using var scope = app.Services.CreateScope();
+            loggingService = scope.ServiceProvider.GetService<IStructuredLoggingService>();
+
             loggingService?.LogUserAction("Middleware configuration started", new { Environment = app.Environment.EnvironmentName });
-            
+
             ConfigureSwagger(app, loggingService);
             ConfigureForwardedHeaders(app, loggingService);
             ConfigureHttpsRedirection(app, loggingService);
@@ -23,7 +27,7 @@ public static class MiddlewareConfiguration
             ConfigureControllers(app, loggingService);
             ConfigureHealthChecks(app, loggingService);
             ConfigureExceptionHandling(app, loggingService);
-            
+
             loggingService?.LogUserAction("Middleware configuration completed successfully", new { Environment = app.Environment.EnvironmentName });
         }
         catch (Exception ex)
@@ -36,9 +40,8 @@ public static class MiddlewareConfiguration
     private static void ConfigureSwagger(WebApplication app, IStructuredLoggingService? loggingService)
     {
         var isDevelopment = app.Environment.IsDevelopment();
-        var isBeta = app.Environment.EnvironmentName.Equals(AppConstants.Environment.BETA, StringComparison.OrdinalIgnoreCase);
-        
-        if (isDevelopment || isBeta)
+
+        if (isDevelopment)
         {
             app.UseSwagger();
             app.UseSwaggerUI(c =>
@@ -46,12 +49,12 @@ public static class MiddlewareConfiguration
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Normaize API v1");
                 c.RoutePrefix = "swagger";
             });
-            
+
             loggingService?.LogUserAction("Swagger configured", new { Environment = app.Environment.EnvironmentName, Enabled = true });
         }
         else
         {
-            loggingService?.LogUserAction("Swagger skipped", new { Environment = app.Environment.EnvironmentName, Enabled = false });
+            loggingService?.LogUserAction("Swagger disabled", new { Environment = app.Environment.EnvironmentName, Enabled = false });
         }
     }
 
@@ -65,14 +68,14 @@ public static class MiddlewareConfiguration
     {
         var isProduction = app.Environment.IsProduction();
         var isBeta = app.Environment.IsEnvironment(AppConstants.Environment.BETA);
-        
+
         if (isProduction || isBeta)
         {
             // In production (Railway), HTTPS is handled by the load balancer
             // Only redirect if we're not behind a proxy and have HTTPS configured
             var appConfigService = app.Services.GetService<IAppConfigurationService>();
             string? httpsPort = null;
-            
+
             try
             {
                 httpsPort = appConfigService?.GetHttpsPort();
@@ -82,7 +85,7 @@ public static class MiddlewareConfiguration
                 loggingService?.LogException(ex, "Failed to get HTTPS port from configuration service");
                 // Continue without HTTPS redirection if we can't get the port
             }
-            
+
             if (!string.IsNullOrEmpty(httpsPort) && int.TryParse(httpsPort, out _))
             {
                 app.UseHttpsRedirection();
@@ -106,7 +109,7 @@ public static class MiddlewareConfiguration
         // Get the environment to determine which CORS policy to use
         var appConfigService = app.Services.GetService<IAppConfigurationService>();
         string environment = AppConstants.Environment.DEVELOPMENT; // Default fallback
-        
+
         try
         {
             environment = appConfigService?.GetEnvironment() ?? AppConstants.Environment.DEVELOPMENT;
@@ -116,7 +119,7 @@ public static class MiddlewareConfiguration
             loggingService?.LogException(ex, "Failed to get environment from configuration service, using default");
             // Continue with default environment
         }
-        
+
         if (environment.Equals(AppConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
         {
             app.UseCors(AppConstants.Environment.DEVELOPMENT);
@@ -181,4 +184,4 @@ public static class MiddlewareConfiguration
             loggingService?.LogUserAction("Global exception handling skipped for test environment");
         }
     }
-} 
+}

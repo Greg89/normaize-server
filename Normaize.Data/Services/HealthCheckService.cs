@@ -2,56 +2,50 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Normaize.Core.Configuration;
+using Normaize.Core.Constants;
 using Normaize.Core.Interfaces;
 using System.Diagnostics;
 
 namespace Normaize.Data.Services;
 
-public class HealthCheckService : IHealthCheckService
+public class HealthCheckService(
+    NormaizeContext context,
+    ILogger<HealthCheckService> logger,
+    IOptions<HealthCheckConfiguration> config) : IHealthCheckService
 {
-    private readonly NormaizeContext _context;
-    private readonly ILogger<HealthCheckService> _logger;
-    private readonly HealthCheckConfiguration _config;
-
-    public HealthCheckService(
-        NormaizeContext context,
-        ILogger<HealthCheckService> logger,
-        IOptions<HealthCheckConfiguration> config)
-    {
-        _context = context;
-        _logger = logger;
-        _config = config.Value;
-    }
+    private readonly NormaizeContext _context = context;
+    private readonly ILogger<HealthCheckService> _logger = logger;
+    private readonly HealthCheckConfiguration _config = config.Value;
 
     public async Task<HealthCheckResult> CheckHealthAsync(CancellationToken cancellationToken = default)
     {
         var correlationId = Guid.NewGuid().ToString();
         var stopwatch = Stopwatch.StartNew();
-        
+
         _logger.LogInformation("Starting comprehensive health check. CorrelationId: {CorrelationId}", correlationId);
 
         try
         {
             var components = await CheckAllComponentsAsync(correlationId, cancellationToken);
-            
-            var result = CreateHealthResult(components, "healthy", "unhealthy", correlationId);
+
+            var result = CreateHealthResult(components, AppConstants.Messages.HEALTHY, "unhealthy", correlationId);
             result.Duration = stopwatch.Elapsed;
 
             LogHealthCheckResult(result, correlationId);
             return result;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             stopwatch.Stop();
-            _logger.LogWarning("Health check was cancelled. CorrelationId: {CorrelationId}", correlationId);
-            
+            _logger.LogWarning(ex, "Health check was cancelled. CorrelationId: {CorrelationId}", correlationId);
+
             return CreateErrorResult("Health check was cancelled", stopwatch.Elapsed, correlationId);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
             _logger.LogError(ex, "Unexpected error during health check. CorrelationId: {CorrelationId}", correlationId);
-            
+
             return CreateErrorResult(
                 _config.IncludeDetailedErrors ? ex.Message : "An unexpected error occurred during health check",
                 stopwatch.Elapsed,
@@ -63,13 +57,13 @@ public class HealthCheckService : IHealthCheckService
     {
         var correlationId = Guid.NewGuid().ToString();
         var stopwatch = Stopwatch.StartNew();
-        
+
         _logger.LogInformation("Starting liveness check. CorrelationId: {CorrelationId}", correlationId);
 
         try
         {
             var appHealth = await CheckApplicationHealthAsync(correlationId, cancellationToken);
-            
+
             var result = new HealthCheckResult
             {
                 IsHealthy = appHealth.IsHealthy,
@@ -90,18 +84,18 @@ public class HealthCheckService : IHealthCheckService
             LogHealthCheckResult(result, correlationId);
             return result;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             stopwatch.Stop();
-            _logger.LogWarning("Liveness check was cancelled. CorrelationId: {CorrelationId}", correlationId);
-            
+            _logger.LogWarning(ex, "Liveness check was cancelled. CorrelationId: {CorrelationId}", correlationId);
+
             return CreateErrorResult("Liveness check was cancelled", stopwatch.Elapsed, correlationId);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
             _logger.LogError(ex, "Unexpected error during liveness check. CorrelationId: {CorrelationId}", correlationId);
-            
+
             return CreateErrorResult(
                 _config.IncludeDetailedErrors ? ex.Message : "An unexpected error occurred during liveness check",
                 stopwatch.Elapsed,
@@ -113,7 +107,7 @@ public class HealthCheckService : IHealthCheckService
     {
         var correlationId = Guid.NewGuid().ToString();
         var stopwatch = Stopwatch.StartNew();
-        
+
         _logger.LogInformation("Starting readiness check. CorrelationId: {CorrelationId}", correlationId);
 
         try
@@ -135,18 +129,18 @@ public class HealthCheckService : IHealthCheckService
             LogHealthCheckResult(result, correlationId);
             return result;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             stopwatch.Stop();
-            _logger.LogWarning("Readiness check was cancelled. CorrelationId: {CorrelationId}", correlationId);
-            
+            _logger.LogWarning(ex, "Readiness check was cancelled. CorrelationId: {CorrelationId}", correlationId);
+
             return CreateErrorResult("Readiness check was cancelled", stopwatch.Elapsed, correlationId);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
             _logger.LogError(ex, "Unexpected error during readiness check. CorrelationId: {CorrelationId}", correlationId);
-            
+
             return CreateErrorResult(
                 _config.IncludeDetailedErrors ? ex.Message : "An unexpected error occurred during readiness check",
                 stopwatch.Elapsed,
@@ -173,22 +167,22 @@ public class HealthCheckService : IHealthCheckService
     private async Task<ComponentHealth> CheckDatabaseHealthAsync(string correlationId, CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
-        
+
         _logger.LogDebug("Checking database health. CorrelationId: {CorrelationId}", correlationId);
-        
+
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(_config.DatabaseTimeoutSeconds));
 
             var canConnect = await _context.Database.CanConnectAsync(cts.Token);
-            
+
             stopwatch.Stop();
-            
+
             var health = new ComponentHealth
             {
                 IsHealthy = canConnect,
-                Status = canConnect ? "healthy" : "unhealthy",
+                Status = canConnect ? AppConstants.Messages.HEALTHY : "unhealthy",
                 ErrorMessage = canConnect ? null : "Cannot connect to database",
                 Details = new Dictionary<string, object>
                 {
@@ -199,17 +193,17 @@ public class HealthCheckService : IHealthCheckService
                 CorrelationId = correlationId
             };
 
-            _logger.LogDebug("Database health check completed. IsHealthy: {IsHealthy}, Duration: {Duration}ms. CorrelationId: {CorrelationId}", 
+            _logger.LogDebug("Database health check completed. IsHealthy: {IsHealthy}, Duration: {Duration}ms. CorrelationId: {CorrelationId}",
                 health.IsHealthy, health.Duration.TotalMilliseconds, correlationId);
 
             return health;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             stopwatch.Stop();
-            _logger.LogWarning("Database health check timed out after {TimeoutSeconds}s. CorrelationId: {CorrelationId}", 
+            _logger.LogWarning(ex, "Database health check timed out after {TimeoutSeconds}s. CorrelationId: {CorrelationId}",
                 _config.DatabaseTimeoutSeconds, correlationId);
-            
+
             return new ComponentHealth
             {
                 IsHealthy = false,
@@ -223,7 +217,7 @@ public class HealthCheckService : IHealthCheckService
         {
             stopwatch.Stop();
             _logger.LogError(ex, "Error during database health check. CorrelationId: {CorrelationId}", correlationId);
-            
+
             return new ComponentHealth
             {
                 IsHealthy = false,
@@ -238,9 +232,9 @@ public class HealthCheckService : IHealthCheckService
     private async Task<ComponentHealth> CheckApplicationHealthAsync(string correlationId, CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
-        
+
         _logger.LogDebug("Checking application health. CorrelationId: {CorrelationId}", correlationId);
-        
+
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -254,7 +248,7 @@ public class HealthCheckService : IHealthCheckService
                 var health = new ComponentHealth
                 {
                     IsHealthy = true,
-                    Status = "healthy",
+                    Status = AppConstants.Messages.HEALTHY,
                     ErrorMessage = null,
                     Details = new Dictionary<string, object>
                     {
@@ -265,7 +259,7 @@ public class HealthCheckService : IHealthCheckService
                     CorrelationId = correlationId
                 };
 
-                _logger.LogDebug("Application health check completed (in-memory). IsHealthy: {IsHealthy}, Duration: {Duration}ms. CorrelationId: {CorrelationId}", 
+                _logger.LogDebug("Application health check completed (in-memory). IsHealthy: {IsHealthy}, Duration: {Duration}ms. CorrelationId: {CorrelationId}",
                     health.IsHealthy, health.Duration.TotalMilliseconds, correlationId);
 
                 return health;
@@ -273,7 +267,7 @@ public class HealthCheckService : IHealthCheckService
 
             // Check if application is responsive
             var canConnect = await _context.Database.CanConnectAsync(cts.Token);
-            
+
             // Check for pending migrations (only if not skipped)
             var pendingMigrations = new List<string>();
             if (!_config.SkipMigrationsCheck)
@@ -282,15 +276,22 @@ public class HealthCheckService : IHealthCheckService
             }
 
             stopwatch.Stop();
-            
+
             var isHealthy = canConnect && pendingMigrations.Count == 0;
-            var errorMessage = !canConnect ? "Cannot connect to database" : 
-                              pendingMigrations.Count > 0 ? $"Pending migrations: {string.Join(", ", pendingMigrations)}" : null;
+            string? errorMessage = null;
+            if (!canConnect)
+            {
+                errorMessage = "Cannot connect to database";
+            }
+            else if (pendingMigrations.Count > 0)
+            {
+                errorMessage = $"Pending migrations: {string.Join(", ", pendingMigrations)}";
+            }
 
             var appHealth = new ComponentHealth
             {
                 IsHealthy = isHealthy,
-                Status = isHealthy ? "healthy" : "unhealthy",
+                Status = isHealthy ? AppConstants.Messages.HEALTHY : "unhealthy",
                 ErrorMessage = errorMessage,
                 Details = new Dictionary<string, object>
                 {
@@ -304,17 +305,17 @@ public class HealthCheckService : IHealthCheckService
                 CorrelationId = correlationId
             };
 
-            _logger.LogDebug("Application health check completed. IsHealthy: {IsHealthy}, Duration: {Duration}ms. CorrelationId: {CorrelationId}", 
+            _logger.LogDebug("Application health check completed. IsHealthy: {IsHealthy}, Duration: {Duration}ms. CorrelationId: {CorrelationId}",
                 appHealth.IsHealthy, appHealth.Duration.TotalMilliseconds, correlationId);
 
             return appHealth;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             stopwatch.Stop();
-            _logger.LogWarning("Application health check timed out after {TimeoutSeconds}s. CorrelationId: {CorrelationId}", 
+            _logger.LogWarning(ex, "Application health check timed out after {TimeoutSeconds}s. CorrelationId: {CorrelationId}",
                 _config.ApplicationTimeoutSeconds, correlationId);
-            
+
             return new ComponentHealth
             {
                 IsHealthy = false,
@@ -328,7 +329,7 @@ public class HealthCheckService : IHealthCheckService
         {
             stopwatch.Stop();
             _logger.LogError(ex, "Error during application health check. CorrelationId: {CorrelationId}", correlationId);
-            
+
             return new ComponentHealth
             {
                 IsHealthy = false,
@@ -341,8 +342,8 @@ public class HealthCheckService : IHealthCheckService
     }
 
     private static HealthCheckResult CreateHealthResult(
-        Dictionary<string, ComponentHealth> components, 
-        string healthyStatus, 
+        Dictionary<string, ComponentHealth> components,
+        string healthyStatus,
         string unhealthyStatus,
         string correlationId)
     {
@@ -377,13 +378,13 @@ public class HealthCheckService : IHealthCheckService
     {
         if (result.IsHealthy)
         {
-            _logger.LogInformation("Health check completed successfully. Status: {Status}, Duration: {Duration}ms, CorrelationId: {CorrelationId}", 
+            _logger.LogInformation("Health check completed successfully. Status: {Status}, Duration: {Duration}ms, CorrelationId: {CorrelationId}",
                 result.Status, result.Duration.TotalMilliseconds, correlationId);
         }
         else
         {
-            _logger.LogWarning("Health check failed. Status: {Status}, Issues: {IssueCount}, Duration: {Duration}ms, CorrelationId: {CorrelationId}", 
+            _logger.LogWarning("Health check failed. Status: {Status}, Issues: {IssueCount}, Duration: {Duration}ms, CorrelationId: {CorrelationId}",
                 result.Status, result.Issues.Count, result.Duration.TotalMilliseconds, correlationId);
         }
     }
-} 
+}

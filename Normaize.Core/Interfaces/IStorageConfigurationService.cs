@@ -10,4 +10,4 @@ public interface IStorageConfigurationService
     bool IsS3Configured();
     bool IsAzureConfigured();
     StorageProvider GetStorageProvider();
-} 
+}

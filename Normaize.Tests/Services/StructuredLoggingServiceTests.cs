@@ -98,7 +98,7 @@ public class StructuredLoggingServiceTests
     public void CreateContext_WithEmptyParameters_ShouldThrowArgumentException(string? operationName, string? correlationId)
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => 
+        var exception = Assert.Throws<ArgumentException>(() =>
             _service.CreateContext(operationName!, correlationId!));
     }
 
@@ -108,7 +108,7 @@ public class StructuredLoggingServiceTests
     public void CreateContext_WithNullParameters_ShouldThrowArgumentNullException(string? operationName, string? correlationId)
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => 
+        var exception = Assert.Throws<ArgumentNullException>(() =>
             _service.CreateContext(operationName!, correlationId!));
     }
 
@@ -150,9 +150,9 @@ public class StructuredLoggingServiceTests
     public void LogStep_WithNullContext_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => 
+        var exception = Assert.Throws<ArgumentNullException>(() =>
             _service.LogStep(null!, "step"));
-        
+
         exception.ParamName.Should().Be("context");
     }
 
@@ -164,7 +164,7 @@ public class StructuredLoggingServiceTests
         var context = _service.CreateContext("TestOperation", "test-correlation-id");
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => 
+        var exception = Assert.Throws<ArgumentException>(() =>
             _service.LogStep(context, step!));
     }
 
@@ -175,7 +175,7 @@ public class StructuredLoggingServiceTests
         var context = _service.CreateContext("TestOperation", "test-correlation-id");
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => 
+        var exception = Assert.Throws<ArgumentNullException>(() =>
             _service.LogStep(context, null!));
     }
 
@@ -376,9 +376,9 @@ public class StructuredLoggingServiceTests
     public void LogException_WithNullException_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => 
+        var exception = Assert.Throws<ArgumentNullException>(() =>
             _service.LogException(null!, "context"));
-        
+
         exception.ParamName.Should().Be("exception");
     }
 
@@ -482,7 +482,7 @@ public class StructuredLoggingServiceTests
         // Assert
         scope.Should().NotBeNull();
         scope.Should().BeAssignableTo<IDisposable>();
-        
+
         // Should not throw when disposed
         var action = () => scope.Dispose();
         action.Should().NotThrow();
@@ -505,7 +505,7 @@ public class StructuredLoggingServiceTests
 
         // Act
         var service = new StructuredLoggingService(_mockLogger.Object, _mockHttpContextAccessor.Object);
-        var result = service.GetType().GetMethod("GetCurrentUserId", 
+        var result = service.GetType().GetMethod("GetCurrentUserId",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
             .Invoke(service, null) as string;
 
@@ -526,7 +526,7 @@ public class StructuredLoggingServiceTests
 
         // Act
         var service = new StructuredLoggingService(_mockLogger.Object, _mockHttpContextAccessor.Object);
-        var result = service.GetType().GetMethod("GetCurrentUserId", 
+        var result = service.GetType().GetMethod("GetCurrentUserId",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
             .Invoke(service, null) as string;
 
@@ -547,7 +547,7 @@ public class StructuredLoggingServiceTests
 
         // Act
         var service = new StructuredLoggingService(_mockLogger.Object, _mockHttpContextAccessor.Object);
-        var result = service.GetType().GetMethod("GetCurrentUserEmail", 
+        var result = service.GetType().GetMethod("GetCurrentUserEmail",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
             .Invoke(service, null) as string;
 
@@ -566,11 +566,11 @@ public class StructuredLoggingServiceTests
     public void ValidateInput_WithInvalidValue_ShouldThrowArgumentException(string? value)
     {
         // Act & Assert
-        var exception = Assert.Throws<TargetInvocationException>(() => 
-            _service.GetType().GetMethod("ValidateInput", 
+        var exception = Assert.Throws<TargetInvocationException>(() =>
+            _service.GetType().GetMethod("ValidateInput",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
                 .Invoke(null, new object[] { value!, "parameterName" }));
-        
+
         exception.InnerException.Should().BeOfType<ArgumentException>();
     }
 
@@ -580,11 +580,11 @@ public class StructuredLoggingServiceTests
     public void ValidateStatusCode_WithInvalidStatusCode_ShouldThrowArgumentException(int statusCode)
     {
         // Act & Assert
-        var exception = Assert.Throws<TargetInvocationException>(() => 
-            _service.GetType().GetMethod("ValidateStatusCode", 
+        var exception = Assert.Throws<TargetInvocationException>(() =>
+            _service.GetType().GetMethod("ValidateStatusCode",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
                 .Invoke(null, new object[] { statusCode }));
-        
+
         exception.InnerException.Should().BeOfType<ArgumentException>();
     }
 
@@ -592,11 +592,11 @@ public class StructuredLoggingServiceTests
     public void ValidateDuration_WithNegativeDuration_ShouldThrowArgumentException()
     {
         // Act & Assert
-        var exception = Assert.Throws<TargetInvocationException>(() => 
-            _service.GetType().GetMethod("ValidateDuration", 
+        var exception = Assert.Throws<TargetInvocationException>(() =>
+            _service.GetType().GetMethod("ValidateDuration",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
                 .Invoke(null, new object[] { -1L }));
-        
+
         exception.InnerException.Should().BeOfType<ArgumentException>();
     }
 
@@ -609,13 +609,13 @@ public class StructuredLoggingServiceTests
     {
         // Arrange
         var context = _service.CreateContext("CompleteTest", "test-correlation-id", "user123");
-        
+
         // Act - Simulate a complete operation
         _service.LogStep(context, "Step 1: Initialization");
-        _service.LogStep(context, "Step 2: Processing", new Dictionary<string, object> 
-        { 
+        _service.LogStep(context, "Step 2: Processing", new Dictionary<string, object>
+        {
             ["ProcessedItems"] = 100,
-            ["ProcessingTime"] = 1500 
+            ["ProcessingTime"] = 1500
         });
         _service.LogStep(context, "Step 3: Validation");
         _service.LogSummary(context, true);
@@ -658,4 +658,4 @@ public class StructuredLoggingServiceTests
     }
 
     #endregion
-} 
+}

@@ -13,4 +13,4 @@ public class MigrationResult
     public List<string> PendingMigrations { get; set; } = new();
     public List<string> MissingColumns { get; set; } = new();
     public string? ErrorMessage { get; set; }
-} 
+}

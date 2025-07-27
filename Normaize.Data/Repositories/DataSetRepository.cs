@@ -2,19 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using Normaize.Core.DTOs;
-using Normaize.Data;
 using System.Text.Json;
 
 namespace Normaize.Data.Repositories;
 
-public class DataSetRepository : IDataSetRepository
+public class DataSetRepository(NormaizeContext context) : IDataSetRepository
 {
-    private readonly NormaizeContext _context;
-
-    public DataSetRepository(NormaizeContext context)
-    {
-        _context = context;
-    }
+    private readonly NormaizeContext _context = context;
 
     public async Task<DataSet?> GetByIdAsync(int id)
     {
@@ -44,7 +38,7 @@ public class DataSetRepository : IDataSetRepository
     {
         dataSet.LastModifiedAt = DateTime.UtcNow;
         dataSet.LastModifiedBy = dataSet.UserId;
-        
+
         _context.DataSets.Add(dataSet);
         await _context.SaveChangesAsync();
         return dataSet;
@@ -59,10 +53,10 @@ public class DataSetRepository : IDataSetRepository
         // Soft delete
         dataSet.IsDeleted = true;
         dataSet.DeletedAt = DateTime.UtcNow;
-        dataSet.DeletedBy = dataSet.UserId; // This will be updated by the service layer
+        dataSet.DeletedBy = dataSet.UserId;
         dataSet.LastModifiedAt = DateTime.UtcNow;
         dataSet.LastModifiedBy = dataSet.DeletedBy;
-        
+
         await _context.SaveChangesAsync();
         return true;
     }
@@ -90,7 +84,7 @@ public class DataSetRepository : IDataSetRepository
         dataSet.DeletedBy = null;
         dataSet.LastModifiedAt = DateTime.UtcNow;
         dataSet.LastModifiedBy = dataSet.UserId; // This will be updated by the service layer
-        
+
         await _context.SaveChangesAsync();
         return true;
     }
@@ -99,7 +93,7 @@ public class DataSetRepository : IDataSetRepository
     {
         dataSet.LastModifiedAt = DateTime.UtcNow;
         dataSet.LastModifiedBy = dataSet.UserId;
-        
+
         _context.DataSets.Update(dataSet);
         await _context.SaveChangesAsync();
         return dataSet;
@@ -118,15 +112,15 @@ public class DataSetRepository : IDataSetRepository
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<DataSet>> GetByUserIdAsync(string userId, bool includeDeleted = false)
+    public async Task<IEnumerable<DataSet>> GetByUserIdAsync(string userId, bool includeDeleted)
     {
         var query = _context.DataSets.Where(d => d.UserId == userId);
-        
+
         if (!includeDeleted)
         {
             query = query.Where(d => !d.IsDeleted);
         }
-        
+
         return await query
             .OrderByDescending(d => d.UploadedAt)
             .ToListAsync();
@@ -136,7 +130,7 @@ public class DataSetRepository : IDataSetRepository
     {
         return await _context.DataSets
             .Where(d => d.UserId == userId && !d.IsDeleted)
-            .Where(d => d.Name.Contains(searchTerm) || 
+            .Where(d => d.Name.Contains(searchTerm) ||
                        (d.Description != null && d.Description.Contains(searchTerm)) ||
                        d.FileName.Contains(searchTerm))
             .OrderByDescending(d => d.UploadedAt)
@@ -154,7 +148,7 @@ public class DataSetRepository : IDataSetRepository
     public async Task<IEnumerable<DataSet>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, string userId)
     {
         return await _context.DataSets
-            .Where(d => d.UserId == userId && !d.IsDeleted && 
+            .Where(d => d.UserId == userId && !d.IsDeleted &&
                        d.UploadedAt >= startDate && d.UploadedAt <= endDate)
             .OrderByDescending(d => d.UploadedAt)
             .ToListAsync();
@@ -228,7 +222,7 @@ public class DataSetRepository : IDataSetRepository
     }
 
     // Bulk operations for large datasets
-    public async Task BulkInsertDataRowsAsync(int dataSetId, IEnumerable<DataSetRow> rows)
+    public async Task BulkInsertDataRowsAsync(IEnumerable<DataSetRow> rows)
     {
         // Use MySQL bulk insert for better performance
         var batchSize = 1000;
@@ -250,7 +244,7 @@ public class DataSetRepository : IDataSetRepository
         if (!dataSet.UseSeparateTable && !string.IsNullOrEmpty(dataSet.ProcessedData))
         {
             // Analyze inline data
-            var data = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(dataSet.ProcessedData);
+            var data = JsonSerializer.Deserialize<List<Dictionary<string, object?>>>(dataSet.ProcessedData);
             return data != null ? AnalyzeData(data.Cast<Dictionary<string, object>?>().ToList()) : null;
         }
         else
@@ -262,29 +256,29 @@ public class DataSetRepository : IDataSetRepository
                 .ToListAsync();
 
             var data = rows.Select(r => JsonSerializer.Deserialize<Dictionary<string, object>>(r.Data)).ToList();
-            return data.Any() ? AnalyzeData(data) : null;
+            return data.Count > 0 ? AnalyzeData(data) : null;
         }
     }
 
-    private object AnalyzeData(List<Dictionary<string, object>?> data)
+    private static Dictionary<string, object> AnalyzeData(List<Dictionary<string, object>?> data)
     {
-        if (!data.Any()) return new { };
+        if (data.Count == 0) return [];
 
         var validData = data.Where(d => d != null).ToList();
-        if (!validData.Any()) return new { };
+        if (validData.Count == 0) return [];
 
         var columns = validData.First()!.Keys.ToList();
         var analysis = new Dictionary<string, object>();
 
         foreach (var column in columns)
         {
-            var values = validData.Select(row => row!.ContainsKey(column) ? row[column]?.ToString() : null)
+            var values = validData.Select(row => row!.TryGetValue(column, out var value) ? value?.ToString() : null)
                             .Where(v => !string.IsNullOrEmpty(v))
                             .ToList();
 
             analysis[column] = new
             {
-                Count = values.Count,
+                values.Count,
                 UniqueCount = values.Distinct().Count(),
                 NullCount = validData.Count - values.Count,
                 SampleValues = values.Take(5).ToList()
@@ -326,4 +320,4 @@ public class DataSetRepository : IDataSetRepository
         await _context.SaveChangesAsync();
         return oldSoftDeleted.Count;
     }
-} 
+}

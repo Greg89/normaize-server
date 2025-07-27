@@ -312,6 +312,6 @@ public class HealthCheckServiceTests : IDisposable
 
     public void Dispose()
     {
-        // Cleanup if needed
+        GC.SuppressFinalize(this);
     }
-} 
+}

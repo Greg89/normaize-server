@@ -7,24 +7,18 @@ using System.Diagnostics;
 
 namespace Normaize.Data.Services;
 
-public class ConfigurationValidationService : IConfigurationValidationService
+public class ConfigurationValidationService(
+    ILogger<ConfigurationValidationService> logger,
+    IOptions<ServiceConfigurationOptions> config) : IConfigurationValidationService
 {
-    private readonly ILogger<ConfigurationValidationService> _logger;
-    private readonly ServiceConfigurationOptions _config;
-
-    public ConfigurationValidationService(
-        ILogger<ConfigurationValidationService> logger,
-        IOptions<ServiceConfigurationOptions> config)
-    {
-        _logger = logger;
-        _config = config.Value;
-    }
+    private readonly ILogger<ConfigurationValidationService> _logger = logger;
+    private readonly ServiceConfigurationOptions _config = config.Value;
 
     public ConfigurationValidationResult ValidateConfiguration(CancellationToken cancellationToken = default)
     {
         var correlationId = Guid.NewGuid().ToString();
         var stopwatch = Stopwatch.StartNew();
-        
+
         _logger.LogInformation("Starting configuration validation. CorrelationId: {CorrelationId}", correlationId);
 
         try
@@ -63,12 +57,12 @@ public class ConfigurationValidationService : IConfigurationValidationService
 
             if (overallResult.IsValid)
             {
-                _logger.LogInformation("Configuration validation completed successfully. Duration: {Duration}ms, CorrelationId: {CorrelationId}", 
+                _logger.LogInformation("Configuration validation completed successfully. Duration: {Duration}ms, CorrelationId: {CorrelationId}",
                     overallResult.ValidationDuration.TotalMilliseconds, correlationId);
             }
             else
             {
-                _logger.LogWarning("Configuration validation failed with {ErrorCount} errors and {WarningCount} warnings. Duration: {Duration}ms, CorrelationId: {CorrelationId}", 
+                _logger.LogWarning("Configuration validation failed with {ErrorCount} errors and {WarningCount} warnings. Duration: {Duration}ms, CorrelationId: {CorrelationId}",
                     overallResult.Errors.Count, overallResult.Warnings.Count, overallResult.ValidationDuration.TotalMilliseconds, correlationId);
             }
 
@@ -78,7 +72,7 @@ public class ConfigurationValidationService : IConfigurationValidationService
         {
             stopwatch.Stop();
             _logger.LogError(ex, "Unexpected error during configuration validation. CorrelationId: {CorrelationId}", correlationId);
-            
+
             return new ConfigurationValidationResult
             {
                 IsValid = false,
@@ -386,4 +380,4 @@ public class ConfigurationValidationService : IConfigurationValidationService
 
     private static bool IsProductionEnvironment() =>
         Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Production", StringComparison.OrdinalIgnoreCase) == true;
-} 
+}

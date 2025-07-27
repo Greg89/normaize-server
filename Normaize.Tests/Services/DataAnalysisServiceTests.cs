@@ -27,12 +27,12 @@ public class DataAnalysisServiceTests
         _mockRepository = new Mock<IAnalysisRepository>();
         _mockMapper = new Mock<IMapper>();
         _mockInfrastructure = new Mock<IDataProcessingInfrastructure>();
-        
+
         _service = new DataAnalysisService(
-            _mockRepository.Object, 
-            _mockMapper.Object, 
+            _mockRepository.Object,
+            _mockMapper.Object,
             _mockInfrastructure.Object);
-        
+
         // Setup default infrastructure mocks
         SetupInfrastructureMocks();
     }
@@ -47,35 +47,32 @@ public class DataAnalysisServiceTests
                 mockContext.Setup(c => c.OperationName).Returns(operationName);
                 mockContext.Setup(c => c.CorrelationId).Returns(correlationId);
                 mockContext.Setup(c => c.UserId).Returns(userId);
-                mockContext.Setup(c => c.Metadata).Returns(metadata ?? new Dictionary<string, object>());
-                mockContext.Setup(c => c.Steps).Returns(new List<string>());
+                mockContext.Setup(c => c.Metadata).Returns(metadata ?? []);
+                mockContext.Setup(c => c.Steps).Returns([]);
                 mockContext.Setup(c => c.Stopwatch).Returns(System.Diagnostics.Stopwatch.StartNew());
                 mockContext.Setup(c => c.SetMetadata(It.IsAny<string>(), It.IsAny<object>()));
                 return mockContext.Object;
             });
-        
+
         _mockInfrastructure.Setup(i => i.StructuredLogging.LogStep(It.IsAny<IOperationContext>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()));
         _mockInfrastructure.Setup(i => i.StructuredLogging.LogSummary(It.IsAny<IOperationContext>(), It.IsAny<bool>(), It.IsAny<string>()));
-        
+
         // Setup chaos engineering
         _mockInfrastructure.Setup(i => i.ChaosEngineering.ExecuteChaosAsync(It.IsAny<string>(), It.IsAny<Func<Task>>(), It.IsAny<Dictionary<string, object>>()))
             .Returns(Task.FromResult(false));
-        
+
         // Setup timeouts
         _mockInfrastructure.Setup(i => i.DefaultTimeout).Returns(TimeSpan.FromMinutes(5));
         _mockInfrastructure.Setup(i => i.QuickTimeout).Returns(TimeSpan.FromSeconds(30));
-        
-        // Setup logger
-        _mockInfrastructure.Setup(i => i.Logger).Returns(new Mock<ILogger>().Object);
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => 
+        var exception = Assert.Throws<ArgumentNullException>(() =>
             new DataAnalysisService(null!, _mockMapper.Object, _mockInfrastructure.Object));
-        
+
         exception.ParamName.Should().Be("analysisRepository");
     }
 
@@ -83,9 +80,9 @@ public class DataAnalysisServiceTests
     public void Constructor_WithNullMapper_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => 
+        var exception = Assert.Throws<ArgumentNullException>(() =>
             new DataAnalysisService(_mockRepository.Object, null!, _mockInfrastructure.Object));
-        
+
         exception.ParamName.Should().Be("mapper");
     }
 
@@ -93,9 +90,9 @@ public class DataAnalysisServiceTests
     public void Constructor_WithNullInfrastructure_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => 
+        var exception = Assert.Throws<ArgumentNullException>(() =>
             new DataAnalysisService(_mockRepository.Object, _mockMapper.Object, null!));
-        
+
         exception.ParamName.Should().Be("infrastructure");
     }
 
@@ -124,7 +121,7 @@ public class DataAnalysisServiceTests
         result.Should().NotBeNull();
         result.Id.Should().Be(1);
         result.Name.Should().Be("Test Analysis");
-        
+
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<Analysis>()), Times.Once);
         _mockMapper.Verify(m => m.Map<Analysis>(createDto), Times.Once);
         _mockMapper.Verify(m => m.Map<AnalysisDto>(analysis), Times.Once);
@@ -134,9 +131,9 @@ public class DataAnalysisServiceTests
     public async Task CreateAnalysisAsync_WithNullDto_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.CreateAnalysisAsync(null!));
-        
+
         exception.Message.Should().Contain("Failed to complete CreateAnalysisAsync for analysis");
         exception.InnerException.Should().BeOfType<ArgumentNullException>();
         ((ArgumentNullException)exception.InnerException!).ParamName.Should().Be("createDto");
@@ -157,9 +154,9 @@ public class DataAnalysisServiceTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.CreateAnalysisAsync(createDto));
-        
+
         exception.Message.Should().Contain("Failed to complete CreateAnalysisAsync for analysis");
         exception.InnerException.Should().BeOfType<ArgumentException>();
         exception.InnerException!.Message.Should().Contain("Analysis name is required");
@@ -177,12 +174,12 @@ public class DataAnalysisServiceTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.CreateAnalysisAsync(createDto));
-        
+
         exception.Message.Should().Contain("Failed to complete CreateAnalysisAsync for analysis");
         exception.InnerException.Should().BeOfType<ArgumentException>();
-        exception.InnerException!.Message.Should().Contain("Analysis name cannot exceed 255 characters");
+        exception.InnerException!.Message.Should().Contain("Analysis name is too long");
     }
 
     [Fact]
@@ -197,12 +194,12 @@ public class DataAnalysisServiceTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.CreateAnalysisAsync(createDto));
-        
+
         exception.Message.Should().Contain("Failed to complete CreateAnalysisAsync for analysis");
         exception.InnerException.Should().BeOfType<ArgumentException>();
-        exception.InnerException!.Message.Should().Contain("Valid dataset ID is required");
+        exception.InnerException!.Message.Should().Contain("Dataset ID is required");
     }
 
     [Fact]
@@ -222,7 +219,7 @@ public class DataAnalysisServiceTests
         result.Should().NotBeNull();
         result!.Id.Should().Be(1);
         result.Name.Should().Be("Test Analysis");
-        
+
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
         _mockMapper.Verify(m => m.Map<AnalysisDto>(analysis), Times.Once);
     }
@@ -238,7 +235,7 @@ public class DataAnalysisServiceTests
 
         // Assert
         result.Should().BeNull();
-        
+
         _mockRepository.Verify(r => r.GetByIdAsync(999), Times.Once);
         _mockMapper.Verify(m => m.Map<AnalysisDto>(It.IsAny<Analysis>()), Times.Never);
     }
@@ -268,7 +265,7 @@ public class DataAnalysisServiceTests
         // Assert
         result.Should().NotBeNull();
         result.Should().HaveCount(2);
-        
+
         _mockRepository.Verify(r => r.GetByDataSetIdAsync(1), Times.Once);
         _mockMapper.Verify(m => m.Map<IEnumerable<AnalysisDto>>(analyses), Times.Once);
     }
@@ -277,9 +274,9 @@ public class DataAnalysisServiceTests
     public async Task GetAnalysisResultAsync_WithExistingAnalysis_ShouldReturnResult()
     {
         // Arrange
-        var analysis = new Analysis 
-        { 
-            Id = 1, 
+        var analysis = new Analysis
+        {
+            Id = 1,
             Name = "Test Analysis",
             Status = AnalysisStatus.Completed,
             Results = JsonSerializer.Serialize(new { test = "data" })
@@ -295,7 +292,7 @@ public class DataAnalysisServiceTests
         result.AnalysisId.Should().Be(1);
         result.Status.Should().Be(AnalysisStatus.Completed);
         result.Results.Should().NotBeNull();
-        
+
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
     }
 
@@ -306,12 +303,12 @@ public class DataAnalysisServiceTests
         _mockRepository.Setup(r => r.GetByIdAsync(999)).ReturnsAsync((Analysis?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.GetAnalysisResultAsync(999));
-        
+
         exception.Message.Should().Contain("Failed to complete GetAnalysisResultAsync for analysis ID 999");
         exception.InnerException.Should().BeOfType<ArgumentException>();
-        exception.InnerException!.Message.Should().Contain("Analysis with ID 999 not found");
+        exception.InnerException!.Message.Should().Contain("Analysis not found");
     }
 
     [Fact]
@@ -325,7 +322,7 @@ public class DataAnalysisServiceTests
 
         // Assert
         result.Should().BeTrue();
-        
+
         _mockRepository.Verify(r => r.DeleteAsync(1), Times.Once);
     }
 
@@ -340,7 +337,7 @@ public class DataAnalysisServiceTests
 
         // Assert
         result.Should().BeFalse();
-        
+
         _mockRepository.Verify(r => r.DeleteAsync(999), Times.Once);
     }
 
@@ -351,21 +348,21 @@ public class DataAnalysisServiceTests
         _mockRepository.Setup(r => r.GetByIdAsync(999)).ReturnsAsync((Analysis?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.RunAnalysisAsync(999));
-        
+
         exception.Message.Should().Contain("Failed to complete RunAnalysisAsync for analysis ID 999");
         exception.InnerException.Should().BeOfType<ArgumentException>();
-        exception.InnerException!.Message.Should().Contain("Analysis with ID 999 not found");
+        exception.InnerException!.Message.Should().Contain("Analysis not found");
     }
 
     [Fact]
     public async Task RunAnalysisAsync_WithProcessingAnalysis_ShouldThrowInvalidOperationException()
     {
         // Arrange
-        var analysis = new Analysis 
-        { 
-            Id = 1, 
+        var analysis = new Analysis
+        {
+            Id = 1,
             Name = "Test Analysis",
             Status = AnalysisStatus.Processing
         };
@@ -373,9 +370,9 @@ public class DataAnalysisServiceTests
         _mockRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(analysis);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.RunAnalysisAsync(1));
-        
+
         exception.Message.Should().Contain("Failed to complete RunAnalysisAsync for analysis ID 1");
         exception.InnerException.Should().BeOfType<InvalidOperationException>();
         exception.InnerException!.Message.Should().Contain("Analysis with ID 1 is already in progress");
@@ -385,9 +382,9 @@ public class DataAnalysisServiceTests
     public async Task RunAnalysisAsync_WithCompletedAnalysis_ShouldReturnExistingResult()
     {
         // Arrange
-        var analysis = new Analysis 
-        { 
-            Id = 1, 
+        var analysis = new Analysis
+        {
+            Id = 1,
             Name = "Test Analysis",
             Status = AnalysisStatus.Completed
         };
@@ -403,7 +400,7 @@ public class DataAnalysisServiceTests
         // Assert
         result.Should().NotBeNull();
         result.Id.Should().Be(1);
-        
+
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
         _mockMapper.Verify(m => m.Map<AnalysisDto>(analysis), Times.Once);
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<Analysis>()), Times.Never);
@@ -413,17 +410,17 @@ public class DataAnalysisServiceTests
     public async Task RunAnalysisAsync_WithValidAnalysis_ShouldExecuteAndUpdate()
     {
         // Arrange
-        var analysis = new Analysis 
-        { 
-            Id = 1, 
+        var analysis = new Analysis
+        {
+            Id = 1,
             Name = "Test Analysis",
             Type = AnalysisType.Statistical,
             Status = AnalysisStatus.Pending
         };
 
-        var updatedAnalysis = new Analysis 
-        { 
-            Id = 1, 
+        var updatedAnalysis = new Analysis
+        {
+            Id = 1,
             Name = "Test Analysis",
             Status = AnalysisStatus.Completed,
             CompletedAt = DateTime.UtcNow
@@ -441,7 +438,7 @@ public class DataAnalysisServiceTests
         // Assert
         result.Should().NotBeNull();
         result.Id.Should().Be(1);
-        
+
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<Analysis>()), Times.AtLeast(2)); // Processing and Success states
         _mockMapper.Verify(m => m.Map<AnalysisDto>(updatedAnalysis), Times.Once);
@@ -459,17 +456,17 @@ public class DataAnalysisServiceTests
     public async Task RunAnalysisAsync_WithDifferentTypes_ShouldExecuteCorrectAnalysis(AnalysisType analysisType)
     {
         // Arrange
-        var analysis = new Analysis 
-        { 
-            Id = 1, 
+        var analysis = new Analysis
+        {
+            Id = 1,
             Name = "Test Analysis",
             Type = analysisType,
             Status = AnalysisStatus.Pending
         };
 
-        var updatedAnalysis = new Analysis 
-        { 
-            Id = 1, 
+        var updatedAnalysis = new Analysis
+        {
+            Id = 1,
             Name = "Test Analysis",
             Status = AnalysisStatus.Completed
         };
@@ -486,7 +483,7 @@ public class DataAnalysisServiceTests
         // Assert
         result.Should().NotBeNull();
         result.Id.Should().Be(1);
-        
+
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<Analysis>()), Times.AtLeast(2)); // Processing and Success states
     }
 
@@ -494,9 +491,9 @@ public class DataAnalysisServiceTests
     public async Task RunAnalysisAsync_WhenRepositoryThrows_ShouldPropagateException()
     {
         // Arrange
-        var analysis = new Analysis 
-        { 
-            Id = 1, 
+        var analysis = new Analysis
+        {
+            Id = 1,
             Name = "Test Analysis",
             Type = AnalysisType.Statistical,
             Status = AnalysisStatus.Pending
@@ -507,13 +504,13 @@ public class DataAnalysisServiceTests
             .ThrowsAsync(new InvalidOperationException("Database error"));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.RunAnalysisAsync(1));
-        
+
         exception.Message.Should().Contain("Failed to complete RunAnalysisAsync for analysis ID 1");
         exception.InnerException.Should().BeOfType<InvalidOperationException>();
         exception.InnerException!.Message.Should().Be("Database error");
-        
+
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<Analysis>()), Times.AtLeastOnce);
     }
-} 
+}

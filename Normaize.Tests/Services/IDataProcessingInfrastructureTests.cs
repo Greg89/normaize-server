@@ -29,13 +29,13 @@ public class IDataProcessingInfrastructureTests
         var interfaceType = typeof(IDataProcessingInfrastructure);
 
         // Assert
-        interfaceType.GetProperty("Logger")!.PropertyType.Should().Be(typeof(Microsoft.Extensions.Logging.ILogger));
-        interfaceType.GetProperty("Cache")!.PropertyType.Should().Be(typeof(Microsoft.Extensions.Caching.Memory.IMemoryCache));
-        interfaceType.GetProperty("StructuredLogging")!.PropertyType.Should().Be(typeof(IStructuredLoggingService));
-        interfaceType.GetProperty("ChaosEngineering")!.PropertyType.Should().Be(typeof(IChaosEngineeringService));
-        interfaceType.GetProperty("CacheExpiration")!.PropertyType.Should().Be(typeof(TimeSpan));
-        interfaceType.GetProperty("DefaultTimeout")!.PropertyType.Should().Be(typeof(TimeSpan));
-        interfaceType.GetProperty("QuickTimeout")!.PropertyType.Should().Be(typeof(TimeSpan));
+        interfaceType.GetProperty("Logger")!.PropertyType.Should().Be<Microsoft.Extensions.Logging.ILogger>();
+        interfaceType.GetProperty("Cache")!.PropertyType.Should().Be<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+        interfaceType.GetProperty("StructuredLogging")!.PropertyType.Should().Be<IStructuredLoggingService>();
+        interfaceType.GetProperty("ChaosEngineering")!.PropertyType.Should().Be<IChaosEngineeringService>();
+        interfaceType.GetProperty("CacheExpiration")!.PropertyType.Should().Be<TimeSpan>();
+        interfaceType.GetProperty("DefaultTimeout")!.PropertyType.Should().Be<TimeSpan>();
+        interfaceType.GetProperty("QuickTimeout")!.PropertyType.Should().Be<TimeSpan>();
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public class IDataProcessingInfrastructureTests
 
         // Assert
         property.Should().NotBeNull();
-        property!.PropertyType.Should().Be(typeof(Microsoft.Extensions.Logging.ILogger));
+        property!.PropertyType.Should().Be<Microsoft.Extensions.Logging.ILogger>();
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public class IDataProcessingInfrastructureTests
 
         // Assert
         property.Should().NotBeNull();
-        property!.PropertyType.Should().Be(typeof(Microsoft.Extensions.Caching.Memory.IMemoryCache));
+        property!.PropertyType.Should().Be<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class IDataProcessingInfrastructureTests
 
         // Assert
         property.Should().NotBeNull();
-        property!.PropertyType.Should().Be(typeof(IStructuredLoggingService));
+        property!.PropertyType.Should().Be<IStructuredLoggingService>();
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class IDataProcessingInfrastructureTests
 
         // Assert
         property.Should().NotBeNull();
-        property!.PropertyType.Should().Be(typeof(IChaosEngineeringService));
+        property!.PropertyType.Should().Be<IChaosEngineeringService>();
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public class IDataProcessingInfrastructureTests
 
         // Assert
         property.Should().NotBeNull();
-        property!.PropertyType.Should().Be(typeof(TimeSpan));
+        property!.PropertyType.Should().Be<TimeSpan>();
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public class IDataProcessingInfrastructureTests
 
         // Assert
         property.Should().NotBeNull();
-        property!.PropertyType.Should().Be(typeof(TimeSpan));
+        property!.PropertyType.Should().Be<TimeSpan>();
     }
 
     [Fact]
@@ -165,7 +165,7 @@ public class IDataProcessingInfrastructureTests
 
         // Assert
         property.Should().NotBeNull();
-        property!.PropertyType.Should().Be(typeof(TimeSpan));
+        property!.PropertyType.Should().Be<TimeSpan>();
     }
 
     [Fact]
@@ -180,4 +180,4 @@ public class IDataProcessingInfrastructureTests
         // Assert
         properties.Should().HaveCount(7);
     }
-} 
+}

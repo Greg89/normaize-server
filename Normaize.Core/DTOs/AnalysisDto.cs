@@ -51,4 +51,4 @@ public class AnalysisResultDto
     public AnalysisStatus Status { get; set; }
     public object? Results { get; set; }
     public string? ErrorMessage { get; set; }
-} 
+}

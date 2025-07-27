@@ -20,7 +20,7 @@ public class HealthMonitoringController : ControllerBase
     public async Task<IActionResult> GetHealth(CancellationToken cancellationToken)
     {
         var result = await _healthCheckService.CheckHealthAsync(cancellationToken);
-        
+
         if (!result.IsHealthy)
         {
             return StatusCode(503, new
@@ -51,7 +51,7 @@ public class HealthMonitoringController : ControllerBase
     public async Task<IActionResult> GetLiveness(CancellationToken cancellationToken)
     {
         var result = await _healthCheckService.CheckLivenessAsync(cancellationToken);
-        
+
         if (!result.IsHealthy)
         {
             return StatusCode(503, new
@@ -80,7 +80,7 @@ public class HealthMonitoringController : ControllerBase
     public async Task<IActionResult> GetReadiness(CancellationToken cancellationToken)
     {
         var result = await _healthCheckService.CheckReadinessAsync(cancellationToken);
-        
+
         if (!result.IsHealthy)
         {
             return StatusCode(503, new
@@ -104,4 +104,4 @@ public class HealthMonitoringController : ControllerBase
             correlationId = result.CorrelationId
         });
     }
-} 
+}

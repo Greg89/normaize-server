@@ -1,17 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
-using Normaize.Core.Interfaces;
 using Normaize.Data;
 using Normaize.Data.Services;
 using Xunit;
+
+namespace Normaize.Tests.Services;
 
 public class DatabaseHealthServiceTests
 {
@@ -25,7 +20,7 @@ public class DatabaseHealthServiceTests
         _mockOptions.Setup(x => x.Value).Returns(_defaultConfig);
     }
 
-    private NormaizeContext CreateInMemoryContext()
+    private static NormaizeContext CreateInMemoryContext()
     {
         var options = new DbContextOptionsBuilder<NormaizeContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -115,4 +110,4 @@ public class DatabaseHealthServiceTests
         Assert.Equal("unhealthy", result.Status);
         Assert.NotNull(result.ErrorMessage);
     }
-} 
+}

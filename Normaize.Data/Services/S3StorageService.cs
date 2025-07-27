@@ -10,7 +10,7 @@ namespace Normaize.Data.Services;
 
 public class S3StorageService : IStorageService
 {
-    private readonly IAmazonS3 _s3Client;
+    private readonly AmazonS3Client _s3Client;
     private readonly string _bucketName;
     private readonly ILogger<S3StorageService> _logger;
 
@@ -20,7 +20,7 @@ public class S3StorageService : IStorageService
         var secretKey = configuration["AWS_SECRET_ACCESS_KEY"] ?? throw new ArgumentException("AWS_SECRET_ACCESS_KEY configuration is required");
         var region = configuration["AWS_REGION"] ?? "us-east-1";
         var serviceUrl = configuration["AWS_SERVICE_URL"]; // For MinIO or other S3-compatible services
-        
+
         _bucketName = configuration["AWS_S3_BUCKET"] ?? "normaize-uploads";
         _logger = logger;
 
@@ -39,13 +39,13 @@ public class S3StorageService : IStorageService
 
         _s3Client = new AmazonS3Client(accessKey, secretKey, config);
 
-        _logger.LogInformation("S3 Storage Service initialized with Bucket: {Bucket}, Region: {Region}, ServiceURL: {ServiceURL}", 
+        _logger.LogInformation("S3 Storage Service initialized with Bucket: {Bucket}, Region: {Region}, ServiceURL: {ServiceURL}",
             _bucketName, region, serviceUrl ?? "AWS S3");
-        
+
         // Debug logging
-        _logger.LogInformation("DEBUG: S3 Client Configuration - AccessKey: {AccessKey}, SecretKey: {SecretKey}, ServiceURL: {ServiceURL}", 
-            accessKey.Substring(0, Math.Min(8, accessKey.Length)) + "...", 
-            secretKey.Substring(0, Math.Min(8, secretKey.Length)) + "...", 
+        _logger.LogInformation("DEBUG: S3 Client Configuration - AccessKey: {AccessKey}, SecretKey: {SecretKey}, ServiceURL: {ServiceURL}",
+            string.Concat(accessKey.AsSpan(0, Math.Min(8, accessKey.Length)), "..."),
+            string.Concat(secretKey.AsSpan(0, Math.Min(8, secretKey.Length)), "..."),
             serviceUrl ?? "Not set");
 
         // Ensure bucket exists
@@ -57,7 +57,7 @@ public class S3StorageService : IStorageService
         try
         {
             var bucketExists = await AmazonS3Util.DoesS3BucketExistV2Async(_s3Client, _bucketName);
-            
+
             if (!bucketExists)
             {
                 var putBucketRequest = new PutBucketRequest
@@ -77,7 +77,7 @@ public class S3StorageService : IStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error ensuring S3 bucket exists: {BucketName}", _bucketName);
-            throw;
+            throw new InvalidOperationException($"Failed to ensure S3 bucket '{_bucketName}' exists", ex);
         }
     }
 
@@ -85,10 +85,10 @@ public class S3StorageService : IStorageService
     {
         var fileName = $"{Guid.NewGuid()}_{fileRequest.FileName}";
         var datePath = DateTime.UtcNow.ToString("yyyy/MM/dd");
-        
+
         // Get environment for folder structure
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.ToLowerInvariant() ?? "development";
-        
+
         // Map environment names to folder names
         var environmentFolder = environment switch
         {
@@ -98,13 +98,13 @@ public class S3StorageService : IStorageService
             "development" => "development",
             _ => "development"
         };
-        
+
         // Create object key with environment folder: environment/date/filename
         var objectKey = $"{environmentFolder}/{datePath}/{fileName}";
-        
-        _logger.LogInformation("Attempting to upload file {FileName} to S3 object {ObjectKey} in environment {Environment}", 
+
+        _logger.LogInformation("Attempting to upload file {FileName} to S3 object {ObjectKey} in environment {Environment}",
             fileRequest.FileName, objectKey, environmentFolder);
-        
+
         try
         {
             var putRequest = new PutObjectRequest
@@ -116,7 +116,7 @@ public class S3StorageService : IStorageService
             };
 
             await _s3Client.PutObjectAsync(putRequest);
-            
+
             _logger.LogInformation("File uploaded successfully to S3: {ObjectKey} in environment {Environment}", objectKey, environmentFolder);
             _logger.LogInformation("DEBUG: File URL returned: s3://{Bucket}/{ObjectKey}", _bucketName, objectKey);
             return $"s3://{_bucketName}/{objectKey}";
@@ -124,14 +124,14 @@ public class S3StorageService : IStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error uploading file to S3: {ObjectKey}", objectKey);
-            throw;
+            throw new InvalidOperationException($"Failed to upload file to S3: {objectKey}", ex);
         }
     }
 
     public async Task<Stream> GetFileAsync(string filePath)
     {
         var objectKey = ExtractObjectKeyFromUrl(filePath);
-        
+
         try
         {
             var getRequest = new GetObjectRequest
@@ -141,12 +141,12 @@ public class S3StorageService : IStorageService
             };
 
             var response = await _s3Client.GetObjectAsync(getRequest);
-            
+
             // Copy to memory stream to avoid disposal issues
             var memoryStream = new MemoryStream();
             await response.ResponseStream.CopyToAsync(memoryStream);
             memoryStream.Position = 0;
-            
+
             return memoryStream;
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -156,14 +156,14 @@ public class S3StorageService : IStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error downloading file from S3: {ObjectKey}", objectKey);
-            throw;
+            throw new InvalidOperationException($"Failed to download file from S3: {objectKey}", ex);
         }
     }
 
     public async Task DeleteFileAsync(string filePath)
     {
         var objectKey = ExtractObjectKeyFromUrl(filePath);
-        
+
         try
         {
             var deleteRequest = new DeleteObjectRequest
@@ -178,14 +178,14 @@ public class S3StorageService : IStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting file from S3: {ObjectKey}", objectKey);
-            throw;
+            throw new InvalidOperationException($"Failed to delete file from S3: {objectKey}", ex);
         }
     }
 
     public async Task<bool> FileExistsAsync(string filePath)
     {
         var objectKey = ExtractObjectKeyFromUrl(filePath);
-        
+
         try
         {
             var headRequest = new GetObjectMetadataRequest
@@ -208,7 +208,7 @@ public class S3StorageService : IStorageService
         }
     }
 
-    private string ExtractObjectKeyFromUrl(string filePath)
+    private static string ExtractObjectKeyFromUrl(string filePath)
     {
         if (filePath.StartsWith("s3://"))
         {
@@ -218,7 +218,7 @@ public class S3StorageService : IStorageService
         return filePath;
     }
 
-    private string GetContentType(string fileName)
+    private static string GetContentType(string fileName)
     {
         var extension = Path.GetExtension(fileName).ToLowerInvariant();
         return extension switch
@@ -233,4 +233,4 @@ public class S3StorageService : IStorageService
             _ => "application/octet-stream"
         };
     }
-} 
+}

@@ -46,115 +46,143 @@ public class DatabaseHealthService : IDatabaseHealthService
     /// </summary>
     public async Task<DatabaseHealthResult> CheckHealthAsync(CancellationToken cancellationToken = default)
     {
-        var result = new DatabaseHealthResult();
         _logger.LogInformation("Starting database health check at {Timestamp}", DateTime.UtcNow);
 
         try
         {
-            // Check database connectivity
-            var canConnect = await _context.Database.CanConnectAsync(cancellationToken);
-            if (!canConnect)
-            {
-                result.IsHealthy = false;
-                result.Status = "unhealthy";
-                result.ErrorMessage = "Cannot connect to database";
-                _logger.LogWarning("Database connectivity check failed");
-                return result;
-            }
+            if (!await CheckConnectivityAsync(cancellationToken))
+                return CreateUnhealthyResult("Cannot connect to database");
 
-            // Check if we're using an in-memory database
-            var isInMemory = _context.Database.ProviderName?.Contains("InMemory") == true;
-            if (isInMemory)
-            {
-                result.IsHealthy = true;
-                result.Status = "healthy";
-                result.ErrorMessage = null;
-                _logger.LogInformation("In-memory database detected, skipping schema checks");
-                return result;
-            }
+            if (IsInMemoryDatabase())
+                return CreateHealthyResult();
 
-            // Batch check for all critical columns in a single query
-            var foundColumns = new List<string>();
-            
-            // Use provider-specific queries
-            var providerName = _context.Database.ProviderName ?? string.Empty;
-            if (providerName.Contains("Sqlite"))
-            {
-                // SQLite uses PRAGMA table_info
-                var sql = "PRAGMA table_info(DataSets)";
-                using (var command = _context.Database.GetDbConnection().CreateCommand())
-                {
-                    command.CommandText = sql;
-                    if (command.Connection?.State != System.Data.ConnectionState.Open)
-                        await command.Connection!.OpenAsync(cancellationToken);
-                    using var reader = await command.ExecuteReaderAsync(cancellationToken);
-                    while (await reader.ReadAsync(cancellationToken))
-                    {
-                        var columnName = reader.GetString(1); // Column name is at index 1
-                        foundColumns.Add(columnName);
-                    }
-                }
-            }
-            else
-            {
-                // Other databases use INFORMATION_SCHEMA with parameterized query
-                using (var command = _context.Database.GetDbConnection().CreateCommand())
-                {
-                    var sql = @"
-                        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-                        WHERE TABLE_NAME = 'DataSets' AND COLUMN_NAME IN (";
-                    
-                    // Build parameterized query with proper parameters
-                    var parameters = new List<System.Data.Common.DbParameter>();
-                    for (int i = 0; i < _config.CriticalColumns.Length; i++)
-                    {
-                        if (i > 0) sql += ",";
-                        var paramName = $"@column{i}";
-                        sql += paramName;
-                        
-                        var parameter = command.CreateParameter();
-                        parameter.ParameterName = paramName;
-                        parameter.Value = _config.CriticalColumns[i];
-                        parameters.Add(parameter);
-                    }
-                    sql += ")";
-                    
-                    command.CommandText = sql;
-                    command.Parameters.AddRange(parameters.ToArray());
-                    
-                    if (command.Connection?.State != System.Data.ConnectionState.Open)
-                        await command.Connection!.OpenAsync(cancellationToken);
-                    using var reader = await command.ExecuteReaderAsync(cancellationToken);
-                    while (await reader.ReadAsync(cancellationToken))
-                    {
-                        foundColumns.Add(reader.GetString(0));
-                    }
-                }
-            }
-            
+            var foundColumns = await GetExistingColumnsAsync(cancellationToken);
             var missingColumns = _config.CriticalColumns.Except(foundColumns).ToList();
-            if (missingColumns.Any())
+
+            if (missingColumns.Count > 0)
             {
-                result.IsHealthy = false;
-                result.Status = "unhealthy";
-                result.ErrorMessage = "Missing critical columns";
-                result.MissingColumns = missingColumns;
                 _logger.LogWarning("Database missing critical columns: {Columns}", string.Join(", ", missingColumns));
-                return result;
+                return CreateUnhealthyResult("Missing critical columns", missingColumns);
             }
 
-            result.IsHealthy = true;
-            result.Status = "healthy";
-            _logger.LogInformation("Database health check passed");
-            return result;
+            return CreateHealthyResult();
         }
         catch (Exception ex)
         {
-            result.IsHealthy = false;
-            result.Status = "unhealthy";
-            result.ErrorMessage = ex.Message;
             _logger.LogError(ex, "Database health check failed: {Message}", ex.Message);
-            return result;
+            return CreateUnhealthyResult(ex.Message);
         }
     }
-} 
+
+    private async Task<bool> CheckConnectivityAsync(CancellationToken cancellationToken)
+    {
+        var canConnect = await _context.Database.CanConnectAsync(cancellationToken);
+        if (!canConnect)
+        {
+            _logger.LogWarning("Database connectivity check failed");
+        }
+        return canConnect;
+    }
+
+    private bool IsInMemoryDatabase()
+    {
+        var isInMemory = _context.Database.ProviderName?.Contains("InMemory") == true;
+        if (isInMemory)
+        {
+            _logger.LogInformation("In-memory database detected, skipping schema checks");
+        }
+        return isInMemory;
+    }
+
+    private async Task<List<string>> GetExistingColumnsAsync(CancellationToken cancellationToken)
+    {
+        var providerName = _context.Database.ProviderName ?? string.Empty;
+
+        if (providerName.Contains("Sqlite"))
+            return await GetSqliteColumnsAsync(cancellationToken);
+
+        return await GetStandardColumnsAsync(cancellationToken);
+    }
+
+    private async Task<List<string>> GetSqliteColumnsAsync(CancellationToken cancellationToken)
+    {
+        var foundColumns = new List<string>();
+        var sql = "PRAGMA table_info(DataSets)";
+
+        using var command = _context.Database.GetDbConnection().CreateCommand();
+        command.CommandText = sql;
+
+        if (command.Connection?.State != System.Data.ConnectionState.Open)
+            await command.Connection!.OpenAsync(cancellationToken);
+
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var columnName = reader.GetString(1); // Column name is at index 1
+            foundColumns.Add(columnName);
+        }
+
+        return foundColumns;
+    }
+
+    private async Task<List<string>> GetStandardColumnsAsync(CancellationToken cancellationToken)
+    {
+        var foundColumns = new List<string>();
+        var sqlBuilder = new System.Text.StringBuilder(@"
+            SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_NAME = 'DataSets' AND COLUMN_NAME IN (");
+
+        using var command = _context.Database.GetDbConnection().CreateCommand();
+
+        // Build parameterized query with proper parameters
+        var parameters = new List<System.Data.Common.DbParameter>();
+        for (int i = 0; i < _config.CriticalColumns.Length; i++)
+        {
+            if (i > 0) sqlBuilder.Append(',');
+            var paramName = $"@column{i}";
+            sqlBuilder.Append(paramName);
+
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = paramName;
+            parameter.Value = _config.CriticalColumns[i];
+            parameters.Add(parameter);
+        }
+        sqlBuilder.Append(')');
+        var sql = sqlBuilder.ToString();
+
+        command.CommandText = sql;
+        command.Parameters.AddRange(parameters.ToArray());
+
+        if (command.Connection?.State != System.Data.ConnectionState.Open)
+            await command.Connection!.OpenAsync(cancellationToken);
+
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            foundColumns.Add(reader.GetString(0));
+        }
+
+        return foundColumns;
+    }
+
+    private static DatabaseHealthResult CreateHealthyResult()
+    {
+        return new DatabaseHealthResult
+        {
+            IsHealthy = true,
+            Status = "healthy",
+            ErrorMessage = null
+        };
+    }
+
+    private static DatabaseHealthResult CreateUnhealthyResult(string errorMessage, List<string>? missingColumns = null)
+    {
+        return new DatabaseHealthResult
+        {
+            IsHealthy = false,
+            Status = "unhealthy",
+            ErrorMessage = errorMessage,
+            MissingColumns = missingColumns ?? []
+        };
+    }
+}

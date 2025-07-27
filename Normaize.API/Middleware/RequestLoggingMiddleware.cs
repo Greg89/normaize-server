@@ -18,7 +18,7 @@ public class RequestLoggingMiddleware
         var stopwatch = Stopwatch.StartNew();
         var method = context.Request.Method;
         var path = context.Request.Path.ToString(); // Convert PathString to string
-        
+
         // Get user info from Auth0 middleware with null safety
         var userId = GetUserId(context);
 
@@ -40,10 +40,10 @@ public class RequestLoggingMiddleware
         catch (Exception ex)
         {
             stopwatch.Stop();
-            
+
             // Log the exception with full context
             loggingService.LogException(ex, $"Request processing failed: {method} {path}");
-            
+
             // Re-throw to let the global exception handler deal with it
             throw;
         }
@@ -55,11 +55,11 @@ public class RequestLoggingMiddleware
         var userIdFromClaims = context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (!string.IsNullOrEmpty(userIdFromClaims))
             return userIdFromClaims;
-        
+
         // Try to get from Items (fallback)
         if (context.Items.TryGetValue("UserId", out var userIdFromItems))
             return userIdFromItems?.ToString();
-        
+
         return null;
     }
-} 
+}

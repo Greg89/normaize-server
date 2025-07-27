@@ -8,4 +8,4 @@ public interface IStorageService
     Task<Stream> GetFileAsync(string filePath);
     Task DeleteFileAsync(string filePath);
     Task<bool> FileExistsAsync(string filePath);
-} 
+}

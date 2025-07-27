@@ -3,31 +3,21 @@ using Microsoft.AspNetCore.Authorization;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
-using System.Security.Claims;
+using Normaize.Core.Extensions;
 
 namespace Normaize.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class DataSetsController : ControllerBase
+public class DataSetsController(IDataProcessingService dataProcessingService, IStructuredLoggingService loggingService) : ControllerBase
 {
-    private readonly IDataProcessingService _dataProcessingService;
-    private readonly IStructuredLoggingService _loggingService;
-
-    public DataSetsController(IDataProcessingService dataProcessingService, IStructuredLoggingService loggingService)
-    {
-        _dataProcessingService = dataProcessingService;
-        _loggingService = loggingService;
-    }
+    private readonly IDataProcessingService _dataProcessingService = dataProcessingService;
+    private readonly IStructuredLoggingService _loggingService = loggingService;
 
     private string GetCurrentUserId()
     {
-        // Get user ID from JWT token (Auth0 sub claim)
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                    ?? User.FindFirst("sub")?.Value 
-                    ?? throw new UnauthorizedAccessException("User ID not found in token");
-        return userId;
+        return User.GetUserId();
     }
 
     [HttpGet]
@@ -36,7 +26,10 @@ public class DataSetsController : ControllerBase
         try
         {
             var userId = GetCurrentUserId();
-            var dataSets = await _dataProcessingService.GetDataSetsByUserAsync(userId);
+
+            IEnumerable<DataSetDto> dataSets;
+            dataSets = await _dataProcessingService.GetDataSetsByUserAsync(userId);
+
             return Ok(dataSets?.ToList());
         }
         catch (UnauthorizedAccessException)
@@ -99,7 +92,7 @@ public class DataSetsController : ControllerBase
             };
 
             var result = await _dataProcessingService.UploadDataSetAsync(fileRequest, createDto);
-            
+
             if (!result.Success)
                 return BadRequest(result.Message);
 
@@ -253,8 +246,8 @@ public class DataSetsController : ControllerBase
 
     [HttpGet("search")]
     public async Task<ActionResult<IEnumerable<DataSetDto>>> SearchDataSets(
-        [FromQuery] string q, 
-        [FromQuery] int page = 1, 
+        [FromQuery] string q,
+        [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
         try
@@ -302,7 +295,7 @@ public class DataSetsController : ControllerBase
 
     [HttpGet("date-range")]
     public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDataSetsByDateRange(
-        [FromQuery] DateTime startDate, 
+        [FromQuery] DateTime startDate,
         [FromQuery] DateTime endDate,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
@@ -344,4 +337,4 @@ public class DataSetsController : ControllerBase
         }
     }
 
-} 
+}

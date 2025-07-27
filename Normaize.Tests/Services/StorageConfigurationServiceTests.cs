@@ -225,4 +225,4 @@ public class StorageConfigurationServiceTests
         result.StorageProvider.Should().Be(StorageProvider.Memory);
         result.Environment.Should().Be("Test");
     }
-} 
+}

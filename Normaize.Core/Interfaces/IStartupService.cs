@@ -28,4 +28,4 @@ public interface IStartupService
     /// <param name="cancellationToken">Cancellation token for the operation</param>
     /// <returns>Task representing the health check operation</returns>
     Task PerformHealthChecksAsync(CancellationToken cancellationToken = default);
-} 
+}

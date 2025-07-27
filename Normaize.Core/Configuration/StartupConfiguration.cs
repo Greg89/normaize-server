@@ -85,4 +85,4 @@ public class RetryConfiguration
 
     [Range(0, 1, ErrorMessage = "Jitter factor must be between 0 and 1")]
     public double JitterFactor { get; set; } = 0.1;
-} 
+}

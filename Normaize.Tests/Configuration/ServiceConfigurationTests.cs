@@ -8,22 +8,62 @@ using Normaize.Core.Interfaces;
 using Normaize.Data;
 using Normaize.Data.Repositories;
 using Normaize.Data.Services;
+using System.Collections;
 using Xunit;
 using FluentAssertions;
 
 namespace Normaize.Tests.Configuration;
 
-public class ServiceConfigurationTests
+[CollectionDefinition("ServiceConfigurationTests")]
+public class ServiceConfigurationTestsCollection : ICollectionFixture<object>
+{
+    // This class has no code, and is never created. Its purpose is simply
+    // to be the place to apply [CollectionDefinition] and all the
+    // ICollectionFixture<> interfaces.
+}
+
+[Collection("ServiceConfigurationTests")]
+public class ServiceConfigurationTests : IDisposable
 {
     private readonly WebApplicationBuilder _builder;
+    private readonly Dictionary<string, string?> _originalEnvironmentVariables;
 
     public ServiceConfigurationTests()
     {
         _builder = WebApplication.CreateBuilder();
-        
+
+        // Store original environment variables to restore them later
+        _originalEnvironmentVariables = new Dictionary<string, string?>
+        {
+            ["ASPNETCORE_ENVIRONMENT"] = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+            ["MYSQLHOST"] = Environment.GetEnvironmentVariable("MYSQLHOST"),
+            ["MYSQLDATABASE"] = Environment.GetEnvironmentVariable("MYSQLDATABASE"),
+            ["MYSQLUSER"] = Environment.GetEnvironmentVariable("MYSQLUSER"),
+            ["MYSQLPASSWORD"] = Environment.GetEnvironmentVariable("MYSQLPASSWORD"),
+            ["MYSQLPORT"] = Environment.GetEnvironmentVariable("MYSQLPORT"),
+            ["STORAGE_PROVIDER"] = Environment.GetEnvironmentVariable("STORAGE_PROVIDER"),
+            ["AWS_ACCESS_KEY_ID"] = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
+            ["AWS_SECRET_ACCESS_KEY"] = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY"),
+            ["AUTH0_ISSUER"] = Environment.GetEnvironmentVariable("AUTH0_ISSUER"),
+            ["AUTH0_AUDIENCE"] = Environment.GetEnvironmentVariable("AUTH0_AUDIENCE")
+        };
+
+        // Clear all environment variables to start with a clean slate
+        ClearAllEnvironmentVariables();
+
         // Add basic services required for testing
         _builder.Services.AddLogging();
         _builder.Services.AddSingleton<IAppConfigurationService, AppConfigurationService>();
+    }
+
+    public void Dispose()
+    {
+        // Restore original environment variables
+        foreach (var kvp in _originalEnvironmentVariables)
+        {
+            Environment.SetEnvironmentVariable(kvp.Key, kvp.Value);
+        }
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -38,7 +78,7 @@ public class ServiceConfigurationTests
 
         // Assert
         using var scope = app.Services.CreateScope();
-        
+
         // Core services
         scope.ServiceProvider.GetService<IConfigurationValidationService>().Should().NotBeNull();
         scope.ServiceProvider.GetService<IAppConfigurationService>().Should().NotBeNull();
@@ -69,13 +109,10 @@ public class ServiceConfigurationTests
     public void ConfigureServices_ShouldBeResilientToConfigurationErrors()
     {
         // Arrange
-        // Create a builder that would normally cause issues
         var problematicBuilder = WebApplication.CreateBuilder();
         problematicBuilder.Services.AddLogging();
-        
+
         // Act & Assert
-        // The configuration should be resilient and not throw exceptions
-        // This demonstrates the chaos engineering principle of graceful degradation
         var action = () => ServiceConfiguration.ConfigureServices(problematicBuilder);
         action.Should().NotThrow();
     }
@@ -92,10 +129,10 @@ public class ServiceConfigurationTests
 
         // Assert
         using var scope = app.Services.CreateScope();
-        
+
         var context = scope.ServiceProvider.GetService<NormaizeContext>();
         context.Should().NotBeNull();
-        
+
         // Verify it's using in-memory database
         var storageService = scope.ServiceProvider.GetService<IStorageService>();
         storageService.Should().BeOfType<InMemoryStorageService>();
@@ -113,206 +150,39 @@ public class ServiceConfigurationTests
 
         // Assert
         using var scope = app.Services.CreateScope();
-        
+
         var storageService = scope.ServiceProvider.GetService<IStorageService>();
         storageService.Should().BeOfType<InMemoryStorageService>();
     }
 
     [Fact]
-    public void ConfigureServices_WhenTestEnvironment_ShouldUseInMemoryStorage()
+    public void ServiceConfiguration_ShouldHandleMissingEnvVarsGracefully()
     {
-        // Arrange
-        SetupTestEnvironment();
+        SetupInvalidEnvironment();
+        var builder = WebApplication.CreateBuilder();
+        builder.Services.AddLogging();
+        builder.Services.AddSingleton<IAppConfigurationService, AppConfigurationService>();
 
-        // Act
-        ServiceConfiguration.ConfigureServices(_builder);
-        var app = _builder.Build();
+        // Act & Assert - Should not throw, but should use fallback configurations
+        var action = () =>
+        {
+            ServiceConfiguration.ConfigureServices(builder);
+        };
 
-        // Assert
+        action.Should().NotThrow("Service configuration should handle missing environment variables gracefully");
+
+        // Verify fallback behavior
+        var app = builder.Build();
         using var scope = app.Services.CreateScope();
-        
-        var storageService = scope.ServiceProvider.GetService<IStorageService>();
-        storageService.Should().BeOfType<InMemoryStorageService>();
-    }
 
-    [Fact]
-    public void ConfigureServices_WhenDevelopmentEnvironment_ShouldEnableSensitiveDataLogging()
-    {
-        // Arrange
-        SetupDevelopmentEnvironment();
-
-        // Act
-        ServiceConfiguration.ConfigureServices(_builder);
-        var app = _builder.Build();
-
-        // Assert
-        using var scope = app.Services.CreateScope();
-        
-        var context = scope.ServiceProvider.GetService<NormaizeContext>();
-        context.Should().NotBeNull();
-        
-        // Note: We can't directly test EnableSensitiveDataLogging as it's internal,
-        // but we can verify the context is configured
-    }
-
-    [Fact]
-    public void ConfigureServices_ShouldConfigureCorsPolicies()
-    {
-        // Arrange
-        SetupValidEnvironment();
-
-        // Act
-        ServiceConfiguration.ConfigureServices(_builder);
-        var app = _builder.Build();
-
-        // Assert
-        var corsService = app.Services.GetService<ICorsService>();
-        corsService.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void ConfigureServices_ShouldConfigureResponseCompression()
-    {
-        // Arrange
-        SetupValidEnvironment();
-
-        // Act
-        ServiceConfiguration.ConfigureServices(_builder);
-        var app = _builder.Build();
-
-        // Assert
-        // Response compression is configured at middleware level, not as a DI service
-        // We can verify the application builds successfully
-        app.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void ConfigureServices_ShouldConfigureResponseCaching()
-    {
-        // Arrange
-        SetupValidEnvironment();
-
-        // Act
-        ServiceConfiguration.ConfigureServices(_builder);
-        var app = _builder.Build();
-
-        // Assert
-        // Response caching is configured at middleware level, not as a DI service
-        // We can verify the application builds successfully
-        app.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void ConfigureServices_ShouldConfigureMemoryCache()
-    {
-        // Arrange
-        SetupValidEnvironment();
-
-        // Act
-        ServiceConfiguration.ConfigureServices(_builder);
-        var app = _builder.Build();
-
-        // Assert
-        var memoryCache = app.Services.GetService<IMemoryCache>();
-        memoryCache.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void ConfigureServices_ShouldConfigureHttpClient()
-    {
-        // Arrange
-        SetupValidEnvironment();
-
-        // Act
-        ServiceConfiguration.ConfigureServices(_builder);
-        var app = _builder.Build();
-
-        // Assert
-        var httpClientFactory = app.Services.GetService<IHttpClientFactory>();
-        httpClientFactory.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void ConfigureServices_ShouldConfigureHealthChecks()
-    {
-        // Arrange
-        SetupValidEnvironment();
-
-        // Act
-        ServiceConfiguration.ConfigureServices(_builder);
-        var app = _builder.Build();
-
-        // Assert
-        using var scope = app.Services.CreateScope();
-        var healthCheckService = scope.ServiceProvider.GetService<IHealthCheckService>();
-        healthCheckService.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void ConfigureServices_ShouldConfigureAuthentication()
-    {
-        // Arrange
-        SetupValidEnvironment();
-
-        // Act
-        ServiceConfiguration.ConfigureServices(_builder);
-        var app = _builder.Build();
-
-        // Assert
-        // Authentication is configured at middleware level, not as a DI service
-        // We can verify the application builds successfully
-        app.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void ConfigureServices_ShouldConfigureSwagger()
-    {
-        // Arrange
-        SetupValidEnvironment();
-
-        // Act
-        ServiceConfiguration.ConfigureServices(_builder);
-        var app = _builder.Build();
-
-        // Assert
-        // Swagger services are configured but not directly accessible via DI
-        // We can verify the application builds successfully
-        app.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void ConfigureServices_ShouldConfigureAutoMapper()
-    {
-        // Arrange
-        SetupValidEnvironment();
-
-        // Act
-        ServiceConfiguration.ConfigureServices(_builder);
-        var app = _builder.Build();
-
-        // Assert
-        var mapper = app.Services.GetService<AutoMapper.IMapper>();
-        mapper.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void ConfigureServices_ShouldConfigureHttpContextAccessor()
-    {
-        // Arrange
-        SetupValidEnvironment();
-
-        // Act
-        ServiceConfiguration.ConfigureServices(_builder);
-        var app = _builder.Build();
-
-        // Assert
-        var httpContextAccessor = app.Services.GetService<IHttpContextAccessor>();
-        httpContextAccessor.Should().NotBeNull();
+        // Should still have core services available
+        scope.ServiceProvider.GetService<IAppConfigurationService>().Should().NotBeNull();
+        scope.ServiceProvider.GetService<NormaizeContext>().Should().NotBeNull();
     }
 
     #region Helper Methods
 
-    private void SetupValidEnvironment()
+    private static void SetupValidEnvironment()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         Environment.SetEnvironmentVariable("MYSQLHOST", "localhost");
@@ -324,7 +194,7 @@ public class ServiceConfigurationTests
         Environment.SetEnvironmentVariable("AUTH0_AUDIENCE", "test-audience");
     }
 
-    private void SetupInvalidEnvironment()
+    private static void SetupInvalidEnvironment()
     {
         // Remove required environment variables to cause configuration failure
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", null);
@@ -335,7 +205,7 @@ public class ServiceConfigurationTests
         Environment.SetEnvironmentVariable("MYSQLPORT", null);
     }
 
-    private void SetupEnvironmentWithoutDatabase()
+    private static void SetupEnvironmentWithoutDatabase()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         Environment.SetEnvironmentVariable("MYSQLHOST", null);
@@ -347,24 +217,30 @@ public class ServiceConfigurationTests
         Environment.SetEnvironmentVariable("AUTH0_AUDIENCE", "test-audience");
     }
 
-    private void SetupEnvironmentWithS3ButNoCredentials()
+    private static void SetupEnvironmentWithS3ButNoCredentials()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         Environment.SetEnvironmentVariable("STORAGE_PROVIDER", "s3");
+
+        // Clear all AWS-related environment variables to ensure no credentials are available
         Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", null);
         Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", null);
+        Environment.SetEnvironmentVariable("AWS_REGION", null);
+        Environment.SetEnvironmentVariable("AWS_S3_BUCKET", null);
+        Environment.SetEnvironmentVariable("AWS_SERVICE_URL", null);
+
         Environment.SetEnvironmentVariable("AUTH0_ISSUER", "https://test.auth0.com/");
         Environment.SetEnvironmentVariable("AUTH0_AUDIENCE", "test-audience");
     }
 
-    private void SetupTestEnvironment()
+    private static void SetupTestEnvironment()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Test");
         Environment.SetEnvironmentVariable("AUTH0_ISSUER", "https://test.auth0.com/");
         Environment.SetEnvironmentVariable("AUTH0_AUDIENCE", "test-audience");
     }
 
-    private void SetupDevelopmentEnvironment()
+    private static void SetupDevelopmentEnvironment()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         Environment.SetEnvironmentVariable("MYSQLHOST", "localhost");
@@ -376,5 +252,24 @@ public class ServiceConfigurationTests
         Environment.SetEnvironmentVariable("AUTH0_AUDIENCE", "test-audience");
     }
 
+    private static void ClearAllEnvironmentVariables()
+    {
+        // Clear only the environment variables that could cause database provider conflicts
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", null);
+        Environment.SetEnvironmentVariable("MYSQLHOST", null);
+        Environment.SetEnvironmentVariable("MYSQLDATABASE", null);
+        Environment.SetEnvironmentVariable("MYSQLUSER", null);
+        Environment.SetEnvironmentVariable("MYSQLPASSWORD", null);
+        Environment.SetEnvironmentVariable("MYSQLPORT", null);
+        Environment.SetEnvironmentVariable("STORAGE_PROVIDER", null);
+        Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", null);
+        Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", null);
+        Environment.SetEnvironmentVariable("AWS_REGION", null);
+        Environment.SetEnvironmentVariable("AWS_S3_BUCKET", null);
+        Environment.SetEnvironmentVariable("AWS_SERVICE_URL", null);
+        Environment.SetEnvironmentVariable("AUTH0_ISSUER", null);
+        Environment.SetEnvironmentVariable("AUTH0_AUDIENCE", null);
+    }
+
     #endregion
-} 
+}

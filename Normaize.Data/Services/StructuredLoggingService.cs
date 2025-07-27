@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Logging;
 using Normaize.Core.Constants;
 using Normaize.Core.Interfaces;
+using Normaize.Core.Extensions;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
-using System.Security.Claims;
 
 namespace Normaize.Data.Services;
 
@@ -18,8 +18,10 @@ public class StructuredLoggingService : IStructuredLoggingService
 
     public StructuredLoggingService(ILogger<StructuredLoggingService> logger, IHttpContextAccessor httpContextAccessor)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(httpContextAccessor);
+        _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public IOperationContext CreateContext(string operationName, string correlationId, string? userId = null, Dictionary<string, object>? additionalContext = null)
@@ -42,7 +44,7 @@ public class StructuredLoggingService : IStructuredLoggingService
         ArgumentException.ThrowIfNullOrEmpty(step);
 
         context.Steps.Add(step);
-        
+
         if (additionalData != null)
         {
             foreach (var kvp in additionalData)
@@ -117,11 +119,11 @@ public class StructuredLoggingService : IStructuredLoggingService
     public void LogUserAction(string action, object? data, LogLevel level)
     {
         ValidateInput(action, nameof(action));
-        
+
         var userId = GetCurrentUserId();
         var userEmail = GetCurrentUserEmail();
         var requestContext = GetRequestContext();
-        
+
         var logData = new
         {
             Action = action,
@@ -131,10 +133,10 @@ public class StructuredLoggingService : IStructuredLoggingService
             RequestMethod = requestContext.Method,
             Timestamp = DateTime.UtcNow
         };
-        
-        _logger.Log(level, "User Action: {Action} by User: {UserId} ({UserEmail}) - Request: {Method} {Path}", 
+
+        _logger.Log(level, "User Action: {Action} by User: {UserId} ({UserEmail}) - Request: {Method} {Path}",
             action, logData.UserId, logData.UserEmail, requestContext.Method, requestContext.Path);
-        
+
         if (data != null)
         {
             _logger.Log(level, "Action Data: {@ActionData}", data);
@@ -148,29 +150,28 @@ public class StructuredLoggingService : IStructuredLoggingService
 
     public void LogException(Exception exception, string context, LogLevel level)
     {
-        if (exception == null)
-            throw new ArgumentNullException(nameof(exception));
-        
+        ArgumentNullException.ThrowIfNull(exception);
+
         var userId = GetCurrentUserId();
         var userEmail = GetCurrentUserEmail();
         var requestContext = GetRequestContext();
-        
+
         var exceptionData = new
         {
             Context = context,
             UserId = userId ?? AppConstants.Auth.AnonymousUser,
-            UserEmail = userEmail ?? "unknown",
+            UserEmail = userEmail ?? AppConstants.Messages.UNKNOWN,
             RequestPath = requestContext.Path,
             RequestMethod = requestContext.Method,
             ExceptionType = exception.GetType().Name,
             ExceptionMessage = exception.Message,
-            StackTrace = exception.StackTrace,
+            exception.StackTrace,
             Timestamp = DateTime.UtcNow
         };
 
-        _logger.Log(level, exception, 
-            "Exception in {Context} - User: {UserId} ({UserEmail}) - Request: {Method} {Path} - Type: {ExceptionType} - Message: {ExceptionMessage}", 
-            context, exceptionData.UserId, exceptionData.UserEmail, requestContext.Method, requestContext.Path, 
+        _logger.Log(level, exception,
+            "Exception in {Context} - User: {UserId} ({UserEmail}) - Request: {Method} {Path} - Type: {ExceptionType} - Message: {ExceptionMessage}",
+            context, exceptionData.UserId, exceptionData.UserEmail, requestContext.Method, requestContext.Path,
             exceptionData.ExceptionType, exceptionData.ExceptionMessage);
     }
 
@@ -183,18 +184,10 @@ public class StructuredLoggingService : IStructuredLoggingService
     {
         ValidateInput(method, nameof(method));
         ValidateInput(path, nameof(path));
-        
+
         var actualUserId = userId ?? GetCurrentUserId() ?? AppConstants.Auth.AnonymousUser;
-        
-        var requestData = new
-        {
-            Method = method,
-            Path = path,
-            UserId = actualUserId,
-            Timestamp = DateTime.UtcNow
-        };
-        
-        _logger.Log(level, "Request Started: {Method} {Path} by User: {UserId}", 
+
+        _logger.Log(level, "Request Started: {Method} {Path} by User: {UserId}",
             method, path, actualUserId);
     }
 
@@ -209,23 +202,13 @@ public class StructuredLoggingService : IStructuredLoggingService
         ValidateInput(path, nameof(path));
         ValidateStatusCode(statusCode);
         ValidateDuration(durationMs);
-        
+
         var actualUserId = userId ?? GetCurrentUserId() ?? AppConstants.Auth.AnonymousUser;
-        
-        var requestData = new
-        {
-            Method = method,
-            Path = path,
-            StatusCode = statusCode,
-            DurationMs = durationMs,
-            UserId = actualUserId,
-            Timestamp = DateTime.UtcNow
-        };
-        
+
         // Determine log level based on status code
         var finalLevel = statusCode >= 400 ? LogLevel.Warning : level;
-        
-        _logger.Log(finalLevel, "Request Completed: {Method} {Path} - Status: {StatusCode} - Duration: {DurationMs}ms - User: {UserId}", 
+
+        _logger.Log(finalLevel, "Request Completed: {Method} {Path} - Status: {StatusCode} - Duration: {DurationMs}ms - User: {UserId}",
             method, path, statusCode, durationMs, actualUserId);
     }
 
@@ -238,7 +221,7 @@ public class StructuredLoggingService : IStructuredLoggingService
     {
         ValidateInput(operation, nameof(operation));
         ValidateDuration(durationMs);
-        
+
         var userId = GetCurrentUserId();
         var userEmail = GetCurrentUserEmail();
 
@@ -250,10 +233,10 @@ public class StructuredLoggingService : IStructuredLoggingService
             UserEmail = userEmail ?? AppConstants.Messages.UNKNOWN,
             Timestamp = DateTime.UtcNow
         };
-        
-        _logger.Log(level, "Performance: {Operation} completed in {DurationMs}ms by User: {UserId} ({UserEmail})", 
+
+        _logger.Log(level, "Performance: {Operation} completed in {DurationMs}ms by User: {UserId} ({UserEmail})",
             operation, durationMs, performanceData.UserId, performanceData.UserEmail);
-        
+
         if (metadata != null)
         {
             _logger.Log(level, "Performance Metadata: {@Metadata}", metadata);
@@ -269,42 +252,19 @@ public class StructuredLoggingService : IStructuredLoggingService
     private string? GetCurrentUserId()
     {
         var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext == null)
+        if (httpContext?.User == null)
             return null;
-        var user = httpContext.User;
-        if (user == null)
-            return null;
-        
-        // Try to get from claims first
-        var userIdFromClaims = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!string.IsNullOrEmpty(userIdFromClaims))
-            return userIdFromClaims;
-        
-        // Fallback to sub claim (Auth0)
-        var subClaim = user.FindFirst("sub")?.Value;
-        if (!string.IsNullOrEmpty(subClaim))
-            return subClaim;
-        
-        // Fallback to name claim
-        return user.FindFirst(ClaimTypes.Name)?.Value;
+
+        return httpContext.User.GetUserIdWithFallback() ?? AppConstants.Auth.AnonymousUser;
     }
 
     private string? GetCurrentUserEmail()
     {
         var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext == null)
+        if (httpContext?.User == null)
             return null;
-        var user = httpContext.User;
-        if (user == null)
-            return null;
-        
-        // Try to get from claims first
-        var emailFromClaims = user.FindFirst(ClaimTypes.Email)?.Value;
-        if (!string.IsNullOrEmpty(emailFromClaims))
-            return emailFromClaims;
-        
-        // Fallback to Auth0 email claim
-        return user.FindFirst("email")?.Value;
+
+        return httpContext.User.GetUserEmail();
     }
 
     private (string Method, string Path) GetRequestContext()
@@ -312,7 +272,7 @@ public class StructuredLoggingService : IStructuredLoggingService
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext == null)
             return (AppConstants.Messages.UNKNOWN, AppConstants.Messages.UNKNOWN);
-        
+
         return (httpContext.Request.Method, httpContext.Request.Path.ToString());
     }
 
@@ -336,10 +296,36 @@ public class StructuredLoggingService : IStructuredLoggingService
 
     private class NoOpDisposable : IDisposable
     {
-        public void Dispose() { }
+        private bool _disposed;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose managed resources (none in this case)
+                }
+
+                // Dispose unmanaged resources (none in this case)
+
+                _disposed = true;
+            }
+        }
+
+        ~NoOpDisposable()
+        {
+            Dispose(false);
+        }
     }
 
-    private class OperationContext : IOperationContext
+    private sealed class OperationContext : IOperationContext
     {
         public string OperationName { get; set; } = string.Empty;
         public string CorrelationId { get; set; } = string.Empty;
@@ -362,4 +348,4 @@ public class StructuredLoggingService : IStructuredLoggingService
             return defaultValue;
         }
     }
-} 
+}

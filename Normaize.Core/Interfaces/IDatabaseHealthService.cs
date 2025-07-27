@@ -9,7 +9,7 @@ public class DatabaseHealthResult
 {
     public bool IsHealthy { get; set; }
     public string Status { get; set; } = string.Empty;
-    public List<string> MissingColumns { get; set; } = new();
+    public List<string> MissingColumns { get; set; } = [];
     public string? ErrorMessage { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-} 
+}

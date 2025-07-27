@@ -1,0 +1,166 @@
+name: Code Quality
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  DOTNET_VERSION: '9.0.x'
+
+jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Check code formatting
+      id: format-check
+      run: |
+        echo "## 🎨 Code Formatting Check" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Check if code is properly formatted
+        if dotnet format --verify-no-changes --verbosity normal; then
+          echo "✅ Code formatting is consistent" >> $GITHUB_STEP_SUMMARY
+          echo "formatted=true" >> $GITHUB_OUTPUT
+        else
+          echo "⚠️ Code formatting issues found. Run 'dotnet format' to fix." >> $GITHUB_STEP_SUMMARY
+          echo "formatted=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Run code analysis
+      id: analysis
+      run: |
+        echo "## 🔍 Code Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Build with warnings as errors
+        if dotnet build --no-restore --configuration Release /p:TreatWarningsAsErrors=true; then
+          echo "✅ No code analysis issues found" >> $GITHUB_STEP_SUMMARY
+          echo "analysis_passed=true" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Code analysis issues found" >> $GITHUB_STEP_SUMMARY
+          echo "analysis_passed=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Check for TODO comments
+      id: todo-check
+      run: |
+        echo "## 📝 Code Comments Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Find TODO, FIXME, HACK comments
+        todo_count=$(grep -r "TODO\|FIXME\|HACK" --include="*.cs" --include="*.csproj" . | wc -l)
+        
+        if [ $todo_count -eq 0 ]; then
+          echo "✅ No TODO/FIXME/HACK comments found" >> $GITHUB_STEP_SUMMARY
+          echo "todos_found=false" >> $GITHUB_OUTPUT
+        else
+          echo "⚠️ Found $todo_count TODO/FIXME/HACK comments:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -r "TODO\|FIXME\|HACK" --include="*.cs" --include="*.csproj" . | head -5 >> $GITHUB_STEP_SUMMARY
+          if [ $todo_count -gt 5 ]; then
+            echo "... and $((todo_count - 5)) more" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "todos_found=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Check .cs file sizes (>1000 lines)
+      id: file-size-check
+      run: |
+        echo "## 📁 File Size Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+    
+        # Find .cs files with more than 1000 lines, safely handling spaces in filenames
+        large_files=$(
+          find . -name "*.cs" -type f -print0 \
+          | xargs -0 wc -l \
+          | awk '$2 != "total" && $1 > 1000 {print $1 " lines: " $2}'
+        )
+    
+        if [ -z "$large_files" ]; then
+          echo "✅ No excessively large files found" >> $GITHUB_STEP_SUMMARY
+          echo "large_files_found=false" >> $GITHUB_OUTPUT
+        else
+          echo "⚠️ Found large files (>1000 lines):" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$large_files" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "large_files_found=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Generate Quality Report
+      run: |
+        echo "## 📊 Code Quality Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.format-check.outputs.formatted }}" == "true" ] && [ "${{ steps.analysis.outputs.analysis_passed }}" == "true" ]; then
+          echo "🎉 **Overall Quality**: ✅ Excellent" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ steps.format-check.outputs.formatted }}" == "true" ] || [ "${{ steps.analysis.outputs.analysis_passed }}" == "true" ]; then
+          echo "⚠️ **Overall Quality**: ⚠️ Good (with minor issues)" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Overall Quality**: ❌ Needs attention" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Detailed Results:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Formatting**: ${{ steps.format-check.outputs.formatted == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Analysis**: ${{ steps.analysis.outputs.analysis_passed == 'true' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **TODOs**: ${{ steps.todo-check.outputs.todos_found == 'true' && '⚠️' || '✅' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **File Sizes**: ${{ steps.file-size-check.outputs.large_files_found == 'true' && '⚠️' || '✅' }}" >> $GITHUB_STEP_SUMMARY
+
+    - name: Comment PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const formatStatus = '${{ steps.format-check.outputs.formatted }}' === 'true' ? '✅ Consistent' : '❌ Issues found';
+          const formatAction = '${{ steps.format-check.outputs.formatted }}' === 'false' ? 'Run `dotnet format` to fix' : 'No action needed';
+          const analysisStatus = '${{ steps.analysis.outputs.analysis_passed }}' === 'true' ? '✅ Clean' : '❌ Issues found';
+          const analysisAction = '${{ steps.analysis.outputs.analysis_passed }}' === 'false' ? 'Fix compiler warnings' : 'No action needed';
+          const todoStatus = '${{ steps.todo-check.outputs.todos_found }}' === 'true' ? '⚠️ Found' : '✅ Clean';
+          const fileSizeStatus = '${{ steps.file-size-check.outputs.large_files_found }}' === 'true' ? '⚠️ Large files detected' : '✅ Good';
+
+          const quality = `## 📊 Code Quality Report
+
+          ### 🎨 Formatting
+          - **Status**: ${formatStatus}
+          - **Action**: ${formatAction}
+
+          ### 🔍 Analysis
+          - **Status**: ${analysisStatus}
+          - **Action**: ${analysisAction}
+
+          ### 📝 Code Comments
+          - **TODOs**: ${todoStatus}
+          - **File Sizes**: ${fileSizeStatus}
+
+          ---
+          *This report was automatically generated by GitHub Actions*`;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: quality
+          }); 

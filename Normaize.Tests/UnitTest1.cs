@@ -40,4 +40,4 @@ public class BasicTests
         number.Should().BeLessThan(100);
         number.Should().Be(42);
     }
-} 
+}

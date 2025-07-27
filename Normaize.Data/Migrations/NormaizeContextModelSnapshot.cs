@@ -296,6 +296,163 @@ namespace Normaize.Data.Migrations
                     b.ToTable("DataSetRows");
                 });
 
+            modelBuilder.Entity("Normaize.Core.Models.UserSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("AllowDataUsageForImprovement")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("AutoProcessUploads")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("CompactMode")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DateFormat")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasDefaultValue("MM/dd/yyyy");
+
+                    b.Property<string>("DefaultFileType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasDefaultValue("CSV");
+
+                    b.Property<int>("DefaultPageSize")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(20);
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<bool>("EmailNotificationsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("EnableDataValidation")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("EnableSchemaInference")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("ErrorNotifications")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasDefaultValue("en");
+
+                    b.Property<int>("MaxPreviewRows")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(100);
+
+                    b.Property<bool>("ProcessingCompleteNotifications")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("PushNotificationsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("ShareAnalytics")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("ShowProcessingTime")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("ShowTutorials")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Theme")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasDefaultValue("light");
+
+                    b.Property<string>("TimeFormat")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasDefaultValue("12h");
+
+                    b.Property<string>("TimeZone")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasDefaultValue("UTC");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<bool>("WeeklyDigestEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("UpdatedAt");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("UserSettings");
+                });
+
             modelBuilder.Entity("Normaize.Core.Models.Analysis", b =>
                 {
                     b.HasOne("Normaize.Core.Models.DataSet", "ComparisonDataSet")

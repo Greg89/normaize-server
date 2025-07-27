@@ -17,25 +17,25 @@ public class MiddlewareConfigurationTests
         var builder = WebApplication.CreateBuilder();
         var mockAppConfigService = new Mock<IAppConfigurationService>();
         var mockLoggingService = new Mock<IStructuredLoggingService>();
-        
+
         mockAppConfigService.Setup(x => x.GetEnvironment()).Returns("Development");
         mockAppConfigService.Setup(x => x.GetHttpsPort()).Returns((string?)null);
-        
+
         builder.Services.AddSingleton(mockAppConfigService.Object);
         builder.Services.AddSingleton(mockLoggingService.Object);
-        
+
         // Add all required services that middleware expects
         builder.Services.AddControllers();
         builder.Services.AddAuthentication();
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("Development", policy => 
+            options.AddPolicy("Development", policy =>
                 policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
                       .AllowCredentials());
-            options.AddPolicy("Beta", policy => 
+            options.AddPolicy("Beta", policy =>
                 policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
@@ -44,13 +44,13 @@ public class MiddlewareConfigurationTests
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddSwaggerGen();
-        
+
         var app = builder.Build();
 
         // Act & Assert
         var action = () => MiddlewareConfiguration.ConfigureMiddleware(app);
         action.Should().NotThrow();
-        
+
         // Verify logging was called
         mockLoggingService.Verify(x => x.LogUserAction(It.IsAny<string>(), It.IsAny<object>()), Times.AtLeastOnce);
     }
@@ -61,7 +61,7 @@ public class MiddlewareConfigurationTests
         // Arrange
         var builder = WebApplication.CreateBuilder();
         var mockLoggingService = new Mock<IStructuredLoggingService>();
-        
+
         // Don't register IAppConfigurationService to simulate null scenario
         builder.Services.AddSingleton(mockLoggingService.Object);
         builder.Services.AddControllers();
@@ -69,12 +69,12 @@ public class MiddlewareConfigurationTests
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("Development", policy => 
+            options.AddPolicy("Development", policy =>
                 policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
                       .AllowCredentials());
-            options.AddPolicy("Beta", policy => 
+            options.AddPolicy("Beta", policy =>
                 policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
@@ -88,7 +88,7 @@ public class MiddlewareConfigurationTests
         // Act & Assert
         var action = () => MiddlewareConfiguration.ConfigureMiddleware(app);
         action.Should().NotThrow();
-        
+
         // Verify logging was called
         mockLoggingService.Verify(x => x.LogUserAction(It.IsAny<string>(), It.IsAny<object>()), Times.AtLeastOnce);
     }
@@ -105,25 +105,25 @@ public class MiddlewareConfigurationTests
         var builder = WebApplication.CreateBuilder();
         var mockAppConfigService = new Mock<IAppConfigurationService>();
         var mockLoggingService = new Mock<IStructuredLoggingService>();
-        
+
         mockAppConfigService.Setup(x => x.GetEnvironment()).Returns(environment ?? "Development");
         mockAppConfigService.Setup(x => x.GetHttpsPort()).Returns((string?)null);
-        
+
         builder.Services.AddSingleton(mockAppConfigService.Object);
         builder.Services.AddSingleton(mockLoggingService.Object);
-        
+
         // Add all required services
         builder.Services.AddControllers();
         builder.Services.AddAuthentication();
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("Development", policy => 
+            options.AddPolicy("Development", policy =>
                 policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
                       .AllowCredentials());
-            options.AddPolicy("Beta", policy => 
+            options.AddPolicy("Beta", policy =>
                 policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
@@ -132,13 +132,13 @@ public class MiddlewareConfigurationTests
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddSwaggerGen();
-        
+
         var app = builder.Build();
 
         // Act & Assert
         var action = () => MiddlewareConfiguration.ConfigureMiddleware(app);
         action.Should().NotThrow();
-        
+
         // Verify logging was called
         mockLoggingService.Verify(x => x.LogUserAction(It.IsAny<string>(), It.IsAny<object>()), Times.AtLeastOnce);
     }
@@ -153,25 +153,25 @@ public class MiddlewareConfigurationTests
         var builder = WebApplication.CreateBuilder();
         var mockAppConfigService = new Mock<IAppConfigurationService>();
         var mockLoggingService = new Mock<IStructuredLoggingService>();
-        
+
         mockAppConfigService.Setup(x => x.GetEnvironment()).Returns(environment ?? "Development");
         mockAppConfigService.Setup(x => x.GetHttpsPort()).Returns((string?)null);
-        
+
         builder.Services.AddSingleton(mockAppConfigService.Object);
         builder.Services.AddSingleton(mockLoggingService.Object);
-        
+
         // Add all required services
         builder.Services.AddControllers();
         builder.Services.AddAuthentication();
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("Development", policy => 
+            options.AddPolicy("Development", policy =>
                 policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
                       .AllowCredentials());
-            options.AddPolicy("Beta", policy => 
+            options.AddPolicy("Beta", policy =>
                 policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
@@ -180,13 +180,13 @@ public class MiddlewareConfigurationTests
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddSwaggerGen();
-        
+
         var app = builder.Build();
 
         // Act & Assert
         var action = () => MiddlewareConfiguration.ConfigureMiddleware(app);
         action.Should().NotThrow();
-        
+
         // Verify logging was called
         mockLoggingService.Verify(x => x.LogUserAction(It.IsAny<string>(), It.IsAny<object>()), Times.AtLeastOnce);
     }
@@ -202,25 +202,25 @@ public class MiddlewareConfigurationTests
         var builder = WebApplication.CreateBuilder();
         var mockAppConfigService = new Mock<IAppConfigurationService>();
         var mockLoggingService = new Mock<IStructuredLoggingService>();
-        
+
         mockAppConfigService.Setup(x => x.GetEnvironment()).Returns("Production");
         mockAppConfigService.Setup(x => x.GetHttpsPort()).Returns(invalidPort);
-        
+
         builder.Services.AddSingleton(mockAppConfigService.Object);
         builder.Services.AddSingleton(mockLoggingService.Object);
-        
+
         // Add all required services
         builder.Services.AddControllers();
         builder.Services.AddAuthentication();
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("Development", policy => 
+            options.AddPolicy("Development", policy =>
                 policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
                       .AllowCredentials());
-            options.AddPolicy("Beta", policy => 
+            options.AddPolicy("Beta", policy =>
                 policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
@@ -229,13 +229,13 @@ public class MiddlewareConfigurationTests
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddSwaggerGen();
-        
+
         var app = builder.Build();
 
         // Act & Assert
         var action = () => MiddlewareConfiguration.ConfigureMiddleware(app);
         action.Should().NotThrow();
-        
+
         // Verify logging was called
         mockLoggingService.Verify(x => x.LogUserAction(It.IsAny<string>(), It.IsAny<object>()), Times.AtLeastOnce);
     }
@@ -250,25 +250,25 @@ public class MiddlewareConfigurationTests
         var builder = WebApplication.CreateBuilder();
         var mockAppConfigService = new Mock<IAppConfigurationService>();
         var mockLoggingService = new Mock<IStructuredLoggingService>();
-        
+
         mockAppConfigService.Setup(x => x.GetEnvironment()).Returns("Production");
         mockAppConfigService.Setup(x => x.GetHttpsPort()).Returns(validPort);
-        
+
         builder.Services.AddSingleton(mockAppConfigService.Object);
         builder.Services.AddSingleton(mockLoggingService.Object);
-        
+
         // Add all required services
         builder.Services.AddControllers();
         builder.Services.AddAuthentication();
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("Development", policy => 
+            options.AddPolicy("Development", policy =>
                 policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
                       .AllowCredentials());
-            options.AddPolicy("Beta", policy => 
+            options.AddPolicy("Beta", policy =>
                 policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
@@ -277,13 +277,13 @@ public class MiddlewareConfigurationTests
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddSwaggerGen();
-        
+
         var app = builder.Build();
 
         // Act & Assert
         var action = () => MiddlewareConfiguration.ConfigureMiddleware(app);
         action.Should().NotThrow();
-        
+
         // Verify logging was called
         mockLoggingService.Verify(x => x.LogUserAction(It.IsAny<string>(), It.IsAny<object>()), Times.AtLeastOnce);
     }
@@ -295,25 +295,25 @@ public class MiddlewareConfigurationTests
         var builder = WebApplication.CreateBuilder();
         var mockAppConfigService = new Mock<IAppConfigurationService>();
         var mockLoggingService = new Mock<IStructuredLoggingService>();
-        
+
         mockAppConfigService.Setup(x => x.GetEnvironment()).Throws(new InvalidOperationException("Test exception"));
         mockAppConfigService.Setup(x => x.GetHttpsPort()).Returns((string?)null);
-        
+
         builder.Services.AddSingleton(mockAppConfigService.Object);
         builder.Services.AddSingleton(mockLoggingService.Object);
-        
+
         // Add all required services
         builder.Services.AddControllers();
         builder.Services.AddAuthentication();
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("Development", policy => 
+            options.AddPolicy("Development", policy =>
                 policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
                       .AllowCredentials());
-            options.AddPolicy("Beta", policy => 
+            options.AddPolicy("Beta", policy =>
                 policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
@@ -322,13 +322,13 @@ public class MiddlewareConfigurationTests
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddSwaggerGen();
-        
+
         var app = builder.Build();
 
         // Act & Assert
         var action = () => MiddlewareConfiguration.ConfigureMiddleware(app);
         action.Should().NotThrow();
-        
+
         // Verify exception was logged
         mockLoggingService.Verify(x => x.LogException(It.IsAny<Exception>(), It.IsAny<string>()), Times.AtLeastOnce);
         // Verify configuration still completed
@@ -342,25 +342,25 @@ public class MiddlewareConfigurationTests
         var builder = WebApplication.CreateBuilder();
         var mockAppConfigService = new Mock<IAppConfigurationService>();
         var mockLoggingService = new Mock<IStructuredLoggingService>();
-        
+
         mockAppConfigService.Setup(x => x.GetEnvironment()).Throws(new InvalidOperationException("Environment exception"));
         mockAppConfigService.Setup(x => x.GetHttpsPort()).Throws(new InvalidOperationException("HTTPS port exception"));
-        
+
         builder.Services.AddSingleton(mockAppConfigService.Object);
         builder.Services.AddSingleton(mockLoggingService.Object);
-        
+
         // Add all required services
         builder.Services.AddControllers();
         builder.Services.AddAuthentication();
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("Development", policy => 
+            options.AddPolicy("Development", policy =>
                 policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
                       .AllowCredentials());
-            options.AddPolicy("Beta", policy => 
+            options.AddPolicy("Beta", policy =>
                 policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
@@ -369,13 +369,13 @@ public class MiddlewareConfigurationTests
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddSwaggerGen();
-        
+
         var app = builder.Build();
 
         // Act & Assert
         var action = () => MiddlewareConfiguration.ConfigureMiddleware(app);
         action.Should().NotThrow();
-        
+
         // Verify exceptions were logged
         mockLoggingService.Verify(x => x.LogException(It.IsAny<Exception>(), It.IsAny<string>()), Times.AtLeastOnce);
         // Verify configuration still completed
@@ -389,25 +389,25 @@ public class MiddlewareConfigurationTests
         var builder = WebApplication.CreateBuilder();
         var mockAppConfigService = new Mock<IAppConfigurationService>();
         var mockLoggingService = new Mock<IStructuredLoggingService>();
-        
+
         mockAppConfigService.Setup(x => x.GetEnvironment()).Returns("Development");
         mockAppConfigService.Setup(x => x.GetHttpsPort()).Returns((string?)null);
-        
+
         builder.Services.AddSingleton(mockAppConfigService.Object);
         builder.Services.AddSingleton(mockLoggingService.Object);
-        
+
         // Add all required services
         builder.Services.AddControllers();
         builder.Services.AddAuthentication();
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("Development", policy => 
+            options.AddPolicy("Development", policy =>
                 policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
                       .AllowCredentials());
-            options.AddPolicy("Beta", policy => 
+            options.AddPolicy("Beta", policy =>
                 policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
@@ -416,13 +416,13 @@ public class MiddlewareConfigurationTests
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddSwaggerGen();
-        
+
         var app = builder.Build();
 
         // Act & Assert
         var action = () => MiddlewareConfiguration.ConfigureMiddleware(app);
         action.Should().NotThrow();
-        
+
         // Verify logging was called
         mockLoggingService.Verify(x => x.LogUserAction(It.IsAny<string>(), It.IsAny<object>()), Times.AtLeastOnce);
     }
@@ -434,25 +434,25 @@ public class MiddlewareConfigurationTests
         var builder = WebApplication.CreateBuilder();
         var mockAppConfigService = new Mock<IAppConfigurationService>();
         var mockLoggingService = new Mock<IStructuredLoggingService>();
-        
+
         mockAppConfigService.Setup(x => x.GetEnvironment()).Returns("Development");
         mockAppConfigService.Setup(x => x.GetHttpsPort()).Returns("8443");
-        
+
         builder.Services.AddSingleton(mockAppConfigService.Object);
         builder.Services.AddSingleton(mockLoggingService.Object);
-        
+
         // Add all required services
         builder.Services.AddControllers();
         builder.Services.AddAuthentication();
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("Development", policy => 
+            options.AddPolicy("Development", policy =>
                 policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
                       .AllowCredentials());
-            options.AddPolicy("Beta", policy => 
+            options.AddPolicy("Beta", policy =>
                 policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
@@ -461,9 +461,9 @@ public class MiddlewareConfigurationTests
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddSwaggerGen();
-        
+
         var app = builder.Build();
-        
+
         // Set the environment to Development so Swagger gets configured
         app.Environment.EnvironmentName = "Development";
 
@@ -484,25 +484,25 @@ public class MiddlewareConfigurationTests
         // Arrange
         var builder = WebApplication.CreateBuilder();
         var mockAppConfigService = new Mock<IAppConfigurationService>();
-        
+
         mockAppConfigService.Setup(x => x.GetEnvironment()).Returns("Development");
         mockAppConfigService.Setup(x => x.GetHttpsPort()).Returns((string?)null);
-        
+
         builder.Services.AddSingleton(mockAppConfigService.Object);
         // Don't register IStructuredLoggingService to simulate null scenario
-        
+
         // Add all required services
         builder.Services.AddControllers();
         builder.Services.AddAuthentication();
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("Development", policy => 
+            options.AddPolicy("Development", policy =>
                 policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
                       .AllowCredentials());
-            options.AddPolicy("Beta", policy => 
+            options.AddPolicy("Beta", policy =>
                 policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
@@ -511,7 +511,7 @@ public class MiddlewareConfigurationTests
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddSwaggerGen();
-        
+
         var app = builder.Build();
 
         // Act & Assert
@@ -526,25 +526,25 @@ public class MiddlewareConfigurationTests
         var builder = WebApplication.CreateBuilder();
         var mockAppConfigService = new Mock<IAppConfigurationService>();
         var mockLoggingService = new Mock<IStructuredLoggingService>();
-        
+
         mockAppConfigService.Setup(x => x.GetEnvironment()).Returns("Beta");
         mockAppConfigService.Setup(x => x.GetHttpsPort()).Returns((string?)null);
-        
+
         builder.Services.AddSingleton(mockAppConfigService.Object);
         builder.Services.AddSingleton(mockLoggingService.Object);
-        
+
         // Add all required services
         builder.Services.AddControllers();
         builder.Services.AddAuthentication();
         builder.Services.AddAuthorization();
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("Development", policy => 
+            options.AddPolicy("Development", policy =>
                 policy.WithOrigins("http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
                       .AllowCredentials());
-            options.AddPolicy("Beta", policy => 
+            options.AddPolicy("Beta", policy =>
                 policy.WithOrigins("https://beta.normaize.com", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080")
                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                       .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
@@ -553,14 +553,14 @@ public class MiddlewareConfigurationTests
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddSwaggerGen();
-        
+
         var app = builder.Build();
 
         // Act
         MiddlewareConfiguration.ConfigureMiddleware(app);
 
         // Assert - Verify Beta policy was used
-        mockLoggingService.Verify(x => x.LogUserAction("CORS configured with Beta policy", It.Is<object>(o => 
+        mockLoggingService.Verify(x => x.LogUserAction("CORS configured with Beta policy", It.Is<object>(o =>
             o != null && o.ToString() != null && o.ToString()!.Contains("Environment") && o.ToString()!.Contains("Beta") && o.ToString()!.Contains("Policy") && o.ToString()!.Contains("Beta"))), Times.Once);
     }
-} 
+}

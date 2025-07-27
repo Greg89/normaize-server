@@ -67,7 +67,7 @@ public class AnalysisRepository : IAnalysisRepository
         analysis.IsDeleted = true;
         analysis.DeletedAt = DateTime.UtcNow;
         analysis.DeletedBy = "System"; // This will be updated by the service layer
-        
+
         await _context.SaveChangesAsync();
         return true;
     }
@@ -93,7 +93,7 @@ public class AnalysisRepository : IAnalysisRepository
         analysis.IsDeleted = false;
         analysis.DeletedAt = null;
         analysis.DeletedBy = null;
-        
+
         await _context.SaveChangesAsync();
         return true;
     }
@@ -142,4 +142,4 @@ public class AnalysisRepository : IAnalysisRepository
     {
         return await _context.Analyses.AnyAsync(a => a.Id == id && !a.IsDeleted);
     }
-} 
+}

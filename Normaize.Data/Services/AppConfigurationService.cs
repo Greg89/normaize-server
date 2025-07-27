@@ -13,7 +13,8 @@ public class AppConfigurationService : IAppConfigurationService
 
     public AppConfigurationService(ILogger<AppConfigurationService> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public void LoadEnvironmentVariables()
@@ -30,7 +31,7 @@ public class AppConfigurationService : IAppConfigurationService
             {
                 var currentDir = Directory.GetCurrentDirectory();
                 var projectRoot = currentDir;
-                
+
                 while (!File.Exists(Path.Combine(projectRoot, ".env")) && Directory.GetParent(projectRoot) != null)
                 {
                     projectRoot = Directory.GetParent(projectRoot)?.FullName ?? projectRoot;
@@ -53,37 +54,37 @@ public class AppConfigurationService : IAppConfigurationService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading environment variables");
-                throw;
+                throw new InvalidOperationException("Failed to load environment variables", ex);
             }
         }
     }
 
-    public string GetEnvironment() => 
+    public string GetEnvironment() =>
         Environment.GetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT) ?? AppConstants.Environment.DEVELOPMENT;
 
-    public string? GetSeqUrl() => 
+    public string? GetSeqUrl() =>
         Environment.GetEnvironmentVariable("SEQ_URL");
 
-    public string? GetSeqApiKey() => 
+    public string? GetSeqApiKey() =>
         Environment.GetEnvironmentVariable("SEQ_API_KEY");
 
     public DatabaseConfig GetDatabaseConfig()
     {
-        var mysqlHost = Environment.GetEnvironmentVariable("MYSQLHOST") ?? 
-                        Environment.GetEnvironmentVariable("MYSQL_HOST") ?? 
+        var mysqlHost = Environment.GetEnvironmentVariable("MYSQLHOST") ??
+                        Environment.GetEnvironmentVariable("MYSQL_HOST") ??
                         Environment.GetEnvironmentVariable("DB_HOST");
-        var mysqlDatabase = Environment.GetEnvironmentVariable("MYSQLDATABASE") ?? 
-                           Environment.GetEnvironmentVariable("MYSQL_DATABASE") ?? 
+        var mysqlDatabase = Environment.GetEnvironmentVariable("MYSQLDATABASE") ??
+                           Environment.GetEnvironmentVariable("MYSQL_DATABASE") ??
                            Environment.GetEnvironmentVariable("DB_NAME");
-        var mysqlUser = Environment.GetEnvironmentVariable("MYSQLUSER") ?? 
-                       Environment.GetEnvironmentVariable("MYSQL_USER") ?? 
+        var mysqlUser = Environment.GetEnvironmentVariable("MYSQLUSER") ??
+                       Environment.GetEnvironmentVariable("MYSQL_USER") ??
                        Environment.GetEnvironmentVariable("DB_USER");
-        var mysqlPassword = Environment.GetEnvironmentVariable("MYSQLPASSWORD") ?? 
-                           Environment.GetEnvironmentVariable("MYSQL_PASSWORD") ?? 
+        var mysqlPassword = Environment.GetEnvironmentVariable("MYSQLPASSWORD") ??
+                           Environment.GetEnvironmentVariable("MYSQL_PASSWORD") ??
                            Environment.GetEnvironmentVariable("DB_PASSWORD");
-        var mysqlPort = Environment.GetEnvironmentVariable("MYSQLPORT") ?? 
-                       Environment.GetEnvironmentVariable("MYSQL_PORT") ?? 
-                       Environment.GetEnvironmentVariable("DB_PORT") ?? 
+        var mysqlPort = Environment.GetEnvironmentVariable("MYSQLPORT") ??
+                       Environment.GetEnvironmentVariable("MYSQL_PORT") ??
+                       Environment.GetEnvironmentVariable("DB_PORT") ??
                        "3306";
 
         return new DatabaseConfig
@@ -99,13 +100,13 @@ public class AppConfigurationService : IAppConfigurationService
     public bool HasDatabaseConnection()
     {
         var config = GetDatabaseConfig();
-        var hasConnection = !string.IsNullOrEmpty(config.Host) && 
-                           !string.IsNullOrEmpty(config.Database) && 
-                           !string.IsNullOrEmpty(config.User) && 
+        var hasConnection = !string.IsNullOrEmpty(config.Host) &&
+                           !string.IsNullOrEmpty(config.Database) &&
+                           !string.IsNullOrEmpty(config.User) &&
                            !string.IsNullOrEmpty(config.Password);
 
         _logger.LogDebug("Database connection check: Host={Host}, Database={Database}, User={User}, HasConnection={HasConnection}",
-            !string.IsNullOrEmpty(config.Host), !string.IsNullOrEmpty(config.Database), !string.IsNullOrEmpty(config.User), 
+            !string.IsNullOrEmpty(config.Host), !string.IsNullOrEmpty(config.Database), !string.IsNullOrEmpty(config.User),
             hasConnection);
 
         return hasConnection;
@@ -118,7 +119,7 @@ public class AppConfigurationService : IAppConfigurationService
                               environment.Equals("Staging", StringComparison.OrdinalIgnoreCase) ||
                               environment.Equals("Beta", StringComparison.OrdinalIgnoreCase);
 
-        _logger.LogDebug("Production-like environment check: Environment={Environment}, IsProductionLike={IsProductionLike}", 
+        _logger.LogDebug("Production-like environment check: Environment={Environment}, IsProductionLike={IsProductionLike}",
             environment, isProductionLike);
 
         return isProductionLike;
@@ -138,9 +139,9 @@ public class AppConfigurationService : IAppConfigurationService
         return isContainerized;
     }
 
-    public string GetPort() => 
+    public string GetPort() =>
         Environment.GetEnvironmentVariable("PORT") ?? "5000";
 
-    public string? GetHttpsPort() => 
+    public string? GetHttpsPort() =>
         Environment.GetEnvironmentVariable("HTTPS_PORT");
-} 
+}

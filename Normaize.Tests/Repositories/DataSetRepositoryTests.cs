@@ -21,7 +21,7 @@ public class DataSetRepositoryTests : IDisposable
 
         _context = new NormaizeContext(options);
         _repository = new DataSetRepository(_context);
-        
+
         // Seed test data
         SeedTestData();
     }
@@ -392,5 +392,6 @@ public class DataSetRepositoryTests : IDisposable
     public void Dispose()
     {
         _context?.Dispose();
+        GC.SuppressFinalize(this);
     }
-} 
+}

@@ -13,12 +13,12 @@ public class IConfigurationValidationServiceTests
         var interfaceType = typeof(IConfigurationValidationService);
 
         // Assert
-        interfaceType.GetMethod("ValidateConfiguration", new[] { typeof(CancellationToken) })!.Should().NotBeNull();
-        interfaceType.GetMethod("ValidateDatabaseConfiguration", new[] { typeof(CancellationToken) })!.Should().NotBeNull();
-        interfaceType.GetMethod("ValidateSecurityConfiguration", new[] { typeof(CancellationToken) })!.Should().NotBeNull();
-        interfaceType.GetMethod("ValidateStorageConfiguration", new[] { typeof(CancellationToken) })!.Should().NotBeNull();
-        interfaceType.GetMethod("ValidateCachingConfiguration", new[] { typeof(CancellationToken) })!.Should().NotBeNull();
-        interfaceType.GetMethod("ValidatePerformanceConfiguration", new[] { typeof(CancellationToken) })!.Should().NotBeNull();
+        interfaceType.GetMethod("ValidateConfiguration", [typeof(CancellationToken)])!.Should().NotBeNull();
+        interfaceType.GetMethod("ValidateDatabaseConfiguration", [typeof(CancellationToken)])!.Should().NotBeNull();
+        interfaceType.GetMethod("ValidateSecurityConfiguration", [typeof(CancellationToken)])!.Should().NotBeNull();
+        interfaceType.GetMethod("ValidateStorageConfiguration", [typeof(CancellationToken)])!.Should().NotBeNull();
+        interfaceType.GetMethod("ValidateCachingConfiguration", [typeof(CancellationToken)])!.Should().NotBeNull();
+        interfaceType.GetMethod("ValidatePerformanceConfiguration", [typeof(CancellationToken)])!.Should().NotBeNull();
     }
 
     [Fact]
@@ -28,12 +28,12 @@ public class IConfigurationValidationServiceTests
         var interfaceType = typeof(IConfigurationValidationService);
 
         // Assert
-        interfaceType.GetMethod("ValidateConfiguration", new[] { typeof(CancellationToken) })!.ReturnType.Should().Be(typeof(ConfigurationValidationResult));
-        interfaceType.GetMethod("ValidateDatabaseConfiguration", new[] { typeof(CancellationToken) })!.ReturnType.Should().Be(typeof(ConfigurationValidationResult));
-        interfaceType.GetMethod("ValidateSecurityConfiguration", new[] { typeof(CancellationToken) })!.ReturnType.Should().Be(typeof(ConfigurationValidationResult));
-        interfaceType.GetMethod("ValidateStorageConfiguration", new[] { typeof(CancellationToken) })!.ReturnType.Should().Be(typeof(ConfigurationValidationResult));
-        interfaceType.GetMethod("ValidateCachingConfiguration", new[] { typeof(CancellationToken) })!.ReturnType.Should().Be(typeof(ConfigurationValidationResult));
-        interfaceType.GetMethod("ValidatePerformanceConfiguration", new[] { typeof(CancellationToken) })!.ReturnType.Should().Be(typeof(ConfigurationValidationResult));
+        interfaceType.GetMethod("ValidateConfiguration", [typeof(CancellationToken)])!.ReturnType.Should().Be<ConfigurationValidationResult>();
+        interfaceType.GetMethod("ValidateDatabaseConfiguration", [typeof(CancellationToken)])!.ReturnType.Should().Be<ConfigurationValidationResult>();
+        interfaceType.GetMethod("ValidateSecurityConfiguration", [typeof(CancellationToken)])!.ReturnType.Should().Be<ConfigurationValidationResult>();
+        interfaceType.GetMethod("ValidateStorageConfiguration", [typeof(CancellationToken)])!.ReturnType.Should().Be<ConfigurationValidationResult>();
+        interfaceType.GetMethod("ValidateCachingConfiguration", [typeof(CancellationToken)])!.ReturnType.Should().Be<ConfigurationValidationResult>();
+        interfaceType.GetMethod("ValidatePerformanceConfiguration", [typeof(CancellationToken)])!.ReturnType.Should().Be<ConfigurationValidationResult>();
     }
 
     [Fact]
@@ -52,10 +52,10 @@ public class IConfigurationValidationServiceTests
         };
         foreach (var name in methodNames)
         {
-            var method = interfaceType.GetMethod(name, new[] { typeof(CancellationToken) });
+            var method = interfaceType.GetMethod(name, [typeof(CancellationToken)]);
             method.Should().NotBeNull();
             method!.GetParameters().Should().HaveCount(1);
-            method.GetParameters()[0].ParameterType.Should().Be(typeof(CancellationToken));
+            method.GetParameters()[0].ParameterType.Should().Be<CancellationToken>();
         }
     }
-} 
+}
