@@ -58,7 +58,7 @@ public class FileProcessingService : IFileProcessingService
             additionalMetadata: new Dictionary<string, object>
             {
                 [AppConstants.FileProcessing.FILE_PATH_KEY] = filePath,
-                ["FileType"] = fileType
+                [AppConstants.DataProcessing.METADATA_FILE_TYPE] = fileType
             },
             validation: () => _validationService.ValidateFileProcessingInputs(filePath, fileType),
             operation: async (context) =>
@@ -110,7 +110,7 @@ public class FileProcessingService : IFileProcessingService
         }
         catch (Exception ex)
         {
-            HandleProcessingError(filePath, ".csv", dataSet, context, ex);
+            HandleProcessingError(filePath, AppConstants.FileProcessing.CSV_EXTENSION, dataSet, context, ex);
         }
     }
 
@@ -133,8 +133,8 @@ public class FileProcessingService : IFileProcessingService
             var error = string.Format(AppConstants.FileUpload.JSON_PARSING_ERROR, ex.Message);
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.JSON_PARSING_FAILED_ERROR, new Dictionary<string, object>
             {
-                ["FilePath"] = filePath,
-                ["ErrorMessage"] = ex.Message
+                [AppConstants.DataProcessing.METADATA_FILE_PATH] = filePath,
+                [AppConstants.DataProcessing.METADATA_ERROR_MESSAGE] = ex.Message
             });
             throw new FileProcessingException(error, ex);
         }
@@ -161,8 +161,8 @@ public class FileProcessingService : IFileProcessingService
             var error = string.Format(AppConstants.FileUpload.EXCEL_PROCESSING_ERROR, ex.Message);
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.EXCEL_PROCESSING_FAILED_ERROR, new Dictionary<string, object>
             {
-                ["FilePath"] = filePath,
-                ["ErrorMessage"] = ex.Message
+                [AppConstants.DataProcessing.METADATA_FILE_PATH] = filePath,
+                [AppConstants.DataProcessing.METADATA_ERROR_MESSAGE] = ex.Message
             });
             throw new FileProcessingException(error, ex);
         }
@@ -191,8 +191,8 @@ public class FileProcessingService : IFileProcessingService
             var error = string.Format(AppConstants.FileUpload.XML_PARSING_ERROR, ex.Message);
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.XML_PARSING_FAILED_ERROR, new Dictionary<string, object>
             {
-                ["FilePath"] = filePath,
-                ["ErrorMessage"] = ex.Message
+                [AppConstants.DataProcessing.METADATA_FILE_PATH] = filePath,
+                [AppConstants.DataProcessing.METADATA_ERROR_MESSAGE] = ex.Message
             });
             throw new FileProcessingException(error, ex);
         }
@@ -247,9 +247,9 @@ public class FileProcessingService : IFileProcessingService
         var error = string.Format(AppConstants.FileUpload.ERROR_PROCESSING_FILE, filePath, ex.Message);
         _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.UNEXPECTED_ERROR_FILE_PROCESSING, new Dictionary<string, object>
         {
-            ["FilePath"] = filePath,
-            ["FileType"] = fileType,
-            ["ErrorMessage"] = ex.Message
+            [AppConstants.DataProcessing.METADATA_FILE_PATH] = filePath,
+            [AppConstants.DataProcessing.METADATA_FILE_TYPE] = fileType,
+            [AppConstants.DataProcessing.METADATA_ERROR_MESSAGE] = ex.Message
         });
 
         dataSet.IsProcessed = false;
@@ -303,7 +303,7 @@ public class FileProcessingService : IFileProcessingService
         {
             case nameof(ProcessFileAsync):
                 var filePath = metadata.TryGetValue(AppConstants.FileProcessing.FILE_PATH_KEY, out var path) ? path?.ToString() : AppConstants.Messages.UNKNOWN;
-                var fileType = metadata.TryGetValue("FileType", out var type) ? type?.ToString() : AppConstants.Messages.UNKNOWN;
+                var fileType = metadata.TryGetValue(AppConstants.DataProcessing.METADATA_FILE_TYPE, out var type) ? type?.ToString() : AppConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{filePath}' of type '{fileType}'";
 
             default:
@@ -318,7 +318,7 @@ public class FileProcessingService : IFileProcessingService
         FileName = Path.GetFileName(filePath),
         FilePath = filePath,
         FileType = GetFileTypeFromExtension(fileType),
-        FileSize = 0, // Will be calculated during processing
+        FileSize = AppConstants.FileProcessing.DEFAULT_FILE_SIZE, // Will be calculated during processing
         UploadedAt = DateTime.UtcNow,
         StorageProvider = GetStorageProviderFromPath(filePath)
     };
@@ -333,11 +333,11 @@ public class FileProcessingService : IFileProcessingService
 
     private FileProcessor GetFileProcessor(string fileType) => fileType.ToLowerInvariant() switch
     {
-        ".csv" => ProcessCsvFileAsync,
-        ".json" => ProcessJsonFileAsync,
-        ".xlsx" or ".xls" => ProcessExcelFileAsync,
-        ".xml" => ProcessXmlFileAsync,
-        ".txt" => ProcessTextFileAsync,
+        AppConstants.FileProcessing.CSV_EXTENSION => ProcessCsvFileAsync,
+        AppConstants.FileProcessing.JSON_EXTENSION => ProcessJsonFileAsync,
+        AppConstants.FileProcessing.XLSX_EXTENSION or AppConstants.FileProcessing.XLS_EXTENSION => ProcessExcelFileAsync,
+        AppConstants.FileProcessing.XML_EXTENSION => ProcessXmlFileAsync,
+        AppConstants.FileProcessing.TXT_EXTENSION => ProcessTextFileAsync,
         _ => throw new UnsupportedFileTypeException(string.Format(AppConstants.FileUpload.UNSUPPORTED_FILE_TYPE_ERROR, fileType))
     };
 
@@ -364,16 +364,16 @@ public class FileProcessingService : IFileProcessingService
             csv.ReadHeader();
             headers = csv.HeaderRecord?.ToList() ?? [];
 
-            if (headers.Count == 0)
+            if (headers.Count == AppConstants.FileProcessing.DEFAULT_ROW_COUNT)
             {
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.CSV_NO_HEADERS_WARNING, new Dictionary<string, object>
                 {
-                    ["FilePath"] = filePath
+                    [AppConstants.DataProcessing.METADATA_FILE_PATH] = filePath
                 });
             }
         }
 
-        var rowCount = 0;
+        var rowCount = AppConstants.FileProcessing.DEFAULT_ROW_COUNT;
         var maxRows = _dataProcessingConfig.MaxRowsPerDataset;
 
         // Pre-allocate capacity for better performance
@@ -399,8 +399,8 @@ public class FileProcessingService : IFileProcessingService
         var error = string.Format(AppConstants.FileUpload.CSV_PARSING_ERROR, ex.Message);
         _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.CSV_PARSING_FAILED_ERROR, new Dictionary<string, object>
         {
-            ["FilePath"] = filePath,
-            ["ErrorMessage"] = ex.Message
+            [AppConstants.DataProcessing.METADATA_FILE_PATH] = filePath,
+            [AppConstants.DataProcessing.METADATA_ERROR_MESSAGE] = ex.Message
         });
         throw new FileProcessingException(error, ex);
     }
@@ -427,8 +427,8 @@ public class FileProcessingService : IFileProcessingService
                 var error = string.Format(AppConstants.FileUpload.UNSUPPORTED_JSON_STRUCTURE, jsonElement.ValueKind);
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.UNSUPPORTED_JSON_STRUCTURE_WARNING, new Dictionary<string, object>
                 {
-                    ["FilePath"] = filePath,
-                    ["ValueKind"] = jsonElement.ValueKind
+                    [AppConstants.DataProcessing.METADATA_FILE_PATH] = filePath,
+                    [AppConstants.DataProcessing.METADATA_VALUE_KIND] = jsonElement.ValueKind
                 });
                 throw new FileProcessingException(error);
         }
@@ -497,7 +497,7 @@ public class FileProcessingService : IFileProcessingService
     private List<Dictionary<string, object>> ExtractExcelData(ExcelWorksheet worksheet, List<string> headers)
     {
         var records = new List<Dictionary<string, object>>();
-        var rowCount = 0;
+        var rowCount = AppConstants.FileProcessing.DEFAULT_ROW_COUNT;
         var maxRows = _dataProcessingConfig.MaxRowsPerDataset;
         var maxCols = headers.Count;
 
@@ -558,7 +558,7 @@ public class FileProcessingService : IFileProcessingService
         if (root == null) return (headers, records);
 
         var children = root.Elements().ToList();
-        if (children.Count > 0)
+        if (children.Count > AppConstants.FileProcessing.DEFAULT_CHILDREN_COUNT)
         {
             ExtractXmlArrayData(children, headers, records);
         }
@@ -625,7 +625,7 @@ public class FileProcessingService : IFileProcessingService
 
         for (int i = 0; i < maxRows; i++)
         {
-            var record = new Dictionary<string, object>(2)
+            var record = new Dictionary<string, object>(AppConstants.FileProcessing.DEFAULT_DICTIONARY_CAPACITY)
             {
                 [AppConstants.FileProcessing.LINE_NUMBER_COLUMN] = i + 1,
                 [AppConstants.FileProcessing.CONTENT_COLUMN] = lines[i]
@@ -647,11 +647,11 @@ public class FileProcessingService : IFileProcessingService
 
         _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.FILE_TOO_MANY_COLUMNS_WARNING, new Dictionary<string, object>
         {
-            ["FilePath"] = filePath,
-            ["ColumnCount"] = headers.Count,
-            ["MaxColumns"] = _dataProcessingConfig.MaxColumnsPerDataset
+            [AppConstants.DataProcessing.METADATA_FILE_PATH] = filePath,
+            [AppConstants.DataProcessing.METADATA_COLUMN_COUNT] = headers.Count,
+            [AppConstants.DataProcessing.METADATA_MAX_COLUMNS] = _dataProcessingConfig.MaxColumnsPerDataset
         });
-        return headers.Take(_dataProcessingConfig.MaxColumnsPerDataset).ToList();
+        return [.. headers.Take(_dataProcessingConfig.MaxColumnsPerDataset)];
     }
 
     private void PopulateDataSet(DataSet dataSet, List<string> headers, List<Dictionary<string, object>> records,
@@ -671,7 +671,7 @@ public class FileProcessingService : IFileProcessingService
         dataSet.Schema = JsonSerializer.Serialize(headers, jsonOptions);
 
         // Only serialize preview data if needed
-        if (records.Count > 0)
+        if (records.Count > AppConstants.FileProcessing.DEFAULT_ROW_COUNT)
         {
             var previewRecords = records.Take(_dataProcessingConfig.MaxPreviewRows).ToList();
             dataSet.PreviewData = JsonSerializer.Serialize(previewRecords, jsonOptions);
@@ -685,9 +685,9 @@ public class FileProcessingService : IFileProcessingService
 
         _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.FILE_PROCESSING_COMPLETED_DEBUG, new Dictionary<string, object>
         {
-            ["FilePath"] = filePath,
-            ["RowCount"] = records.Count,
-            ["ColumnCount"] = headers.Count
+            [AppConstants.DataProcessing.METADATA_FILE_PATH] = filePath,
+            [AppConstants.DataProcessing.METADATA_ROW_COUNT] = records.Count,
+            [AppConstants.DataProcessing.METADATA_COLUMN_COUNT] = headers.Count
         });
     }
 
@@ -696,9 +696,9 @@ public class FileProcessingService : IFileProcessingService
         var error = string.Format(AppConstants.FileUpload.JSON_SERIALIZATION_ERROR, fileType, ex.Message);
         _infrastructure.StructuredLogging.LogStep(context, string.Format(AppConstants.FileUpload.JSON_SERIALIZATION_FAILED_ERROR, fileType), new Dictionary<string, object>
         {
-            ["FilePath"] = filePath,
-            ["FileType"] = fileType,
-            ["ErrorMessage"] = ex.Message
+            [AppConstants.DataProcessing.METADATA_FILE_PATH] = filePath,
+            [AppConstants.DataProcessing.METADATA_FILE_TYPE] = fileType,
+            [AppConstants.DataProcessing.METADATA_ERROR_MESSAGE] = ex.Message
         });
         throw new FileProcessingException(error, ex);
     }
@@ -707,12 +707,12 @@ public class FileProcessingService : IFileProcessingService
     {
         return fileType.ToLowerInvariant() switch
         {
-            ".csv" => FileType.CSV,
-            ".json" => FileType.JSON,
-            ".xlsx" or ".xls" => FileType.Excel,
-            ".xml" => FileType.XML,
-            ".txt" => FileType.TXT,
-            ".parquet" => FileType.Parquet,
+            AppConstants.FileProcessing.CSV_EXTENSION => FileType.CSV,
+            AppConstants.FileProcessing.JSON_EXTENSION => FileType.JSON,
+            AppConstants.FileProcessing.XLSX_EXTENSION or AppConstants.FileProcessing.XLS_EXTENSION => FileType.Excel,
+            AppConstants.FileProcessing.XML_EXTENSION => FileType.XML,
+            AppConstants.FileProcessing.TXT_EXTENSION => FileType.TXT,
+            AppConstants.FileProcessing.PARQUET_EXTENSION => FileType.Parquet,
             _ => FileType.Custom
         };
     }
@@ -721,9 +721,9 @@ public class FileProcessingService : IFileProcessingService
     {
         return filePath switch
         {
-            var path when path.StartsWith("s3://") => StorageProvider.S3,
-            var path when path.StartsWith("azure://") => StorageProvider.Azure,
-            var path when path.StartsWith("memory://") => StorageProvider.Memory,
+            var path when path.StartsWith(AppConstants.FileProcessing.S3_PREFIX) => StorageProvider.S3,
+            var path when path.StartsWith(AppConstants.FileProcessing.AZURE_PREFIX) => StorageProvider.Azure,
+            var path when path.StartsWith(AppConstants.FileProcessing.MEMORY_PREFIX) => StorageProvider.Memory,
             _ => StorageProvider.Local
         };
     }

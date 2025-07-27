@@ -2,6 +2,7 @@ using Normaize.Core.Constants;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
+using System.Globalization;
 using System.Text.Json;
 
 namespace Normaize.Core.Services.Visualization;
@@ -198,7 +199,7 @@ public class StatisticalCalculationService : IStatisticalCalculationService
         return value switch
         {
             DateTime => true,
-            string s => DateTime.TryParse(s, out _),
+            string s => DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out _),
             _ => false
         };
     }

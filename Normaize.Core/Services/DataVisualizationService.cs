@@ -522,41 +522,7 @@ public class DataVisualizationService : IDataVisualizationService
         }
     }
 
-    private static double ExtractDouble(object? value, double fallback = 0)
-    {
-        if (value == null) return fallback;
-
-        return value switch
-        {
-            double d => d,
-            int i => i,
-            long l => l,
-            float f => f,
-            decimal dec => (double)dec,
-            string s when double.TryParse(s, out var result) => result,
-            _ => fallback
-        };
-    }
-
-
-
     #endregion
-
-    #region Chart Generation Methods
-
-    // Chart generation logic has been moved to ChartGenerationService
-
-    #endregion
-
-    #region Summary Generation Methods
-
-
-
-
-
-    #endregion
-
-
 }
 
 public class DataVisualizationOptions

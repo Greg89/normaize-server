@@ -265,6 +265,26 @@ public static class AppConstants
         // Size conversion constants
         public const int BYTES_PER_MEGABYTE = 1024 * 1024;
         public const int BYTES_PER_KILOBYTE = 1024;
+
+        // File extensions
+        public const string CSV_EXTENSION = ".csv";
+        public const string JSON_EXTENSION = ".json";
+        public const string XLSX_EXTENSION = ".xlsx";
+        public const string XLS_EXTENSION = ".xls";
+        public const string XML_EXTENSION = ".xml";
+        public const string TXT_EXTENSION = ".txt";
+        public const string PARQUET_EXTENSION = ".parquet";
+
+        // Storage provider prefixes
+        public const string S3_PREFIX = "s3://";
+        public const string AZURE_PREFIX = "azure://";
+        public const string MEMORY_PREFIX = "memory://";
+
+        // Default values
+        public const int DEFAULT_FILE_SIZE = 0;
+        public const int DEFAULT_DICTIONARY_CAPACITY = 2;
+        public const int DEFAULT_ROW_COUNT = 0;
+        public const int DEFAULT_CHILDREN_COUNT = 0;
     }
 
     /// <summary>
@@ -366,6 +386,15 @@ public static class AppConstants
         public const string CHAOS_ENGINEERING_SIMULATING_CACHE_CORRUPTION = "Chaos engineering: Simulating cache corruption";
         public const string ACCESS_DENIED_USER_MISMATCH = "Access denied - user mismatch";
         public const string SIMULATED_DELETION_FAILURE_MESSAGE = "Simulated deletion failure (chaos engineering)";
+
+        // Metadata keys for structured logging
+        public const string METADATA_FILE_PATH = "FilePath";
+        public const string METADATA_FILE_TYPE = "FileType";
+        public const string METADATA_ERROR_MESSAGE = "ErrorMessage";
+        public const string METADATA_ROW_COUNT = "RowCount";
+        public const string METADATA_COLUMN_COUNT = "ColumnCount";
+        public const string METADATA_MAX_COLUMNS = "MaxColumns";
+        public const string METADATA_VALUE_KIND = "ValueKind";
     }
 
     /// <summary>

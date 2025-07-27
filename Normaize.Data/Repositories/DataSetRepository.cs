@@ -112,7 +112,7 @@ public class DataSetRepository(NormaizeContext context) : IDataSetRepository
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<DataSet>> GetByUserIdAsync(string userId, bool includeDeleted = false)
+    public async Task<IEnumerable<DataSet>> GetByUserIdAsync(string userId, bool includeDeleted)
     {
         var query = _context.DataSets.Where(d => d.UserId == userId);
 

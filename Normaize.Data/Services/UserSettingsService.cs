@@ -34,7 +34,7 @@ public class UserSettingsService : IUserSettingsService
         }
     }
 
-    public async Task<UserSettingsDto> SaveUserSettingsAsync(string userId, UpdateUserSettingsDto updateDto)
+    public async Task<UserSettingsDto> SaveUserSettingsAsync(string userId, UpdateUserSettingsDto settings)
     {
         try
         {
@@ -48,14 +48,14 @@ public class UserSettingsService : IUserSettingsService
                     UserId = userId
                 };
 
-                ApplyUpdates(newSettings, updateDto);
+                ApplyUpdates(newSettings, settings);
                 var created = await _repository.CreateAsync(newSettings);
                 return MapToDto(created);
             }
             else
             {
                 // Update existing settings
-                ApplyUpdates(existingSettings, updateDto);
+                ApplyUpdates(existingSettings, settings);
                 var updated = await _repository.UpdateAsync(existingSettings);
                 return MapToDto(updated);
             }

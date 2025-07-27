@@ -155,7 +155,11 @@ jobs:
     - name: Debug coverage history directory before upload
       run: |
         echo "Listing contents of ./coverage-history/"
-        ls -al ./coverage-history/
+        if [ -d ./coverage-history/ ]; then
+          ls -al ./coverage-history/
+        else
+          echo "No coverage-history directory found (likely first run for this branch or artifact not yet created)."
+        fi
 
     - name: Upload coverage report
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
