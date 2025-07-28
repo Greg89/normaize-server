@@ -130,7 +130,7 @@ jobs:
         token: ${{ secrets.GH_PAT }}
         commit-message: "chore: bump version to ${{ steps.new-version.outputs.new-version }} [skip ci]"
         base: main
-        title: "chore: bump version to ${{ steps.new-version.outputs.new-version }}"
+        title: "chore: bump version to ${{ steps.new-version.outputs.new-version }} [skip ci]"
         body: |
           ## Automated Version Bump
 
