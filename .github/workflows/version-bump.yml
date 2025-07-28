@@ -2,7 +2,7 @@ name: Version Bump
 
 on:
   workflow_run:
-    workflows: ["CI/CD Pipeline"]
+    workflows: ["CI Pipeline"]
     branches: [main]
     types: [completed]
 

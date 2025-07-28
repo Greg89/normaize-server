@@ -333,7 +333,8 @@ public static class ServiceConfiguration
                 {
                     policy.WithOrigins(
                             "https://normaize.com",         // Production site
-                            "https://www.normaize.com"      // Production site with www
+                            "https://www.normaize.com",     // Production site with www
+                            "https://app.normaize.com"      // Production app subdomain
                         )
                         .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")

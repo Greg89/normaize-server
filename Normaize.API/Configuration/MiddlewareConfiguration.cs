@@ -132,8 +132,8 @@ public static class MiddlewareConfiguration
         }
         else
         {
-            app.UseCors("Restrictive");
-            loggingService?.LogUserAction("CORS configured with Restrictive policy", new { Environment = environment, Policy = "Restrictive" });
+            app.UseCors("Production");
+            loggingService?.LogUserAction("CORS configured with Production policy", new { Environment = environment, Policy = "Production" });
         }
     }
 
