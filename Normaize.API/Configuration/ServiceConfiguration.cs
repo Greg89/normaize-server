@@ -290,9 +290,11 @@ public static class ServiceConfiguration
                             AppConstants.Cors.LOCALHOST_3000,    // React default
                             AppConstants.Cors.LOCALHOST_4200,    // Angular default
                             AppConstants.Cors.LOCALHOST_8080,    // Vue default
+                            AppConstants.Cors.LOCALHOST_5173,    // Vite/React default
                             AppConstants.Cors.LOCALHOST_127_3000,
                             AppConstants.Cors.LOCALHOST_127_4200,
-                            AppConstants.Cors.LOCALHOST_127_8080
+                            AppConstants.Cors.LOCALHOST_127_8080,
+                            AppConstants.Cors.LOCALHOST_127_5173
                         )
                         .WithMethods(AppConstants.Cors.GET, AppConstants.Cors.POST, AppConstants.Cors.PUT, AppConstants.Cors.DELETE, AppConstants.Cors.OPTIONS)
                         .WithHeaders(AppConstants.Cors.CONTENT_TYPE, AppConstants.Cors.AUTHORIZATION, AppConstants.Cors.X_REQUESTED_WITH, AppConstants.Cors.ACCEPT)
@@ -313,9 +315,11 @@ public static class ServiceConfiguration
                             AppConstants.Cors.LOCALHOST_3000,        // Local development
                             AppConstants.Cors.LOCALHOST_4200,        // Local development
                             AppConstants.Cors.LOCALHOST_8080,        // Local development
+                            AppConstants.Cors.LOCALHOST_5173,        // Vite/React development
                             AppConstants.Cors.LOCALHOST_127_3000,
                             AppConstants.Cors.LOCALHOST_127_4200,
-                            AppConstants.Cors.LOCALHOST_127_8080
+                            AppConstants.Cors.LOCALHOST_127_8080,
+                            AppConstants.Cors.LOCALHOST_127_5173
                         )
                         .WithMethods(AppConstants.Cors.GET, AppConstants.Cors.POST, AppConstants.Cors.PUT, AppConstants.Cors.DELETE, AppConstants.Cors.OPTIONS)
                         .WithHeaders(AppConstants.Cors.CONTENT_TYPE, AppConstants.Cors.AUTHORIZATION, AppConstants.Cors.X_REQUESTED_WITH, AppConstants.Cors.ACCEPT)
