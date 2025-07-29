@@ -85,7 +85,7 @@ public static class ServiceConfiguration
 
         // Configure storage settings
         builder.Services.Configure<StorageConfiguration>(
-            builder.Configuration.GetSection("Storage"));
+            builder.Configuration.GetSection(AppConstants.ConfigurationSections.STORAGE));
 
         // Register configuration validation service
         builder.Services.AddScoped<IConfigurationValidationService, ConfigurationValidationService>();
@@ -116,9 +116,9 @@ public static class ServiceConfiguration
         logger.LogDebug("Configuring Swagger. CorrelationId: {CorrelationId}", correlationId);
 
         // Only enable Swagger in development environment
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+        var environment = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.ASPNETCORE_ENVIRONMENT) ?? AppConstants.Environment.DEVELOPMENT;
 
-        if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
+        if (environment.Equals(AppConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
         {
             logger.LogInformation("Enabling Swagger for development environment. CorrelationId: {CorrelationId}", correlationId);
 
@@ -171,8 +171,8 @@ public static class ServiceConfiguration
     {
         logger.LogDebug("Configuring authentication. CorrelationId: {CorrelationId}", correlationId);
 
-        var issuer = Environment.GetEnvironmentVariable("AUTH0_ISSUER");
-        var audience = Environment.GetEnvironmentVariable("AUTH0_AUDIENCE");
+        var issuer = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.AUTH0_ISSUER);
+        var audience = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.AUTH0_AUDIENCE);
 
         if (string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(audience))
         {
@@ -227,14 +227,14 @@ public static class ServiceConfiguration
         logger.LogDebug("Configuring database. CorrelationId: {CorrelationId}", correlationId);
 
         // Get environment directly instead of using service provider
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+        var environment = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.ASPNETCORE_ENVIRONMENT) ?? AppConstants.Environment.DEVELOPMENT;
 
         // Check for database connection directly
-        var mysqlHost = Environment.GetEnvironmentVariable("MYSQLHOST");
-        var mysqlDatabase = Environment.GetEnvironmentVariable("MYSQLDATABASE");
-        var mysqlUser = Environment.GetEnvironmentVariable("MYSQLUSER");
-        var mysqlPassword = Environment.GetEnvironmentVariable("MYSQLPASSWORD");
-        var mysqlPort = Environment.GetEnvironmentVariable("MYSQLPORT") ?? "3306";
+        var mysqlHost = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.MYSQLHOST);
+        var mysqlDatabase = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.MYSQLDATABASE);
+        var mysqlUser = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.MYSQLUSER);
+        var mysqlPassword = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.MYSQLPASSWORD);
+        var mysqlPort = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.MYSQLPORT) ?? AppConstants.Database.DEFAULT_PORT;
 
         var hasDatabaseConnection = !string.IsNullOrEmpty(mysqlHost) &&
                                    !string.IsNullOrEmpty(mysqlDatabase) &&
@@ -246,14 +246,14 @@ public static class ServiceConfiguration
             logger.LogInformation("Configuring MySQL database connection. Environment: {Environment}, CorrelationId: {CorrelationId}",
                 environment, correlationId);
 
-            var connectionString = $"Server={mysqlHost};Database={mysqlDatabase};User={mysqlUser};Password={mysqlPassword};Port={mysqlPort};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
+            var connectionString = $"{AppConstants.Database.SERVER_PREFIX}{mysqlHost};{AppConstants.Database.DATABASE_PREFIX}{mysqlDatabase};{AppConstants.Database.USER_PREFIX}{mysqlUser};{AppConstants.Database.PASSWORD_PREFIX}{mysqlPassword};{AppConstants.Database.PORT_PREFIX}{mysqlPort};{AppConstants.Database.CHARSET_PREFIX}{AppConstants.Database.DEFAULT_CHARSET};{AppConstants.Database.ALLOW_LOAD_LOCAL_INFILE};{AppConstants.Database.CONVERT_ZERO_DATETIME};{AppConstants.Database.ALLOW_ZERO_DATETIME};";
 
             builder.Services.AddDbContext<NormaizeContext>(options =>
             {
-                options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 0)));
+                options.UseMySql(connectionString, new MySqlServerVersion(new Version(AppConstants.Database.MYSQL_VERSION)));
 
                 // Configure based on environment
-                if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
+                if (environment.Equals(AppConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
                 {
                     options.EnableSensitiveDataLogging();
                     options.EnableDetailedErrors();
@@ -264,7 +264,7 @@ public static class ServiceConfiguration
         {
             logger.LogInformation("No database connection detected, using in-memory database. CorrelationId: {CorrelationId}", correlationId);
             builder.Services.AddDbContext<NormaizeContext>(options =>
-                options.UseInMemoryDatabase("TestDatabase"));
+                options.UseInMemoryDatabase(AppConstants.Database.TEST_DATABASE_NAME));
         }
     }
 
@@ -273,52 +273,52 @@ public static class ServiceConfiguration
         logger.LogDebug("Configuring CORS. CorrelationId: {CorrelationId}", correlationId);
 
         // Get environment directly instead of using service provider
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+        var environment = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.ASPNETCORE_ENVIRONMENT) ?? AppConstants.Environment.DEVELOPMENT;
 
         builder.Services.AddCors(options =>
         {
             // Use environment-specific CORS configuration
-            if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
+            if (environment.Equals(AppConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
             {
                 logger.LogInformation("Configuring development CORS for {Environment} environment. CorrelationId: {CorrelationId}",
                     environment, correlationId);
 
                 // Development policy - localhost only for local development
-                options.AddPolicy("Development", policy =>
+                options.AddPolicy(AppConstants.Cors.DEVELOPMENT_POLICY, policy =>
                 {
                     policy.WithOrigins(
-                            "http://localhost:3000",    // React default
-                            "http://localhost:4200",    // Angular default
-                            "http://localhost:8080",    // Vue default
-                            "http://127.0.0.1:3000",
-                            "http://127.0.0.1:4200",
-                            "http://127.0.0.1:8080"
+                            AppConstants.Cors.LOCALHOST_3000,    // React default
+                            AppConstants.Cors.LOCALHOST_4200,    // Angular default
+                            AppConstants.Cors.LOCALHOST_8080,    // Vue default
+                            AppConstants.Cors.LOCALHOST_127_3000,
+                            AppConstants.Cors.LOCALHOST_127_4200,
+                            AppConstants.Cors.LOCALHOST_127_8080
                         )
-                        .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                        .WithMethods(AppConstants.Cors.GET, AppConstants.Cors.POST, AppConstants.Cors.PUT, AppConstants.Cors.DELETE, AppConstants.Cors.OPTIONS)
+                        .WithHeaders(AppConstants.Cors.CONTENT_TYPE, AppConstants.Cors.AUTHORIZATION, AppConstants.Cors.X_REQUESTED_WITH, AppConstants.Cors.ACCEPT)
                         .AllowCredentials()
                         .SetIsOriginAllowedToAllowWildcardSubdomains();
                 });
             }
-            else if (environment.Equals("Beta", StringComparison.OrdinalIgnoreCase))
+            else if (environment.Equals(AppConstants.Environment.BETA, StringComparison.OrdinalIgnoreCase))
             {
                 logger.LogInformation("Configuring beta CORS for {Environment} environment. CorrelationId: {CorrelationId}",
                     environment, correlationId);
 
                 // Beta policy - allows beta.normaize.com and localhost for testing
-                options.AddPolicy("Beta", policy =>
+                options.AddPolicy(AppConstants.Cors.BETA_POLICY, policy =>
                 {
                     policy.WithOrigins(
-                            "https://beta.normaize.com",    // Beta production site
-                            "http://localhost:3000",        // Local development
-                            "http://localhost:4200",        // Local development
-                            "http://localhost:8080",        // Local development
-                            "http://127.0.0.1:3000",
-                            "http://127.0.0.1:4200",
-                            "http://127.0.0.1:8080"
+                            AppConstants.Cors.BETA_NORMAIZE_COM,    // Beta production site
+                            AppConstants.Cors.LOCALHOST_3000,        // Local development
+                            AppConstants.Cors.LOCALHOST_4200,        // Local development
+                            AppConstants.Cors.LOCALHOST_8080,        // Local development
+                            AppConstants.Cors.LOCALHOST_127_3000,
+                            AppConstants.Cors.LOCALHOST_127_4200,
+                            AppConstants.Cors.LOCALHOST_127_8080
                         )
-                        .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                        .WithMethods(AppConstants.Cors.GET, AppConstants.Cors.POST, AppConstants.Cors.PUT, AppConstants.Cors.DELETE, AppConstants.Cors.OPTIONS)
+                        .WithHeaders(AppConstants.Cors.CONTENT_TYPE, AppConstants.Cors.AUTHORIZATION, AppConstants.Cors.X_REQUESTED_WITH, AppConstants.Cors.ACCEPT)
                         .AllowCredentials()
                         .SetIsOriginAllowedToAllowWildcardSubdomains();
                 });
@@ -329,15 +329,15 @@ public static class ServiceConfiguration
                     environment, correlationId);
 
                 // Production policy - strict origin control
-                options.AddPolicy("Production", policy =>
+                options.AddPolicy(AppConstants.Cors.PRODUCTION_POLICY, policy =>
                 {
                     policy.WithOrigins(
-                            "https://normaize.com",         // Production site
-                            "https://www.normaize.com",     // Production site with www
-                            "https://app.normaize.com"      // Production app subdomain
+                            AppConstants.Cors.NORMAIZE_COM,         // Production site
+                            AppConstants.Cors.WWW_NORMAIZE_COM,     // Production site with www
+                            AppConstants.Cors.APP_NORMAIZE_COM      // Production app subdomain
                         )
-                        .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "Accept")
+                        .WithMethods(AppConstants.Cors.GET, AppConstants.Cors.POST, AppConstants.Cors.PUT, AppConstants.Cors.DELETE, AppConstants.Cors.OPTIONS)
+                        .WithHeaders(AppConstants.Cors.CONTENT_TYPE, AppConstants.Cors.AUTHORIZATION, AppConstants.Cors.X_REQUESTED_WITH, AppConstants.Cors.ACCEPT)
                         .AllowCredentials()
                         .SetIsOriginAllowedToAllowWildcardSubdomains();
                 });
@@ -357,14 +357,14 @@ public static class ServiceConfiguration
         logger.LogDebug("Configuring storage service. CorrelationId: {CorrelationId}", correlationId);
 
         // Get environment directly instead of using service provider
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
-        var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER")?.ToLowerInvariant();
+        var environment = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.ASPNETCORE_ENVIRONMENT) ?? AppConstants.Environment.DEVELOPMENT;
+        var storageProvider = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.STORAGE_PROVIDER)?.ToLowerInvariant();
 
         logger.LogInformation("Configuring storage service. Environment: {Environment}, Provider: {Provider}, CorrelationId: {CorrelationId}",
             environment, storageProvider ?? "default", correlationId);
 
         // Force in-memory storage for Test environment
-        if (environment.Equals("Test", StringComparison.OrdinalIgnoreCase))
+        if (environment.Equals(AppConstants.Environment.TEST, StringComparison.OrdinalIgnoreCase))
         {
             logger.LogInformation("Using in-memory storage for test environment. CorrelationId: {CorrelationId}", correlationId);
             builder.Services.AddScoped<IStorageService, InMemoryStorageService>();
@@ -374,13 +374,13 @@ public static class ServiceConfiguration
             // Environment-aware storage selection with fallback
             if (string.IsNullOrEmpty(storageProvider))
             {
-                storageProvider = "memory";
+                storageProvider = AppConstants.StorageProvider.MEMORY;
             }
 
-            if (storageProvider == "s3")
+            if (storageProvider == AppConstants.StorageProvider.S3)
             {
-                var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
-                var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+                var awsAccessKey = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.AWS_ACCESS_KEY_ID);
+                var awsSecretKey = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.AWS_SECRET_ACCESS_KEY);
 
                 if (string.IsNullOrEmpty(awsAccessKey) || string.IsNullOrEmpty(awsSecretKey))
                 {
@@ -486,7 +486,7 @@ public static class ServiceConfiguration
 
         // Memory cache is already configured in ConfigureApplicationServices
         // To enable Redis, add: Microsoft.Extensions.Caching.StackExchangeRedis package
-        var redisConnectionString = Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING");
+        var redisConnectionString = Environment.GetEnvironmentVariable(AppConstants.EnvironmentVariables.REDIS_CONNECTION_STRING);
         if (!string.IsNullOrEmpty(redisConnectionString))
         {
             logger.LogInformation("Redis connection string found but Redis package not available. Using in-memory cache only. CorrelationId: {CorrelationId}", correlationId);
