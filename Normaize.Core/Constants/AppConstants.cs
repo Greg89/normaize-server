@@ -536,6 +536,58 @@ public static class AppConstants
     }
 
     /// <summary>
+    /// Data visualization and processing constants
+    /// </summary>
+    public static class DataVisualization
+    {
+        // Metadata keys
+        public const string DATASET_ID_1 = "DataSetId1";
+        public const string DATASET_ID_2 = "DataSetId2";
+        public const string PROCESSING_TIME_MS = "ProcessingTimeMs";
+        public const string ROW_COUNT = "RowCount";
+        public const string ERROR_MESSAGE = "ErrorMessage";
+        public const string TIMEOUT = "Timeout";
+        public const string OPERATION_NAME = "OperationName";
+
+        // Logging messages
+        public const string RETRIEVED_CHART_FROM_CACHE = "Retrieved chart from cache";
+        public const string CACHE_MISS_GENERATING_NEW_CHART = "Cache miss, generating new chart";
+        public const string GENERATED_CHART_SUCCESSFULLY = "Generated chart successfully";
+        public const string RETRIEVED_COMPARISON_CHART_FROM_CACHE = "Retrieved comparison chart from cache";
+        public const string CACHE_MISS_GENERATING_NEW_COMPARISON_CHART = "Cache miss, generating new comparison chart";
+        public const string GENERATED_COMPARISON_CHART_SUCCESSFULLY = "Generated comparison chart successfully";
+        public const string RETRIEVED_DATA_SUMMARY_FROM_CACHE = "Retrieved data summary from cache";
+        public const string CACHE_MISS_GENERATING_NEW_DATA_SUMMARY = "Cache miss, generating new data summary";
+        public const string GENERATED_DATA_SUMMARY_SUCCESSFULLY = "Generated data summary successfully";
+        public const string RETRIEVED_STATISTICAL_SUMMARY_FROM_CACHE = "Retrieved statistical summary from cache";
+        public const string CACHE_MISS_GENERATING_NEW_STATISTICAL_SUMMARY = "Cache miss, generating new statistical summary";
+        public const string GENERATED_STATISTICAL_SUMMARY_SUCCESSFULLY = "Generated statistical summary successfully";
+
+        // Error and validation messages
+        public const string DATASET_NOT_FOUND_LOG = "Dataset not found";
+        public const string UNAUTHORIZED_ACCESS_ATTEMPT = "Unauthorized access attempt";
+        public const string ATTEMPTED_TO_ACCESS_DELETED_DATASET = "Attempted to access deleted dataset";
+        public const string DATASET_HAS_NO_PROCESSED_DATA = "Dataset has no processed data";
+        public const string FAILED_TO_DESERIALIZE_DATASET_JSON_DATA = "Failed to deserialize dataset JSON data";
+        public const string EXTRACTED_ROWS_FROM_DATASET = "Extracted rows from dataset";
+        public const string FAILED_TO_PARSE_DATASET_JSON_DATA = "Failed to parse dataset JSON data";
+        public const string SIMULATED_CACHE_FAILURE_MESSAGE = "Simulated cache failure (chaos engineering)";
+        public const string CHAOS_ENGINEERING_SIMULATING = "Chaos engineering: Simulating {0}";
+
+        // Error message templates
+        public const string FAILED_TO_COMPLETE_OPERATION = "Failed to complete {0}";
+        public const string FAILED_TO_COMPLETE_GENERATE_CHART = "Failed to complete GenerateChartAsync for dataset ID {0} with chart type {1}";
+        public const string FAILED_TO_COMPLETE_GENERATE_COMPARISON_CHART = "Failed to complete GenerateComparisonChartAsync for dataset IDs {0} and {1} with chart type {2}";
+        public const string FAILED_TO_COMPLETE_GET_DATA_SUMMARY = "Failed to complete GetDataSummaryAsync for dataset ID {0}";
+        public const string FAILED_TO_COMPLETE_GET_STATISTICAL_SUMMARY = "Failed to complete GetStatisticalSummaryAsync for dataset ID {0}";
+        public const string DATASET_NOT_FOUND_WITH_ID = "Dataset not found with ID {0}";
+        public const string DATASET_ACCESS_DENIED_USER_NOT_AUTHORIZED = "Dataset access denied - User {0} is not authorized to access dataset {1}";
+        public const string DATASET_HAS_BEEN_DELETED = "Dataset {0} has been deleted";
+        public const string OPERATION_TIMED_OUT_AFTER = "Operation {0} timed out after {1}";
+        public const string FAILED_TO_PARSE_DATASET_DATA = "Failed to parse dataset {0} data: {1}";
+    }
+
+    /// <summary>
     /// Validation patterns and formats
     /// </summary>
     public static class Validation
