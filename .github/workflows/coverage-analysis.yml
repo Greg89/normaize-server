@@ -127,12 +127,31 @@ jobs:
         echo "✅ OpenCover format conversion completed"
 
     # Coverage History Management
+    - name: Initialize coverage history directory
+      run: |
+        echo "Initializing coverage history directory..."
+        mkdir -p ./coverage-history
+        echo "✅ Coverage history directory initialized"
+
     - name: Download previous coverage history
       uses: actions/download-artifact@v4
       with:
-        name: coverage-history-${{ github.ref_name }}
+        name: coverage-history
         path: ./coverage-history/
       continue-on-error: true
+
+    - name: Debug coverage history download
+      run: |
+        echo "=== Coverage History Debug Information ==="
+        echo "Current directory: $(pwd)"
+        echo "Coverage history directory contents:"
+        if [ -d ./coverage-history ]; then
+          ls -la ./coverage-history/
+          echo "Directory exists and contains $(ls -1 ./coverage-history/ | wc -l) files"
+        else
+          echo "Coverage history directory does not exist"
+        fi
+        echo "=== End Coverage History Debug ==="
 
     - name: Generate coverage report with history
       env:
@@ -196,7 +215,7 @@ jobs:
     - name: Upload coverage history for next run
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-history-${{ github.ref_name }}
+        name: coverage-history
         path: ./coverage-history/
         retention-days: 90
 
