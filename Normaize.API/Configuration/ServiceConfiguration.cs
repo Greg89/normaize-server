@@ -106,9 +106,29 @@ public static class ServiceConfiguration
         builder.Services.AddControllers()
             .AddJsonOptions(options =>
             {
-                options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-                options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+                // Use the global JSON configuration for consistency
+                var defaultOptions = Normaize.Core.Configuration.JsonConfiguration.DefaultOptions;
+                options.JsonSerializerOptions.PropertyNamingPolicy = defaultOptions.PropertyNamingPolicy;
+                options.JsonSerializerOptions.DictionaryKeyPolicy = defaultOptions.DictionaryKeyPolicy;
+                options.JsonSerializerOptions.WriteIndented = defaultOptions.WriteIndented;
+                options.JsonSerializerOptions.DefaultIgnoreCondition = defaultOptions.DefaultIgnoreCondition;
+                options.JsonSerializerOptions.Encoder = defaultOptions.Encoder;
+                options.JsonSerializerOptions.ReferenceHandler = defaultOptions.ReferenceHandler;
             });
+
+        // Configure global JSON options for HttpClient and other services
+        builder.Services.Configure<System.Text.Json.JsonSerializerOptions>(options =>
+        {
+            var defaultOptions = Normaize.Core.Configuration.JsonConfiguration.DefaultOptions;
+            options.PropertyNamingPolicy = defaultOptions.PropertyNamingPolicy;
+            options.DictionaryKeyPolicy = defaultOptions.DictionaryKeyPolicy;
+            options.WriteIndented = defaultOptions.WriteIndented;
+            options.DefaultIgnoreCondition = defaultOptions.DefaultIgnoreCondition;
+            options.Encoder = defaultOptions.Encoder;
+            options.ReferenceHandler = defaultOptions.ReferenceHandler;
+        });
+
+        logger.LogDebug("JSON serialization configured with camelCase naming policy. CorrelationId: {CorrelationId}", correlationId);
     }
 
     private static void ConfigureSwagger(WebApplicationBuilder builder, ILogger logger, string correlationId)

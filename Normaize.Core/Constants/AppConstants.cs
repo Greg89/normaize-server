@@ -484,26 +484,26 @@ public static class AppConstants
         public const string LOCALHOST_127_4200 = "http://127.0.0.1:4200";
         public const string LOCALHOST_127_8080 = "http://127.0.0.1:8080";
         public const string LOCALHOST_127_5173 = "http://127.0.0.1:5173";  // Vite/React default
-        
+
         // Production origins
         public const string NORMAIZE_COM = "https://normaize.com";
         public const string WWW_NORMAIZE_COM = "https://www.normaize.com";
         public const string APP_NORMAIZE_COM = "https://app.normaize.com";
         public const string BETA_NORMAIZE_COM = "https://beta.normaize.com";
-        
+
         // HTTP methods
         public const string GET = "GET";
         public const string POST = "POST";
         public const string PUT = "PUT";
         public const string DELETE = "DELETE";
         public const string OPTIONS = "OPTIONS";
-        
+
         // Headers
         public const string CONTENT_TYPE = "Content-Type";
         public const string AUTHORIZATION = "Authorization";
         public const string X_REQUESTED_WITH = "X-Requested-With";
         public const string ACCEPT = "Accept";
-        
+
         // Policy names
         public const string DEVELOPMENT_POLICY = "Development";
         public const string BETA_POLICY = "Beta";
@@ -678,6 +678,25 @@ public static class AppConstants
         public const string FILE_TYPE_TXT = "TXT";
         public const string FILE_TYPE_PARQUET = "Parquet";
         public const string FILE_TYPE_CUSTOM = "Custom";
+    }
+
+    /// <summary>
+    /// JSON serialization configuration constants
+    /// </summary>
+    public static class JsonSerialization
+    {
+        public const string CAMEL_CASE_POLICY = "CamelCase";
+        public const string PASCAL_CASE_POLICY = "PascalCase";
+        public const string SNAKE_CASE_POLICY = "SnakeCase";
+
+        // Default configuration values
+        public const bool DEFAULT_WRITE_INDENTED = false;
+        public const bool DEFAULT_IGNORE_NULL_VALUES = true;
+        public const string DEFAULT_ENCODER = "UnsafeRelaxedJsonEscaping";
+
+        // Error messages
+        public const string SERIALIZATION_ERROR = "JSON serialization failed";
+        public const string DESERIALIZATION_ERROR = "JSON deserialization failed";
     }
 
     /// <summary>

@@ -1,16 +1,12 @@
 using Normaize.Core.Interfaces;
+using Normaize.Core.Configuration;
 using System.Net;
-using System.Text.Json;
 
 namespace Normaize.API.Middleware;
 
 public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 
     public ExceptionHandlingMiddleware(RequestDelegate next)
     {
@@ -58,7 +54,8 @@ public class ExceptionHandlingMiddleware
 
         context.Response.StatusCode = GetHttpStatusCode(exception);
 
-        var jsonResponse = JsonSerializer.Serialize(response, JsonOptions);
+        // Use the global JSON configuration for consistent camelCase output
+        var jsonResponse = JsonConfiguration.Serialize(response);
         await context.Response.WriteAsync(jsonResponse);
     }
 

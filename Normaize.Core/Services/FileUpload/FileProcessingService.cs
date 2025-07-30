@@ -661,26 +661,20 @@ public class FileProcessingService : IFileProcessingService
         dataSet.RowCount = records.Count;
         dataSet.FileSize = fileSize;
 
-        // Optimize JSON serialization with reusable options
-        var jsonOptions = new JsonSerializerOptions
-        {
-            WriteIndented = false, // Smaller output
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
-
-        dataSet.Schema = JsonSerializer.Serialize(headers, jsonOptions);
+        // Use global JSON configuration for consistent camelCase output
+        dataSet.Schema = JsonConfiguration.Serialize(headers);
 
         // Only serialize preview data if needed
         if (records.Count > AppConstants.FileProcessing.DEFAULT_ROW_COUNT)
         {
             var previewRecords = records.Take(_dataProcessingConfig.MaxPreviewRows).ToList();
-            dataSet.PreviewData = JsonSerializer.Serialize(previewRecords, jsonOptions);
+            dataSet.PreviewData = JsonConfiguration.Serialize(previewRecords);
         }
 
         // Only serialize full data if within limits
         if (records.Count < _dataProcessingConfig.MaxRowsPerDataset)
         {
-            dataSet.ProcessedData = JsonSerializer.Serialize(records, jsonOptions);
+            dataSet.ProcessedData = JsonConfiguration.Serialize(records);
         }
 
         _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.FILE_PROCESSING_COMPLETED_DEBUG, new Dictionary<string, object>

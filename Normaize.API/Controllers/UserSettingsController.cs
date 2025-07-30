@@ -111,6 +111,34 @@ public class UserSettingsController(
     }
 
     /// <summary>
+    /// Update user profile settings
+    /// </summary>
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateUserProfile([FromBody] UpdateUserSettingsDto updateDto)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var updatedSettings = await _userSettingsService.SaveUserSettingsAsync(userId, updateDto);
+
+            _loggingService.LogUserAction("User profile updated", new { UserId = userId });
+
+            // Return the updated profile
+            var updatedProfile = await _userSettingsService.GetUserProfileAsync(userId);
+            return Ok(updatedProfile);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogException(ex, "UpdateUserProfile");
+            return StatusCode(500, "Error updating user profile");
+        }
+    }
+
+    /// <summary>
     /// Get a specific setting value
     /// </summary>
     [HttpGet("setting/{settingName}")]
@@ -195,5 +223,29 @@ public class UserSettingsController(
             _loggingService.LogException(ex, "ResetUserSettings");
             return StatusCode(500, "Error resetting user settings");
         }
+    }
+
+    /// <summary>
+    /// Test endpoint to verify camelCase JSON serialization
+    /// </summary>
+    [HttpGet("test-serialization")]
+    public IActionResult TestSerialization()
+    {
+        var testObject = new
+        {
+            UserId = "test-user-123",
+            EmailAddress = "test@example.com",
+            DisplayName = "Test User",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            Settings = new
+            {
+                Theme = "dark",
+                Language = "en",
+                EmailNotificationsEnabled = true
+            }
+        };
+
+        return Ok(testObject);
     }
 }

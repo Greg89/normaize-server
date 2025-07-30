@@ -1,5 +1,4 @@
 using Normaize.Core.Models;
-using Normaize.Core.DTOs;
 
 namespace Normaize.Data.Repositories;
 
