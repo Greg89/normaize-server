@@ -9,16 +9,10 @@ namespace Normaize.API.Controllers;
 /// Base controller providing common API response functionality
 /// </summary>
 [ApiController]
-public abstract class BaseApiController : ControllerBase
+public abstract class BaseApiController(IStructuredLoggingService? loggingService = null) : ControllerBase
 {
-    protected readonly IStructuredLoggingService? _loggingService;
-    private readonly Stopwatch _stopwatch;
-
-    protected BaseApiController(IStructuredLoggingService? loggingService = null)
-    {
-        _loggingService = loggingService;
-        _stopwatch = Stopwatch.StartNew();
-    }
+    protected readonly IStructuredLoggingService? _loggingService = loggingService;
+    private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
 
     /// <summary>
     /// Creates a successful API response with data

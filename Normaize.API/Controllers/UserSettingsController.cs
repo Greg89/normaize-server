@@ -19,6 +19,11 @@ public class UserSettingsController(
         return User.GetUserId();
     }
 
+    private ProfileInfoDto GetCurrentUserInfo()
+    {
+        return User.GetUserInfo();
+    }
+
     /// <summary>
     /// Get current user's settings
     /// </summary>
@@ -71,18 +76,30 @@ public class UserSettingsController(
     {
         try
         {
-            var userId = GetCurrentUserId();
-            var profile = await _userSettingsService.GetUserProfileAsync(userId);
+            var userInfo = GetCurrentUserInfo();
+            var profile = await _userSettingsService.GetUserProfileAsync(userInfo.UserId);
 
             if (profile == null)
             {
                 // Initialize settings and create profile
-                var settings = await _userSettingsService.InitializeUserSettingsAsync(userId);
+                var settings = await _userSettingsService.InitializeUserSettingsAsync(userInfo.UserId);
                 profile = new UserProfileDto
                 {
-                    UserId = userId,
+                    UserId = userInfo.UserId,
+                    Email = userInfo.Email ?? string.Empty,
+                    Name = userInfo.Name ?? string.Empty,
+                    Picture = userInfo.Picture,
+                    EmailVerified = userInfo.EmailVerified,
                     Settings = settings
                 };
+            }
+            else
+            {
+                // Update the Auth0 info from claims
+                profile.Email = userInfo.Email ?? string.Empty;
+                profile.Name = userInfo.Name ?? string.Empty;
+                profile.Picture = userInfo.Picture;
+                profile.EmailVerified = userInfo.EmailVerified;
             }
 
             return Success(profile);

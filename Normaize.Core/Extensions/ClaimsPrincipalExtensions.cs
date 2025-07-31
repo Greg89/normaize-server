@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Normaize.Core.DTOs;
 
 namespace Normaize.Core.Extensions;
 
@@ -79,5 +80,35 @@ public static class ClaimsPrincipalExtensions
     {
         return user.FindFirst(ClaimTypes.Email)?.Value
                ?? user.FindFirst("email")?.Value;
+    }
+
+    /// <summary>
+    /// Gets the user name from the JWT token claims
+    /// </summary>
+    /// <param name="user">The ClaimsPrincipal from the current user context</param>
+    /// <returns>The user name or null if not found</returns>
+    public static string? GetUserName(this ClaimsPrincipal user)
+    {
+        return user.FindFirst(ClaimTypes.Name)?.Value
+               ?? user.FindFirst("name")?.Value;
+    }
+
+    /// <summary>
+    /// Gets all user information from the JWT token claims in a single call
+    /// </summary>
+    /// <param name="user">The ClaimsPrincipal from the current user context</param>
+    /// <returns>ProfileInfoDto containing all available user information</returns>
+    public static ProfileInfoDto GetUserInfo(this ClaimsPrincipal user)
+    {
+        return new ProfileInfoDto
+        {
+            UserId = user.GetUserId(),
+            Email = user.GetUserEmail(),
+            Name = user.GetUserName(),
+            Picture = user.FindFirst(ClaimTypes.Uri)?.Value 
+                     ?? user.FindFirst("picture")?.Value,
+            EmailVerified = bool.TryParse(
+                user.FindFirst("email_verified")?.Value, out var verified) && verified
+        };
     }
 }
