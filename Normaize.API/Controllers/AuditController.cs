@@ -2,18 +2,18 @@ using Microsoft.AspNetCore.Mvc;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using Normaize.Core.Extensions;
+using Normaize.Core.DTOs;
 
 namespace Normaize.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuditController(IAuditService auditService, IStructuredLoggingService loggingService) : ControllerBase
+public class AuditController(IAuditService auditService, IStructuredLoggingService loggingService) : BaseApiController(loggingService)
 {
     private readonly IAuditService _auditService = auditService;
-    private readonly IStructuredLoggingService _loggingService = loggingService;
 
     [HttpGet("datasets/{dataSetId}")]
-    public async Task<ActionResult<IEnumerable<DataSetAuditLog>>> GetDataSetAuditLogs(
+    public async Task<ActionResult<ApiResponse<IEnumerable<DataSetAuditLog>>>> GetDataSetAuditLogs(
         int dataSetId,
         [FromQuery] int skip = 0,
         [FromQuery] int take = 50)
@@ -21,21 +21,16 @@ public class AuditController(IAuditService auditService, IStructuredLoggingServi
         try
         {
             var auditLogs = await _auditService.GetDataSetAuditLogsAsync(dataSetId, skip, take);
-            return Ok(auditLogs);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(auditLogs);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, $"GetDataSetAuditLogs({dataSetId})");
-            return StatusCode(500, "Error retrieving audit logs");
+            return HandleException<IEnumerable<DataSetAuditLog>>(ex, $"GetDataSetAuditLogs({dataSetId})");
         }
     }
 
     [HttpGet("user")]
-    public async Task<ActionResult<IEnumerable<DataSetAuditLog>>> GetUserAuditLogs(
+    public async Task<ActionResult<ApiResponse<IEnumerable<DataSetAuditLog>>>> GetUserAuditLogs(
         [FromQuery] int skip = 0,
         [FromQuery] int take = 50)
     {
@@ -43,21 +38,16 @@ public class AuditController(IAuditService auditService, IStructuredLoggingServi
         {
             var userId = GetCurrentUserId();
             var auditLogs = await _auditService.GetUserAuditLogsAsync(userId, skip, take);
-            return Ok(auditLogs);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(auditLogs);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, "GetUserAuditLogs");
-            return StatusCode(500, "Error retrieving user audit logs");
+            return HandleException<IEnumerable<DataSetAuditLog>>(ex, "GetUserAuditLogs");
         }
     }
 
     [HttpGet("actions/{action}")]
-    public async Task<ActionResult<IEnumerable<DataSetAuditLog>>> GetAuditLogsByAction(
+    public async Task<ActionResult<ApiResponse<IEnumerable<DataSetAuditLog>>>> GetAuditLogsByAction(
         string action,
         [FromQuery] int skip = 0,
         [FromQuery] int take = 50)
@@ -65,12 +55,11 @@ public class AuditController(IAuditService auditService, IStructuredLoggingServi
         try
         {
             var auditLogs = await _auditService.GetAuditLogsByActionAsync(action, skip, take);
-            return Ok(auditLogs);
+            return Success(auditLogs);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, $"GetAuditLogsByAction({action})");
-            return StatusCode(500, "Error retrieving audit logs by action");
+            return HandleException<IEnumerable<DataSetAuditLog>>(ex, $"GetAuditLogsByAction({action})");
         }
     }
 

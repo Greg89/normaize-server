@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using Moq;
 using Normaize.API.Controllers;
 using Normaize.Core.Interfaces;
+using Normaize.Core.DTOs;
 using FluentAssertions;
 using Xunit;
 
@@ -16,6 +18,12 @@ public class HealthControllerTests
     {
         _mockLoggingService = new Mock<IStructuredLoggingService>();
         _controller = new HealthController(_mockLoggingService.Object);
+
+        // Set up controller context to avoid null reference issues
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
     }
 
     [Fact]
@@ -25,17 +33,18 @@ public class HealthControllerTests
         var result = _controller.Get();
 
         // Assert
-        result.Should().BeOfType<OkObjectResult>().Subject.Should().NotBeNull();
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject!;
+        result.Should().BeOfType<ActionResult<ApiResponse<HealthResponseDto>>>();
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
         okResult.Value.Should().NotBeNull();
-        var response = okResult.Value!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<HealthResponseDto>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        var response = apiResponse.Data!;
         // Check properties
-        var responseType = response.GetType();
-        responseType.GetProperty("Status").Should().NotBeNull();
-        responseType.GetProperty("Timestamp").Should().NotBeNull();
-        responseType.GetProperty("Service").Should().NotBeNull();
-        responseType.GetProperty("Version").Should().NotBeNull();
-        responseType.GetProperty("Environment").Should().NotBeNull();
+        response.Status.Should().NotBeNull();
+        response.Timestamp.Should().NotBe(default(DateTime));
+        response.Service.Should().NotBeNull();
+        response.Version.Should().NotBeNull();
+        response.Environment.Should().NotBeNull();
         // Verify logging was called
         _mockLoggingService.Verify(
             x => x.LogUserAction(It.IsAny<string>(), It.IsAny<object?>()),
@@ -49,26 +58,17 @@ public class HealthControllerTests
         var result = _controller.Get();
 
         // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject!;
+        result.Should().BeOfType<ActionResult<ApiResponse<HealthResponseDto>>>();
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
         okResult.Value.Should().NotBeNull();
-        var response = okResult.Value!;
-        var responseType = response.GetType();
-        var statusProperty = responseType.GetProperty("Status");
-        statusProperty.Should().NotBeNull();
-        var statusValue = statusProperty!.GetValue(response);
-        statusValue.Should().Be("healthy");
-        var timestampProperty = responseType.GetProperty("Timestamp");
-        timestampProperty.Should().NotBeNull();
-        var timestampValue = timestampProperty!.GetValue(response);
-        timestampValue.Should().NotBeNull();
-        var serviceProperty = responseType.GetProperty("Service");
-        serviceProperty.Should().NotBeNull();
-        var serviceValue = serviceProperty!.GetValue(response);
-        serviceValue.Should().Be("Normaize API");
-        var versionProperty = responseType.GetProperty("Version");
-        versionProperty.Should().NotBeNull();
-        var versionValue = versionProperty!.GetValue(response);
-        versionValue.Should().Be("1.0.0");
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<HealthResponseDto>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        var response = apiResponse.Data!;
+
+        response.Status.Should().Be("healthy");
+        response.Timestamp.Should().NotBe(default(DateTime));
+        response.Service.Should().Be("Normaize API");
+        response.Version.Should().Be("1.0.0");
     }
 
     [Fact]
@@ -78,14 +78,14 @@ public class HealthControllerTests
         var result = _controller.Get();
 
         // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject!;
+        result.Should().BeOfType<ActionResult<ApiResponse<HealthResponseDto>>>();
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
         okResult.Value.Should().NotBeNull();
-        var response = okResult.Value!;
-        var responseType = response.GetType();
-        var environmentProperty = responseType.GetProperty("Environment");
-        environmentProperty.Should().NotBeNull();
-        var environmentValue = environmentProperty!.GetValue(response);
-        environmentValue.Should().NotBeNull();
-        environmentValue!.ToString().Should().NotBeEmpty();
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<HealthResponseDto>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        var response = apiResponse.Data!;
+
+        response.Environment.Should().NotBeNull();
+        response.Environment.Should().NotBeEmpty();
     }
 }

@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Http;
-using Moq;
+using Microsoft.Extensions.Logging;
 using Normaize.API.Middleware;
+using Normaize.Core.Interfaces;
+using Normaize.Core.Configuration;
 using System.Net;
 using System.Text.Json;
-using Xunit;
 using FluentAssertions;
-using Normaize.Core.Interfaces;
+using Moq;
+using Xunit;
 
 namespace Normaize.Tests.Middleware;
 
@@ -21,16 +23,15 @@ public class ExceptionHandlingMiddlewareTests
         _mockServiceProvider = new Mock<IServiceProvider>();
         _context = new DefaultHttpContext();
 
+        // Setup service provider to return the logging service
+        _mockServiceProvider.Setup(x => x.GetService(typeof(IStructuredLoggingService)))
+            .Returns(_mockLoggingService.Object);
+        _context.RequestServices = _mockServiceProvider.Object;
+
         // Set up a proper response body stream
         _context.Response.Body = new MemoryStream();
 
-        _mockServiceProvider
-            .Setup(x => x.GetService(typeof(IStructuredLoggingService)))
-            .Returns(_mockLoggingService.Object);
-
-        _context.RequestServices = _mockServiceProvider.Object;
-        _context.Request.Path = "/api/test";
-        _context.Request.Method = "GET";
+        // Set trace identifier for correlation ID
         _context.TraceIdentifier = "test-trace-id";
     }
 
@@ -38,12 +39,8 @@ public class ExceptionHandlingMiddlewareTests
     public async Task InvokeAsync_WhenNoException_ShouldCallNextMiddleware()
     {
         // Arrange
-        var nextCalled = false;
-        RequestDelegate next = async (ctx) =>
-        {
-            nextCalled = true;
-            await Task.CompletedTask;
-        };
+        var wasNextCalled = false;
+        RequestDelegate next = async (ctx) => { await Task.Yield(); wasNextCalled = true; };
 
         var middleware = new ExceptionHandlingMiddleware(next);
 
@@ -51,7 +48,7 @@ public class ExceptionHandlingMiddlewareTests
         await middleware.InvokeAsync(_context);
 
         // Assert
-        nextCalled.Should().BeTrue();
+        wasNextCalled.Should().BeTrue();
         _context.Response.StatusCode.Should().Be(200);
     }
 
@@ -59,7 +56,7 @@ public class ExceptionHandlingMiddlewareTests
     public async Task InvokeAsync_WhenArgumentException_ShouldReturnBadRequest()
     {
         // Arrange
-        var exception = new ArgumentException("Invalid parameter");
+        var exception = new ArgumentException("Invalid argument");
         RequestDelegate next = async (ctx) => { await Task.Yield(); throw exception; };
 
         var middleware = new ExceptionHandlingMiddleware(next);
@@ -73,7 +70,7 @@ public class ExceptionHandlingMiddlewareTests
 
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("Invalid request parameters provided");
-        responseBody.Should().Contain("ArgumentException");
+        responseBody.Should().Contain("BAD_REQUEST");
         responseBody.Should().Contain("test-trace-id");
 
         _mockLoggingService.Verify(
@@ -98,7 +95,7 @@ public class ExceptionHandlingMiddlewareTests
 
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("You are not authorized to perform this action");
-        responseBody.Should().Contain("UnauthorizedAccessException");
+        responseBody.Should().Contain("UNAUTHORIZED");
     }
 
     [Fact]
@@ -118,7 +115,7 @@ public class ExceptionHandlingMiddlewareTests
 
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("The requested operation cannot be completed");
-        responseBody.Should().Contain("InvalidOperationException");
+        responseBody.Should().Contain("INVALID_OPERATION");
     }
 
     [Fact]
@@ -138,7 +135,7 @@ public class ExceptionHandlingMiddlewareTests
 
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("The requested resource was not found");
-        responseBody.Should().Contain("KeyNotFoundException");
+        responseBody.Should().Contain("NOT_FOUND");
     }
 
     [Fact]
@@ -158,7 +155,7 @@ public class ExceptionHandlingMiddlewareTests
 
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("This operation is not supported");
-        responseBody.Should().Contain("NotSupportedException");
+        responseBody.Should().Contain("NOT_SUPPORTED");
     }
 
     [Fact]
@@ -178,7 +175,7 @@ public class ExceptionHandlingMiddlewareTests
 
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("The operation timed out. Please try again");
-        responseBody.Should().Contain("TimeoutException");
+        responseBody.Should().Contain("TIMEOUT");
     }
 
     [Fact]
@@ -198,15 +195,15 @@ public class ExceptionHandlingMiddlewareTests
 
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("An unexpected error occurred while processing your request");
-        responseBody.Should().Contain("DivideByZeroException");
+        responseBody.Should().Contain("INTERNAL_SERVER_ERROR");
     }
 
     [Fact]
     public async Task InvokeAsync_WhenNoTraceIdentifier_ShouldGenerateCorrelationId()
     {
         // Arrange
-        _context.TraceIdentifier = null!;
-        var exception = new ArgumentException("Test exception");
+        _context.TraceIdentifier = string.Empty;
+        var exception = new Exception("Test exception");
         RequestDelegate next = async (ctx) => { await Task.Yield(); throw exception; };
 
         var middleware = new ExceptionHandlingMiddleware(next);
@@ -217,9 +214,7 @@ public class ExceptionHandlingMiddlewareTests
         // Assert
         var responseBody = await GetResponseBody();
         responseBody.Should().Contain("correlationId");
-
-        // Should contain either a trace identifier format or a GUID format correlation ID
-        responseBody.Should().MatchRegex(@"""correlationId"":""[0-9A-Z]{13}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}""");
+        responseBody.Should().NotContain("test-trace-id");
     }
 
     [Fact]
@@ -227,8 +222,8 @@ public class ExceptionHandlingMiddlewareTests
     {
         // Arrange
         _context.Request.Path = "/api/datasets/123";
-        _context.Request.Method = "POST";
-        var exception = new ArgumentException("Test exception");
+        _context.Request.Method = "GET";
+        var exception = new ArgumentException("Invalid request");
         RequestDelegate next = async (ctx) => { await Task.Yield(); throw exception; };
 
         var middleware = new ExceptionHandlingMiddleware(next);
@@ -238,9 +233,9 @@ public class ExceptionHandlingMiddlewareTests
 
         // Assert
         var responseBody = await GetResponseBody();
-        responseBody.Should().Contain(@"""requestPath"":""/api/datasets/123""");
-        responseBody.Should().Contain(@"""requestMethod"":""POST""");
-        responseBody.Should().Contain("timestamp");
+        responseBody.Should().Contain("test-trace-id");
+        responseBody.Should().Contain("Invalid request parameters provided");
+        responseBody.Should().Contain("BAD_REQUEST");
     }
 
     [Fact]
@@ -248,8 +243,8 @@ public class ExceptionHandlingMiddlewareTests
     {
         // Arrange
         _context.Request.Path = "/api/test";
-        _context.Request.Method = "PUT";
-        var exception = new ArgumentException("Test exception");
+        _context.Request.Method = "POST";
+        var exception = new Exception("Test exception");
         RequestDelegate next = async (ctx) => { await Task.Yield(); throw exception; };
 
         var middleware = new ExceptionHandlingMiddleware(next);
@@ -261,11 +256,8 @@ public class ExceptionHandlingMiddlewareTests
         _mockLoggingService.Verify(
             x => x.LogException(
                 exception,
-                It.Is<string>(s =>
-                    s.Contains("Global exception handler") &&
-                    s.Contains("PUT") &&
-                    s.Contains("/api/test") &&
-                    s.Contains("test-trace-id"))),
+                It.Is<string>(s => s.Contains("Global exception handler") && s.Contains("POST") && s.Contains("/api/test"))
+            ),
             Times.Once);
     }
 
@@ -282,28 +274,27 @@ public class ExceptionHandlingMiddlewareTests
         await middleware.InvokeAsync(_context);
 
         // Assert
+        _context.Response.ContentType.Should().Be("application/json");
+
         var responseBody = await GetResponseBody();
+        responseBody.Should().NotBeNullOrEmpty();
 
-        // Should be valid JSON
-        Action parseJson = () => JsonDocument.Parse(responseBody);
-        parseJson.Should().NotThrow();
-
-        // Should have expected structure
+        // Verify it's valid JSON
         var jsonDoc = JsonDocument.Parse(responseBody);
-        jsonDoc.RootElement.TryGetProperty("error", out var errorElement).Should().BeTrue();
-        errorElement.TryGetProperty("message", out _).Should().BeTrue();
-        errorElement.TryGetProperty("type", out _).Should().BeTrue();
-        errorElement.TryGetProperty("details", out _).Should().BeTrue();
-        errorElement.TryGetProperty("correlationId", out _).Should().BeTrue();
-        errorElement.TryGetProperty("requestPath", out _).Should().BeTrue();
-        errorElement.TryGetProperty("requestMethod", out _).Should().BeTrue();
-        errorElement.TryGetProperty("timestamp", out _).Should().BeTrue();
+        jsonDoc.RootElement.TryGetProperty("success", out var successElement).Should().BeTrue();
+        jsonDoc.RootElement.TryGetProperty("message", out var messageElement).Should().BeTrue();
+        jsonDoc.RootElement.TryGetProperty("errorCode", out var errorCodeElement).Should().BeTrue();
+        jsonDoc.RootElement.TryGetProperty("metadata", out var metadataElement).Should().BeTrue();
+
+        successElement.GetBoolean().Should().BeFalse();
+        messageElement.GetString().Should().Contain("Invalid request parameters provided");
+        errorCodeElement.GetString().Should().Be("BAD_REQUEST");
     }
 
     private async Task<string> GetResponseBody()
     {
         _context.Response.Body.Seek(0, SeekOrigin.Begin);
-        using var reader = new StreamReader(_context.Response.Body, leaveOpen: true);
+        using var reader = new StreamReader(_context.Response.Body);
         return await reader.ReadToEndAsync();
     }
 }

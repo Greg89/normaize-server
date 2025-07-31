@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Normaize.Core.Extensions;
-using System.Security.Claims;
+using Normaize.Core.DTOs;
 using System.Text;
 using System.Text.Json;
 
@@ -9,16 +9,11 @@ namespace Normaize.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController : ControllerBase
+public class AuthController(
+    HttpClient _httpClient,
+    ILogger<AuthController> _logger
+) : BaseApiController()
 {
-    private readonly HttpClient _httpClient;
-    private readonly ILogger<AuthController> _logger;
-
-    public AuthController(HttpClient httpClient, ILogger<AuthController> logger)
-    {
-        _httpClient = httpClient;
-        _logger = logger;
-    }
 
     /// <summary>
     /// Get a client credentials token from Auth0 for testing (development only)
@@ -26,7 +21,7 @@ public class AuthController : ControllerBase
     /// <returns>Auth0 JWT token for API access</returns>
     [HttpPost("login")]
     [AllowAnonymous]
-    public async Task<ActionResult<TokenResponse>> Login([FromBody] LoginRequest request)
+    public async Task<ActionResult<ApiResponse<TokenResponse>>> Login([FromBody] LoginRequest request)
     {
         try
         {
@@ -82,7 +77,7 @@ public class AuthController : ControllerBase
                 if (!passwordResponse.IsSuccessStatusCode)
                 {
                     _logger.LogWarning("Auth0 password grant also failed: {StatusCode}, {Error}", passwordResponse.StatusCode, passwordResponseContent);
-                    return BadRequest(new { message = "Login failed", error = passwordResponseContent });
+                    return BadRequest<TokenResponse>("Login failed");
                 }
 
                 responseContent = passwordResponseContent;
@@ -93,10 +88,10 @@ public class AuthController : ControllerBase
             if (tokenResponse?.AccessToken == null)
             {
                 _logger.LogError("Auth0 login response parsed but AccessToken is null");
-                return BadRequest(new { message = "Invalid response from Auth0 - no access token" });
+                return BadRequest<TokenResponse>("Invalid response from Auth0 - no access token");
             }
 
-            return Ok(new TokenResponse
+            return Success(new TokenResponse
             {
                 Token = tokenResponse.AccessToken,
                 ExpiresIn = tokenResponse.ExpiresIn,
@@ -106,7 +101,7 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during login");
-            return StatusCode(500, new { message = "Internal server error during login" });
+            return InternalServerError<TokenResponse>("Internal server error during login");
         }
     }
 
@@ -116,20 +111,20 @@ public class AuthController : ControllerBase
     /// <returns>Authentication test result</returns>
     [HttpGet("test")]
     [Authorize]
-    public ActionResult<object> TestAuth()
+    public ActionResult<ApiResponse<object>> TestAuth()
     {
         var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
         var userId = User.GetUserIdWithFallback();
         var grantType = User.GetGrantType();
         var isClientCredentials = User.IsClientCredentialsToken();
 
-        return Ok(new
+        return Success((object)new
         {
             message = "Authentication successful",
-            userId = userId,
-            grantType = grantType,
-            isClientCredentials = isClientCredentials,
-            claims = claims,
+            userId,
+            grantType,
+            isClientCredentials,
+            claims,
             timestamp = DateTime.UtcNow
         });
     }

@@ -10,10 +10,10 @@ namespace Normaize.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class DataSetsController(IDataProcessingService dataProcessingService, IStructuredLoggingService loggingService) : ControllerBase
+public class DataSetsController(IDataProcessingService dataProcessingService, IStructuredLoggingService loggingService)
+    : BaseApiController(loggingService)
 {
     private readonly IDataProcessingService _dataProcessingService = dataProcessingService;
-    private readonly IStructuredLoggingService _loggingService = loggingService;
 
     private string GetCurrentUserId()
     {
@@ -21,58 +21,45 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDataSets()
+    public async Task<ActionResult<ApiResponse<List<DataSetDto>>>> GetDataSets()
     {
         try
         {
             var userId = GetCurrentUserId();
-
-            IEnumerable<DataSetDto> dataSets;
-            dataSets = await _dataProcessingService.GetDataSetsByUserAsync(userId);
-
-            return Ok(dataSets?.ToList());
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            var dataSets = await _dataProcessingService.GetDataSetsByUserAsync(userId);
+            return Success(dataSets?.ToList() ?? []);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, "GetDataSets");
-            return StatusCode(500, "Error retrieving datasets");
+            return HandleException<List<DataSetDto>>(ex, "GetDataSets");
         }
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<DataSetDto>> GetDataSet(int id)
+    public async Task<ActionResult<ApiResponse<DataSetDto>>> GetDataSet(int id)
     {
         try
         {
             var userId = GetCurrentUserId();
             var dataSet = await _dataProcessingService.GetDataSetAsync(id, userId);
             if (dataSet == null)
-                return NotFound();
+                return NotFound<DataSetDto>();
 
-            return Ok(dataSet);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(dataSet);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, $"GetDataSet({id})");
-            return StatusCode(500, "Error retrieving dataset");
+            return HandleException<DataSetDto>(ex, $"GetDataSet({id})");
         }
     }
 
     [HttpPost("upload")]
-    public async Task<ActionResult<DataSetUploadResponse>> UploadDataSet([FromForm] FileUploadDto uploadDto)
+    public async Task<ActionResult<ApiResponse<DataSetUploadResponse>>> UploadDataSet([FromForm] FileUploadDto uploadDto)
     {
         try
         {
             if (uploadDto.File == null || uploadDto.File.Length == 0)
-                return BadRequest("No file provided");
+                return BadRequest<DataSetUploadResponse>("No file provided");
 
             var userId = GetCurrentUserId();
             var createDto = new CreateDataSetDto
@@ -94,9 +81,9 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
             var result = await _dataProcessingService.UploadDataSetAsync(fileRequest, createDto);
 
             if (!result.Success)
-                return BadRequest(result.Message);
+                return BadRequest<DataSetUploadResponse>(result.Message);
 
-            return Ok(result);
+            return Success(result, "Dataset uploaded successfully");
         }
         catch (UnauthorizedAccessException)
         {
@@ -104,148 +91,118 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, "UploadDataSet");
+            _loggingService?.LogException(ex, "UploadDataSet");
             return StatusCode(500, "Error uploading dataset");
         }
     }
 
     [HttpGet("{id}/preview")]
-    public async Task<ActionResult<string>> GetDataSetPreview(int id, [FromQuery] int rows = 10)
+    public async Task<ActionResult<ApiResponse<string>>> GetDataSetPreview(int id, [FromQuery] int rows = 10)
     {
         try
         {
             var userId = GetCurrentUserId();
             var preview = await _dataProcessingService.GetDataSetPreviewAsync(id, rows, userId);
             if (preview == null)
-                return NotFound();
+                return NotFound<string>();
 
-            return Ok(preview);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success<string>(preview ?? string.Empty);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, $"GetDataSetPreview({id})");
-            return StatusCode(500, "Error retrieving dataset preview");
+            return HandleException<string>(ex, $"GetDataSetPreview({id})");
         }
     }
 
     [HttpGet("{id}/schema")]
-    public async Task<ActionResult<object>> GetDataSetSchema(int id)
+    public async Task<ActionResult<ApiResponse<object>>> GetDataSetSchema(int id)
     {
         try
         {
             var userId = GetCurrentUserId();
             var schema = await _dataProcessingService.GetDataSetSchemaAsync(id, userId);
             if (schema == null)
-                return NotFound();
+                return NotFound<object>();
 
-            return Ok(schema);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(schema);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, $"GetDataSetSchema({id})");
-            return StatusCode(500, "Error retrieving dataset schema");
+            return HandleException<object>(ex, $"GetDataSetSchema({id})");
         }
     }
 
     [HttpDelete("{id}")]
-    public async Task<ActionResult> DeleteDataSet(int id)
+    public async Task<ActionResult<ApiResponse<string?>>> DeleteDataSet(int id)
     {
         try
         {
             var userId = GetCurrentUserId();
             var result = await _dataProcessingService.DeleteDataSetAsync(id, userId);
             if (!result)
-                return NotFound();
+                return NotFound<string?>();
 
-            return NoContent();
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success<string?>(null, "Dataset deleted successfully");
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, $"DeleteDataSet({id})");
-            return StatusCode(500, "Error deleting dataset");
+            return HandleException<string?>(ex, $"DeleteDataSet({id})");
         }
     }
 
     [HttpPost("{id}/restore")]
-    public async Task<ActionResult> RestoreDataSet(int id)
+    public async Task<ActionResult<ApiResponse<string?>>> RestoreDataSet(int id)
     {
         try
         {
             var userId = GetCurrentUserId();
             var result = await _dataProcessingService.RestoreDataSetAsync(id, userId);
             if (!result)
-                return NotFound();
+                return NotFound<string?>();
 
-            return Ok(new { message = "Dataset restored successfully" });
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success<string?>(null, "Dataset restored successfully");
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, $"RestoreDataSet({id})");
-            return StatusCode(500, "Error restoring dataset");
+            return HandleException<string?>(ex, $"RestoreDataSet({id})");
         }
     }
 
     [HttpDelete("{id}/permanent")]
-    public async Task<ActionResult> HardDeleteDataSet(int id)
+    public async Task<ActionResult<ApiResponse<string?>>> HardDeleteDataSet(int id)
     {
         try
         {
             var userId = GetCurrentUserId();
             var result = await _dataProcessingService.HardDeleteDataSetAsync(id, userId);
             if (!result)
-                return NotFound();
+                return NotFound<string?>();
 
-            return NoContent();
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success<string?>(null, "Dataset permanently deleted");
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, $"HardDeleteDataSet({id})");
-            return StatusCode(500, "Error permanently deleting dataset");
+            return HandleException<string?>(ex, $"HardDeleteDataSet({id})");
         }
     }
 
     [HttpGet("deleted")]
-    public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDeletedDataSets()
+    public async Task<ActionResult<ApiResponse<List<DataSetDto>>>> GetDeletedDataSets()
     {
         try
         {
             var userId = GetCurrentUserId();
             var dataSets = await _dataProcessingService.GetDeletedDataSetsAsync(userId);
-            return Ok(dataSets?.ToList());
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(dataSets?.ToList() ?? []);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, "GetDeletedDataSets");
-            return StatusCode(500, "Error retrieving deleted datasets");
+            return HandleException<List<DataSetDto>>(ex, "GetDeletedDataSets");
         }
     }
 
     [HttpGet("search")]
-    public async Task<ActionResult<IEnumerable<DataSetDto>>> SearchDataSets(
+    public async Task<ActionResult<ApiResponse<List<DataSetDto>>>> SearchDataSets(
         [FromQuery] string q,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
@@ -253,25 +210,20 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
         try
         {
             if (string.IsNullOrWhiteSpace(q))
-                return BadRequest("Search query is required");
+                return BadRequest<List<DataSetDto>>("Search query is required");
 
             var userId = GetCurrentUserId();
             var dataSets = await _dataProcessingService.SearchDataSetsAsync(q, userId, page, pageSize);
-            return Ok(dataSets?.ToList());
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(dataSets?.ToList() ?? []);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, $"SearchDataSets({q})");
-            return StatusCode(500, "Error searching datasets");
+            return HandleException<List<DataSetDto>>(ex, $"SearchDataSets({q})");
         }
     }
 
     [HttpGet("filetype/{fileType}")]
-    public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDataSetsByFileType(
+    public async Task<ActionResult<ApiResponse<List<DataSetDto>>>> GetDataSetsByFileType(
         FileType fileType,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
@@ -280,21 +232,16 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
         {
             var userId = GetCurrentUserId();
             var dataSets = await _dataProcessingService.GetDataSetsByFileTypeAsync(fileType, userId, page, pageSize);
-            return Ok(dataSets?.ToList());
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(dataSets?.ToList() ?? []);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, $"GetDataSetsByFileType({fileType})");
-            return StatusCode(500, "Error retrieving datasets by file type");
+            return HandleException<List<DataSetDto>>(ex, $"GetDataSetsByFileType({fileType})");
         }
     }
 
     [HttpGet("date-range")]
-    public async Task<ActionResult<IEnumerable<DataSetDto>>> GetDataSetsByDateRange(
+    public async Task<ActionResult<ApiResponse<List<DataSetDto>>>> GetDataSetsByDateRange(
         [FromQuery] DateTime startDate,
         [FromQuery] DateTime endDate,
         [FromQuery] int page = 1,
@@ -304,36 +251,26 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
         {
             var userId = GetCurrentUserId();
             var dataSets = await _dataProcessingService.GetDataSetsByDateRangeAsync(startDate, endDate, userId, page, pageSize);
-            return Ok(dataSets?.ToList());
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(dataSets?.ToList() ?? []);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, $"GetDataSetsByDateRange({startDate}, {endDate})");
-            return StatusCode(500, "Error retrieving datasets by date range");
+            return HandleException<List<DataSetDto>>(ex, $"GetDataSetsByDateRange({startDate}, {endDate})");
         }
     }
 
     [HttpGet("statistics")]
-    public async Task<ActionResult<DataSetStatisticsDto>> GetDataSetStatistics()
+    public async Task<ActionResult<ApiResponse<DataSetStatisticsDto>>> GetDataSetStatistics()
     {
         try
         {
             var userId = GetCurrentUserId();
             var statistics = await _dataProcessingService.GetDataSetStatisticsAsync(userId);
-            return Ok(statistics);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(statistics);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, "GetDataSetStatistics");
-            return StatusCode(500, "Error retrieving dataset statistics");
+            return HandleException<DataSetStatisticsDto>(ex, "GetDataSetStatistics");
         }
     }
 

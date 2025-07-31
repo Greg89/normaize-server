@@ -3,60 +3,56 @@ using Microsoft.AspNetCore.Authorization;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using Normaize.Core.DTOs;
-using Normaize.Core.Constants;
 
 namespace Normaize.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class DiagnosticsController : ControllerBase
+public class DiagnosticsController(
+    IStructuredLoggingService loggingService,
+    IStorageConfigurationService _storageConfigService
+) : BaseApiController(loggingService)
 {
-    private readonly IStructuredLoggingService _loggingService;
-    private readonly IStorageConfigurationService _storageConfigService;
-
-    public DiagnosticsController(
-        IStructuredLoggingService loggingService,
-        IStorageConfigurationService storageConfigService)
-    {
-        _loggingService = loggingService;
-        _storageConfigService = storageConfigService;
-    }
 
     [HttpGet("storage")]
-    public ActionResult<StorageDiagnosticsDto> GetStorageDiagnostics(CancellationToken cancellationToken = default)
+    public async Task<ActionResult<ApiResponse<StorageDiagnosticsDto>>> GetStorageDiagnostics(CancellationToken cancellationToken = default)
     {
         try
         {
-            _loggingService.LogUserAction("Storage diagnostics requested", new { UserId = User.Identity?.Name });
+            _loggingService?.LogUserAction("Storage diagnostics requested", new { UserId = User?.Identity?.Name ?? "unknown" });
 
-            var diagnostics = _storageConfigService.GetDiagnostics();
+            var diagnostics = await Task.Run(_storageConfigService.GetDiagnostics, cancellationToken);
 
-            _loggingService.LogUserAction("Storage diagnostics retrieved successfully", new
+            _loggingService?.LogUserAction("Storage diagnostics retrieved successfully", new
             {
-                StorageProvider = diagnostics.StorageProvider,
-                S3Configured = diagnostics.S3Configured,
-                Environment = diagnostics.Environment
+                diagnostics.StorageProvider,
+                diagnostics.S3Configured,
+                diagnostics.Environment
             });
 
-            return Ok(diagnostics);
+            return Success(diagnostics);
+        }
+        catch (OperationCanceledException)
+        {
+            return StatusCode(499, "Request was cancelled");
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, "GetStorageDiagnostics");
-            return StatusCode(500, "Error retrieving storage diagnostics");
+            return HandleException<StorageDiagnosticsDto>(ex, "GetStorageDiagnostics");
         }
     }
 
     [HttpPost("test-storage")]
-    public async Task<ActionResult<StorageTestResultDto>> TestStorage(CancellationToken cancellationToken = default)
+    public async Task<ActionResult<ApiResponse<StorageTestResultDto>>> TestStorage(CancellationToken cancellationToken = default)
     {
         try
         {
-            _loggingService.LogUserAction("Storage test requested", new { UserId = User.Identity?.Name });
+            _loggingService?.LogUserAction("Storage test requested", new { UserId = User?.Identity?.Name ?? "unknown" });
 
             // Get the storage service from DI
-            var storageService = HttpContext.RequestServices.GetRequiredService<IStorageService>();
+            var storageService = HttpContext?.RequestServices.GetRequiredService<IStorageService>()
+                ?? throw new InvalidOperationException("HttpContext is not available");
             var storageType = storageService.GetType().Name;
 
             // Test file operations
@@ -99,14 +95,14 @@ public class DiagnosticsController : ControllerBase
                     Message = "Storage service is working correctly"
                 };
 
-                _loggingService.LogUserAction("Storage test completed successfully", new
+                _loggingService?.LogUserAction("Storage test completed successfully", new
                 {
                     StorageType = storageType,
                     FilePath = filePath,
-                    ContentMatch = result.ContentMatch
+                    result.ContentMatch
                 });
 
-                return Ok(result);
+                return Success(result);
             }
             catch (Exception ex)
             {
@@ -118,15 +114,14 @@ public class DiagnosticsController : ControllerBase
                     Message = "Storage service test failed"
                 };
 
-                _loggingService.LogException(ex, "Storage test failed");
+                _loggingService?.LogException(ex, "Storage test failed");
 
-                return Ok(result);
+                return Success(result);
             }
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, "TestStorage");
-            return StatusCode(500, "Error testing storage");
+            return HandleException<StorageTestResultDto>(ex, "TestStorage");
         }
     }
 }

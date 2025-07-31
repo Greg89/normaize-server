@@ -1,40 +1,27 @@
 using Microsoft.AspNetCore.Mvc;
 using Normaize.Core.Interfaces;
+using Normaize.Core.DTOs;
 
 namespace Normaize.API.Controllers;
 
 [ApiController]
 [Route("health")]
-public class HealthMonitoringController : ControllerBase
+public class HealthMonitoringController(IHealthCheckService _healthCheckService) : BaseApiController()
 {
-    private readonly IHealthCheckService _healthCheckService;
-
-    public HealthMonitoringController(IHealthCheckService healthCheckService)
-    {
-        _healthCheckService = healthCheckService;
-    }
 
     [HttpGet("health")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
-    public async Task<IActionResult> GetHealth(CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<object>>> GetHealth(CancellationToken cancellationToken)
     {
         var result = await _healthCheckService.CheckHealthAsync(cancellationToken);
 
         if (!result.IsHealthy)
         {
-            return StatusCode(503, new
-            {
-                status = result.Status,
-                components = result.Components,
-                issues = result.Issues,
-                timestamp = result.Timestamp,
-                duration = result.Duration.TotalMilliseconds,
-                correlationId = result.CorrelationId
-            });
+            return Error<object>("Health check failed", "HEALTH_CHECK_FAILED", 503);
         }
 
-        return Ok(new
+        return Success((object)new
         {
             status = result.Status,
             components = result.Components,
@@ -48,23 +35,16 @@ public class HealthMonitoringController : ControllerBase
     [HttpGet("liveness")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
-    public async Task<IActionResult> GetLiveness(CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<object>>> GetLiveness(CancellationToken cancellationToken)
     {
         var result = await _healthCheckService.CheckLivenessAsync(cancellationToken);
 
         if (!result.IsHealthy)
         {
-            return StatusCode(503, new
-            {
-                status = result.Status,
-                issues = result.Issues,
-                timestamp = result.Timestamp,
-                duration = result.Duration.TotalMilliseconds,
-                correlationId = result.CorrelationId
-            });
+            return Error<object>("Liveness check failed", "LIVENESS_CHECK_FAILED", 503);
         }
 
-        return Ok(new
+        return Success((object)new
         {
             status = result.Status,
             timestamp = result.Timestamp,
@@ -77,24 +57,16 @@ public class HealthMonitoringController : ControllerBase
     [HttpGet("readiness")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
-    public async Task<IActionResult> GetReadiness(CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<object>>> GetReadiness(CancellationToken cancellationToken)
     {
         var result = await _healthCheckService.CheckReadinessAsync(cancellationToken);
 
         if (!result.IsHealthy)
         {
-            return StatusCode(503, new
-            {
-                status = result.Status,
-                components = result.Components,
-                issues = result.Issues,
-                timestamp = result.Timestamp,
-                duration = result.Duration.TotalMilliseconds,
-                correlationId = result.CorrelationId
-            });
+            return Error<object>("Readiness check failed", "READINESS_CHECK_FAILED", 503);
         }
 
-        return Ok(new
+        return Success((object)new
         {
             status = result.Status,
             components = result.Components,
