@@ -4,15 +4,29 @@ This directory contains scripts to validate your code before committing to the r
 
 ## Available Scripts
 
-### PowerShell Script (Recommended)
+### Pre-Commit Validation Scripts
+
+#### PowerShell Script (Recommended)
 - **File**: `pre-commit.ps1`
 - **Platform**: Windows, macOS, Linux (with PowerShell Core)
 - **Features**: Comprehensive validation with colored output
 
-### Batch Script (Windows)
+#### Batch Script (Windows)
 - **File**: `pre-commit.bat`
 - **Platform**: Windows only
 - **Features**: Basic validation with simple output
+
+### Package Update Scripts
+
+#### PowerShell Script (Recommended)
+- **File**: `update-packages.ps1`
+- **Platform**: Windows, macOS, Linux (with PowerShell Core)
+- **Features**: Automated package updates with comprehensive validation
+
+#### Batch Script (Windows)
+- **File**: `update-packages.bat`
+- **Platform**: Windows only
+- **Features**: Manual package updates with predefined versions
 
 ## Usage
 
@@ -42,9 +56,76 @@ This directory contains scripts to validate your code before committing to the r
 scripts\pre-commit.bat
 ```
 
+## Package Update Usage
+
+### PowerShell Script (Recommended)
+
+The PowerShell script automatically detects and updates all outdated packages across all projects in the solution.
+
+```powershell
+# Check for outdated packages (dry run)
+powershell -ExecutionPolicy Bypass -File scripts/update-packages.ps1 -DryRun
+
+# Update all packages
+powershell -ExecutionPolicy Bypass -File scripts/update-packages.ps1
+
+# Update packages but skip tests
+powershell -ExecutionPolicy Bypass -File scripts/update-packages.ps1 -SkipTests
+
+# Update packages with verbose output
+powershell -ExecutionPolicy Bypass -File scripts/update-packages.ps1 -Verbose
+```
+
+### Batch Script
+
+The batch script updates packages to specific predefined versions.
+
+```cmd
+# Update all packages to latest versions
+scripts\update-packages.bat
+```
+
+### Manual Package Updates
+
+For selective package updates or custom version management:
+
+```bash
+# Check for outdated packages
+dotnet list package --outdated
+
+# Update a specific package in a project
+dotnet add Normaize.API/Normaize.API.csproj package PackageName --version LatestVersion
+
+# Update all packages in a project (example)
+dotnet add Normaize.API/Normaize.API.csproj package CsvHelper --version 33.1.0
+dotnet add Normaize.API/Normaize.API.csproj package DotNetEnv --version 3.1.1
+```
+
+### Using Visual Studio
+
+1. Right-click on your solution in Solution Explorer
+2. Select "Manage NuGet Packages for Solution"
+3. Go to the "Updates" tab
+4. Select packages to update and click "Update"
+
+### Using dotnet CLI with Global Tool
+
+```bash
+# Install the dotnet-outdated tool
+dotnet tool install --global dotnet-outdated-tool
+
+# Check for outdated packages
+dotnet outdated
+
+# Update packages
+dotnet outdated --upgrade
+```
+
 ## What the Scripts Check
 
-### Essential Checks (Both Scripts)
+### Pre-Commit Validation Checks
+
+#### Essential Checks (Both Scripts)
 1. **Prerequisites**
    - .NET SDK availability
    - Solution file existence
@@ -81,6 +162,41 @@ scripts\pre-commit.bat
 9. **Performance**
    - Async method patterns
    - Memory usage patterns
+
+### Package Update Process
+
+#### PowerShell Script Features
+1. **Package Detection**
+   - Scans all projects for outdated packages
+   - Identifies current vs. latest versions
+   - Groups packages by project
+
+2. **Automated Updates**
+   - Updates packages to latest versions
+   - Handles dependencies automatically
+   - Provides progress feedback
+
+3. **Validation Steps**
+   - Package restoration
+   - Solution building
+   - Test execution
+   - Success/failure reporting
+
+4. **Safety Features**
+   - Dry run mode for preview
+   - Error handling and reporting
+   - Rollback capability through git
+
+#### Batch Script Features
+1. **Predefined Updates**
+   - Updates to specific known versions
+   - Covers all major packages
+   - Consistent across environments
+
+2. **Simple Execution**
+   - One-command execution
+   - No complex parameters
+   - Windows-native experience
 
 ## Prerequisites
 
@@ -121,7 +237,102 @@ chmod +x .git/hooks/pre-commit
 
 2. The hook will run automatically before each commit
 
+## Package Update Best Practices
+
+### Before Updating
+1. **Backup Your Work**
+   ```bash
+   # Commit current state
+   git add .
+   git commit -m "Backup before package updates"
+   ```
+
+2. **Check Current State**
+   ```bash
+   # Verify current package versions
+   dotnet list package --outdated
+   ```
+
+3. **Review Breaking Changes**
+   - Check package release notes
+   - Review major version changes
+   - Test in a separate branch first
+
+### During Updates
+1. **Use Dry Run First**
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts/update-packages.ps1 -DryRun
+   ```
+
+2. **Update Incrementally**
+   - Update one project at a time
+   - Test after each major update
+   - Address issues before continuing
+
+3. **Monitor for Errors**
+   - Watch for build failures
+   - Check for breaking changes
+   - Review test failures
+
+### After Updates
+1. **Verify Functionality**
+   ```bash
+   # Run all tests
+   dotnet test --verbosity normal
+   
+   # Build solution
+   dotnet build
+   ```
+
+2. **Check for Issues**
+   - Review build warnings
+   - Address deprecated APIs
+   - Update code if needed
+
+3. **Document Changes**
+   - Update package versions in documentation
+   - Note any breaking changes
+   - Update team on new features
+
 ## Troubleshooting
+
+### Package Update Issues
+
+#### Build Failures After Updates
+```bash
+# Clean and rebuild
+dotnet clean
+dotnet restore
+dotnet build
+
+# Check for specific errors
+dotnet build --verbosity normal
+```
+
+#### Test Failures After Updates
+```bash
+# Run tests with detailed output
+dotnet test --verbosity normal --logger "console;verbosity=detailed"
+
+# Check for specific test failures
+dotnet test --filter "TestClassName"
+```
+
+#### Package Conflicts
+```bash
+# Check package dependencies
+dotnet list package --include-transitive
+
+# Resolve conflicts manually
+dotnet add package PackageName --version SpecificVersion
+```
+
+#### Breaking Changes
+```bash
+# Revert to previous version if needed
+git checkout HEAD~1 -- Normaize.API/Normaize.API.csproj
+dotnet restore
+```
 
 ### Common Issues
 
@@ -193,6 +404,42 @@ Edit the script to adjust:
 - Validation thresholds
 - Error messages
 - Success criteria
+
+## Current Package Status
+
+### Typical Outdated Packages
+
+The Normaize solution typically has the following packages that need regular updates:
+
+#### Normaize.API
+- **CsvHelper**: 31.0.0 → 33.1.0
+- **DotNetEnv**: 3.0.0 → 3.1.1
+- **EPPlus**: 7.0.9 → 8.0.8
+- **Microsoft.AspNetCore.Authentication.JwtBearer**: 9.0.0 → 9.0.7
+- **Serilog.AspNetCore**: 8.0.0 → 9.0.0
+- **Swashbuckle.AspNetCore**: 7.0.0 → 9.0.3
+
+#### Normaize.Core
+- **AutoMapper**: 12.0.1 → 15.0.1
+- **FluentValidation**: 11.8.1 → 12.0.0
+- **Microsoft.Extensions.* packages**: 9.0.0 → 9.0.7
+- **Serilog**: 3.1.1 → 4.3.0
+
+#### Normaize.Data
+- **AWSSDK.S3**: 3.7.305.12 → 4.0.6.2
+- **Microsoft.EntityFrameworkCore**: 9.0.0 → 9.0.7
+
+#### Normaize.Tests
+- **FluentAssertions**: 6.12.0 → 8.5.0
+- **xunit**: 2.7.0 → 2.9.3
+- **Moq**: 4.20.70 → 4.20.72
+
+### Update Frequency
+
+- **Security Updates**: Immediately when available
+- **Patch Updates**: Monthly
+- **Minor Updates**: Quarterly
+- **Major Updates**: After thorough testing
 
 ## Best Practices
 
