@@ -123,7 +123,7 @@ public class UserSettingsController(
 
             // Return the updated profile with Auth0 info
             var updatedProfile = await _userSettingsService.GetUserProfileAsync(userInfo.UserId);
-            
+
             if (updatedProfile != null)
             {
                 // Update the Auth0 info from claims

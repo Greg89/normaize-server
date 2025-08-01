@@ -105,7 +105,7 @@ public static class ClaimsPrincipalExtensions
             UserId = user.GetUserId(),
             Email = user.GetUserEmail(),
             Name = user.GetUserName(),
-            Picture = user.FindFirst(ClaimTypes.Uri)?.Value 
+            Picture = user.FindFirst(ClaimTypes.Uri)?.Value
                      ?? user.FindFirst("picture")?.Value,
             EmailVerified = bool.TryParse(
                 user.FindFirst("email_verified")?.Value, out var verified) && verified
