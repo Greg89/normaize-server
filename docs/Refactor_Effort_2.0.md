@@ -67,7 +67,7 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 - [x] `Normaize.Core/DTOs/ApiResponse.cs`
 - [x] `Normaize.Core/DTOs/VisualizationDto.cs`
 - [x] `Normaize.Core/DTOs/UserProfileDto.cs`
-- [ ] `Normaize.Core/DTOs/UserSettingsDto.cs`
+- [x] `Normaize.Core/DTOs/UserSettingsDto.cs`
 - [ ] `Normaize.Core/DTOs/StorageDiagnosticsDto.cs`
 - [ ] `Normaize.Core/DTOs/UpdateUserSettingsDto.cs`
 - [ ] `Normaize.Core/DTOs/HealthResponseDto.cs`
@@ -543,6 +543,110 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 - Implemented JSON serialization attributes for consistent API responses
 - Added validation attributes for data integrity (Required, EmailAddress, StringLength, Url)
 - Added versioning support with Version and LastUpdated properties
+- All recommendations successfully implemented and tested
+
+---
+
+#### `Normaize.Core/DTOs/UserSettingsDto.cs` ✅
+**Review Date**: 2025-01-27
+
+**Overview & Description**:
+- **Purpose**: Defines a comprehensive user settings DTO containing all user-configurable preferences for the Normaize platform
+- **Responsibilities**: 
+  - Provides complete user settings including notifications, UI preferences, data processing options, privacy settings, and account information
+  - Serves as the primary data transfer object for user settings management
+  - Supports both reading and writing user settings with sensible defaults
+  - Bridges user preferences with application functionality
+- **Role**: Complete user settings data transfer object for settings management
+
+**Code Quality Check** ✅:
+- No compiler warnings or errors
+- Clean, focused implementation with proper naming conventions
+- Good use of nullable reference types for optional fields
+- Appropriate default values and initialization
+- **IMPROVED**: Comprehensive XML documentation for all public members
+- **IMPROVED**: JSON serialization attributes for API consistency
+- **IMPROVED**: Validation attributes for data integrity
+- **IMPROVED**: Static classes for constrained value options
+
+**Code Efficiency** ✅:
+- No code duplication
+- Minimal, focused DTO with essential settings fields
+- Efficient use of nullable types to avoid unnecessary allocations
+- Proper use of string.Empty for required fields
+- Lightweight memory footprint with good organization
+- **IMPROVED**: Type-safe constants for constrained values
+- **IMPROVED**: Organized into logical regions for better maintainability
+
+**Clean Architecture Compliance** ✅:
+- ✅ **Dependency Direction**: Correctly placed in Core layer as DTO
+- ✅ **Layer Separation**: Clear DTO boundary with no external dependencies
+- ✅ **Interface Segregation**: Single, focused responsibility for settings data
+- ✅ **Single Responsibility**: Clear purpose - complete user settings data transfer
+- ✅ **Dependency Inversion**: No dependencies on external frameworks
+- ✅ **No Circular Dependencies**: Clean dependency graph
+- ✅ **Proper Namespacing**: Correctly placed in Normaize.Core.DTOs namespace
+
+**Test Coverage** ✅:
+- **Well-tested**: Found 50+ references in test files
+- **Comprehensive testing**: Covered in UserSettingsControllerTests, UserSettingsServiceTests, and UserSettingsIntegrationTests
+- **Integration testing**: Validated through controller and service layer tests
+- **Test data creation**: Proper test data builders for comprehensive testing
+
+**Key Components**:
+1. **Id**: Database primary key for the settings record
+2. **UserId**: Required Auth0 user identifier with validation
+3. **Notification Settings**: Email, push, processing, error, and digest notifications
+4. **UI/UX Preferences**: Theme, language, page size, tutorials, compact mode
+5. **Data Processing Preferences**: Auto-processing, preview rows, file type, validation, schema inference
+6. **Privacy Settings**: Analytics sharing, data usage, processing time display
+7. **Account Information**: Display name, timezone, date/time formats
+8. **Timestamps**: CreatedAt and UpdatedAt for tracking changes
+
+**Usage Analysis**:
+- **Settings Management**: Used by UserSettingsController for GET/PUT settings endpoints
+- **Service Integration**: Used by UserSettingsService for CRUD operations
+- **Profile Integration**: Used by UserProfileDto for complete user profile
+- **Comprehensive Testing**: Well-tested through controller, service, and integration tests
+
+**Improvements Made**:
+- ✅ **XML Documentation**: Complete documentation for all public members with detailed remarks
+- ✅ **JSON Serialization**: Consistent camelCase naming in API responses
+- ✅ **Validation Attributes**: Data integrity validation (Required, StringLength, Range)
+- ✅ **Static Option Classes**: Type-safe constants for ThemeOptions, TimeFormatOptions, FileTypeOptions
+- ✅ **Logical Organization**: Organized into regions for better code organization
+- ✅ **Comprehensive Documentation**: Detailed remarks explaining each setting's purpose and usage
+- Clean, maintainable DTO structure
+- Proper validation and constraints
+- Good integration with user settings service layer
+- Consistent with application naming conventions
+- Comprehensive test coverage
+
+**SonarQube Status**: ✅ No issues detected
+
+**Architecture Notes**:
+- This DTO serves as the foundation for all user settings functionality
+- Well-designed with comprehensive validation and documentation
+- Provides clean separation between different types of user preferences
+- Supports both read and write operations for settings management
+- Excellent integration with the user settings service layer
+- **IMPROVED**: Now includes comprehensive validation, documentation, and type safety
+- **IMPROVED**: Supports API consistency and maintainability
+
+**Recommendations**:
+1. ✅ **XML documentation** for public properties - IMPLEMENTED
+2. ✅ **JSON serialization attributes** for API consistency - IMPLEMENTED
+3. ✅ **Validation attributes** for data integrity - IMPLEMENTED
+4. ✅ **Static option classes** for constrained values - IMPLEMENTED
+5. ✅ **Logical organization** with regions - IMPLEMENTED
+6. ✅ **Comprehensive documentation** with detailed remarks - IMPLEMENTED
+
+**Implementation Summary**:
+- Added comprehensive XML documentation with detailed explanations for each setting
+- Implemented JSON serialization attributes for consistent API responses
+- Added validation attributes for data integrity (Required, StringLength, Range)
+- Created static option classes for type-safe constrained values
+- Organized code into logical regions for better maintainability
 - All recommendations successfully implemented and tested
 
 ---
