@@ -167,7 +167,14 @@ if (-not $SkipFormat) {
     Write-Step "Checking Code Formatting"
     try {
         # Check if dotnet format is available
-        if (Test-Command "dotnet format") {
+        try {
+            dotnet format --help | Out-Null
+            $formatAvailable = $true
+        } catch {
+            $formatAvailable = $false
+        }
+        
+        if ($formatAvailable) {
             # Check formatting without making changes
             dotnet format --verify-no-changes --verbosity quiet
             
@@ -195,19 +202,30 @@ try {
     # Check for outdated packages
     $outdatedResult = dotnet list package --outdated 2>$null
     
-    if ($LASTEXITCODE -eq 0 -and $outdatedResult -and $outdatedResult.Count -gt 1) {
-        Write-ColorOutput "WARNING: Found outdated packages. Consider updating." ([System.ConsoleColor]::Yellow)
+    if ($LASTEXITCODE -eq 0) {
+        # Check if the output contains "no updates" which means no outdated packages
+        if ($outdatedResult -and ($outdatedResult -join "`n") -match "no updates given the current sources") {
+            Write-ColorOutput "SUCCESS: No outdated packages found" ([System.ConsoleColor]::Green)
+        } else {
+            Write-ColorOutput "WARNING: Found outdated packages. Consider updating." ([System.ConsoleColor]::Yellow)
+        }
     } else {
-        Write-ColorOutput "SUCCESS: No outdated packages found" ([System.ConsoleColor]::Green)
+        Write-ColorOutput "WARNING: Could not check for outdated packages" ([System.ConsoleColor]::Yellow)
     }
     
     # Check for deprecated packages
     $deprecatedResult = dotnet list package --deprecated 2>$null
     
-    if ($LASTEXITCODE -eq 0 -and $deprecatedResult -and $deprecatedResult.Count -gt 1) {
-        Write-ColorOutput "WARNING: Found deprecated packages." ([System.ConsoleColor]::Yellow)
+    if ($LASTEXITCODE -eq 0) {
+        $deprecatedOutput = $deprecatedResult -join "`n"
+        # Check if the output contains "has the following deprecated packages" which means there are deprecated packages
+        if ($deprecatedOutput -match "has the following deprecated packages") {
+            Write-ColorOutput "WARNING: Found deprecated packages." ([System.ConsoleColor]::Yellow)
+        } else {
+            Write-ColorOutput "SUCCESS: No deprecated packages found" ([System.ConsoleColor]::Green)
+        }
     } else {
-        Write-ColorOutput "SUCCESS: No deprecated packages found" ([System.ConsoleColor]::Green)
+        Write-ColorOutput "WARNING: Could not check for deprecated packages" ([System.ConsoleColor]::Yellow)
     }
 }
 catch {

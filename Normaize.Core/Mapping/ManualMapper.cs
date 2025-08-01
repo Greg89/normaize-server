@@ -320,4 +320,4 @@ public static class ManualMapper
     }
 
     #endregion
-} 
+}
