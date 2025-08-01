@@ -53,7 +53,7 @@ public class DataAnalysisService : IDataAnalysisService
                 }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
-                var analysis = createDto.ToEntity();
+                var analysis = createDto!.ToEntity();
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
 
                 _infrastructure.StructuredLogging.LogStep(context, "Database save started");

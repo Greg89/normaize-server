@@ -273,9 +273,9 @@ public static class ManualMapper
         return new UserProfileDto
         {
             UserId = userInfo.UserId,
-            Email = userInfo.Email,
-            Name = userInfo.Name,
-            Picture = userInfo.Picture,
+            Email = userInfo.Email ?? string.Empty,
+            Name = userInfo.Name ?? string.Empty,
+            Picture = userInfo.Picture ?? string.Empty,
             EmailVerified = userInfo.EmailVerified,
             Settings = userSettings
         };

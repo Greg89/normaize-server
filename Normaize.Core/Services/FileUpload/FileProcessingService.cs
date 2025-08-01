@@ -144,8 +144,6 @@ public class FileProcessingService : IFileProcessingService
     {
         try
         {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
             using var fileStream = await _storageService.GetFileAsync(filePath);
             using var package = new ExcelPackage(fileStream);
             var worksheet = GetWorksheet(package);
