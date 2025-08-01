@@ -87,7 +87,7 @@ public class UserSettingsController(
                 {
                     UserId = userInfo.UserId,
                     Email = userInfo.Email ?? string.Empty,
-                    Name = userInfo.Name ?? string.Empty,
+                    Name = settings.DisplayName ?? userInfo.Name ?? string.Empty,
                     Picture = userInfo.Picture,
                     EmailVerified = userInfo.EmailVerified,
                     Settings = settings
@@ -97,7 +97,7 @@ public class UserSettingsController(
             {
                 // Update the Auth0 info from claims
                 profile.Email = userInfo.Email ?? string.Empty;
-                profile.Name = userInfo.Name ?? string.Empty;
+                profile.Name = profile.Settings.DisplayName ?? userInfo.Name ?? string.Empty;
                 profile.Picture = userInfo.Picture;
                 profile.EmailVerified = userInfo.EmailVerified;
             }
@@ -118,11 +118,21 @@ public class UserSettingsController(
     {
         try
         {
-            var userId = GetCurrentUserId();
-            var updatedSettings = await _userSettingsService.SaveUserSettingsAsync(userId, updateDto);
+            var userInfo = GetCurrentUserInfo();
+            var updatedSettings = await _userSettingsService.SaveUserSettingsAsync(userInfo.UserId, updateDto);
 
-            // Return the updated profile
-            var updatedProfile = await _userSettingsService.GetUserProfileAsync(userId);
+            // Return the updated profile with Auth0 info
+            var updatedProfile = await _userSettingsService.GetUserProfileAsync(userInfo.UserId);
+            
+            if (updatedProfile != null)
+            {
+                // Update the Auth0 info from claims
+                updatedProfile.Email = userInfo.Email ?? string.Empty;
+                updatedProfile.Name = updatedProfile.Settings.DisplayName ?? userInfo.Name ?? string.Empty;
+                updatedProfile.Picture = userInfo.Picture;
+                updatedProfile.EmailVerified = userInfo.EmailVerified;
+            }
+
             return Success(updatedProfile, "User profile updated successfully");
         }
         catch (Exception ex)
