@@ -91,8 +91,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             mockAppConfig.Setup(x => x.HasDatabaseConnection()).Returns(false);
             services.AddSingleton(mockAppConfig.Object);
 
-            // Add AutoMapper
-            services.AddAutoMapper(typeof(Core.Mapping.MappingProfile));
+
 
             // Add HttpContextAccessor
             services.AddHttpContextAccessor();

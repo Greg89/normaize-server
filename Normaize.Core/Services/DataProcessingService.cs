@@ -1,8 +1,8 @@
-using AutoMapper;
 using Normaize.Core.Constants;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
+using Normaize.Core.Mapping;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using System.Diagnostics;
@@ -18,25 +18,21 @@ public class DataProcessingService : IDataProcessingService
     private readonly IDataSetRepository _dataSetRepository;
     private readonly IFileUploadService _fileUploadService;
     private readonly IAuditService _auditService;
-    private readonly IMapper _mapper;
     private readonly IDataProcessingInfrastructure _infrastructure;
 
     public DataProcessingService(
         IDataSetRepository dataSetRepository,
         IFileUploadService fileUploadService,
         IAuditService auditService,
-        IMapper mapper,
         IDataProcessingInfrastructure infrastructure)
     {
         ArgumentNullException.ThrowIfNull(dataSetRepository);
         ArgumentNullException.ThrowIfNull(fileUploadService);
         ArgumentNullException.ThrowIfNull(auditService);
-        ArgumentNullException.ThrowIfNull(mapper);
         ArgumentNullException.ThrowIfNull(infrastructure);
         _dataSetRepository = dataSetRepository;
         _fileUploadService = fileUploadService;
         _auditService = auditService;
-        _mapper = mapper;
         _infrastructure = infrastructure;
     }
 
@@ -176,7 +172,7 @@ public class DataProcessingService : IDataProcessingService
                 if (dataSet == null) return null;
 
                 await LogAuditActionAsync(id, userId, "Viewed", context);
-                return _mapper.Map<DataSetDto>(dataSet);
+                return dataSet.ToDto();
             });
     }
 
@@ -208,7 +204,7 @@ public class DataProcessingService : IDataProcessingService
                 });
 
                 var pagedDataSets = ApplyPagination(dataSets, page, pageSize, context);
-                return _mapper.Map<IEnumerable<DataSetDto>>(pagedDataSets);
+                return pagedDataSets.ToDtoCollection();
             });
     }
 
@@ -392,7 +388,7 @@ public class DataProcessingService : IDataProcessingService
                     ["DeletedDataSets"] = deletedDataSets.Count
                 });
 
-                return _mapper.Map<IEnumerable<DataSetDto>>(deletedDataSets);
+                return deletedDataSets.ToDtoCollection();
             });
     }
 
@@ -421,7 +417,7 @@ public class DataProcessingService : IDataProcessingService
                 });
 
                 var pagedDataSets = ApplyPagination(dataSets, page, pageSize, context);
-                return _mapper.Map<IEnumerable<DataSetDto>>(pagedDataSets);
+                return pagedDataSets.ToDtoCollection();
             });
     }
 
@@ -454,7 +450,7 @@ public class DataProcessingService : IDataProcessingService
                 });
 
                 var pagedDataSets = ApplyPagination(dataSets, page, pageSize, context);
-                return _mapper.Map<IEnumerable<DataSetDto>>(pagedDataSets);
+                return pagedDataSets.ToDtoCollection();
             });
     }
 
@@ -484,7 +480,7 @@ public class DataProcessingService : IDataProcessingService
                 });
 
                 var pagedDataSets = ApplyPagination(dataSets, page, pageSize, context);
-                return _mapper.Map<IEnumerable<DataSetDto>>(pagedDataSets);
+                return pagedDataSets.ToDtoCollection();
             });
     }
 
@@ -537,7 +533,7 @@ public class DataProcessingService : IDataProcessingService
                 {
                     TotalCount = totalCount,
                     TotalSize = totalSize,
-                    RecentlyModified = _mapper.Map<IEnumerable<DataSetDto>>(recentlyModified)
+                    RecentlyModified = recentlyModified.ToDtoCollection()
                 };
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.CACHE_STORAGE_STARTED);

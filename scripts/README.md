@@ -398,6 +398,43 @@ catch {
 }
 ```
 
+### Customizing Package Updates
+
+#### Modifying Update Scripts
+You can customize the package update scripts for your specific needs:
+
+```powershell
+# Add custom package update logic
+Write-Host "Updating custom packages..." -ForegroundColor Yellow
+
+# Update specific packages with custom logic
+$customPackages = @(
+    @{ Name = "CustomPackage"; Version = "1.0.0" },
+    @{ Name = "AnotherPackage"; Version = "2.0.0" }
+)
+
+foreach ($package in $customPackages) {
+    dotnet add $projectPath package $package.Name --version $package.Version
+}
+```
+
+#### Adding Package Validation
+```powershell
+# Add custom package validation
+function Test-PackageCompatibility {
+    param($PackageName, $Version)
+    
+    # Your compatibility logic here
+    $compatible = $true
+    
+    if (-not $compatible) {
+        Write-Host "Warning: $PackageName $Version may have compatibility issues" -ForegroundColor Yellow
+    }
+    
+    return $compatible
+}
+```
+
 ### Modifying Validation Rules
 Edit the script to adjust:
 - File patterns to scan

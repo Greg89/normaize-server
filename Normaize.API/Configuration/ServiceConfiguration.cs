@@ -237,7 +237,6 @@ public static class ServiceConfiguration
 
         ConfigureDatabase(builder, logger, correlationId);
         ConfigureCors(builder, logger, correlationId);
-        ConfigureAutoMapper(builder, logger, correlationId);
         ConfigureStorageService(builder, logger, correlationId);
         ConfigureRepositories(builder, logger, correlationId);
     }
@@ -369,12 +368,7 @@ public static class ServiceConfiguration
         });
     }
 
-    private static void ConfigureAutoMapper(WebApplicationBuilder builder, ILogger logger, string correlationId)
-    {
-        logger.LogDebug("Configuring AutoMapper. CorrelationId: {CorrelationId}", correlationId);
 
-        builder.Services.AddAutoMapper(typeof(Program), typeof(Core.Mapping.MappingProfile));
-    }
 
     private static void ConfigureStorageService(WebApplicationBuilder builder, ILogger logger, string correlationId)
     {
