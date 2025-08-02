@@ -4,7 +4,7 @@
     "builder": "DOCKERFILE"
   },
   "deploy": {
-    "healthcheckPath": "/health/readiness",
+    "healthcheckPath": "/api/healthmonitoring/readiness",
     "healthcheckTimeout": 300,
     "restartPolicyType": "on_failure",
     "healthcheckInterval": 30,

@@ -18,7 +18,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 ```json
 {
   "deploy": {
-    "healthcheckPath": "/health/database",
+    "healthcheckPath": "/api/healthmonitoring/readiness",
     "healthcheckTimeout": 300,
     "restartPolicyType": "on_failure",
     "healthcheckInterval": 30,
@@ -29,30 +29,47 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 
 ## Health Check Endpoints
 
-### Database Health Check (`/health/database`)
-Returns detailed database health information:
+### Comprehensive Health Check (`/api/healthmonitoring/health`)
+Returns detailed health information for all system components:
 
 ```json
 {
   "status": "healthy",
-  "component": "database",
+  "components": {
+    "database": "healthy",
+    "storage": "healthy",
+    "external_services": "healthy"
+  },
   "timestamp": "2024-01-15T10:30:00Z",
-  "message": "Database schema is valid"
+  "duration": 214.8,
+  "message": "All systems healthy",
+  "correlationId": "abc123"
 }
 ```
 
-Or if unhealthy:
+### Readiness Check (`/api/healthmonitoring/readiness`)
+Returns readiness status for traffic serving:
+
 ```json
 {
-  "status": "unhealthy",
-  "component": "database",
-  "error": "Missing critical columns",
-  "missingColumns": ["DataHash", "UserId"],
-  "timestamp": "2024-01-15T10:30:00Z"
+  "status": "ready",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "message": "Application ready to serve traffic"
 }
 ```
 
-### Basic Health Check (`/health/basic`)
+### Liveness Check (`/api/healthmonitoring/liveness`)
+Returns basic liveness status:
+
+```json
+{
+  "status": "alive",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "message": "Application is alive and responding"
+}
+```
+
+### Basic Health Check (`/api/health`)
 Returns basic application status:
 ```json
 {
