@@ -69,7 +69,7 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 - [x] `Normaize.Core/DTOs/UserProfileDto.cs`
 - [x] `Normaize.Core/DTOs/UserSettingsDto.cs`
 - [x] `Normaize.Core/DTOs/StorageDiagnosticsDto.cs`
-- [ ] `Normaize.Core/DTOs/UpdateUserSettingsDto.cs`
+- [x] `Normaize.Core/DTOs/UpdateUserSettingsDto.cs`
 - [ ] `Normaize.Core/DTOs/HealthResponseDto.cs`
 - [ ] `Normaize.Core/DTOs/DataSetDto.cs`
 - [ ] `Normaize.Core/DTOs/DataSetStatisticsDto.cs`
@@ -745,6 +745,101 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 - Implemented JSON serialization attributes for consistent API responses
 - Added validation attributes for data integrity (Required, StringLength)
 - Enhanced documentation with detailed remarks explaining usage and purpose
+- All recommendations successfully implemented and tested
+
+---
+
+#### `Normaize.Core/DTOs/UpdateUserSettingsDto.cs` ✅
+**Review Date**: 2025-01-27
+
+**Overview & Description**:
+- **Purpose**: Defines a DTO for updating user settings with selective property updates
+- **Responsibilities**: 
+  - Provides nullable properties for selective user settings updates
+  - Allows partial updates without requiring all settings to be specified
+  - Supports all user-configurable preferences including notifications, UI preferences, data processing options, privacy settings, and account information
+  - Bridges user preference updates with application functionality
+- **Role**: Data transfer object for selective user settings updates
+
+**Code Quality Check** ✅:
+- No compiler warnings or errors
+- **IMPROVED**: Comprehensive XML documentation for all public members
+- **IMPROVED**: JSON serialization attributes for API consistency
+- **IMPROVED**: Validation attributes for data integrity
+- Good use of nullable reference types for selective updates
+- **IMPROVED**: Organized into logical regions for better maintainability
+
+**Code Efficiency** ✅:
+- No code duplication
+- Minimal, focused DTO with essential update fields
+- Efficient use of nullable types for selective updates
+- Lightweight memory footprint
+- Good organization with logical grouping
+
+**Clean Architecture Compliance** ✅:
+- ✅ **Dependency Direction**: Correctly placed in Core layer as DTO
+- ✅ **Layer Separation**: Clear DTO boundary with no external dependencies
+- ✅ **Interface Segregation**: Single, focused responsibility for settings updates
+- ✅ **Single Responsibility**: Clear purpose - selective user settings updates
+- ✅ **Dependency Inversion**: No dependencies on external frameworks
+- ✅ **No Circular Dependencies**: Clean dependency graph
+- ✅ **Proper Namespacing**: Correctly placed in Normaize.Core.DTOs namespace
+
+**Test Coverage** ✅:
+- **Well-tested**: Found 15+ references in test files
+- **Comprehensive testing**: Covered in UserSettingsControllerTests, UserSettingsServiceTests, and UserSettingsIntegrationTests
+- **Integration testing**: Validated through controller and service layer tests
+- **Test data creation**: Proper test data builders for comprehensive testing
+
+**Key Components**:
+1. **Notification Settings**: Email, push, processing, error, and digest notifications
+2. **UI/UX Preferences**: Theme, language, page size, tutorials, compact mode
+3. **Data Processing Preferences**: Auto-processing, preview rows, file type, validation, schema inference
+4. **Privacy Settings**: Analytics sharing, data usage, processing time display
+5. **Account Information**: Display name, timezone, date/time formats
+
+**Usage Analysis**:
+- **Settings Updates**: Used by UserSettingsController.UpdateUserSettings() and UpdateUserProfile()
+- **Service Integration**: Used by UserSettingsService.SaveUserSettingsAsync()
+- **Selective Updates**: Supports partial updates through nullable properties
+- **Comprehensive Testing**: Well-tested through controller, service, and integration tests
+
+**Improvements Made**:
+- ✅ **XML Documentation**: Complete documentation for all public members with detailed remarks
+- ✅ **JSON Serialization**: Consistent camelCase naming in API responses
+- ✅ **Validation Attributes**: Data integrity validation (StringLength, Range)
+- ✅ **Logical Organization**: Organized into regions for better code organization
+- ✅ **Comprehensive Documentation**: Detailed remarks explaining each property's purpose and selective update behavior
+- Clean, maintainable DTO structure
+- Proper validation and constraints
+- Good integration with user settings service layer
+- Consistent with application naming conventions
+- Comprehensive test coverage
+
+**SonarQube Status**: ✅ No issues detected
+
+**Architecture Notes**:
+- This DTO serves as the foundation for selective user settings updates
+- Well-designed with comprehensive validation and documentation
+- Provides clean separation between different types of user preferences
+- Supports both individual and bulk setting updates
+- Excellent integration with the user settings service layer
+- **IMPROVED**: Now includes comprehensive validation, documentation, and API consistency
+- **IMPROVED**: Supports maintainability and developer experience
+
+**Recommendations**:
+1. ✅ **XML documentation** for public properties - IMPLEMENTED
+2. ✅ **JSON serialization attributes** for API consistency - IMPLEMENTED
+3. ✅ **Validation attributes** for data integrity - IMPLEMENTED
+4. ✅ **Logical organization** with regions - IMPLEMENTED
+5. ✅ **Comprehensive documentation** with detailed remarks - IMPLEMENTED
+
+**Implementation Summary**:
+- Added comprehensive XML documentation with detailed explanations for each property
+- Implemented JSON serialization attributes for consistent API responses
+- Added validation attributes for data integrity (StringLength, Range)
+- Organized code into logical regions for better maintainability
+- Enhanced documentation with detailed remarks explaining selective update behavior
 - All recommendations successfully implemented and tested
 
 ---
