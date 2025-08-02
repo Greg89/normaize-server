@@ -29,7 +29,7 @@ public class LoggingIntegrationTests(TestWebApplicationFactory _factory) : IClas
         var client = _factory.CreateClient();
 
         // Act
-        var response = await client.GetAsync("/health");
+        var response = await client.GetAsync("/api/health");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
