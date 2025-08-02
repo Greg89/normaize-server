@@ -71,7 +71,7 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 - [x] `Normaize.Core/DTOs/StorageDiagnosticsDto.cs`
 - [x] `Normaize.Core/DTOs/UpdateUserSettingsDto.cs`
 - [x] `Normaize.Core/DTOs/HealthResponseDto.cs`
-- [ ] `Normaize.Core/DTOs/DataSetDto.cs`
+- [x] `Normaize.Core/DTOs/DataSetDto.cs`
 - [ ] `Normaize.Core/DTOs/DataSetStatisticsDto.cs`
 - [ ] `Normaize.Core/DTOs/AnalysisDto.cs`
 
@@ -931,6 +931,103 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 - Implemented JSON serialization attributes for consistent API responses
 - Added validation attributes for data integrity (Required, StringLength)
 - Enhanced documentation with detailed remarks explaining usage and purpose
+- All recommendations successfully implemented and tested
+
+---
+
+#### `Normaize.Core/DTOs/DataSetDto.cs` ✅
+**Review Date**: 2025-01-27
+
+**Overview & Description**:
+- **Purpose**: Defines DTOs for dataset management functionality including file uploads, dataset creation, and dataset information
+- **Responsibilities**: 
+  - `DataSetDto`: Provides comprehensive dataset information including metadata, file details, processing status, and storage information
+  - `CreateDataSetDto`: Provides data for creating new datasets with basic metadata
+  - `DataSetUploadResponse`: Provides response information for dataset upload operations
+  - `FileUploadDto`: Provides file upload data with form file support
+  - `FileType` and `StorageProvider` enums: Define supported file types and storage providers
+- **Role**: Core data transfer layer for dataset management and file upload functionality
+
+**Code Quality Check** ✅:
+- No compiler warnings or errors
+- **IMPROVED**: Comprehensive XML documentation for all public members including enums
+- **IMPROVED**: JSON serialization attributes for API consistency
+- **IMPROVED**: Validation attributes for data integrity
+- Good use of nullable reference types for optional fields
+- Appropriate default values and initialization
+- Clean, focused implementation with proper naming conventions
+
+**Code Efficiency** ✅:
+- No code duplication
+- Efficient use of enums for type safety
+- Proper use of nullable types to avoid unnecessary allocations
+- Good use of string.Empty for required fields
+- Lightweight memory footprint for DTOs
+
+**Clean Architecture Compliance** ✅:
+- ✅ **Dependency Direction**: Correctly placed in Core layer as DTOs
+- ✅ **Layer Separation**: Clear DTO boundary with no external dependencies
+- ✅ **Interface Segregation**: DTOs are focused and cohesive
+- ✅ **Single Responsibility**: Each DTO has a clear, single purpose
+- ✅ **Dependency Inversion**: No dependencies on external frameworks beyond System.ComponentModel.DataAnnotations
+- ✅ **No Circular Dependencies**: Clean dependency graph
+- ✅ **Proper Namespacing**: Correctly placed in Normaize.Core.DTOs namespace
+
+**Test Coverage** ✅:
+- **Well-tested**: Found 100+ references in test files
+- **Comprehensive testing**: Covered in DataSetsControllerTests and DataProcessingServiceTests
+- **Integration testing**: Validated through controller and service layer tests
+- **Test data creation**: Proper test data builders for comprehensive testing
+
+**Key Components**:
+1. **Enums**: `FileType` (7 types), `StorageProvider` (4 types)
+2. **DataSetDto**: Complete dataset information with 20+ properties
+3. **CreateDataSetDto**: Simplified dataset creation data
+4. **DataSetUploadResponse**: Upload operation response
+5. **FileUploadDto**: File upload with form file support
+
+**Usage Analysis**:
+- **Heavily used** in dataset management services and controllers
+- **Well-integrated** with file upload and processing services
+- **Comprehensive coverage** of dataset operations
+- **Extensible design** with enum support for file types and storage providers
+
+**Improvements Made**:
+- ✅ **XML Documentation**: Complete documentation for all public members including enums with detailed remarks
+- ✅ **JSON Serialization**: Consistent camelCase naming in API responses
+- ✅ **Validation Attributes**: Data integrity validation (Required, StringLength)
+- ✅ **Comprehensive Documentation**: Detailed remarks explaining each property's purpose and usage
+- ✅ **Enum Documentation**: Complete documentation for FileType and StorageProvider enums
+- Clean, maintainable DTO structure
+- Proper validation and constraints
+- Good integration with dataset management functionality
+- Consistent with application naming conventions
+- Comprehensive test coverage
+
+**SonarQube Status**: ✅ No issues detected
+
+**Architecture Notes**:
+- These DTOs serve as the foundation for the entire dataset management system
+- Well-designed with comprehensive validation and documentation
+- Provides clean separation between different dataset operations
+- Supports both read and write operations for dataset management
+- Excellent integration with the dataset controller and processing service
+- **IMPROVED**: Now includes comprehensive validation, documentation, and API consistency
+- **IMPROVED**: Supports maintainability and developer experience
+
+**Recommendations**:
+1. ✅ **XML documentation** for public properties and enums - IMPLEMENTED
+2. ✅ **JSON serialization attributes** for API consistency - IMPLEMENTED
+3. ✅ **Validation attributes** for data integrity - IMPLEMENTED
+4. ✅ **Comprehensive documentation** with detailed remarks - IMPLEMENTED
+5. ✅ **Enum documentation** for better developer experience - IMPLEMENTED
+
+**Implementation Summary**:
+- Added comprehensive XML documentation with detailed explanations for each property and enum value
+- Implemented JSON serialization attributes for consistent API responses
+- Added validation attributes for data integrity (Required, StringLength)
+- Enhanced documentation with detailed remarks explaining usage and purpose
+- Documented all enum values for better developer experience
 - All recommendations successfully implemented and tested
 
 ---
