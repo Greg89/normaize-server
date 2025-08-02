@@ -67,12 +67,15 @@ jobs:
         echo "Starting SonarQube analysis..."
         echo "Project Key: ${{ env.SONAR_PROJECT_KEY }}"
         echo "Organization: ${{ env.SONAR_ORGANIZATION }}"
-        echo "Using sonar-project.properties for configuration..."
         ./.sonar/scanner/dotnet-sonarscanner begin \
           /k:"${{ env.SONAR_PROJECT_KEY }}" \
           /o:"${{ env.SONAR_ORGANIZATION }}" \
           /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
-          /d:sonar.host.url="https://sonarcloud.io"
+          /d:sonar.host.url="https://sonarcloud.io" \
+          /d:sonar.exclusions="**/coverage-report/**,**/coverage-summary/**,**/coverage-opencover/**,**/coverage/**,**/test-results/**,**/bin/**,**/obj/**,**/uploads/**,**/*.Designer.cs,**/Migrations/**,**/Migrations/**/*.cs,**/*Migration*.cs,**/*Snapshot*.cs" \
+          /d:sonar.test.exclusions="**/Tests/**,**/*Tests.cs,**/*Test.cs" \
+          /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+          /d:sonar.verbose=true
 
     - name: Build for SonarQube Analysis
       run: |
