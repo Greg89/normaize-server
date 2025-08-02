@@ -67,14 +67,12 @@ jobs:
         echo "Starting SonarQube analysis..."
         echo "Project Key: ${{ env.SONAR_PROJECT_KEY }}"
         echo "Organization: ${{ env.SONAR_ORGANIZATION }}"
+        echo "Using sonar-project.properties for configuration..."
         ./.sonar/scanner/dotnet-sonarscanner begin \
           /k:"${{ env.SONAR_PROJECT_KEY }}" \
           /o:"${{ env.SONAR_ORGANIZATION }}" \
           /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
-          /d:sonar.host.url="https://sonarcloud.io" \
-          /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
-          /d:sonar.exclusions="**/coverage-report/**,**/coverage-summary/**,**/coverage-opencover/**,**/coverage/**,**/test-results/**,**/bin/**,**/obj/**,**/uploads/**,**/*.Designer.cs,**/Migrations/**" \
-          /d:sonar.verbose=true
+          /d:sonar.host.url="https://sonarcloud.io"
 
     - name: Build for SonarQube Analysis
       run: |
@@ -82,6 +80,16 @@ jobs:
         dotnet build --no-restore --configuration Release
         echo "Build completed. Checking for built assemblies..."
         find . -name "*.dll" -path "*/bin/Release/*" | grep -E "(Normaize\.API|Normaize\.Core|Normaize\.Data)" | head -10
+
+    - name: Debug SonarQube exclusions
+      run: |
+        echo "=== SonarQube Exclusions Debug ==="
+        echo "Checking if Migrations files exist and should be excluded:"
+        find . -name "*.cs" -path "*/Migrations/*" | head -10
+        echo ""
+        echo "Checking for Migration and Snapshot files:"
+        find . -name "*Migration*.cs" -o -name "*Snapshot*.cs" | head -10
+        echo "=== End SonarQube Exclusions Debug ==="
 
     # Run tests with coverage
     - name: Install PowerShell
