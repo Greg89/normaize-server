@@ -32,6 +32,7 @@ public class UserSettingsIntegrationTests : IClassFixture<TestWebApplicationFact
     }
 
     [Fact]
+    [Trait("Category", TestSetup.Categories.Integration)]
     public async Task GetUserSettings_WhenAuthenticated_ShouldReturnUserSettings()
     {
         // Arrange
@@ -50,6 +51,7 @@ public class UserSettingsIntegrationTests : IClassFixture<TestWebApplicationFact
     }
 
     [Fact]
+    [Trait("Category", TestSetup.Categories.Integration)]
     public async Task UpdateUserSettings_WhenAuthenticated_ShouldUpdateSettings()
     {
         // Arrange
@@ -75,6 +77,7 @@ public class UserSettingsIntegrationTests : IClassFixture<TestWebApplicationFact
     }
 
     [Fact]
+    [Trait("Category", TestSetup.Categories.Integration)]
     public async Task GetSettingValue_WhenAuthenticated_ShouldReturnSettingValue()
     {
         // Arrange
@@ -94,6 +97,7 @@ public class UserSettingsIntegrationTests : IClassFixture<TestWebApplicationFact
     }
 
     [Fact]
+    [Trait("Category", TestSetup.Categories.Integration)]
     public async Task UpdateSettingValue_WhenAuthenticated_ShouldUpdateSetting()
     {
         // Arrange

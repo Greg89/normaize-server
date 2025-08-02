@@ -1,4 +1,4 @@
-using AutoMapper;
+
 using Microsoft.Extensions.Logging;
 using Moq;
 using Normaize.Core.DTOs;
@@ -18,19 +18,18 @@ namespace Normaize.Tests.Services;
 public class DataAnalysisServiceTests
 {
     private readonly Mock<IAnalysisRepository> _mockRepository;
-    private readonly Mock<IMapper> _mockMapper;
+
     private readonly Mock<IDataProcessingInfrastructure> _mockInfrastructure;
     private readonly DataAnalysisService _service;
 
     public DataAnalysisServiceTests()
     {
         _mockRepository = new Mock<IAnalysisRepository>();
-        _mockMapper = new Mock<IMapper>();
+
         _mockInfrastructure = new Mock<IDataProcessingInfrastructure>();
 
         _service = new DataAnalysisService(
             _mockRepository.Object,
-            _mockMapper.Object,
             _mockInfrastructure.Object);
 
         // Setup default infrastructure mocks
@@ -71,27 +70,19 @@ public class DataAnalysisServiceTests
     {
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new DataAnalysisService(null!, _mockMapper.Object, _mockInfrastructure.Object));
+            new DataAnalysisService(null!, _mockInfrastructure.Object));
 
         exception.ParamName.Should().Be("analysisRepository");
     }
 
-    [Fact]
-    public void Constructor_WithNullMapper_ShouldThrowArgumentNullException()
-    {
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
-            new DataAnalysisService(_mockRepository.Object, null!, _mockInfrastructure.Object));
 
-        exception.ParamName.Should().Be("mapper");
-    }
 
     [Fact]
     public void Constructor_WithNullInfrastructure_ShouldThrowArgumentNullException()
     {
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new DataAnalysisService(_mockRepository.Object, _mockMapper.Object, null!));
+            new DataAnalysisService(_mockRepository.Object, null!));
 
         exception.ParamName.Should().Be("infrastructure");
     }
@@ -110,9 +101,7 @@ public class DataAnalysisServiceTests
         var analysis = new Analysis { Id = 1, Name = "Test Analysis" };
         var analysisDto = new AnalysisDto { Id = 1, Name = "Test Analysis" };
 
-        _mockMapper.Setup(m => m.Map<Analysis>(createDto)).Returns(analysis);
-        _mockRepository.Setup(r => r.AddAsync(analysis)).ReturnsAsync(analysis);
-        _mockMapper.Setup(m => m.Map<AnalysisDto>(analysis)).Returns(analysisDto);
+        _mockRepository.Setup(r => r.AddAsync(It.IsAny<Analysis>())).ReturnsAsync(analysis);
 
         // Act
         var result = await _service.CreateAnalysisAsync(createDto);
@@ -123,8 +112,6 @@ public class DataAnalysisServiceTests
         result.Name.Should().Be("Test Analysis");
 
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<Analysis>()), Times.Once);
-        _mockMapper.Verify(m => m.Map<Analysis>(createDto), Times.Once);
-        _mockMapper.Verify(m => m.Map<AnalysisDto>(analysis), Times.Once);
     }
 
     [Fact]
@@ -210,34 +197,31 @@ public class DataAnalysisServiceTests
         var analysisDto = new AnalysisDto { Id = 1, Name = "Test Analysis" };
 
         _mockRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(analysis);
-        _mockMapper.Setup(m => m.Map<AnalysisDto>(analysis)).Returns(analysisDto);
 
         // Act
         var result = await _service.GetAnalysisAsync(1);
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(1);
+        result.Id.Should().Be(1);
         result.Name.Should().Be("Test Analysis");
 
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
-        _mockMapper.Verify(m => m.Map<AnalysisDto>(analysis), Times.Once);
     }
 
     [Fact]
     public async Task GetAnalysisAsync_WithNonExistingId_ShouldReturnNull()
     {
         // Arrange
-        _mockRepository.Setup(r => r.GetByIdAsync(999)).ReturnsAsync((Analysis?)null);
+        _mockRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync((Analysis?)null);
 
         // Act
-        var result = await _service.GetAnalysisAsync(999);
+        var result = await _service.GetAnalysisAsync(1);
 
         // Assert
         result.Should().BeNull();
 
-        _mockRepository.Verify(r => r.GetByIdAsync(999), Times.Once);
-        _mockMapper.Verify(m => m.Map<AnalysisDto>(It.IsAny<Analysis>()), Times.Never);
+        _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
     }
 
     [Fact]
@@ -246,18 +230,16 @@ public class DataAnalysisServiceTests
         // Arrange
         var analyses = new List<Analysis>
         {
-            new() { Id = 1, Name = "Analysis 1" },
-            new() { Id = 2, Name = "Analysis 2" }
+            new Analysis { Id = 1, Name = "Analysis 1" },
+            new Analysis { Id = 2, Name = "Analysis 2" }
         };
-
         var analysisDtos = new List<AnalysisDto>
         {
-            new() { Id = 1, Name = "Analysis 1" },
-            new() { Id = 2, Name = "Analysis 2" }
+            new AnalysisDto { Id = 1, Name = "Analysis 1" },
+            new AnalysisDto { Id = 2, Name = "Analysis 2" }
         };
 
         _mockRepository.Setup(r => r.GetByDataSetIdAsync(1)).ReturnsAsync(analyses);
-        _mockMapper.Setup(m => m.Map<IEnumerable<AnalysisDto>>(analyses)).Returns(analysisDtos);
 
         // Act
         var result = await _service.GetAnalysesByDataSetAsync(1);
@@ -267,7 +249,6 @@ public class DataAnalysisServiceTests
         result.Should().HaveCount(2);
 
         _mockRepository.Verify(r => r.GetByDataSetIdAsync(1), Times.Once);
-        _mockMapper.Verify(m => m.Map<IEnumerable<AnalysisDto>>(analyses), Times.Once);
     }
 
     [Fact]
@@ -392,7 +373,8 @@ public class DataAnalysisServiceTests
         var analysisDto = new AnalysisDto { Id = 1, Name = "Test Analysis" };
 
         _mockRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(analysis);
-        _mockMapper.Setup(m => m.Map<AnalysisDto>(analysis)).Returns(analysisDto);
+        _mockRepository.Setup(r => r.UpdateAsync(It.IsAny<Analysis>())).ReturnsAsync(analysis);
+        _mockRepository.Setup(r => r.UpdateAsync(It.IsAny<Analysis>())).ReturnsAsync(analysis);
 
         // Act
         var result = await _service.RunAnalysisAsync(1);
@@ -402,7 +384,6 @@ public class DataAnalysisServiceTests
         result.Id.Should().Be(1);
 
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
-        _mockMapper.Verify(m => m.Map<AnalysisDto>(analysis), Times.Once);
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<Analysis>()), Times.Never);
     }
 
@@ -430,7 +411,7 @@ public class DataAnalysisServiceTests
 
         _mockRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(analysis);
         _mockRepository.Setup(r => r.UpdateAsync(It.IsAny<Analysis>())).ReturnsAsync(updatedAnalysis);
-        _mockMapper.Setup(m => m.Map<AnalysisDto>(updatedAnalysis)).Returns(analysisDto);
+        _mockRepository.Setup(r => r.UpdateAsync(It.IsAny<Analysis>())).ReturnsAsync(updatedAnalysis);
 
         // Act
         var result = await _service.RunAnalysisAsync(1);
@@ -441,7 +422,6 @@ public class DataAnalysisServiceTests
 
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<Analysis>()), Times.AtLeast(2)); // Processing and Success states
-        _mockMapper.Verify(m => m.Map<AnalysisDto>(updatedAnalysis), Times.Once);
     }
 
     [Theory]
@@ -475,7 +455,7 @@ public class DataAnalysisServiceTests
 
         _mockRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(analysis);
         _mockRepository.Setup(r => r.UpdateAsync(It.IsAny<Analysis>())).ReturnsAsync(updatedAnalysis);
-        _mockMapper.Setup(m => m.Map<AnalysisDto>(updatedAnalysis)).Returns(analysisDto);
+        _mockRepository.Setup(r => r.UpdateAsync(It.IsAny<Analysis>())).ReturnsAsync(updatedAnalysis);
 
         // Act
         var result = await _service.RunAnalysisAsync(1);

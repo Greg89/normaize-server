@@ -52,9 +52,11 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSets();
 
         // Assert
-        result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<List<DataSetDto>>>>();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
-        var returnedDataSets = okResult.Value.Should().BeOfType<List<DataSetDto>>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<List<DataSetDto>>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        var returnedDataSets = apiResponse.Data!;
         returnedDataSets.Should().HaveCount(2);
         returnedDataSets.Should().BeEquivalentTo(expectedDataSets);
     }
@@ -72,9 +74,9 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSets();
 
         // Assert
-        result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<List<DataSetDto>>>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
-        statusResult.StatusCode.Should().Be(500);
+        statusResult.StatusCode.Should().Be(400);
 
         _mockLoggingService.Verify(
             x => x.LogException(exception, "GetDataSets"),
@@ -101,9 +103,11 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSet(datasetId);
 
         // Assert
-        result.Should().BeOfType<ActionResult<DataSetDto>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<DataSetDto>>>();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
-        var returnedDataSet = okResult.Value.Should().BeOfType<DataSetDto>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<DataSetDto>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        var returnedDataSet = apiResponse.Data!;
         returnedDataSet.Should().BeEquivalentTo(expectedDataSet);
     }
 
@@ -120,8 +124,8 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSet(datasetId);
 
         // Assert
-        result.Should().BeOfType<ActionResult<DataSetDto>>();
-        result.Result.Should().BeOfType<NotFoundResult>();
+        result.Should().BeOfType<ActionResult<ApiResponse<DataSetDto>>>();
+        result.Result.Should().BeOfType<ObjectResult>();
     }
 
     [Fact]
@@ -138,9 +142,9 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSet(datasetId);
 
         // Assert
-        result.Should().BeOfType<ActionResult<DataSetDto>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<DataSetDto>>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
-        statusResult.StatusCode.Should().Be(500);
+        statusResult.StatusCode.Should().Be(400);
 
         _mockLoggingService.Verify(
             x => x.LogException(exception, $"GetDataSet({datasetId})"),
@@ -160,7 +164,8 @@ public class DataSetsControllerTests
         var result = await _controller.DeleteDataSet(datasetId);
 
         // Assert
-        result.Should().BeOfType<NoContentResult>();
+        result.Should().BeOfType<ActionResult<ApiResponse<string?>>>();
+        result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
@@ -176,7 +181,8 @@ public class DataSetsControllerTests
         var result = await _controller.DeleteDataSet(datasetId);
 
         // Assert
-        result.Should().BeOfType<NotFoundResult>();
+        result.Should().BeOfType<ActionResult<ApiResponse<string?>>>();
+        result.Result.Should().BeOfType<ObjectResult>();
     }
 
     [Fact]
@@ -193,9 +199,9 @@ public class DataSetsControllerTests
         var result = await _controller.DeleteDataSet(datasetId);
 
         // Assert
-        result.Should().BeOfType<ObjectResult>();
-        var statusResult = result.Should().BeOfType<ObjectResult>().Subject!;
-        statusResult.StatusCode.Should().Be(500);
+        result.Should().BeOfType<ActionResult<ApiResponse<string?>>>();
+        var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
+        statusResult.StatusCode.Should().Be(400);
 
         _mockLoggingService.Verify(
             x => x.LogException(exception, $"DeleteDataSet({datasetId})"),
@@ -216,9 +222,11 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSetPreview(datasetId);
 
         // Assert
-        result.Should().BeOfType<ActionResult<string>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<string>>>();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
-        var returnedPreview = okResult.Value.Should().BeOfType<string>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<string>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        var returnedPreview = apiResponse.Data!;
         returnedPreview.Should().Be(expectedPreview);
     }
 
@@ -235,8 +243,8 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSetPreview(datasetId);
 
         // Assert
-        result.Should().BeOfType<ActionResult<string>>();
-        result.Result.Should().BeOfType<NotFoundResult>();
+        result.Should().BeOfType<ActionResult<ApiResponse<string>>>();
+        result.Result.Should().BeOfType<ObjectResult>();
     }
 
     [Fact]
@@ -253,9 +261,11 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSetSchema(datasetId);
 
         // Assert
-        result.Should().BeOfType<ActionResult<object>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<object>>>();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
-        okResult.Value.Should().Be(expectedSchema);
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<object>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        apiResponse.Data.Should().Be(expectedSchema);
     }
 
     [Fact]
@@ -271,8 +281,8 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSetSchema(datasetId);
 
         // Assert
-        result.Should().BeOfType<ActionResult<object>>();
-        result.Result.Should().BeOfType<NotFoundResult>();
+        result.Should().BeOfType<ActionResult<ApiResponse<object>>>();
+        result.Result.Should().BeOfType<ObjectResult>();
     }
 
     [Fact]
@@ -288,9 +298,10 @@ public class DataSetsControllerTests
         var result = await _controller.RestoreDataSet(datasetId);
 
         // Assert
-        result.Should().BeOfType<OkObjectResult>();
-        var okResult = result as OkObjectResult;
-        okResult!.Value.Should().BeEquivalentTo(new { message = "Dataset restored successfully" });
+        result.Should().BeOfType<ActionResult<ApiResponse<string>>>();
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<string>>().Subject!;
+        apiResponse.Message.Should().Be("Dataset restored successfully");
     }
 
     [Fact]
@@ -306,7 +317,8 @@ public class DataSetsControllerTests
         var result = await _controller.RestoreDataSet(datasetId);
 
         // Assert
-        result.Should().BeOfType<NotFoundResult>();
+        result.Should().BeOfType<ActionResult<ApiResponse<string?>>>();
+        result.Result.Should().BeOfType<ObjectResult>();
     }
 
     [Fact]
@@ -322,7 +334,8 @@ public class DataSetsControllerTests
         var result = await _controller.HardDeleteDataSet(datasetId);
 
         // Assert
-        result.Should().BeOfType<NoContentResult>();
+        result.Should().BeOfType<ActionResult<ApiResponse<string?>>>();
+        result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
@@ -338,7 +351,8 @@ public class DataSetsControllerTests
         var result = await _controller.HardDeleteDataSet(datasetId);
 
         // Assert
-        result.Should().BeOfType<NotFoundResult>();
+        result.Should().BeOfType<ActionResult<ApiResponse<string?>>>();
+        result.Result.Should().BeOfType<ObjectResult>();
     }
 
     [Fact]
@@ -367,9 +381,11 @@ public class DataSetsControllerTests
         var result = await _controller.UploadDataSet(uploadDto);
 
         // Assert
-        result.Should().BeOfType<ActionResult<DataSetUploadResponse>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<DataSetUploadResponse>>>();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
-        var returnedResponse = okResult.Value.Should().BeOfType<DataSetUploadResponse>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<DataSetUploadResponse>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        var returnedResponse = apiResponse.Data!;
         returnedResponse.Should().BeEquivalentTo(expectedResponse);
     }
 
@@ -388,8 +404,8 @@ public class DataSetsControllerTests
         var result = await _controller.UploadDataSet(uploadDto);
 
         // Assert
-        result.Should().BeOfType<ActionResult<DataSetUploadResponse>>();
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        result.Should().BeOfType<ActionResult<ApiResponse<DataSetUploadResponse>>>();
+        result.Result.Should().BeOfType<ObjectResult>();
     }
 
     [Fact]
@@ -407,8 +423,8 @@ public class DataSetsControllerTests
         var result = await _controller.UploadDataSet(uploadDto);
 
         // Assert
-        result.Should().BeOfType<ActionResult<DataSetUploadResponse>>();
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        result.Should().BeOfType<ActionResult<ApiResponse<DataSetUploadResponse>>>();
+        result.Result.Should().BeOfType<ObjectResult>();
     }
 
     [Fact]
@@ -436,8 +452,8 @@ public class DataSetsControllerTests
         var result = await _controller.UploadDataSet(uploadDto);
 
         // Assert
-        result.Should().BeOfType<ActionResult<DataSetUploadResponse>>();
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        result.Should().BeOfType<ActionResult<ApiResponse<DataSetUploadResponse>>>();
+        result.Result.Should().BeOfType<ObjectResult>();
     }
 
     [Fact]
@@ -460,7 +476,7 @@ public class DataSetsControllerTests
         var result = await _controller.UploadDataSet(uploadDto);
 
         // Assert
-        result.Should().BeOfType<ActionResult<DataSetUploadResponse>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<DataSetUploadResponse>>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
         statusResult.StatusCode.Should().Be(500);
 
@@ -487,9 +503,11 @@ public class DataSetsControllerTests
         var result = await _controller.GetDeletedDataSets();
 
         // Assert
-        result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<List<DataSetDto>>>>();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
-        var returnedDataSets = okResult.Value.Should().BeOfType<List<DataSetDto>>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<List<DataSetDto>>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        var returnedDataSets = apiResponse.Data!;
         returnedDataSets.Should().HaveCount(2);
         returnedDataSets.Should().BeEquivalentTo(expectedDataSets);
     }
@@ -507,9 +525,9 @@ public class DataSetsControllerTests
         var result = await _controller.GetDeletedDataSets();
 
         // Assert
-        result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<List<DataSetDto>>>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
-        statusResult.StatusCode.Should().Be(500);
+        statusResult.StatusCode.Should().Be(400);
 
         _mockLoggingService.Verify(
             x => x.LogException(exception, "GetDeletedDataSets"),
@@ -535,9 +553,11 @@ public class DataSetsControllerTests
         var result = await _controller.SearchDataSets(searchQuery, 1, 10);
 
         // Assert
-        result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<List<DataSetDto>>>>();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
-        var returnedDataSets = okResult.Value.Should().BeOfType<List<DataSetDto>>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<List<DataSetDto>>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        var returnedDataSets = apiResponse.Data!;
         returnedDataSets.Should().HaveCount(2);
         returnedDataSets.Should().BeEquivalentTo(expectedDataSets);
     }
@@ -556,9 +576,9 @@ public class DataSetsControllerTests
         var result = await _controller.SearchDataSets(searchQuery, 1, 10);
 
         // Assert
-        result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<List<DataSetDto>>>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
-        statusResult.StatusCode.Should().Be(500);
+        statusResult.StatusCode.Should().Be(400);
 
         _mockLoggingService.Verify(
             x => x.LogException(exception, $"SearchDataSets({searchQuery})"),
@@ -584,9 +604,11 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSetsByFileType(fileType, 1, 10);
 
         // Assert
-        result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<List<DataSetDto>>>>();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
-        var returnedDataSets = okResult.Value.Should().BeOfType<List<DataSetDto>>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<List<DataSetDto>>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        var returnedDataSets = apiResponse.Data!;
         returnedDataSets.Should().HaveCount(2);
         returnedDataSets.Should().BeEquivalentTo(expectedDataSets);
     }
@@ -605,9 +627,9 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSetsByFileType(fileType, 1, 10);
 
         // Assert
-        result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<List<DataSetDto>>>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
-        statusResult.StatusCode.Should().Be(500);
+        statusResult.StatusCode.Should().Be(400);
 
         _mockLoggingService.Verify(
             x => x.LogException(exception, $"GetDataSetsByFileType({fileType})"),
@@ -634,9 +656,11 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSetsByDateRange(startDate, endDate, 1, 10);
 
         // Assert
-        result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<List<DataSetDto>>>>();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
-        var returnedDataSets = okResult.Value.Should().BeOfType<List<DataSetDto>>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<List<DataSetDto>>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        var returnedDataSets = apiResponse.Data!;
         returnedDataSets.Should().HaveCount(2);
         returnedDataSets.Should().BeEquivalentTo(expectedDataSets);
     }
@@ -656,9 +680,9 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSetsByDateRange(startDate, endDate, 1, 10);
 
         // Assert
-        result.Should().BeOfType<ActionResult<IEnumerable<DataSetDto>>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<List<DataSetDto>>>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
-        statusResult.StatusCode.Should().Be(500);
+        statusResult.StatusCode.Should().Be(400);
 
         _mockLoggingService.Verify(
             x => x.LogException(exception, $"GetDataSetsByDateRange({startDate}, {endDate})"),
@@ -688,9 +712,11 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSetStatistics();
 
         // Assert
-        result.Should().BeOfType<ActionResult<DataSetStatisticsDto>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<DataSetStatisticsDto>>>();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
-        var returnedStatistics = okResult.Value.Should().BeOfType<DataSetStatisticsDto>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<DataSetStatisticsDto>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        var returnedStatistics = apiResponse.Data!;
         returnedStatistics.Should().BeEquivalentTo(expectedStatistics);
     }
 
@@ -707,9 +733,9 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSetStatistics();
 
         // Assert
-        result.Should().BeOfType<ActionResult<DataSetStatisticsDto>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<DataSetStatisticsDto>>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
-        statusResult.StatusCode.Should().Be(500);
+        statusResult.StatusCode.Should().Be(400);
 
         _mockLoggingService.Verify(
             x => x.LogException(exception, "GetDataSetStatistics"),

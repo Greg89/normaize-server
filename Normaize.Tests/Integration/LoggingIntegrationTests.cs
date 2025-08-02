@@ -29,7 +29,7 @@ public class LoggingIntegrationTests(TestWebApplicationFactory _factory) : IClas
         var client = _factory.CreateClient();
 
         // Act
-        var response = await client.GetAsync("/health");
+        var response = await client.GetAsync("/api/health");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -91,8 +91,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             mockAppConfig.Setup(x => x.HasDatabaseConnection()).Returns(false);
             services.AddSingleton(mockAppConfig.Object);
 
-            // Add AutoMapper
-            services.AddAutoMapper(typeof(Core.Mapping.MappingProfile));
+
 
             // Add HttpContextAccessor
             services.AddHttpContextAccessor();

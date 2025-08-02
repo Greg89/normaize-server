@@ -1,9 +1,9 @@
-using AutoMapper;
 using Microsoft.Extensions.Logging;
 using Normaize.Core.Constants;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
+using Normaize.Core.Mapping;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -16,20 +16,16 @@ namespace Normaize.Core.Services;
 public class DataAnalysisService : IDataAnalysisService
 {
     private readonly IAnalysisRepository _analysisRepository;
-    private readonly IMapper _mapper;
     private readonly IDataProcessingInfrastructure _infrastructure;
     private readonly Random _random = new();
 
     public DataAnalysisService(
         IAnalysisRepository analysisRepository,
-        IMapper mapper,
         IDataProcessingInfrastructure infrastructure)
     {
         ArgumentNullException.ThrowIfNull(analysisRepository);
-        ArgumentNullException.ThrowIfNull(mapper);
         ArgumentNullException.ThrowIfNull(infrastructure);
         _analysisRepository = analysisRepository;
-        _mapper = mapper;
         _infrastructure = infrastructure;
     }
 
@@ -57,7 +53,7 @@ public class DataAnalysisService : IDataAnalysisService
                 }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
-                var analysis = _mapper.Map<Analysis>(createDto);
+                var analysis = createDto!.ToEntity();
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
 
                 _infrastructure.StructuredLogging.LogStep(context, "Database save started");
@@ -71,7 +67,7 @@ public class DataAnalysisService : IDataAnalysisService
                 });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
-                var result = _mapper.Map<AnalysisDto>(savedAnalysis);
+                var result = savedAnalysis.ToDto();
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
 
                 return result;
@@ -109,12 +105,11 @@ public class DataAnalysisService : IDataAnalysisService
                     {
                         [AppConstants.DataStructures.ANALYSIS_ID] = id
                     });
-                    _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
                     return null;
                 }
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
-                var result = _mapper.Map<AnalysisDto>(analysis);
+                var result = analysis.ToDto();
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
 
                 return result;
@@ -150,7 +145,7 @@ public class DataAnalysisService : IDataAnalysisService
                 });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
-                var result = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
+                var result = analyses.ToDtoCollection();
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
 
                 return result;
@@ -186,7 +181,7 @@ public class DataAnalysisService : IDataAnalysisService
                 });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
-                var result = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
+                var result = analyses.ToDtoCollection();
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
 
                 return result;
@@ -222,7 +217,7 @@ public class DataAnalysisService : IDataAnalysisService
                 });
 
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
-                var result = _mapper.Map<IEnumerable<AnalysisDto>>(analyses);
+                var result = analyses.ToDtoCollection();
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
 
                 return result;
@@ -376,7 +371,7 @@ public class DataAnalysisService : IDataAnalysisService
                         [AppConstants.DataStructures.STATUS] = analysis.Status.ToString()
                     });
                     _infrastructure.StructuredLogging.LogSummary(context, true, AppConstants.AnalysisMessages.ANALYSIS_ALREADY_COMPLETED);
-                    return _mapper.Map<AnalysisDto>(analysis);
+                    return analysis.ToDto();
                 }
 
                 // Execute analysis with state management
@@ -511,7 +506,7 @@ public class DataAnalysisService : IDataAnalysisService
                 _infrastructure.QuickTimeout,
                 context);
 
-            return _mapper.Map<AnalysisDto>(updatedAnalysis);
+            return updatedAnalysis.ToDto();
         }
         catch (Exception ex)
         {

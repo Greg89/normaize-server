@@ -72,8 +72,9 @@ jobs:
           /o:"${{ env.SONAR_ORGANIZATION }}" \
           /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
           /d:sonar.host.url="https://sonarcloud.io" \
+          /d:sonar.exclusions="**/coverage-report/**,**/coverage-summary/**,**/coverage-opencover/**,**/coverage/**,**/test-results/**,**/bin/**,**/obj/**,**/uploads/**,**/*.Designer.cs,**/Migrations/**,**/Migrations/**/*.cs,**/*Migration*.cs,**/*Snapshot*.cs" \
+          /d:sonar.test.exclusions="**/Tests/**,**/*Tests.cs,**/*Test.cs" \
           /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
-          /d:sonar.exclusions="**/coverage-report/**,**/coverage-summary/**,**/coverage-opencover/**,**/coverage/**,**/test-results/**,**/bin/**,**/obj/**,**/uploads/**,**/*.Designer.cs,**/Migrations/**" \
           /d:sonar.verbose=true
 
     - name: Build for SonarQube Analysis
@@ -82,6 +83,16 @@ jobs:
         dotnet build --no-restore --configuration Release
         echo "Build completed. Checking for built assemblies..."
         find . -name "*.dll" -path "*/bin/Release/*" | grep -E "(Normaize\.API|Normaize\.Core|Normaize\.Data)" | head -10
+
+    - name: Debug SonarQube exclusions
+      run: |
+        echo "=== SonarQube Exclusions Debug ==="
+        echo "Checking if Migrations files exist and should be excluded:"
+        find . -name "*.cs" -path "*/Migrations/*" | head -10
+        echo ""
+        echo "Checking for Migration and Snapshot files:"
+        find . -name "*Migration*.cs" -o -name "*Snapshot*.cs" | head -10
+        echo "=== End SonarQube Exclusions Debug ==="
 
     # Run tests with coverage
     - name: Install PowerShell
@@ -126,15 +137,9 @@ jobs:
         cp ./coverage-opencover/OpenCover.xml ./coverage/coverage.opencover.xml
         echo "✅ OpenCover format conversion completed"
 
-    # Coverage History Management
-    - name: Download previous coverage history
-      uses: actions/download-artifact@v4
-      with:
-        name: coverage-history-${{ github.ref_name }}
-        path: ./coverage-history/
-      continue-on-error: true
+    # Note: Coverage history management removed - now handled by SonarQube and Codecov
 
-    - name: Generate coverage report with history
+    - name: Generate coverage report
       env:
         REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
       run: |
@@ -149,21 +154,16 @@ jobs:
           echo "No coverage data available" > ./coverage-summary/Summary.txt
           echo "No coverage data available" > ./coverage-report/index.html
         else
-          # Generate HTML report with history if available
-          if [ -d "./coverage-history" ] && [ "$(ls -A ./coverage-history)" ]; then
-            echo "Generating report with history..."
-            reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html -historydir:"./coverage-history"
-          else
-            echo "Generating report without history..."
-            reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html
-          fi
+          # Generate HTML report
+          echo "Generating HTML report..."
+          reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html
           
-          # Always generate summary and badges
+          # Generate summary and badges
           echo "Generating summary and badges..."
           reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-summary" -reporttypes:"TextSummary;Badges"
+          
+          echo "✅ Coverage report generation completed"
         fi
-        
-        echo "✅ Coverage report generation completed"
 
     - name: Debug coverage artifacts
       run: |
@@ -173,9 +173,6 @@ jobs:
         echo ""
         echo "Coverage summary directory:"
         if [ -d ./coverage-summary ]; then ls -la ./coverage-summary/; else echo "No coverage-summary directory found"; fi
-        echo ""
-        echo "Coverage history directory:"
-        if [ -d ./coverage-history ]; then ls -la ./coverage-history/; else echo "No coverage-history directory found"; fi
         echo "=== End Debug Information ==="
 
     # Upload Coverage Artifacts
@@ -193,12 +190,8 @@ jobs:
         path: ./coverage-summary/
         retention-days: 30
 
-    - name: Upload coverage history for next run
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-history-${{ github.ref_name }}
-        path: ./coverage-history/
-        retention-days: 90
+    # Note: Coverage history is now handled by SonarQube and Codecov
+    # Removed local history artifact upload due to ReportGenerator compatibility issues
 
     # End SonarQube Analysis
     - name: End SonarQube Analysis

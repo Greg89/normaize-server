@@ -461,6 +461,242 @@ public static class AppConstants
         public const string PASSWORD_PREFIX = "Password=";
         public const string PORT_PREFIX = "Port=";
         public const string CHARSET_PREFIX = "CharSet=";
+
+        // MySQL specific constants
+        public const string MYSQL_VERSION = "8.0.0";
+        public const string ALLOW_LOAD_LOCAL_INFILE = "AllowLoadLocalInfile=true";
+        public const string CONVERT_ZERO_DATETIME = "Convert Zero Datetime=True";
+        public const string ALLOW_ZERO_DATETIME = "Allow Zero Datetime=True";
+        public const string TEST_DATABASE_NAME = "TestDatabase";
+    }
+
+    /// <summary>
+    /// CORS configuration constants
+    /// </summary>
+    public static class Cors
+    {
+        // Development origins
+        public const string LOCALHOST_3000 = "http://localhost:3000";
+        public const string LOCALHOST_4200 = "http://localhost:4200";
+        public const string LOCALHOST_8080 = "http://localhost:8080";
+        public const string LOCALHOST_5173 = "http://localhost:5173";  // Vite/React default
+        public const string LOCALHOST_127_3000 = "http://127.0.0.1:3000";
+        public const string LOCALHOST_127_4200 = "http://127.0.0.1:4200";
+        public const string LOCALHOST_127_8080 = "http://127.0.0.1:8080";
+        public const string LOCALHOST_127_5173 = "http://127.0.0.1:5173";  // Vite/React default
+
+        // Production origins
+        public const string NORMAIZE_COM = "https://normaize.com";
+        public const string WWW_NORMAIZE_COM = "https://www.normaize.com";
+        public const string APP_NORMAIZE_COM = "https://app.normaize.com";
+        public const string BETA_NORMAIZE_COM = "https://beta.normaize.com";
+
+        // HTTP methods
+        public const string GET = "GET";
+        public const string POST = "POST";
+        public const string PUT = "PUT";
+        public const string DELETE = "DELETE";
+        public const string OPTIONS = "OPTIONS";
+
+        // Headers
+        public const string CONTENT_TYPE = "Content-Type";
+        public const string AUTHORIZATION = "Authorization";
+        public const string X_REQUESTED_WITH = "X-Requested-With";
+        public const string ACCEPT = "Accept";
+
+        // Policy names
+        public const string DEVELOPMENT_POLICY = "Development";
+        public const string BETA_POLICY = "Beta";
+        public const string PRODUCTION_POLICY = "Production";
+    }
+
+    /// <summary>
+    /// Environment variable names
+    /// </summary>
+    public static class EnvironmentVariables
+    {
+        public const string ASPNETCORE_ENVIRONMENT = "ASPNETCORE_ENVIRONMENT";
+        public const string MYSQLHOST = "MYSQLHOST";
+        public const string MYSQLDATABASE = "MYSQLDATABASE";
+        public const string MYSQLUSER = "MYSQLUSER";
+        public const string MYSQLPASSWORD = "MYSQLPASSWORD";
+        public const string MYSQLPORT = "MYSQLPORT";
+        public const string STORAGE_PROVIDER = "STORAGE_PROVIDER";
+        public const string AWS_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID";
+        public const string AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY";
+        public const string AUTH0_ISSUER = "AUTH0_ISSUER";
+        public const string AUTH0_AUDIENCE = "AUTH0_AUDIENCE";
+        public const string REDIS_CONNECTION_STRING = "REDIS_CONNECTION_STRING";
+    }
+
+    /// <summary>
+    /// Configuration section names
+    /// </summary>
+    public static class ConfigurationSections
+    {
+        public const string STORAGE = "Storage";
+    }
+
+    /// <summary>
+    /// Data visualization and processing constants
+    /// </summary>
+    public static class DataVisualization
+    {
+        // Metadata keys
+        public const string DATASET_ID_1 = "DataSetId1";
+        public const string DATASET_ID_2 = "DataSetId2";
+        public const string PROCESSING_TIME_MS = "ProcessingTimeMs";
+        public const string ROW_COUNT = "RowCount";
+        public const string ERROR_MESSAGE = "ErrorMessage";
+        public const string TIMEOUT = "Timeout";
+        public const string OPERATION_NAME = "OperationName";
+
+        // Logging messages
+        public const string RETRIEVED_CHART_FROM_CACHE = "Retrieved chart from cache";
+        public const string CACHE_MISS_GENERATING_NEW_CHART = "Cache miss, generating new chart";
+        public const string GENERATED_CHART_SUCCESSFULLY = "Generated chart successfully";
+        public const string RETRIEVED_COMPARISON_CHART_FROM_CACHE = "Retrieved comparison chart from cache";
+        public const string CACHE_MISS_GENERATING_NEW_COMPARISON_CHART = "Cache miss, generating new comparison chart";
+        public const string GENERATED_COMPARISON_CHART_SUCCESSFULLY = "Generated comparison chart successfully";
+        public const string RETRIEVED_DATA_SUMMARY_FROM_CACHE = "Retrieved data summary from cache";
+        public const string CACHE_MISS_GENERATING_NEW_DATA_SUMMARY = "Cache miss, generating new data summary";
+        public const string GENERATED_DATA_SUMMARY_SUCCESSFULLY = "Generated data summary successfully";
+        public const string RETRIEVED_STATISTICAL_SUMMARY_FROM_CACHE = "Retrieved statistical summary from cache";
+        public const string CACHE_MISS_GENERATING_NEW_STATISTICAL_SUMMARY = "Cache miss, generating new statistical summary";
+        public const string GENERATED_STATISTICAL_SUMMARY_SUCCESSFULLY = "Generated statistical summary successfully";
+
+        // Error and validation messages
+        public const string DATASET_NOT_FOUND_LOG = "Dataset not found";
+        public const string UNAUTHORIZED_ACCESS_ATTEMPT = "Unauthorized access attempt";
+        public const string ATTEMPTED_TO_ACCESS_DELETED_DATASET = "Attempted to access deleted dataset";
+        public const string DATASET_HAS_NO_PROCESSED_DATA = "Dataset has no processed data";
+        public const string FAILED_TO_DESERIALIZE_DATASET_JSON_DATA = "Failed to deserialize dataset JSON data";
+        public const string EXTRACTED_ROWS_FROM_DATASET = "Extracted rows from dataset";
+        public const string FAILED_TO_PARSE_DATASET_JSON_DATA = "Failed to parse dataset JSON data";
+        public const string SIMULATED_CACHE_FAILURE_MESSAGE = "Simulated cache failure (chaos engineering)";
+        public const string CHAOS_ENGINEERING_SIMULATING = "Chaos engineering: Simulating {0}";
+
+        // Error message templates
+        public const string FAILED_TO_COMPLETE_OPERATION = "Failed to complete {0}";
+        public const string FAILED_TO_COMPLETE_GENERATE_CHART = "Failed to complete GenerateChartAsync for dataset ID {0} with chart type {1}";
+        public const string FAILED_TO_COMPLETE_GENERATE_COMPARISON_CHART = "Failed to complete GenerateComparisonChartAsync for dataset IDs {0} and {1} with chart type {2}";
+        public const string FAILED_TO_COMPLETE_GET_DATA_SUMMARY = "Failed to complete GetDataSummaryAsync for dataset ID {0}";
+        public const string FAILED_TO_COMPLETE_GET_STATISTICAL_SUMMARY = "Failed to complete GetStatisticalSummaryAsync for dataset ID {0}";
+        public const string DATASET_NOT_FOUND_WITH_ID = "Dataset not found with ID {0}";
+        public const string DATASET_ACCESS_DENIED_USER_NOT_AUTHORIZED = "Dataset access denied - User {0} is not authorized to access dataset {1}";
+        public const string DATASET_HAS_BEEN_DELETED = "Dataset {0} has been deleted";
+        public const string OPERATION_TIMED_OUT_AFTER = "Operation {0} timed out after {1}";
+        public const string FAILED_TO_PARSE_DATASET_DATA = "Failed to parse dataset {0} data: {1}";
+    }
+
+    /// <summary>
+    /// File processing and serialization constants
+    /// </summary>
+    public static class FileProcessingConstants
+    {
+        // JSON serialization options
+        public const string WRITE_INDENTED = "WriteIndented";
+        public const string PROPERTY_NAMING_POLICY = "PropertyNamingPolicy";
+        public const string CAMEL_CASE = "CamelCase";
+
+        // Default values
+        public const string EMPTY_STRING = "";
+        public const string UNKNOWN_FILE_PATH = "Unknown file path";
+        public const string UNKNOWN_FILE_TYPE = "Unknown file type";
+
+        // Error message templates
+        public const string FAILED_TO_COMPLETE_OPERATION = "Failed to complete {0}";
+        public const string FAILED_TO_COMPLETE_FILE_PROCESSING = "Failed to complete {0} for file '{1}' of type '{2}'";
+
+        // Excel processing constants
+        public const string EXCEL_LICENSE_CONTEXT = "NonCommercial";
+        public const string EXCEL_WORKSHEET_NOT_FOUND = "No worksheet found in Excel file";
+
+        // File processing indices and counts
+        public const int EXCEL_HEADER_ROW = 1;
+        public const int EXCEL_DATA_START_ROW = 2;
+        public const int EXCEL_DEFAULT_COLUMN = 1;
+        public const int EXCEL_DEFAULT_CHILDREN_COUNT = 0;
+
+        // Text processing
+        public const char NEWLINE_CHAR = '\n';
+        public const string NEWLINE_SPLIT_OPTIONS = "RemoveEmptyEntries";
+
+        // JSON processing
+        public const string JSON_VALUE_KIND_ARRAY = "Array";
+        public const string JSON_VALUE_KIND_OBJECT = "Object";
+        public const string JSON_PROPERTY_NAME = "Name";
+        public const string JSON_PROPERTY_VALUE = "Value";
+
+        // XML processing
+        public const string XML_ELEMENT_NAME = "LocalName";
+        public const string XML_ATTRIBUTE_NAME = "LocalName";
+        public const string XML_ELEMENT_VALUE = "Value";
+        public const string XML_ATTRIBUTE_VALUE = "Value";
+
+        // CSV processing
+        public const string CSV_HEADER_RECORD = "HeaderRecord";
+        public const string CSV_FIELD_VALUE = "Field";
+        public const string CSV_HEADER_VALIDATED = "HeaderValidated";
+        public const string CSV_MISSING_FIELD_FOUND = "MissingFieldFound";
+        public const string CSV_HAS_HEADER_RECORD = "HasHeaderRecord";
+
+        // File processing metadata
+        public const string METADATA_FILE_NAME = "FileName";
+        public const string METADATA_FILE_PATH = "FilePath";
+        public const string METADATA_FILE_TYPE = "FileType";
+        public const string METADATA_FILE_SIZE = "FileSize";
+        public const string METADATA_UPLOADED_AT = "UploadedAt";
+        public const string METADATA_STORAGE_PROVIDER = "StorageProvider";
+        public const string METADATA_DATA_HASH = "DataHash";
+        public const string METADATA_USE_SEPARATE_TABLE = "UseSeparateTable";
+        public const string METADATA_IS_PROCESSED = "IsProcessed";
+        public const string METADATA_PROCESSED_AT = "ProcessedAt";
+        public const string METADATA_PROCESSING_ERRORS = "ProcessingErrors";
+        public const string METADATA_COLUMN_COUNT = "ColumnCount";
+        public const string METADATA_ROW_COUNT = "RowCount";
+        public const string METADATA_SCHEMA = "Schema";
+        public const string METADATA_PREVIEW_DATA = "PreviewData";
+        public const string METADATA_PROCESSED_DATA = "ProcessedData";
+
+        // Processing status
+        public const string PROCESSING_STATUS_PROCESSED = "Processed";
+        public const string PROCESSING_STATUS_ERROR = "Error";
+        public const string PROCESSING_STATUS_PENDING = "Pending";
+
+        // Storage provider detection
+        public const string STORAGE_PROVIDER_S3 = "S3";
+        public const string STORAGE_PROVIDER_AZURE = "Azure";
+        public const string STORAGE_PROVIDER_MEMORY = "Memory";
+        public const string STORAGE_PROVIDER_LOCAL = "Local";
+
+        // File type detection
+        public const string FILE_TYPE_CSV = "CSV";
+        public const string FILE_TYPE_JSON = "JSON";
+        public const string FILE_TYPE_EXCEL = "Excel";
+        public const string FILE_TYPE_XML = "XML";
+        public const string FILE_TYPE_TXT = "TXT";
+        public const string FILE_TYPE_PARQUET = "Parquet";
+        public const string FILE_TYPE_CUSTOM = "Custom";
+    }
+
+    /// <summary>
+    /// JSON serialization configuration constants
+    /// </summary>
+    public static class JsonSerialization
+    {
+        public const string CAMEL_CASE_POLICY = "CamelCase";
+        public const string PASCAL_CASE_POLICY = "PascalCase";
+        public const string SNAKE_CASE_POLICY = "SnakeCase";
+
+        // Default configuration values
+        public const bool DEFAULT_WRITE_INDENTED = false;
+        public const bool DEFAULT_IGNORE_NULL_VALUES = true;
+        public const string DEFAULT_ENCODER = "UnsafeRelaxedJsonEscaping";
+
+        // Error messages
+        public const string SERIALIZATION_ERROR = "JSON serialization failed";
+        public const string DESERIALIZATION_ERROR = "JSON deserialization failed";
     }
 
     /// <summary>

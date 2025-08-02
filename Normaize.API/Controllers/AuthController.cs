@@ -1,32 +1,81 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Normaize.Core.Extensions;
-using System.Security.Claims;
+using Normaize.Core.DTOs;
 using System.Text;
 using System.Text.Json;
 
 namespace Normaize.API.Controllers;
 
+/// <summary>
+/// Controller for authentication and authorization functionality
+/// </summary>
+/// <remarks>
+/// This controller provides authentication endpoints for the Normaize API, including
+/// Auth0 integration for login and token management. It supports both client credentials
+/// and password grant flows for obtaining access tokens, with comprehensive error
+/// handling and logging for security monitoring.
+/// 
+/// Key features:
+/// - Auth0 OAuth2 integration for token-based authentication
+/// - Support for client credentials and password grant flows
+/// - Comprehensive error handling and logging
+/// - Authentication test endpoints for debugging
+/// - Secure token processing and validation
+/// 
+/// This controller is typically used for:
+/// - User authentication and login
+/// - Token management and validation
+/// - Authentication testing and debugging
+/// - Development and testing authentication flows
+/// </remarks>
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController : ControllerBase
+public class AuthController(
+    HttpClient httpClient,
+    ILogger<AuthController> logger
+) : BaseApiController()
 {
-    private readonly HttpClient _httpClient;
-    private readonly ILogger<AuthController> _logger;
-
-    public AuthController(HttpClient httpClient, ILogger<AuthController> logger)
-    {
-        _httpClient = httpClient;
-        _logger = logger;
-    }
-
     /// <summary>
-    /// Get a client credentials token from Auth0 for testing (development only)
+    /// Authenticates a user and returns an Auth0 access token
     /// </summary>
-    /// <returns>Auth0 JWT token for API access</returns>
+    /// <param name="request">The login request containing username and password</param>
+    /// <returns>
+    /// Authentication result with access token, expiration time, and token type
+    /// </returns>
+    /// <remarks>
+    /// This endpoint authenticates users using Auth0's OAuth2 flow. It first attempts
+    /// client credentials authentication, and if that fails, falls back to password
+    /// grant authentication. The endpoint supports both development and production
+    /// environments with appropriate configuration.
+    /// 
+    /// Authentication flow:
+    /// 1. Attempts client credentials grant (simpler for testing)
+    /// 2. Falls back to password grant if client credentials fail
+    /// 3. Validates Auth0 response and extracts access token
+    /// 4. Returns standardized token response
+    /// 
+    /// Environment variables used:
+    /// - AUTH0_DOMAIN: Auth0 domain for authentication
+    /// - SWAGGER_AUTH0_CLIENT_ID: Client ID for Auth0 application
+    /// - SWAGGER_AUTH0_CLIENT_SECRET: Client secret for Auth0 application
+    /// - AUTH0_AUDIENCE: API audience for token validation
+    /// 
+    /// This endpoint is typically used for:
+    /// - User login and authentication
+    /// - Obtaining access tokens for API calls
+    /// - Development and testing authentication flows
+    /// - Integration with client applications
+    /// </remarks>
+    /// <response code="200">Authentication successful with access token</response>
+    /// <response code="400">Invalid credentials or authentication failed</response>
+    /// <response code="500">Internal server error during authentication</response>
     [HttpPost("login")]
     [AllowAnonymous]
-    public async Task<ActionResult<TokenResponse>> Login([FromBody] LoginRequest request)
+    [ProducesResponseType(typeof(ApiResponse<TokenResponseDto>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<ApiResponse<TokenResponseDto>>> Login([FromBody] LoginRequestDto request)
     {
         try
         {
@@ -37,7 +86,7 @@ public class AuthController : ControllerBase
             var clientSecret = Environment.GetEnvironmentVariable("SWAGGER_AUTH0_CLIENT_SECRET") ?? "SjcKzfbVcL_sUlvHhnUFlOkV_pHJGGtNa8pagL7kvEzhfcuJTSFexBiJtBjAs0ph";
             var audience = Environment.GetEnvironmentVariable("AUTH0_AUDIENCE") ?? "https://api.normaize.com";
 
-            _logger.LogInformation("Auth0 login attempt for user: {Username}", request.Username);
+            logger.LogInformation("Auth0 login attempt for user: {Username}", request.Username);
 
             // Try client credentials first (simpler for testing)
             var tokenRequest = new
@@ -51,17 +100,17 @@ public class AuthController : ControllerBase
             var json = JsonSerializer.Serialize(tokenRequest);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync($"https://{auth0Domain}/oauth/token", content);
+            var response = await httpClient.PostAsync($"https://{auth0Domain}/oauth/token", content);
 
             var responseContent = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation("Auth0 login response status: {StatusCode}", response.StatusCode);
+            logger.LogInformation("Auth0 login response status: {StatusCode}", response.StatusCode);
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Auth0 client credentials failed: {StatusCode}, {Error}", response.StatusCode, responseContent);
+                logger.LogWarning("Auth0 client credentials failed: {StatusCode}, {Error}", response.StatusCode, responseContent);
 
                 // Fallback: Try password grant if client credentials fails
-                _logger.LogInformation("Trying password grant as fallback...");
+                logger.LogInformation("Trying password grant as fallback...");
                 var passwordRequest = new
                 {
                     grant_type = "password",
@@ -76,27 +125,27 @@ public class AuthController : ControllerBase
                 var passwordJson = JsonSerializer.Serialize(passwordRequest);
                 var passwordContent = new StringContent(passwordJson, Encoding.UTF8, "application/json");
 
-                var passwordResponse = await _httpClient.PostAsync($"https://{auth0Domain}/oauth/token", passwordContent);
+                var passwordResponse = await httpClient.PostAsync($"https://{auth0Domain}/oauth/token", passwordContent);
                 var passwordResponseContent = await passwordResponse.Content.ReadAsStringAsync();
 
                 if (!passwordResponse.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("Auth0 password grant also failed: {StatusCode}, {Error}", passwordResponse.StatusCode, passwordResponseContent);
-                    return BadRequest(new { message = "Login failed", error = passwordResponseContent });
+                    logger.LogWarning("Auth0 password grant also failed: {StatusCode}, {Error}", passwordResponse.StatusCode, passwordResponseContent);
+                    return BadRequest<TokenResponseDto>("Login failed");
                 }
 
                 responseContent = passwordResponseContent;
             }
 
-            var tokenResponse = JsonSerializer.Deserialize<Auth0TokenResponse>(responseContent);
+            var tokenResponse = JsonSerializer.Deserialize<Auth0TokenResponseDto>(responseContent);
 
             if (tokenResponse?.AccessToken == null)
             {
-                _logger.LogError("Auth0 login response parsed but AccessToken is null");
-                return BadRequest(new { message = "Invalid response from Auth0 - no access token" });
+                logger.LogError("Auth0 login response parsed but AccessToken is null");
+                return BadRequest<TokenResponseDto>("Invalid response from Auth0 - no access token");
             }
 
-            return Ok(new TokenResponse
+            return Success(new TokenResponseDto
             {
                 Token = tokenResponse.AccessToken,
                 ExpiresIn = tokenResponse.ExpiresIn,
@@ -105,57 +154,69 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during login");
-            return StatusCode(500, new { message = "Internal server error during login" });
+            logger.LogError(ex, "Error during login");
+            return InternalServerError<TokenResponseDto>("Internal server error during login");
         }
     }
 
     /// <summary>
-    /// Test endpoint that requires authentication
+    /// Tests authentication and returns detailed authentication information
     /// </summary>
-    /// <returns>Authentication test result</returns>
+    /// <returns>
+    /// Detailed authentication test result including user information, claims,
+    /// grant type, and authentication status
+    /// </returns>
+    /// <remarks>
+    /// This endpoint tests the current authentication state and returns detailed
+    /// information about the authenticated user. It extracts user claims, grant
+    /// type, and other authentication details from the JWT token.
+    /// 
+    /// The endpoint provides:
+    /// - User ID extraction from claims
+    /// - Grant type identification (client-credentials, password, etc.)
+    /// - Client credentials token detection
+    /// - Complete list of user claims
+    /// - Authentication timestamp
+    /// 
+    /// This endpoint is typically used for:
+    /// - Authentication debugging and testing
+    /// - Verifying token validity and claims
+    /// - Development and testing authentication flows
+    /// - Monitoring authentication state
+    /// </remarks>
+    /// <response code="200">Authentication test successful with detailed information</response>
+    /// <response code="401">User not authenticated</response>
+    /// <response code="500">Internal server error during authentication test</response>
     [HttpGet("test")]
     [Authorize]
-    public ActionResult<object> TestAuth()
+    [ProducesResponseType(typeof(ApiResponse<AuthTestResponseDto>), 200)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(500)]
+    public ActionResult<ApiResponse<AuthTestResponseDto>> TestAuth()
     {
-        var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
-        var userId = User.GetUserIdWithFallback();
-        var grantType = User.GetGrantType();
-        var isClientCredentials = User.IsClientCredentialsToken();
-
-        return Ok(new
+        try
         {
-            message = "Authentication successful",
-            userId = userId,
-            grantType = grantType,
-            isClientCredentials = isClientCredentials,
-            claims = claims,
-            timestamp = DateTime.UtcNow
-        });
+            var claims = User.Claims.Select(c => new ClaimDto { Type = c.Type, Value = c.Value }).ToList();
+            var userId = User.GetUserIdWithFallback();
+            var grantType = User.GetGrantType();
+            var isClientCredentials = User.IsClientCredentialsToken();
+
+            var authTestResponse = new AuthTestResponseDto
+            {
+                Message = "Authentication successful",
+                UserId = userId,
+                GrantType = grantType,
+                IsClientCredentials = isClientCredentials,
+                Claims = claims,
+                Timestamp = DateTime.UtcNow
+            };
+
+            return Success(authTestResponse);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error during authentication test");
+            return InternalServerError<AuthTestResponseDto>("Internal server error during authentication test");
+        }
     }
-}
-
-public class LoginRequest
-{
-    public string Username { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
-}
-
-public class Auth0TokenResponse
-{
-    [System.Text.Json.Serialization.JsonPropertyName("access_token")]
-    public string AccessToken { get; set; } = string.Empty;
-
-    [System.Text.Json.Serialization.JsonPropertyName("expires_in")]
-    public int ExpiresIn { get; set; }
-
-    [System.Text.Json.Serialization.JsonPropertyName("token_type")]
-    public string TokenType { get; set; } = string.Empty;
-}
-
-public class TokenResponse
-{
-    public string Token { get; set; } = string.Empty;
-    public int ExpiresIn { get; set; }
-    public string TokenType { get; set; } = string.Empty;
 }

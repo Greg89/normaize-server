@@ -12,18 +12,23 @@ namespace Normaize.API.Controllers;
 public class UserSettingsController(
     IUserSettingsService _userSettingsService,
     IStructuredLoggingService _loggingService
-) : ControllerBase
+) : BaseApiController(_loggingService)
 {
     private string GetCurrentUserId()
     {
         return User.GetUserId();
     }
 
+    private ProfileInfoDto GetCurrentUserInfo()
+    {
+        return User.GetUserInfo();
+    }
+
     /// <summary>
     /// Get current user's settings
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetUserSettings()
+    public async Task<ActionResult<ApiResponse<UserSettingsDto>>> GetUserSettings()
     {
         try
         {
@@ -36,16 +41,11 @@ public class UserSettingsController(
                 settings = await _userSettingsService.InitializeUserSettingsAsync(userId);
             }
 
-            return Ok(settings);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(settings);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, "GetUserSettings");
-            return StatusCode(500, "Error retrieving user settings");
+            return HandleException<UserSettingsDto>(ex, "GetUserSettings");
         }
     }
 
@@ -53,25 +53,18 @@ public class UserSettingsController(
     /// Update current user's settings
     /// </summary>
     [HttpPut]
-    public async Task<IActionResult> UpdateUserSettings([FromBody] UpdateUserSettingsDto updateDto)
+    public async Task<ActionResult<ApiResponse<UserSettingsDto>>> UpdateUserSettings([FromBody] UpdateUserSettingsDto updateDto)
     {
         try
         {
             var userId = GetCurrentUserId();
             var updatedSettings = await _userSettingsService.SaveUserSettingsAsync(userId, updateDto);
 
-            _loggingService.LogUserAction("User settings updated", new { UserId = userId });
-
-            return Ok(updatedSettings);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(updatedSettings, "User settings updated successfully");
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, "UpdateUserSettings");
-            return StatusCode(500, "Error updating user settings");
+            return HandleException<UserSettingsDto>(ex, "UpdateUserSettings");
         }
     }
 
@@ -79,34 +72,72 @@ public class UserSettingsController(
     /// Get complete user profile including Auth0 info and application settings
     /// </summary>
     [HttpGet("profile")]
-    public async Task<IActionResult> GetUserProfile()
+    public async Task<ActionResult<ApiResponse<UserProfileDto>>> GetUserProfile()
     {
         try
         {
-            var userId = GetCurrentUserId();
-            var profile = await _userSettingsService.GetUserProfileAsync(userId);
+            var userInfo = GetCurrentUserInfo();
+            var profile = await _userSettingsService.GetUserProfileAsync(userInfo.UserId);
 
             if (profile == null)
             {
                 // Initialize settings and create profile
-                var settings = await _userSettingsService.InitializeUserSettingsAsync(userId);
+                var settings = await _userSettingsService.InitializeUserSettingsAsync(userInfo.UserId);
                 profile = new UserProfileDto
                 {
-                    UserId = userId,
+                    UserId = userInfo.UserId,
+                    Email = userInfo.Email ?? string.Empty,
+                    Name = settings.DisplayName ?? userInfo.Name ?? string.Empty,
+                    Picture = userInfo.Picture,
+                    EmailVerified = userInfo.EmailVerified,
                     Settings = settings
                 };
             }
+            else
+            {
+                // Update the Auth0 info from claims
+                profile.Email = userInfo.Email ?? string.Empty;
+                profile.Name = profile.Settings.DisplayName ?? userInfo.Name ?? string.Empty;
+                profile.Picture = userInfo.Picture;
+                profile.EmailVerified = userInfo.EmailVerified;
+            }
 
-            return Ok(profile);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(profile);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, "GetUserProfile");
-            return StatusCode(500, "Error retrieving user profile");
+            return HandleException<UserProfileDto>(ex, "GetUserProfile");
+        }
+    }
+
+    /// <summary>
+    /// Update user profile settings
+    /// </summary>
+    [HttpPut("profile")]
+    public async Task<ActionResult<ApiResponse<UserProfileDto?>>> UpdateUserProfile([FromBody] UpdateUserSettingsDto updateDto)
+    {
+        try
+        {
+            var userInfo = GetCurrentUserInfo();
+            var updatedSettings = await _userSettingsService.SaveUserSettingsAsync(userInfo.UserId, updateDto);
+
+            // Return the updated profile with Auth0 info
+            var updatedProfile = await _userSettingsService.GetUserProfileAsync(userInfo.UserId);
+
+            if (updatedProfile != null)
+            {
+                // Update the Auth0 info from claims
+                updatedProfile.Email = userInfo.Email ?? string.Empty;
+                updatedProfile.Name = updatedProfile.Settings.DisplayName ?? userInfo.Name ?? string.Empty;
+                updatedProfile.Picture = userInfo.Picture;
+                updatedProfile.EmailVerified = userInfo.EmailVerified;
+            }
+
+            return Success(updatedProfile, "User profile updated successfully");
+        }
+        catch (Exception ex)
+        {
+            return HandleException<UserProfileDto?>(ex, "UpdateUserProfile");
         }
     }
 
@@ -114,7 +145,7 @@ public class UserSettingsController(
     /// Get a specific setting value
     /// </summary>
     [HttpGet("setting/{settingName}")]
-    public async Task<IActionResult> GetSettingValue(string settingName)
+    public async Task<ActionResult<ApiResponse<object>>> GetSettingValue(string settingName)
     {
         try
         {
@@ -122,18 +153,13 @@ public class UserSettingsController(
             var value = await _userSettingsService.GetSettingValueAsync<object>(userId, settingName);
 
             if (value == null)
-                return NotFound($"Setting '{settingName}' not found");
+                return NotFound<object>($"Setting '{settingName}' not found");
 
-            return Ok(new { SettingName = settingName, Value = value });
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(value);
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, $"GetSettingValue({settingName})");
-            return StatusCode(500, "Error retrieving setting value");
+            return HandleException<object>(ex, $"GetSettingValue({settingName})");
         }
     }
 
@@ -141,7 +167,7 @@ public class UserSettingsController(
     /// Update a specific setting value
     /// </summary>
     [HttpPut("setting/{settingName}")]
-    public async Task<IActionResult> UpdateSettingValue(string settingName, [FromBody] string value)
+    public async Task<ActionResult<ApiResponse<object?>>> UpdateSettingValue(string settingName, [FromBody] string value)
     {
         try
         {
@@ -149,20 +175,13 @@ public class UserSettingsController(
             var success = await _userSettingsService.UpdateSettingValueAsync(userId, settingName, value);
 
             if (!success)
-                return BadRequest($"Invalid setting name: {settingName}");
+                return BadRequest<object?>($"Invalid setting name: {settingName}");
 
-            _loggingService.LogUserAction("Setting value updated", new { UserId = userId, SettingName = settingName });
-
-            return Ok(new { Message = "Setting updated successfully" });
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success<object?>(null, "Setting updated successfully");
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, $"UpdateSettingValue({settingName})");
-            return StatusCode(500, "Error updating setting value");
+            return HandleException<object?>(ex, $"UpdateSettingValue({settingName})");
         }
     }
 
@@ -170,7 +189,7 @@ public class UserSettingsController(
     /// Reset user settings to defaults
     /// </summary>
     [HttpPost("reset")]
-    public async Task<IActionResult> ResetUserSettings()
+    public async Task<ActionResult<ApiResponse<UserSettingsDto>>> ResetUserSettings()
     {
         try
         {
@@ -182,18 +201,35 @@ public class UserSettingsController(
             // Initialize new default settings
             var newSettings = await _userSettingsService.InitializeUserSettingsAsync(userId);
 
-            _loggingService.LogUserAction("User settings reset to defaults", new { UserId = userId });
-
-            return Ok(newSettings);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(newSettings, "User settings reset to defaults successfully");
         }
         catch (Exception ex)
         {
-            _loggingService.LogException(ex, "ResetUserSettings");
-            return StatusCode(500, "Error resetting user settings");
+            return HandleException<UserSettingsDto>(ex, "ResetUserSettings");
         }
+    }
+
+    /// <summary>
+    /// Test endpoint to verify camelCase JSON serialization
+    /// </summary>
+    [HttpGet("test-serialization")]
+    public ActionResult<ApiResponse<object>> TestSerialization()
+    {
+        var testObject = new
+        {
+            UserId = "test-user-123",
+            EmailAddress = "test@example.com",
+            DisplayName = "Test User",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            Settings = new
+            {
+                Theme = "dark",
+                Language = "en",
+                EmailNotificationsEnabled = true
+            }
+        };
+
+        return Success((object)testObject);
     }
 }

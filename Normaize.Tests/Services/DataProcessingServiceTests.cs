@@ -1,4 +1,4 @@
-using AutoMapper;
+
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -18,7 +18,7 @@ public class DataProcessingServiceTests
     private readonly Mock<IDataSetRepository> _mockRepository;
     private readonly Mock<IFileUploadService> _mockFileUploadService;
     private readonly Mock<IAuditService> _mockAuditService;
-    private readonly Mock<IMapper> _mockMapper;
+
     private readonly Mock<ILogger<DataProcessingService>> _mockLogger;
     private readonly IMemoryCache _cache;
     private readonly Mock<IStructuredLoggingService> _mockStructuredLogging;
@@ -31,7 +31,7 @@ public class DataProcessingServiceTests
         _mockRepository = new Mock<IDataSetRepository>();
         _mockFileUploadService = new Mock<IFileUploadService>();
         _mockAuditService = new Mock<IAuditService>();
-        _mockMapper = new Mock<IMapper>();
+
         _mockLogger = new Mock<ILogger<DataProcessingService>>();
         _cache = new MemoryCache(new MemoryCacheOptions());
         _mockStructuredLogging = new Mock<IStructuredLoggingService>();
@@ -50,7 +50,6 @@ public class DataProcessingServiceTests
             _mockRepository.Object,
             _mockFileUploadService.Object,
             _mockAuditService.Object,
-            _mockMapper.Object,
             _mockInfrastructure.Object);
 
         // Setup default structured logging mocks
@@ -83,7 +82,6 @@ public class DataProcessingServiceTests
                 null!,
                 _mockFileUploadService.Object,
                 _mockAuditService.Object,
-                _mockMapper.Object,
                 _mockInfrastructure.Object));
 
         exception.ParamName.Should().Be("dataSetRepository");
@@ -98,7 +96,6 @@ public class DataProcessingServiceTests
                 _mockRepository.Object,
                 null!,
                 _mockAuditService.Object,
-                _mockMapper.Object,
                 _mockInfrastructure.Object));
 
         exception.ParamName.Should().Be("fileUploadService");
@@ -113,26 +110,12 @@ public class DataProcessingServiceTests
                 _mockRepository.Object,
                 _mockFileUploadService.Object,
                 null!,
-                _mockMapper.Object,
                 _mockInfrastructure.Object));
 
         exception.ParamName.Should().Be("auditService");
     }
 
-    [Fact]
-    public void Constructor_WithNullMapper_ShouldThrowArgumentNullException()
-    {
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
-            new DataProcessingService(
-                _mockRepository.Object,
-                _mockFileUploadService.Object,
-                _mockAuditService.Object,
-                null!,
-                _mockInfrastructure.Object));
 
-        exception.ParamName.Should().Be("mapper");
-    }
 
     [Fact]
     public void Constructor_WithNullInfrastructure_ShouldThrowArgumentNullException()
@@ -143,7 +126,6 @@ public class DataProcessingServiceTests
                 _mockRepository.Object,
                 _mockFileUploadService.Object,
                 _mockAuditService.Object,
-                _mockMapper.Object,
                 null!));
 
         exception.ParamName.Should().Be("infrastructure");
@@ -398,7 +380,7 @@ public class DataProcessingServiceTests
         };
 
         _mockRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(dataSet);
-        _mockMapper.Setup(m => m.Map<DataSetDto>(dataSet)).Returns(dataSetDto);
+
         _mockAuditService.Setup(a => a.LogDataSetActionAsync(1, "user123", "Viewed", null, null, null))
             .Returns(Task.CompletedTask);
 
@@ -411,7 +393,7 @@ public class DataProcessingServiceTests
         result.Name.Should().Be("Test Dataset");
 
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
-        _mockMapper.Verify(m => m.Map<DataSetDto>(dataSet), Times.Once);
+
         _mockAuditService.Verify(a => a.LogDataSetActionAsync(1, "user123", "Viewed", null, null, null), Times.Once);
     }
 
@@ -428,7 +410,6 @@ public class DataProcessingServiceTests
         result.Should().BeNull();
 
         _mockRepository.Verify(r => r.GetByIdAsync(999), Times.Once);
-        _mockMapper.Verify(m => m.Map<DataSetDto>(It.IsAny<DataSet>()), Times.Never);
     }
 
     [Fact]
@@ -451,7 +432,6 @@ public class DataProcessingServiceTests
         result.Should().BeNull();
 
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
-        _mockMapper.Verify(m => m.Map<DataSetDto>(It.IsAny<DataSet>()), Times.Never);
         _mockAuditService.Verify(a => a.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null), Times.Never);
     }
 
@@ -474,8 +454,6 @@ public class DataProcessingServiceTests
         };
 
         _mockRepository.Setup(r => r.GetByUserIdAsync("user123", false)).ReturnsAsync(dataSets);
-        _mockMapper.Setup(m => m.Map<IEnumerable<DataSetDto>>(It.IsAny<IEnumerable<DataSet>>()))
-            .Returns(dataSetDtos.Take(2)); // Simulate paging
 
         // Act
         var result = await _service.GetDataSetsByUserAsync("user123", 1, 2);
@@ -485,7 +463,6 @@ public class DataProcessingServiceTests
         result.Should().HaveCount(2);
 
         _mockRepository.Verify(r => r.GetByUserIdAsync("user123", false), Times.Once);
-        _mockMapper.Verify(m => m.Map<IEnumerable<DataSetDto>>(It.IsAny<IEnumerable<DataSet>>()), Times.Once);
     }
 
     [Fact]
@@ -605,7 +582,7 @@ public class DataProcessingServiceTests
         _mockRepository.Setup(r => r.GetTotalCountAsync("user123")).ReturnsAsync(3);
         _mockRepository.Setup(r => r.GetTotalSizeAsync("user123")).ReturnsAsync(512L);
         _mockRepository.Setup(r => r.GetRecentlyModifiedAsync("user123", 5)).ReturnsAsync(recentlyModified);
-        _mockMapper.Setup(m => m.Map<IEnumerable<DataSetDto>>(recentlyModified)).Returns(dataSetDtos);
+
 
         // Act
         var result = await _service.GetDataSetStatisticsAsync("user123");
@@ -619,7 +596,7 @@ public class DataProcessingServiceTests
         _mockRepository.Verify(r => r.GetTotalCountAsync("user123"), Times.Once);
         _mockRepository.Verify(r => r.GetTotalSizeAsync("user123"), Times.Once);
         _mockRepository.Verify(r => r.GetRecentlyModifiedAsync("user123", 5), Times.Once);
-        _mockMapper.Verify(m => m.Map<IEnumerable<DataSetDto>>(recentlyModified), Times.Once);
+
     }
 
     [Theory]

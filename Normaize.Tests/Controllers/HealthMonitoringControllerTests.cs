@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using Moq;
 using Normaize.API.Controllers;
 using Normaize.Core.Interfaces;
+using Normaize.Core.DTOs;
 using FluentAssertions;
 using Xunit;
 
@@ -16,6 +18,12 @@ public class HealthMonitoringControllerTests
     {
         _mockHealthCheckService = new Mock<IHealthCheckService>();
         _controller = new HealthMonitoringController(_mockHealthCheckService.Object);
+
+        // Set up controller context to avoid null reference issues
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
     }
 
     [Fact]
@@ -46,12 +54,16 @@ public class HealthMonitoringControllerTests
         var result = await _controller.GetLiveness(CancellationToken.None);
 
         // Assert
-        result.Should().BeOfType<OkObjectResult>();
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject!;
+        result.Should().BeOfType<ActionResult<ApiResponse<object>>>();
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
         okResult.Value.Should().NotBeNull();
 
-        var response = okResult.Value;
-        var responseType = response!.GetType();
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<object>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+
+        // The data is an anonymous object, so we need to use reflection to check properties
+        var response = apiResponse.Data!;
+        var responseType = response.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
         responseType.GetProperty("timestamp").Should().NotBeNull();
         responseType.GetProperty("duration").Should().NotBeNull();
@@ -84,17 +96,15 @@ public class HealthMonitoringControllerTests
         var result = await _controller.GetLiveness(CancellationToken.None);
 
         // Assert
-        result.Should().BeOfType<ObjectResult>();
-        var objectResult = result.Should().BeOfType<ObjectResult>().Subject!;
+        result.Should().BeOfType<ActionResult<ApiResponse<object>>>();
+        var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
         objectResult.StatusCode.Should().Be(503);
 
-        var response = objectResult.Value;
-        var responseType = response!.GetType();
-        responseType.GetProperty("status").Should().NotBeNull();
-        responseType.GetProperty("issues").Should().NotBeNull();
-
-        var statusValue = responseType.GetProperty("status")!.GetValue(response);
-        statusValue.Should().Be("not_alive");
+        var apiResponse = objectResult.Value.Should().BeOfType<ApiResponse<object>>().Subject!;
+        // For error responses, Data is null, so we check the message instead
+        apiResponse.Success.Should().BeFalse();
+        apiResponse.Message.Should().NotBeNull();
+        apiResponse.Message.Should().Contain("Liveness check failed");
     }
 
     [Fact]
@@ -137,11 +147,13 @@ public class HealthMonitoringControllerTests
         var result = await _controller.GetReadiness(CancellationToken.None);
 
         // Assert
-        result.Should().BeOfType<OkObjectResult>();
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject!;
+        result.Should().BeOfType<ActionResult<ApiResponse<object>>>();
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
         okResult.Value.Should().NotBeNull();
 
-        var response = okResult.Value;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<object>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        var response = apiResponse.Data!;
         var responseType = response!.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
         responseType.GetProperty("components").Should().NotBeNull();
@@ -189,18 +201,15 @@ public class HealthMonitoringControllerTests
         var result = await _controller.GetReadiness(CancellationToken.None);
 
         // Assert
-        result.Should().BeOfType<ObjectResult>();
-        var objectResult = result.Should().BeOfType<ObjectResult>().Subject!;
+        result.Should().BeOfType<ActionResult<ApiResponse<object>>>();
+        var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
         objectResult.StatusCode.Should().Be(503);
 
-        var response = objectResult.Value;
-        var responseType = response!.GetType();
-        responseType.GetProperty("status").Should().NotBeNull();
-        responseType.GetProperty("components").Should().NotBeNull();
-        responseType.GetProperty("issues").Should().NotBeNull();
-
-        var statusValue = responseType.GetProperty("status")!.GetValue(response);
-        statusValue.Should().Be("not_ready");
+        var apiResponse = objectResult.Value.Should().BeOfType<ApiResponse<object>>().Subject!;
+        // For error responses, Data is null, so we check the message instead
+        apiResponse.Success.Should().BeFalse();
+        apiResponse.Message.Should().NotBeNull();
+        apiResponse.Message.Should().Contain("Readiness check failed");
     }
 
     [Fact]
@@ -249,12 +258,14 @@ public class HealthMonitoringControllerTests
         var result = await _controller.GetHealth(CancellationToken.None);
 
         // Assert
-        result.Should().BeOfType<OkObjectResult>();
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject!;
+        result.Should().BeOfType<ActionResult<ApiResponse<object>>>();
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
         okResult.Value.Should().NotBeNull();
 
-        var response = okResult.Value;
-        var responseType = response!.GetType();
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<object>>().Subject!;
+        apiResponse.Data.Should().NotBeNull();
+        var response = apiResponse.Data!;
+        var responseType = response.GetType();
         responseType.GetProperty("status").Should().NotBeNull();
         responseType.GetProperty("components").Should().NotBeNull();
         responseType.GetProperty("timestamp").Should().NotBeNull();
@@ -308,18 +319,15 @@ public class HealthMonitoringControllerTests
         var result = await _controller.GetHealth(CancellationToken.None);
 
         // Assert
-        result.Should().BeOfType<ObjectResult>();
-        var objectResult = result.Should().BeOfType<ObjectResult>().Subject!;
+        result.Should().BeOfType<ActionResult<ApiResponse<object>>>();
+        var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
         objectResult.StatusCode.Should().Be(503);
 
-        var response = objectResult.Value;
-        var responseType = response!.GetType();
-        responseType.GetProperty("status").Should().NotBeNull();
-        responseType.GetProperty("components").Should().NotBeNull();
-        responseType.GetProperty("issues").Should().NotBeNull();
-
-        var statusValue = responseType.GetProperty("status")!.GetValue(response);
-        statusValue.Should().Be("unhealthy");
+        var apiResponse = objectResult.Value.Should().BeOfType<ApiResponse<object>>().Subject!;
+        // For error responses, Data is null, so we check the message instead
+        apiResponse.Success.Should().BeFalse();
+        apiResponse.Message.Should().NotBeNull();
+        apiResponse.Message.Should().Contain("Health check failed");
     }
 
     [Fact]

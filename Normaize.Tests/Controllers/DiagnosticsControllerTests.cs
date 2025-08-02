@@ -30,7 +30,7 @@ public class DiagnosticsControllerTests
     }
 
     [Fact]
-    public void GetStorageDiagnostics_ReturnsExpectedConfigStatus()
+    public async Task GetStorageDiagnostics_ReturnsExpectedConfigStatus()
     {
         // Arrange
         var expectedDiagnostics = new StorageDiagnosticsDto
@@ -47,12 +47,13 @@ public class DiagnosticsControllerTests
         _mockStorageConfigService.Setup(x => x.GetDiagnostics()).Returns(expectedDiagnostics);
 
         // Act
-        var result = _controller.GetStorageDiagnostics();
+        var result = await _controller.GetStorageDiagnostics();
 
         // Assert
-        var okResult = result.Result as OkObjectResult;
-        okResult.Should().NotBeNull();
-        var diagnostics = okResult!.Value as StorageDiagnosticsDto;
+        result.Should().BeOfType<ActionResult<ApiResponse<StorageDiagnosticsDto>>>();
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<StorageDiagnosticsDto>>().Subject!;
+        var diagnostics = apiResponse.Data;
         diagnostics.Should().NotBeNull();
         diagnostics!.StorageProvider.Should().Be(StorageProvider.S3);
         diagnostics.S3Configured.Should().BeTrue();
@@ -68,18 +69,18 @@ public class DiagnosticsControllerTests
     }
 
     [Fact]
-    public void GetStorageDiagnostics_WhenException_LogsAndReturns500()
+    public async Task GetStorageDiagnostics_WhenException_LogsAndReturns500()
     {
         // Arrange
         _mockStorageConfigService.Setup(x => x.GetDiagnostics()).Throws(new Exception("fail"));
 
         // Act
-        var result = _controller.GetStorageDiagnostics();
+        var result = await _controller.GetStorageDiagnostics();
 
         // Assert
-        var obj = result.Result as ObjectResult;
-        obj.Should().NotBeNull();
-        obj!.StatusCode.Should().Be(500);
+        result.Should().BeOfType<ActionResult<ApiResponse<StorageDiagnosticsDto>>>();
+        var obj = result.Result.Should().BeOfType<ObjectResult>().Subject!;
+        obj.StatusCode.Should().Be(500);
         _mockLoggingService.Verify(x => x.LogException(It.IsAny<Exception>(), "GetStorageDiagnostics"), Times.Once);
     }
 
@@ -105,16 +106,19 @@ public class DiagnosticsControllerTests
         var result = await controller.TestStorage();
 
         // Assert
-        var actionResult = result as ActionResult<StorageTestResultDto>;
-        actionResult.Should().NotBeNull();
-        var obj = actionResult!.Result as ObjectResult;
-        obj.Should().NotBeNull();
-        obj!.StatusCode.Should().Be(500);
+        var actionResult = result.Should().BeOfType<ActionResult<ApiResponse<StorageTestResultDto>>>().Subject;
+        var statusResult = actionResult.Result.Should().BeOfType<ObjectResult>().Subject;
+        statusResult.StatusCode.Should().Be(400);
+
+        var apiResponse = statusResult.Value.Should().BeOfType<ApiResponse<StorageTestResultDto>>().Subject;
+        apiResponse.Success.Should().BeFalse();
+        apiResponse.Message.Should().Contain("Service not found");
+
         _mockLoggingService.Verify(x => x.LogException(It.IsAny<Exception>(), "TestStorage"), Times.Once);
     }
 
     [Fact]
-    public void GetStorageDiagnostics_WithMissingConfig_ReturnsNotSetStatus()
+    public async Task GetStorageDiagnostics_WithMissingConfig_ReturnsNotSetStatus()
     {
         // Arrange
         var expectedDiagnostics = new StorageDiagnosticsDto
@@ -131,12 +135,13 @@ public class DiagnosticsControllerTests
         _mockStorageConfigService.Setup(x => x.GetDiagnostics()).Returns(expectedDiagnostics);
 
         // Act
-        var result = _controller.GetStorageDiagnostics();
+        var result = await _controller.GetStorageDiagnostics();
 
         // Assert
-        var okResult = result.Result as OkObjectResult;
-        okResult.Should().NotBeNull();
-        var diagnostics = okResult!.Value as StorageDiagnosticsDto;
+        result.Should().BeOfType<ActionResult<ApiResponse<StorageDiagnosticsDto>>>();
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<StorageDiagnosticsDto>>().Subject!;
+        var diagnostics = apiResponse.Data;
         diagnostics.Should().NotBeNull();
         diagnostics!.StorageProvider.Should().Be(StorageProvider.Local);
         diagnostics.S3Configured.Should().BeFalse();
@@ -156,7 +161,7 @@ public class DiagnosticsControllerTests
     [InlineData(StorageProvider.Azure)]
     [InlineData(StorageProvider.Memory)]
     [InlineData(StorageProvider.Local)]
-    public void GetStorageDiagnostics_WithDifferentProviders_ReturnsCorrectProvider(StorageProvider provider)
+    public async Task GetStorageDiagnostics_WithDifferentProviders_ReturnsCorrectProvider(StorageProvider provider)
     {
         // Arrange
         var expectedDiagnostics = new StorageDiagnosticsDto
@@ -173,12 +178,13 @@ public class DiagnosticsControllerTests
         _mockStorageConfigService.Setup(x => x.GetDiagnostics()).Returns(expectedDiagnostics);
 
         // Act
-        var result = _controller.GetStorageDiagnostics();
+        var result = await _controller.GetStorageDiagnostics();
 
         // Assert
-        var okResult = result.Result as OkObjectResult;
-        okResult.Should().NotBeNull();
-        var diagnostics = okResult!.Value as StorageDiagnosticsDto;
+        result.Should().BeOfType<ActionResult<ApiResponse<StorageDiagnosticsDto>>>();
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<StorageDiagnosticsDto>>().Subject!;
+        var diagnostics = apiResponse.Data;
         diagnostics.Should().NotBeNull();
         diagnostics!.StorageProvider.Should().Be(provider);
 
@@ -188,7 +194,7 @@ public class DiagnosticsControllerTests
     }
 
     [Fact]
-    public void GetStorageDiagnostics_WithCancellationToken_HandlesCancellation()
+    public async Task GetStorageDiagnostics_WithCancellationToken_HandlesCancellation()
     {
         // Arrange
         var expectedDiagnostics = new StorageDiagnosticsDto
@@ -206,12 +212,13 @@ public class DiagnosticsControllerTests
         var cancellationToken = new CancellationToken();
 
         // Act
-        var result = _controller.GetStorageDiagnostics(cancellationToken);
+        var result = await _controller.GetStorageDiagnostics(cancellationToken);
 
         // Assert
-        var okResult = result.Result as OkObjectResult;
-        okResult.Should().NotBeNull();
-        var diagnostics = okResult!.Value as StorageDiagnosticsDto;
+        result.Should().BeOfType<ActionResult<ApiResponse<StorageDiagnosticsDto>>>();
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<StorageDiagnosticsDto>>().Subject!;
+        var diagnostics = apiResponse.Data;
         diagnostics.Should().NotBeNull();
 
         // Verify logging was called
@@ -247,7 +254,7 @@ public class DiagnosticsControllerTests
     }
 
     [Fact]
-    public void GetStorageDiagnostics_WithNullUser_HandlesGracefully()
+    public async Task GetStorageDiagnostics_WithNullUser_HandlesGracefully()
     {
         // Arrange
         var expectedDiagnostics = new StorageDiagnosticsDto
@@ -270,11 +277,14 @@ public class DiagnosticsControllerTests
         };
 
         // Act
-        var result = _controller.GetStorageDiagnostics();
+        var result = await _controller.GetStorageDiagnostics();
 
         // Assert
-        var ok = result.Result as OkObjectResult;
-        ok.Should().NotBeNull();
+        result.Should().BeOfType<ActionResult<ApiResponse<StorageDiagnosticsDto>>>();
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<StorageDiagnosticsDto>>().Subject!;
+        var diagnostics = apiResponse.Data;
+        diagnostics.Should().NotBeNull();
 
         // Verify logging was called with null user
         _mockLoggingService.Verify(x => x.LogUserAction("Storage diagnostics requested", It.Is<object>(o => o != null && o.ToString() != null && o.ToString()!.Contains("UserId"))), Times.Once);

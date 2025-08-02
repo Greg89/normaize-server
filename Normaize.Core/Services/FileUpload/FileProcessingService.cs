@@ -144,8 +144,6 @@ public class FileProcessingService : IFileProcessingService
     {
         try
         {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
             using var fileStream = await _storageService.GetFileAsync(filePath);
             using var package = new ExcelPackage(fileStream);
             var worksheet = GetWorksheet(package);
@@ -209,7 +207,7 @@ public class FileProcessingService : IFileProcessingService
             using var fileStream = await _storageService.GetFileAsync(filePath);
             using var reader = new StreamReader(fileStream);
             var content = await reader.ReadToEndAsync();
-            var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var lines = content.Split(AppConstants.FileProcessingConstants.NEWLINE_CHAR, StringSplitOptions.RemoveEmptyEntries);
 
             var headers = new List<string> { AppConstants.FileProcessing.LINE_NUMBER_COLUMN, AppConstants.FileProcessing.CONTENT_COLUMN };
             var records = ExtractTextData(lines);
@@ -296,18 +294,18 @@ public class FileProcessingService : IFileProcessingService
 
     private static string CreateDetailedErrorMessage(string operationName, Dictionary<string, object>? metadata)
     {
-        if (metadata == null) return $"Failed to complete {operationName}";
+        if (metadata == null) return string.Format(AppConstants.FileProcessingConstants.FAILED_TO_COMPLETE_OPERATION, operationName);
 
         // Handle specific operation types with detailed error messages
         switch (operationName)
         {
             case nameof(ProcessFileAsync):
-                var filePath = metadata.TryGetValue(AppConstants.FileProcessing.FILE_PATH_KEY, out var path) ? path?.ToString() : AppConstants.Messages.UNKNOWN;
-                var fileType = metadata.TryGetValue(AppConstants.DataProcessing.METADATA_FILE_TYPE, out var type) ? type?.ToString() : AppConstants.Messages.UNKNOWN;
-                return $"Failed to complete {operationName} for file '{filePath}' of type '{fileType}'";
+                var filePath = metadata.TryGetValue(AppConstants.FileProcessing.FILE_PATH_KEY, out var path) ? path?.ToString() : AppConstants.FileProcessingConstants.UNKNOWN_FILE_PATH;
+                var fileType = metadata.TryGetValue(AppConstants.DataProcessing.METADATA_FILE_TYPE, out var type) ? type?.ToString() : AppConstants.FileProcessingConstants.UNKNOWN_FILE_TYPE;
+                return string.Format(AppConstants.FileProcessingConstants.FAILED_TO_COMPLETE_FILE_PROCESSING, operationName, filePath, fileType);
 
             default:
-                return $"Failed to complete {operationName}";
+                return string.Format(AppConstants.FileProcessingConstants.FAILED_TO_COMPLETE_OPERATION, operationName);
         }
     }
 
@@ -385,7 +383,7 @@ public class FileProcessingService : IFileProcessingService
             foreach (var header in headers)
             {
                 var field = csv.GetField(header);
-                record[header] = field ?? string.Empty;
+                record[header] = field ?? AppConstants.FileProcessingConstants.EMPTY_STRING;
             }
             records.Add(record);
             rowCount++;
@@ -477,14 +475,14 @@ public class FileProcessingService : IFileProcessingService
         var worksheet = package.Workbook.Worksheets.FirstOrDefault();
         if (worksheet != null) return worksheet;
 
-        var error = AppConstants.FileUpload.NO_WORKSHEET_FOUND;
+        var error = AppConstants.FileProcessingConstants.EXCEL_WORKSHEET_NOT_FOUND;
         throw new InvalidOperationException(error);
     }
 
     private static List<string> ExtractExcelHeaders(ExcelWorksheet worksheet)
     {
         var headers = new List<string>();
-        var headerRow = worksheet.Cells[AppConstants.FileProcessing.HEADER_ROW_INDEX, AppConstants.FileProcessing.DEFAULT_COLUMN_INDEX, AppConstants.FileProcessing.HEADER_ROW_INDEX, worksheet.Dimension?.Columns ?? AppConstants.FileProcessing.DEFAULT_COLUMN_INDEX];
+        var headerRow = worksheet.Cells[AppConstants.FileProcessingConstants.EXCEL_HEADER_ROW, AppConstants.FileProcessingConstants.EXCEL_DEFAULT_COLUMN, AppConstants.FileProcessingConstants.EXCEL_HEADER_ROW, worksheet.Dimension?.Columns ?? AppConstants.FileProcessingConstants.EXCEL_DEFAULT_COLUMN];
 
         foreach (var cell in headerRow)
         {
@@ -505,8 +503,8 @@ public class FileProcessingService : IFileProcessingService
         records.Capacity = Math.Min(maxRows, AppConstants.FileProcessing.DEFAULT_RECORDS_CAPACITY);
 
         // Optimize by reading entire range at once when possible
-        var dataRange = worksheet.Cells[AppConstants.FileProcessing.DATA_START_ROW_INDEX, AppConstants.FileProcessing.DEFAULT_COLUMN_INDEX,
-            Math.Min(worksheet.Dimension?.Rows ?? AppConstants.FileProcessing.DEFAULT_COLUMN_INDEX, AppConstants.FileProcessing.DATA_START_ROW_INDEX + maxRows - 1),
+        var dataRange = worksheet.Cells[AppConstants.FileProcessingConstants.EXCEL_DATA_START_ROW, AppConstants.FileProcessingConstants.EXCEL_DEFAULT_COLUMN,
+            Math.Min(worksheet.Dimension?.Rows ?? AppConstants.FileProcessingConstants.EXCEL_DEFAULT_COLUMN, AppConstants.FileProcessingConstants.EXCEL_DATA_START_ROW + maxRows - 1),
             maxCols];
 
         var dataValues = dataRange.Value as object[,];
@@ -520,7 +518,7 @@ public class FileProcessingService : IFileProcessingService
                 for (int col = 0; col < maxCols; col++)
                 {
                     var cellValue = dataValues[row, col];
-                    record[headers[col]] = cellValue?.ToString() ?? string.Empty;
+                    record[headers[col]] = cellValue?.ToString() ?? AppConstants.FileProcessingConstants.EMPTY_STRING;
                 }
                 records.Add(record);
                 rowCount++;
@@ -529,13 +527,13 @@ public class FileProcessingService : IFileProcessingService
         else
         {
             // Fallback to cell-by-cell access if range reading fails
-            for (int row = AppConstants.FileProcessing.DATA_START_ROW_INDEX; row <= (worksheet.Dimension?.Rows ?? AppConstants.FileProcessing.DEFAULT_COLUMN_INDEX) && rowCount < maxRows; row++)
+            for (int row = AppConstants.FileProcessingConstants.EXCEL_DATA_START_ROW; row <= (worksheet.Dimension?.Rows ?? AppConstants.FileProcessingConstants.EXCEL_DEFAULT_COLUMN) && rowCount < maxRows; row++)
             {
                 var record = new Dictionary<string, object>(maxCols);
-                for (int col = AppConstants.FileProcessing.DEFAULT_COLUMN_INDEX; col <= maxCols; col++)
+                for (int col = AppConstants.FileProcessingConstants.EXCEL_DEFAULT_COLUMN; col <= maxCols; col++)
                 {
                     var cellValue = worksheet.Cells[row, col].Value;
-                    record[headers[col - AppConstants.FileProcessing.DEFAULT_COLUMN_INDEX]] = cellValue?.ToString() ?? string.Empty;
+                    record[headers[col - AppConstants.FileProcessingConstants.EXCEL_DEFAULT_COLUMN]] = cellValue?.ToString() ?? AppConstants.FileProcessingConstants.EMPTY_STRING;
                 }
                 records.Add(record);
                 rowCount++;
@@ -558,7 +556,7 @@ public class FileProcessingService : IFileProcessingService
         if (root == null) return (headers, records);
 
         var children = root.Elements().ToList();
-        if (children.Count > AppConstants.FileProcessing.DEFAULT_CHILDREN_COUNT)
+        if (children.Count > AppConstants.FileProcessingConstants.EXCEL_DEFAULT_CHILDREN_COUNT)
         {
             ExtractXmlArrayData(children, headers, records);
         }
@@ -591,7 +589,7 @@ public class FileProcessingService : IFileProcessingService
             var record = new Dictionary<string, object>(headers.Count);
             foreach (var element in child.Elements())
             {
-                record[element.Name.LocalName] = element.Value ?? string.Empty;
+                record[element.Name.LocalName] = element.Value ?? AppConstants.FileProcessingConstants.EMPTY_STRING;
             }
             records.Add(record);
         }
@@ -604,12 +602,12 @@ public class FileProcessingService : IFileProcessingService
         foreach (var attr in root.Attributes())
         {
             headers.Add(attr.Name.LocalName);
-            record[attr.Name.LocalName] = attr.Value ?? string.Empty;
+            record[attr.Name.LocalName] = attr.Value ?? AppConstants.FileProcessingConstants.EMPTY_STRING;
         }
         foreach (var element in root.Elements())
         {
             headers.Add(element.Name.LocalName);
-            record[element.Name.LocalName] = element.Value ?? string.Empty;
+            record[element.Name.LocalName] = element.Value ?? AppConstants.FileProcessingConstants.EMPTY_STRING;
         }
         records.Add(record);
     }
@@ -661,26 +659,20 @@ public class FileProcessingService : IFileProcessingService
         dataSet.RowCount = records.Count;
         dataSet.FileSize = fileSize;
 
-        // Optimize JSON serialization with reusable options
-        var jsonOptions = new JsonSerializerOptions
-        {
-            WriteIndented = false, // Smaller output
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
-
-        dataSet.Schema = JsonSerializer.Serialize(headers, jsonOptions);
+        // Use global JSON configuration for consistent camelCase output
+        dataSet.Schema = JsonConfiguration.Serialize(headers);
 
         // Only serialize preview data if needed
         if (records.Count > AppConstants.FileProcessing.DEFAULT_ROW_COUNT)
         {
             var previewRecords = records.Take(_dataProcessingConfig.MaxPreviewRows).ToList();
-            dataSet.PreviewData = JsonSerializer.Serialize(previewRecords, jsonOptions);
+            dataSet.PreviewData = JsonConfiguration.Serialize(previewRecords);
         }
 
         // Only serialize full data if within limits
         if (records.Count < _dataProcessingConfig.MaxRowsPerDataset)
         {
-            dataSet.ProcessedData = JsonSerializer.Serialize(records, jsonOptions);
+            dataSet.ProcessedData = JsonConfiguration.Serialize(records);
         }
 
         _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.FILE_PROCESSING_COMPLETED_DEBUG, new Dictionary<string, object>

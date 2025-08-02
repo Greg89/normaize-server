@@ -26,6 +26,6 @@ WORKDIR /app
 COPY --from=build /app/publish .
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD ["curl", "--fail", "http://localhost:8080/health/readiness"]
+  CMD ["curl", "--fail", "http://localhost:8080/api/healthmonitoring/readiness"]
 
 ENTRYPOINT ["dotnet", "Normaize.API.dll"] 

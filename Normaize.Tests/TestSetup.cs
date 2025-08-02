@@ -4,6 +4,18 @@ namespace Normaize.Tests
 {
     public static class TestSetup
     {
+        // Test categories for selective execution
+        public static class Categories
+        {
+            public const string Unit = "Unit";
+            public const string Integration = "Integration";
+            public const string Slow = "Slow";
+            public const string Fast = "Fast";
+            public const string Database = "Database";
+            public const string FileSystem = "FileSystem";
+            public const string External = "External";
+        }
+
         static TestSetup()
         {
             // Clear all MySQL and storage env vars before any tests run

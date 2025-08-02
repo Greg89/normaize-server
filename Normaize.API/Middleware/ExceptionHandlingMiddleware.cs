@@ -1,21 +1,12 @@
 using Normaize.Core.Interfaces;
+using Normaize.Core.Configuration;
+using Normaize.Core.DTOs;
 using System.Net;
-using System.Text.Json;
 
 namespace Normaize.API.Middleware;
 
-public class ExceptionHandlingMiddleware
+public class ExceptionHandlingMiddleware(RequestDelegate _next)
 {
-    private readonly RequestDelegate _next;
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
-    public ExceptionHandlingMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
 
     public async Task InvokeAsync(HttpContext context)
     {
@@ -42,23 +33,18 @@ public class ExceptionHandlingMiddleware
     {
         context.Response.ContentType = "application/json";
 
-        var response = new
-        {
-            Error = new
-            {
-                Message = GetUserFriendlyMessage(exception),
-                Type = exception.GetType().Name,
-                Details = exception.Message,
-                CorrelationId = correlationId,
-                RequestPath = context.Request.Path.ToString(),
-                RequestMethod = context.Request.Method,
-                Timestamp = DateTime.UtcNow
-            }
-        };
+        var response = ApiResponse<object>.ErrorResponse(
+            GetUserFriendlyMessage(exception),
+            GetErrorCode(exception)
+        );
+
+        response.Metadata.CorrelationId = correlationId;
+        response.Metadata.DurationMs = 0; // Will be set by the base controller for normal requests
 
         context.Response.StatusCode = GetHttpStatusCode(exception);
 
-        var jsonResponse = JsonSerializer.Serialize(response, JsonOptions);
+        // Use the global JSON configuration for consistent camelCase output
+        var jsonResponse = JsonConfiguration.Serialize(response);
         await context.Response.WriteAsync(jsonResponse);
     }
 
@@ -87,6 +73,20 @@ public class ExceptionHandlingMiddleware
             NotSupportedException => (int)HttpStatusCode.MethodNotAllowed,
             TimeoutException => (int)HttpStatusCode.RequestTimeout,
             _ => (int)HttpStatusCode.InternalServerError
+        };
+    }
+
+    private static string GetErrorCode(Exception exception)
+    {
+        return exception switch
+        {
+            ArgumentException => "BAD_REQUEST",
+            UnauthorizedAccessException => "UNAUTHORIZED",
+            InvalidOperationException => "INVALID_OPERATION",
+            KeyNotFoundException => "NOT_FOUND",
+            NotSupportedException => "NOT_SUPPORTED",
+            TimeoutException => "TIMEOUT",
+            _ => "INTERNAL_SERVER_ERROR"
         };
     }
 }

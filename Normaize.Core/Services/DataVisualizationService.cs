@@ -165,7 +165,7 @@ public class DataVisualizationService : IDataVisualizationService
             context.OperationName,
             async () =>
             {
-                _infrastructure.StructuredLogging.LogStep(context, $"Chaos engineering: Simulating {chaosType}", new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, string.Format(AppConstants.DataVisualization.CHAOS_ENGINEERING_SIMULATING, chaosType), new Dictionary<string, object>
                 {
                     [AppConstants.ChaosEngineering.CHAOS_TYPE] = chaosType
                 });
@@ -188,7 +188,7 @@ public class DataVisualizationService : IDataVisualizationService
                 break;
 
             case AppConstants.ChaosEngineering.CACHE_FAILURE:
-                throw new InvalidOperationException("Simulated cache failure (chaos engineering)");
+                throw new InvalidOperationException(AppConstants.DataVisualization.SIMULATED_CACHE_FAILURE_MESSAGE);
 
             case AppConstants.ChaosEngineering.MEMORY_PRESSURE:
                 await SimulateMemoryPressureAsync();
@@ -225,8 +225,8 @@ public class DataVisualizationService : IDataVisualizationService
     {
         return new Dictionary<string, object>
         {
-            ["DataSetId1"] = dataSetId1,
-            ["DataSetId2"] = dataSetId2,
+            [AppConstants.DataVisualization.DATASET_ID_1] = dataSetId1,
+            [AppConstants.DataVisualization.DATASET_ID_2] = dataSetId2,
             [AppConstants.DataStructures.CHART_TYPE] = chartType.ToString(),
             [AppConstants.DataProcessing.CONFIGURATION_KEY] = configuration?.ToString() ?? AppConstants.DataProcessing.DATA_TYPE_NULL
         };
@@ -242,7 +242,7 @@ public class DataVisualizationService : IDataVisualizationService
 
     private static string CreateDetailedErrorMessage(string operationName, Dictionary<string, object>? metadata)
     {
-        if (metadata == null) return $"Failed to complete {operationName}";
+        if (metadata == null) return string.Format(AppConstants.DataVisualization.FAILED_TO_COMPLETE_OPERATION, operationName);
 
         return operationName switch
         {
@@ -250,7 +250,7 @@ public class DataVisualizationService : IDataVisualizationService
             nameof(GenerateComparisonChartAsync) => CreateComparisonChartErrorMessage(metadata),
             nameof(GetDataSummaryAsync) => CreateDataSummaryErrorMessage(metadata),
             nameof(GetStatisticalSummaryAsync) => CreateStatisticalSummaryErrorMessage(metadata),
-            _ => $"Failed to complete {operationName}"
+            _ => string.Format(AppConstants.DataVisualization.FAILED_TO_COMPLETE_OPERATION, operationName)
         };
     }
 
@@ -258,27 +258,27 @@ public class DataVisualizationService : IDataVisualizationService
     {
         var dataSetId = GetMetadataValue(metadata, AppConstants.DataStructures.DATASETID);
         var chartType = GetMetadataValue(metadata, AppConstants.DataStructures.CHART_TYPE);
-        return $"Failed to complete GenerateChartAsync for dataset ID {dataSetId} with chart type {chartType}";
+        return string.Format(AppConstants.DataVisualization.FAILED_TO_COMPLETE_GENERATE_CHART, dataSetId, chartType);
     }
 
     private static string CreateComparisonChartErrorMessage(Dictionary<string, object> metadata)
     {
-        var dataSetId1 = GetMetadataValue(metadata, "DataSetId1");
-        var dataSetId2 = GetMetadataValue(metadata, "DataSetId2");
+        var dataSetId1 = GetMetadataValue(metadata, AppConstants.DataVisualization.DATASET_ID_1);
+        var dataSetId2 = GetMetadataValue(metadata, AppConstants.DataVisualization.DATASET_ID_2);
         var chartType = GetMetadataValue(metadata, AppConstants.DataStructures.CHART_TYPE);
-        return $"Failed to complete GenerateComparisonChartAsync for dataset IDs {dataSetId1} and {dataSetId2} with chart type {chartType}";
+        return string.Format(AppConstants.DataVisualization.FAILED_TO_COMPLETE_GENERATE_COMPARISON_CHART, dataSetId1, dataSetId2, chartType);
     }
 
     private static string CreateDataSummaryErrorMessage(Dictionary<string, object> metadata)
     {
         var dataSetId = GetMetadataValue(metadata, AppConstants.DataStructures.DATASETID);
-        return $"Failed to complete GetDataSummaryAsync for dataset ID {dataSetId}";
+        return string.Format(AppConstants.DataVisualization.FAILED_TO_COMPLETE_GET_DATA_SUMMARY, dataSetId);
     }
 
     private static string CreateStatisticalSummaryErrorMessage(Dictionary<string, object> metadata)
     {
         var dataSetId = GetMetadataValue(metadata, AppConstants.DataStructures.DATASETID);
-        return $"Failed to complete GetStatisticalSummaryAsync for dataset ID {dataSetId}";
+        return string.Format(AppConstants.DataVisualization.FAILED_TO_COMPLETE_GET_STATISTICAL_SUMMARY, dataSetId);
     }
 
     private static string GetMetadataValue(Dictionary<string, object> metadata, string key)
@@ -302,11 +302,11 @@ public class DataVisualizationService : IDataVisualizationService
 
         if (_visualizationServices.CacheManagement.TryGetValue(cacheKey, out ChartDataDto? cachedChart))
         {
-            _infrastructure.StructuredLogging.LogStep(context, "Retrieved chart from cache");
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.RETRIEVED_CHART_FROM_CACHE);
             return cachedChart!;
         }
 
-        _infrastructure.StructuredLogging.LogStep(context, "Cache miss, generating new chart");
+        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.CACHE_MISS_GENERATING_NEW_CHART);
 
         var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, context);
         var data = ExtractDataSetData(dataSet, context);
@@ -316,9 +316,9 @@ public class DataVisualizationService : IDataVisualizationService
 
         _visualizationServices.CacheManagement.Set(cacheKey, chartData, _options.CacheExpiration);
 
-        _infrastructure.StructuredLogging.LogStep(context, "Generated chart successfully", new Dictionary<string, object>
+        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.GENERATED_CHART_SUCCESSFULLY, new Dictionary<string, object>
         {
-            ["ProcessingTimeMs"] = stopwatch.ElapsedMilliseconds
+            [AppConstants.DataVisualization.PROCESSING_TIME_MS] = stopwatch.ElapsedMilliseconds
         });
 
         return chartData;
@@ -332,11 +332,11 @@ public class DataVisualizationService : IDataVisualizationService
 
         if (_visualizationServices.CacheManagement.TryGetValue(cacheKey, out ComparisonChartDto? cachedChart))
         {
-            _infrastructure.StructuredLogging.LogStep(context, "Retrieved comparison chart from cache");
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.RETRIEVED_COMPARISON_CHART_FROM_CACHE);
             return cachedChart!;
         }
 
-        _infrastructure.StructuredLogging.LogStep(context, "Cache miss, generating new comparison chart");
+        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.CACHE_MISS_GENERATING_NEW_COMPARISON_CHART);
 
         var dataSet1 = await GetAndValidateDataSetAsync(dataSetId1, userId, context);
         var dataSet2 = await GetAndValidateDataSetAsync(dataSetId2, userId, context);
@@ -349,9 +349,9 @@ public class DataVisualizationService : IDataVisualizationService
 
         _visualizationServices.CacheManagement.Set(cacheKey, comparisonChart, _options.CacheExpiration);
 
-        _infrastructure.StructuredLogging.LogStep(context, "Generated comparison chart successfully", new Dictionary<string, object>
+        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.GENERATED_COMPARISON_CHART_SUCCESSFULLY, new Dictionary<string, object>
         {
-            ["ProcessingTimeMs"] = stopwatch.ElapsedMilliseconds
+            [AppConstants.DataVisualization.PROCESSING_TIME_MS] = stopwatch.ElapsedMilliseconds
         });
 
         return comparisonChart;
@@ -365,11 +365,11 @@ public class DataVisualizationService : IDataVisualizationService
 
         if (_visualizationServices.CacheManagement.TryGetValue(cacheKey, out DataSummaryDto? cachedSummary))
         {
-            _infrastructure.StructuredLogging.LogStep(context, "Retrieved data summary from cache");
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.RETRIEVED_DATA_SUMMARY_FROM_CACHE);
             return cachedSummary!;
         }
 
-        _infrastructure.StructuredLogging.LogStep(context, "Cache miss, generating new data summary");
+        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.CACHE_MISS_GENERATING_NEW_DATA_SUMMARY);
 
         var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, context);
         var data = ExtractDataSetData(dataSet, context);
@@ -379,9 +379,9 @@ public class DataVisualizationService : IDataVisualizationService
 
         _visualizationServices.CacheManagement.Set(cacheKey, summary, _options.CacheExpiration);
 
-        _infrastructure.StructuredLogging.LogStep(context, "Generated data summary successfully", new Dictionary<string, object>
+        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.GENERATED_DATA_SUMMARY_SUCCESSFULLY, new Dictionary<string, object>
         {
-            ["ProcessingTimeMs"] = stopwatch.ElapsedMilliseconds
+            [AppConstants.DataVisualization.PROCESSING_TIME_MS] = stopwatch.ElapsedMilliseconds
         });
 
         return summary;
@@ -395,11 +395,11 @@ public class DataVisualizationService : IDataVisualizationService
 
         if (_visualizationServices.CacheManagement.TryGetValue(cacheKey, out StatisticalSummaryDto? cachedStats))
         {
-            _infrastructure.StructuredLogging.LogStep(context, "Retrieved statistical summary from cache");
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.RETRIEVED_STATISTICAL_SUMMARY_FROM_CACHE);
             return cachedStats!;
         }
 
-        _infrastructure.StructuredLogging.LogStep(context, "Cache miss, generating new statistical summary");
+        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.CACHE_MISS_GENERATING_NEW_STATISTICAL_SUMMARY);
 
         var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, context);
         var data = ExtractDataSetData(dataSet, context);
@@ -409,9 +409,9 @@ public class DataVisualizationService : IDataVisualizationService
 
         _visualizationServices.CacheManagement.Set(cacheKey, stats, _options.CacheExpiration);
 
-        _infrastructure.StructuredLogging.LogStep(context, "Generated statistical summary successfully", new Dictionary<string, object>
+        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.GENERATED_STATISTICAL_SUMMARY_SUCCESSFULLY, new Dictionary<string, object>
         {
-            ["ProcessingTimeMs"] = stopwatch.ElapsedMilliseconds
+            [AppConstants.DataVisualization.PROCESSING_TIME_MS] = stopwatch.ElapsedMilliseconds
         });
 
         return stats;
@@ -433,11 +433,11 @@ public class DataVisualizationService : IDataVisualizationService
         {
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.OPERATION_TIMED_OUT, new Dictionary<string, object>
             {
-                ["Timeout"] = timeout.ToString(),
-                ["OperationName"] = context.OperationName,
-                ["ErrorMessage"] = ex.Message
+                [AppConstants.DataVisualization.TIMEOUT] = timeout.ToString(),
+                [AppConstants.DataVisualization.OPERATION_NAME] = context.OperationName,
+                [AppConstants.DataVisualization.ERROR_MESSAGE] = ex.Message
             });
-            throw new TimeoutException($"Operation {context.OperationName} timed out after {timeout}");
+            throw new TimeoutException(string.Format(AppConstants.DataVisualization.OPERATION_TIMED_OUT_AFTER, context.OperationName, timeout));
         }
     }
 
@@ -447,33 +447,33 @@ public class DataVisualizationService : IDataVisualizationService
 
         if (dataSet == null)
         {
-            _infrastructure.StructuredLogging.LogStep(context, "Dataset not found", new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.DATASET_NOT_FOUND_LOG, new Dictionary<string, object>
             {
                 [AppConstants.DataStructures.DATASETID] = dataSetId,
                 [AppConstants.DataStructures.USER_ID] = userId
             });
-            throw new ArgumentException($"{AppConstants.VisualizationMessages.DATASET_NOT_FOUND} with ID {dataSetId}", nameof(dataSetId));
+            throw new ArgumentException(string.Format(AppConstants.DataVisualization.DATASET_NOT_FOUND_WITH_ID, dataSetId), nameof(dataSetId));
         }
 
         if (dataSet.UserId != userId)
         {
-            _infrastructure.StructuredLogging.LogStep(context, "Unauthorized access attempt", new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.UNAUTHORIZED_ACCESS_ATTEMPT, new Dictionary<string, object>
             {
                 [AppConstants.DataStructures.DATASETID] = dataSetId,
                 [AppConstants.DataStructures.USER_ID] = userId,
                 [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet.UserId
             });
-            throw new UnauthorizedAccessException($"{AppConstants.VisualizationMessages.DATASET_ACCESS_DENIED} - User {userId} is not authorized to access dataset {dataSetId}");
+            throw new UnauthorizedAccessException(string.Format(AppConstants.DataVisualization.DATASET_ACCESS_DENIED_USER_NOT_AUTHORIZED, userId, dataSetId));
         }
 
         if (dataSet.IsDeleted)
         {
-            _infrastructure.StructuredLogging.LogStep(context, "Attempted to access deleted dataset", new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.ATTEMPTED_TO_ACCESS_DELETED_DATASET, new Dictionary<string, object>
             {
                 [AppConstants.DataStructures.DATASETID] = dataSetId,
                 [AppConstants.DataStructures.USER_ID] = userId
             });
-            throw new ArgumentException($"Dataset {dataSetId} has been deleted", nameof(dataSetId));
+            throw new ArgumentException(string.Format(AppConstants.DataVisualization.DATASET_HAS_BEEN_DELETED, dataSetId), nameof(dataSetId));
         }
 
         return dataSet;
@@ -485,7 +485,7 @@ public class DataVisualizationService : IDataVisualizationService
         {
             if (string.IsNullOrWhiteSpace(dataSet.ProcessedData))
             {
-                _infrastructure.StructuredLogging.LogStep(context, "Dataset has no processed data", new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.DATASET_HAS_NO_PROCESSED_DATA, new Dictionary<string, object>
                 {
                     [AppConstants.DataStructures.DATASETID] = dataSet.Id
                 });
@@ -496,29 +496,29 @@ public class DataVisualizationService : IDataVisualizationService
 
             if (data == null)
             {
-                _infrastructure.StructuredLogging.LogStep(context, "Failed to deserialize dataset JSON data", new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.FAILED_TO_DESERIALIZE_DATASET_JSON_DATA, new Dictionary<string, object>
                 {
                     [AppConstants.DataStructures.DATASETID] = dataSet.Id
                 });
                 return [];
             }
 
-            _infrastructure.StructuredLogging.LogStep(context, "Extracted rows from dataset", new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.EXTRACTED_ROWS_FROM_DATASET, new Dictionary<string, object>
             {
                 [AppConstants.DataStructures.DATASETID] = dataSet.Id,
-                ["RowCount"] = data.Count
+                [AppConstants.DataVisualization.ROW_COUNT] = data.Count
             });
 
             return data;
         }
         catch (JsonException ex)
         {
-            _infrastructure.StructuredLogging.LogStep(context, "Failed to parse dataset JSON data", new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.FAILED_TO_PARSE_DATASET_JSON_DATA, new Dictionary<string, object>
             {
                 [AppConstants.DataStructures.DATASETID] = dataSet.Id,
-                ["ErrorMessage"] = ex.Message
+                [AppConstants.DataVisualization.ERROR_MESSAGE] = ex.Message
             });
-            throw new InvalidOperationException($"Failed to parse dataset {dataSet.Id} data: {ex.Message}", ex);
+            throw new InvalidOperationException(string.Format(AppConstants.DataVisualization.FAILED_TO_PARSE_DATASET_DATA, dataSet.Id, ex.Message), ex);
         }
     }
 

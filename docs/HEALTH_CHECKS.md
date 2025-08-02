@@ -243,7 +243,7 @@ HEALTH_CHECK_INTERVAL=300000  # 5 minutes
 ```json
 {
   "deploy": {
-    "healthcheckPath": "/health/readiness",
+    "healthcheckPath": "/api/healthmonitoring/readiness",
     "healthcheckTimeout": 300,
     "restartPolicyType": "on_failure",
     "healthcheckInterval": 30,
@@ -255,7 +255,7 @@ HEALTH_CHECK_INTERVAL=300000  # 5 minutes
 ### Docker Configuration
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD curl --fail http://localhost:8080/health/readiness || exit 1
+  CMD curl --fail http://localhost:8080/api/healthmonitoring/readiness || exit 1
 ```
 
 ## Monitoring and Alerting
@@ -263,13 +263,16 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 ### Health Check Monitoring
 ```bash
 # Check liveness
-curl -f http://localhost:8080/health/liveness
+curl -f http://localhost:8080/api/healthmonitoring/liveness
 
 # Check readiness
-curl -f http://localhost:8080/health/readiness
+curl -f http://localhost:8080/api/healthmonitoring/readiness
 
 # Comprehensive health check
-curl http://localhost:8080/health/database
+curl http://localhost:8080/api/healthmonitoring/health
+
+# Basic health check
+curl http://localhost:8080/api/health
 ```
 
 ### Alerting Rules

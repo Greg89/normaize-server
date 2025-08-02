@@ -187,6 +187,7 @@ public class StartupServiceTests
     }
 
     [Fact]
+    [Trait("Category", TestSetup.Categories.Slow)]
     public async Task ApplyMigrationsAsync_WithPersistentFailure_ShouldHandleFailure()
     {
         // Arrange
@@ -275,6 +276,7 @@ public class StartupServiceTests
     }
 
     [Fact]
+    [Trait("Category", TestSetup.Categories.Slow)]
     public async Task PerformHealthChecksAsync_WithPersistentFailure_ShouldHandleTimeout()
     {
         // Arrange
