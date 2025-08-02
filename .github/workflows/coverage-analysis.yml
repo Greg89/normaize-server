@@ -203,7 +203,7 @@ jobs:
           
           # Generate history for next run if we have coverage data
           echo "Generating coverage history for next run..."
-          reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-history" -reporttypes:History
+          reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-history" -reporttypes:HistoryChart
           echo "✅ Coverage history generated"
           
           # Remove placeholder file if it exists and we have real history
