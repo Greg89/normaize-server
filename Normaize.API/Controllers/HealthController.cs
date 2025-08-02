@@ -28,8 +28,12 @@ namespace Normaize.API.Controllers;
 /// </remarks>
 [ApiController]
 [Route("api/[controller]")]
-public class HealthController(IStructuredLoggingService loggingService) : BaseApiController(loggingService)
+public class HealthController : BaseApiController
 {
+    public HealthController(IStructuredLoggingService loggingService) : base(loggingService)
+    {
+    }
+
     /// <summary>
     /// Performs a basic health check and returns application status information
     /// </summary>
@@ -68,7 +72,7 @@ public class HealthController(IStructuredLoggingService loggingService) : BaseAp
     [ProducesResponseType(500)]
     public ActionResult<ApiResponse<HealthResponseDto>> Get()
     {
-        loggingService?.LogUserAction("Health check requested", null);
+        _loggingService?.LogUserAction("Health check requested", null);
 
         var healthResponse = new HealthResponseDto
         {
