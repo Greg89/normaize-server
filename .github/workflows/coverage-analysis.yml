@@ -134,46 +134,9 @@ jobs:
         cp ./coverage-opencover/OpenCover.xml ./coverage/coverage.opencover.xml
         echo "✅ OpenCover format conversion completed"
 
-    # Coverage History Management
-    - name: Initialize coverage history directory
-      run: |
-        echo "Initializing coverage history directory..."
-        mkdir -p ./coverage-history
-        echo "✅ Coverage history directory initialized"
+    # Note: Coverage history management removed - now handled by SonarQube and Codecov
 
-    - name: Download previous coverage history
-      uses: actions/download-artifact@v4
-      with:
-        name: coverage-history
-        path: ./coverage-history/
-      continue-on-error: true
-
-    - name: Debug coverage history download
-      run: |
-        echo "=== Coverage History Debug Information ==="
-        echo "Current directory: $(pwd)"
-        echo "Coverage history directory contents:"
-        if [ -d ./coverage-history ]; then
-          ls -la ./coverage-history/
-          echo "Directory exists and contains $(ls -1 ./coverage-history/ | wc -l) files"
-        else
-          echo "Coverage history directory does not exist"
-        fi
-        echo "=== End Coverage History Debug ==="
-
-    - name: Ensure coverage history directory exists
-      run: |
-        echo "Ensuring coverage history directory exists..."
-        mkdir -p ./coverage-history
-        # Create a placeholder file if directory is empty to ensure it can be uploaded
-        if [ ! "$(ls -A ./coverage-history)" ]; then
-          echo "Creating placeholder file for empty coverage history..."
-          echo "# Coverage History Placeholder" > ./coverage-history/.placeholder
-          echo "This file ensures the coverage-history artifact can be uploaded on first run."
-        fi
-        echo "✅ Coverage history directory prepared"
-
-    - name: Generate coverage report with history
+    - name: Generate coverage report
       env:
         REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
       run: |
@@ -188,32 +151,16 @@ jobs:
           echo "No coverage data available" > ./coverage-summary/Summary.txt
           echo "No coverage data available" > ./coverage-report/index.html
         else
-          # Generate HTML report with history if available
-          if [ -d "./coverage-history" ] && [ "$(ls -A ./coverage-history)" ]; then
-            echo "Generating report with history..."
-            reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html -historydir:"./coverage-history"
-          else
-            echo "Generating report without history..."
-            reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html
-          fi
+          # Generate HTML report
+          echo "Generating HTML report..."
+          reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html
           
-          # Always generate summary and badges
+          # Generate summary and badges
           echo "Generating summary and badges..."
           reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-summary" -reporttypes:"TextSummary;Badges"
           
-          # Generate history for next run if we have coverage data
-          echo "Generating coverage history for next run..."
-          reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage-history" -reporttypes:HistoryChart
-          echo "✅ Coverage history generated"
-          
-          # Remove placeholder file if it exists and we have real history
-          if [ -f "./coverage-history/.placeholder" ]; then
-            echo "Removing placeholder file as real history was generated..."
-            rm "./coverage-history/.placeholder"
-          fi
+          echo "✅ Coverage report generation completed"
         fi
-        
-        echo "✅ Coverage report generation completed"
 
     - name: Debug coverage artifacts
       run: |
@@ -223,27 +170,7 @@ jobs:
         echo ""
         echo "Coverage summary directory:"
         if [ -d ./coverage-summary ]; then ls -la ./coverage-summary/; else echo "No coverage-summary directory found"; fi
-        echo ""
-        echo "Coverage history directory:"
-        if [ -d ./coverage-history ]; then ls -la ./coverage-history/; else echo "No coverage-history directory found"; fi
         echo "=== End Debug Information ==="
-
-    - name: Prepare coverage history for upload
-      run: |
-        echo "Preparing coverage history for upload..."
-        # Ensure coverage history directory exists
-        mkdir -p ./coverage-history
-        
-        # If directory is empty, create a placeholder file
-        if [ ! "$(ls -A ./coverage-history)" ]; then
-          echo "Creating placeholder file for empty coverage history..."
-          echo "# Coverage History Placeholder" > ./coverage-history/.placeholder
-          echo "This file ensures the coverage-history artifact can be uploaded on first run."
-        fi
-        
-        echo "Coverage history directory contents:"
-        ls -la ./coverage-history/
-        echo "✅ Coverage history prepared for upload"
 
     # Upload Coverage Artifacts
     - name: Upload coverage report
@@ -260,13 +187,8 @@ jobs:
         path: ./coverage-summary/
         retention-days: 30
 
-    - name: Upload coverage history for next run
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-history
-        path: ./coverage-history/
-        retention-days: 90
-        if-no-files-found: warn
+    # Note: Coverage history is now handled by SonarQube and Codecov
+    # Removed local history artifact upload due to ReportGenerator compatibility issues
 
     # End SonarQube Analysis
     - name: End SonarQube Analysis
