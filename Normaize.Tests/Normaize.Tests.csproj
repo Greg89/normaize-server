@@ -9,6 +9,12 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <ProjectGuid>{79118d8d-a151-4eff-9e53-c8760ceff37f}</ProjectGuid>
+    <!-- Enable parallel test execution -->
+    <ParallelizeTestCollections>true</ParallelizeTestCollections>
+    <MaxParallelThreads>4</MaxParallelThreads>
+    <!-- Optimize test execution -->
+    <OptimizeImplicitlyTriggeredBuild>true</OptimizeImplicitlyTriggeredBuild>
+    <UseRazorBuildServer>false</UseRazorBuildServer>
   </PropertyGroup>
 
   <ItemGroup>

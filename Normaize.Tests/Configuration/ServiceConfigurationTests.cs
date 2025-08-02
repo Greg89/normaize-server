@@ -1,14 +1,9 @@
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Cors.Infrastructure;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Normaize.API.Configuration;
 using Normaize.Core.Interfaces;
 using Normaize.Data;
-using Normaize.Data.Repositories;
 using Normaize.Data.Services;
-using System.Collections;
 using Xunit;
 using FluentAssertions;
 
@@ -139,6 +134,7 @@ public class ServiceConfigurationTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", TestSetup.Categories.External)]
     public void ConfigureServices_WhenS3CredentialsMissing_ShouldFallbackToInMemoryStorage()
     {
         // Arrange
