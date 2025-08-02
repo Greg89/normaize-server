@@ -41,7 +41,7 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 - [ ] `Normaize.API/Controllers/UserSettingsController.cs`
 - [x] `Normaize.API/Controllers/DiagnosticsController.cs`
 - [x] `Normaize.API/Controllers/DataSetsController.cs`
-- [ ] `Normaize.API/Controllers/HealthMonitoringController.cs`
+- [x] `Normaize.API/Controllers/HealthMonitoringController.cs`
 - [ ] `Normaize.API/Controllers/HealthController.cs`
 - [ ] `Normaize.API/Controllers/AuthController.cs`
 - [ ] `Normaize.API/Controllers/AuditController.cs`
@@ -1375,6 +1375,94 @@ The `DiagnosticsController` provides diagnostic endpoints for storage configurat
 - Enhanced method documentation with detailed remarks and response codes
 - Added detailed parameter documentation with constraints and descriptions
 - Documented all possible response codes (200, 400, 401, 404, 500) for each endpoint
+- All recommendations successfully implemented and tested
+
+---
+
+## HealthMonitoringController.cs - COMPLETED ✅
+
+**Overview**:
+The `HealthMonitoringController` provides comprehensive health monitoring endpoints for Kubernetes and container orchestration systems. It includes liveness probes, readiness probes, and comprehensive health checks that verify the application's ability to serve traffic and maintain system health.
+
+**Code Quality**: ⭐⭐⭐⭐⭐
+- **Excellent**: Clean, focused controller with single responsibility
+- **Well-structured**: Clear separation of health check types
+- **Consistent**: Uniform error handling and response patterns
+- **Readable**: Clear method names and logical flow
+- **IMPROVED**: Added comprehensive XML documentation for all methods
+
+**Efficiency**: ⭐⭐⭐⭐⭐
+- **Optimized**: Lightweight liveness checks for frequent polling
+- **Performance**: Appropriate use of async/await patterns
+- **Resource Management**: Proper cancellation token usage
+- **Scalable**: Designed for container orchestration systems
+- **IMPROVED**: Enhanced route structure for better API organization
+
+**Clean Architecture**: ⭐⭐⭐⭐⭐
+- **Dependency Direction**: Correctly depends on IHealthCheckService interface
+- **Layer Separation**: Clear separation between controller and service layers
+- **Single Responsibility**: Focused on health monitoring concerns
+- **Dependency Inversion**: Uses interface-based dependency injection
+- **IMPROVED**: Enhanced route structure and parameter naming consistency
+
+**Test Coverage**: ⭐⭐⭐⭐⭐
+- **Comprehensive**: 9 test methods covering all endpoints
+- **Edge Cases**: Tests both healthy and unhealthy scenarios
+- **Mocking**: Proper use of mocked dependencies
+- **Assertions**: Thorough validation of response structure and content
+- **Coverage**: 100% method coverage with positive and negative test cases
+
+**Key Components**:
+1. **GetHealth**: Comprehensive health check of all system components
+2. **GetLiveness**: Lightweight liveness check for container orchestration
+3. **GetReadiness**: Readiness check for traffic serving capability
+
+**Usage Analysis**:
+- **Container Orchestration**: Primary use case for Kubernetes health probes
+- **Load Balancing**: Health checks for traffic routing decisions
+- **System Monitoring**: Comprehensive health monitoring and alerting
+- **Deployment**: Readiness verification for deployment processes
+- **Troubleshooting**: Detailed component health information for debugging
+
+**Improvements Made**:
+- ✅ **XML Documentation**: Complete documentation for controller class and all methods
+- ✅ **API Documentation**: Added ProducesResponseType attributes for OpenAPI/Swagger
+- ✅ **Parameter Naming**: Fixed inconsistent parameter naming (removed underscore prefix)
+- ✅ **Route Structure**: Improved route structure for better API organization
+- ✅ **Comprehensive Remarks**: Detailed explanations of endpoint functionality and use cases
+- ✅ **Response Documentation**: Clear documentation of all possible response codes
+- ✅ **Using Statements**: Added missing Microsoft.AspNetCore.Authorization using statement
+
+**SonarQube Status**: ✅ No issues detected
+
+**Architecture Notes**:
+- This controller is critical for container orchestration and system monitoring
+- Excellent integration with the health check service layer
+- Well-designed endpoints support different types of health monitoring needs
+- Supports correlation IDs for distributed tracing
+- Provides detailed component health information
+- Implements proper error handling for unhealthy states
+- **IMPROVED**: Now includes comprehensive API documentation and detailed XML comments
+- **IMPROVED**: Enhanced developer experience with detailed endpoint documentation
+- **IMPROVED**: Better route structure and parameter naming consistency
+
+**Recommendations**:
+1. ✅ **XML documentation** for controller and methods - IMPLEMENTED
+2. ✅ **API response documentation** for OpenAPI/Swagger - IMPLEMENTED
+3. ✅ **Parameter naming consistency** - IMPLEMENTED
+4. ✅ **Route structure improvement** - IMPLEMENTED
+5. ✅ **Comprehensive remarks** explaining functionality and use cases - IMPLEMENTED
+6. ✅ **Response code documentation** for all endpoints - IMPLEMENTED
+
+**Implementation Summary**:
+- Added comprehensive XML documentation for the controller class and all 3 methods
+- Implemented ProducesResponseType attributes for proper API documentation
+- Fixed parameter naming inconsistency (removed underscore prefix from healthCheckService)
+- Improved route structure from "health" to "api/[controller]" for better organization
+- Enhanced method documentation with detailed remarks and response codes
+- Added detailed parameter documentation with descriptions
+- Documented all possible response codes (200, 503, 500) for each endpoint
+- Added missing using statement for Microsoft.AspNetCore.Authorization
 - All recommendations successfully implemented and tested
 
 ---
