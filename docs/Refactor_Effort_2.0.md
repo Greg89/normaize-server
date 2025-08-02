@@ -68,7 +68,7 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 - [x] `Normaize.Core/DTOs/VisualizationDto.cs`
 - [x] `Normaize.Core/DTOs/UserProfileDto.cs`
 - [x] `Normaize.Core/DTOs/UserSettingsDto.cs`
-- [ ] `Normaize.Core/DTOs/StorageDiagnosticsDto.cs`
+- [x] `Normaize.Core/DTOs/StorageDiagnosticsDto.cs`
 - [ ] `Normaize.Core/DTOs/UpdateUserSettingsDto.cs`
 - [ ] `Normaize.Core/DTOs/HealthResponseDto.cs`
 - [ ] `Normaize.Core/DTOs/DataSetDto.cs`
@@ -647,6 +647,104 @@ This document tracks the systematic review and refactoring of the Normaize codeb
 - Added validation attributes for data integrity (Required, StringLength, Range)
 - Created static option classes for type-safe constrained values
 - Organized code into logical regions for better maintainability
+- All recommendations successfully implemented and tested
+
+---
+
+#### `Normaize.Core/DTOs/StorageDiagnosticsDto.cs` ✅
+**Review Date**: 2025-01-27
+
+**Overview & Description**:
+- **Purpose**: Defines DTOs for storage diagnostics and testing functionality
+- **Responsibilities**: 
+  - `StorageDiagnosticsDto`: Provides storage configuration diagnostics including provider type, S3 configuration status, and environment information
+  - `StorageTestResultDto`: Provides results from storage connectivity and functionality tests
+- **Role**: Data transfer objects for storage diagnostics and testing endpoints
+
+**Code Quality Check** ✅:
+- No compiler warnings or errors
+- **IMPROVED**: Comprehensive XML documentation for all public members
+- **IMPROVED**: JSON serialization attributes for API consistency
+- **IMPROVED**: Validation attributes for data integrity
+- Good use of nullable reference types for optional fields
+- Appropriate default values and initialization
+- Clean, focused implementation with proper naming conventions
+
+**Code Efficiency** ✅:
+- No code duplication
+- Minimal, focused DTOs with essential fields
+- Efficient use of nullable types to avoid unnecessary allocations
+- Lightweight memory footprint
+- Proper use of string.Empty for required fields
+
+**Clean Architecture Compliance** ✅:
+- ✅ **Dependency Direction**: Correctly placed in Core layer as DTOs
+- ✅ **Layer Separation**: Clear DTO boundary with no external dependencies
+- ✅ **Interface Segregation**: DTOs are focused and cohesive
+- ✅ **Single Responsibility**: Each DTO has a clear, single purpose
+- ✅ **Dependency Inversion**: No dependencies on external frameworks
+- ✅ **No Circular Dependencies**: Clean dependency graph
+- ✅ **Proper Namespacing**: Correctly placed in Normaize.Core.DTOs namespace
+
+**Test Coverage** ✅:
+- **Well-tested**: Found 20+ references in test files
+- **Comprehensive testing**: Covered in DiagnosticsControllerTests
+- **Integration testing**: Validated through controller tests
+- **Test data creation**: Proper test data builders for comprehensive testing
+
+**Key Components**:
+1. **StorageDiagnosticsDto**:
+   - StorageProvider: Current storage provider (Local, S3, Azure, Memory)
+   - S3Configured: Boolean indicating S3 configuration status
+   - S3Bucket, S3AccessKey, S3SecretKey, S3ServiceUrl: Configuration status strings
+   - Environment: Current application environment
+2. **StorageTestResultDto**:
+   - StorageType: Type of storage service being tested
+   - TestResult: Overall test result status ("SUCCESS" or "FAILED")
+   - FilePath: Path used during test operations
+   - Exists, ContentMatch: Boolean flags for test validation
+   - Message: Descriptive test result message
+   - Error: Error details if test failed
+
+**Usage Analysis**:
+- **Storage Diagnostics**: Used by DiagnosticsController.GetStorageDiagnostics()
+- **Storage Testing**: Used by DiagnosticsController.TestStorage()
+- **Service Integration**: Used by StorageConfigurationService.GetDiagnostics()
+- **Comprehensive Testing**: Well-tested through DiagnosticsControllerTests
+
+**Improvements Made**:
+- ✅ **XML Documentation**: Complete documentation for all public members with detailed remarks
+- ✅ **JSON Serialization**: Consistent camelCase naming in API responses
+- ✅ **Validation Attributes**: Data integrity validation (Required, StringLength)
+- ✅ **Comprehensive Documentation**: Detailed remarks explaining each property's purpose and usage
+- Clean, maintainable DTO structure
+- Proper validation and constraints
+- Good integration with diagnostics and testing functionality
+- Consistent with application naming conventions
+- Comprehensive test coverage
+
+**SonarQube Status**: ✅ No issues detected
+
+**Architecture Notes**:
+- These DTOs serve as the foundation for storage diagnostics and testing functionality
+- Well-designed with comprehensive validation and documentation
+- Provides clean separation between configuration diagnostics and test results
+- Supports both read operations for diagnostics and comprehensive testing scenarios
+- Excellent integration with the diagnostics controller and storage configuration service
+- **IMPROVED**: Now includes comprehensive validation, documentation, and API consistency
+- **IMPROVED**: Supports maintainability and developer experience
+
+**Recommendations**:
+1. ✅ **XML documentation** for public properties - IMPLEMENTED
+2. ✅ **JSON serialization attributes** for API consistency - IMPLEMENTED
+3. ✅ **Validation attributes** for data integrity - IMPLEMENTED
+4. ✅ **Comprehensive documentation** with detailed remarks - IMPLEMENTED
+
+**Implementation Summary**:
+- Added comprehensive XML documentation with detailed explanations for each property
+- Implemented JSON serialization attributes for consistent API responses
+- Added validation attributes for data integrity (Required, StringLength)
+- Enhanced documentation with detailed remarks explaining usage and purpose
 - All recommendations successfully implemented and tested
 
 ---
