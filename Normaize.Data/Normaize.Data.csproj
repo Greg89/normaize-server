@@ -6,7 +6,7 @@
     <OutputType>Library</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>1.3.2</Version>
+    <Version>1.3.3</Version>
     <ProjectGuid>{1a43e83a-cbee-4128-afc6-a9dd58eb9f8e}</ProjectGuid>
   </PropertyGroup>
 
@@ -28,6 +28,7 @@
   </ItemGroup>
 
 </Project> 
+
 
 
 
