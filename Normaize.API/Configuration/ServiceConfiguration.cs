@@ -115,6 +115,11 @@ public static class ServiceConfiguration
                 options.JsonSerializerOptions.DefaultIgnoreCondition = defaultOptions.DefaultIgnoreCondition;
                 options.JsonSerializerOptions.Encoder = defaultOptions.Encoder;
                 options.JsonSerializerOptions.ReferenceHandler = defaultOptions.ReferenceHandler;
+                options.JsonSerializerOptions.Converters.Clear();
+                foreach (var converter in defaultOptions.Converters)
+                {
+                    options.JsonSerializerOptions.Converters.Add(converter);
+                }
             });
 
         // Configure global JSON options for HttpClient and other services
@@ -127,6 +132,11 @@ public static class ServiceConfiguration
             options.DefaultIgnoreCondition = defaultOptions.DefaultIgnoreCondition;
             options.Encoder = defaultOptions.Encoder;
             options.ReferenceHandler = defaultOptions.ReferenceHandler;
+            options.Converters.Clear();
+            foreach (var converter in defaultOptions.Converters)
+            {
+                options.Converters.Add(converter);
+            }
         });
 
         logger.LogDebug("JSON serialization configured with camelCase naming policy. CorrelationId: {CorrelationId}", correlationId);
