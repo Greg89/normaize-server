@@ -176,6 +176,60 @@ public class DataProcessingService : IDataProcessingService
             });
     }
 
+    public async Task<DataSetDto?> UpdateDataSetAsync(int id, UpdateDataSetDto updateDto, string userId)
+    {
+        return await ExecuteDataSetOperationAsync(
+            operationName: nameof(UpdateDataSetAsync),
+            userId: userId,
+            additionalMetadata: new Dictionary<string, object>
+            {
+                [AppConstants.DataStructures.DATASET_ID] = id,
+                ["UpdateData"] = new { updateDto.Name, updateDto.Description }
+            },
+            validation: () => ValidateUpdateDataSetInputs(id, updateDto, userId),
+            operation: async (context) =>
+            {
+                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
+                if (dataSet == null) return null;
+
+                // Store original values for audit logging
+                var originalName = dataSet.Name;
+                var originalDescription = dataSet.Description;
+
+                // Update the dataset
+                dataSet.Name = updateDto.Name;
+                dataSet.Description = updateDto.Description;
+                dataSet.LastModifiedAt = DateTime.UtcNow;
+                dataSet.LastModifiedBy = userId;
+
+                var updatedDataSet = await ExecuteWithTimeoutAsync(
+                    () => _dataSetRepository.UpdateAsync(dataSet),
+                    _infrastructure.QuickTimeout,
+                    context);
+
+                if (updatedDataSet != null)
+                {
+                    // Log audit action with changes
+                    var changes = new
+                    {
+                        Name = new { From = originalName, To = updateDto.Name },
+                        Description = new { From = originalDescription, To = updateDto.Description }
+                    };
+                    await LogAuditActionAsync(id, userId, "Updated", context, changes);
+
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATASET_UPDATED_SUCCESSFULLY, new Dictionary<string, object>
+                    {
+                        ["OriginalName"] = originalName,
+                        ["NewName"] = updateDto.Name,
+                        ["OriginalDescription"] = originalDescription ?? "null",
+                        ["NewDescription"] = updateDto.Description ?? "null"
+                    });
+                }
+
+                return updatedDataSet?.ToDto();
+            });
+    }
+
     public async Task<IEnumerable<DataSetDto>> GetDataSetsByUserAsync(string userId, int page = 1, int pageSize = 20)
     {
         return await ExecuteDataSetOperationAsync(
@@ -778,6 +832,23 @@ public class DataProcessingService : IDataProcessingService
     }
 
     private static void ValidateGetDataSetInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
+
+    private static void ValidateUpdateDataSetInputs(int id, UpdateDataSetDto updateDto, string userId)
+    {
+        ValidateDataSetIdAndUserId(id, userId);
+
+        if (updateDto == null)
+            throw new ArgumentNullException(nameof(updateDto), "Update data cannot be null");
+
+        if (string.IsNullOrWhiteSpace(updateDto.Name))
+            throw new ArgumentException("Dataset name cannot be null or empty", nameof(updateDto.Name));
+
+        if (updateDto.Name.Length > 255)
+            throw new ArgumentException("Dataset name cannot exceed 255 characters", nameof(updateDto.Name));
+
+        if (updateDto.Description != null && updateDto.Description.Length > 1000)
+            throw new ArgumentException("Dataset description cannot exceed 1000 characters", nameof(updateDto.Description));
+    }
 
     private static void ValidateDeleteInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
 

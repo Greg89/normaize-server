@@ -113,6 +113,59 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
     }
 
     /// <summary>
+    /// Updates a dataset's name and description for the authenticated user
+    /// </summary>
+    /// <param name="id">The unique identifier of the dataset</param>
+    /// <param name="updateDto">The update data containing name and description</param>
+    /// <returns>
+    /// The updated dataset if found and owned by the current user
+    /// </returns>
+    /// <remarks>
+    /// This endpoint allows updating the name and description of an existing dataset.
+    /// The dataset must belong to the authenticated user. Only the name and description
+    /// fields can be updated to maintain data integrity. All changes are logged in the
+    /// audit trail for compliance and tracking purposes.
+    /// 
+    /// Update capabilities:
+    /// - Dataset name (required, max 255 characters)
+    /// - Dataset description (optional, max 1000 characters)
+    /// - Automatic audit trail logging
+    /// - User access control validation
+    /// </remarks>
+    /// <response code="200">Dataset updated successfully</response>
+    /// <response code="400">Invalid update data provided</response>
+    /// <response code="401">Unauthorized - Authentication required</response>
+    /// <response code="404">Dataset not found or access denied</response>
+    /// <response code="500">Internal server error during update</response>
+    [HttpPut("{id}")]
+    [ProducesResponseType(typeof(ApiResponse<DataSetDto>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<ApiResponse<DataSetDto>>> UpdateDataSet(int id, [FromBody] UpdateDataSetDto updateDto)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var dataSet = await _dataProcessingService.UpdateDataSetAsync(id, updateDto, userId);
+            if (dataSet == null)
+                return NotFound<DataSetDto>();
+
+            return Success(dataSet, "Dataset updated successfully");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _loggingService?.LogException(ex, $"UpdateDataSet({id}) - Unauthorized");
+            return Unauthorized<DataSetDto>("Authentication failed");
+        }
+        catch (Exception ex)
+        {
+            return HandleException<DataSetDto>(ex, $"UpdateDataSet({id})");
+        }
+    }
+
+    /// <summary>
     /// Uploads a new dataset file with metadata
     /// </summary>
     /// <param name="uploadDto">The file upload data transfer object containing file and metadata</param>

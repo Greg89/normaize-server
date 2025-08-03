@@ -7,6 +7,7 @@ public interface IDataProcessingService
 {
     Task<DataSetUploadResponse> UploadDataSetAsync(FileUploadRequest fileRequest, CreateDataSetDto createDto);
     Task<DataSetDto?> GetDataSetAsync(int id, string userId);
+    Task<DataSetDto?> UpdateDataSetAsync(int id, UpdateDataSetDto updateDto, string userId);
     Task<IEnumerable<DataSetDto>> GetDataSetsByUserAsync(string userId, int page = 1, int pageSize = 20);
     Task<bool> DeleteDataSetAsync(int id, string userId);
     Task<bool> RestoreDataSetAsync(int id, string userId);

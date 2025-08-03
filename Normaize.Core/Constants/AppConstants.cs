@@ -133,6 +133,7 @@ public static class AppConstants
         public const string AUDIT_LOGGING_COMPLETED = "Audit logging completed";
         public const string PAGINATION_STARTED = "Pagination processing started";
         public const string PAGINATION_COMPLETED = "Pagination processing completed";
+        public const string DATASET_UPDATED_SUCCESSFULLY = "Dataset updated successfully";
     }
 
     /// <summary>

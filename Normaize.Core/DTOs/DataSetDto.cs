@@ -305,6 +305,43 @@ public class CreateDataSetDto
 }
 
 /// <summary>
+/// Data Transfer Object for updating existing datasets
+/// </summary>
+/// <remarks>
+/// This DTO contains the fields that can be updated for an existing dataset.
+/// Used by the DataSetsController for dataset update operations and by the
+/// DataProcessingService for modifying existing dataset records.
+/// 
+/// Only allows updating the name and description fields to maintain data integrity
+/// and prevent accidental modification of critical dataset properties.
+/// </remarks>
+public class UpdateDataSetDto
+{
+    /// <summary>
+    /// Gets or sets the updated name of the dataset
+    /// </summary>
+    /// <remarks>
+    /// Required field that provides a human-readable identifier for the dataset.
+    /// Should be descriptive and unique within the user's dataset collection.
+    /// </remarks>
+    [Required]
+    [StringLength(255)]
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the updated description of the dataset
+    /// </summary>
+    /// <remarks>
+    /// Provides additional context about the dataset's purpose, contents, or usage.
+    /// Helps users organize and understand their dataset collection.
+    /// </remarks>
+    [StringLength(1000)]
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+}
+
+/// <summary>
 /// Response DTO for dataset upload operations
 /// </summary>
 /// <remarks>

@@ -742,6 +742,105 @@ public class DataSetsControllerTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task UpdateDataSet_WithValidData_ReturnsUpdatedDataSet()
+    {
+        // Arrange
+        var dataSetId = 1;
+        var userId = "test-user-id";
+        var updateDto = new UpdateDataSetDto
+        {
+            Name = "Updated Dataset Name",
+            Description = "Updated dataset description"
+        };
+
+        var updatedDataSet = new DataSetDto
+        {
+            Id = dataSetId,
+            Name = updateDto.Name,
+            Description = updateDto.Description,
+            UserId = userId
+        };
+
+        _mockDataProcessingService
+            .Setup(x => x.UpdateDataSetAsync(dataSetId, updateDto, userId))
+            .ReturnsAsync(updatedDataSet);
+
+        // Act
+        var result = await _controller.UpdateDataSet(dataSetId, updateDto);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var apiResponse = Assert.IsType<ApiResponse<DataSetDto>>(okResult.Value);
+        Assert.True(apiResponse.Success);
+        Assert.Equal(updatedDataSet, apiResponse.Data);
+        Assert.Equal("Dataset updated successfully", apiResponse.Message);
+
+        _mockDataProcessingService.Verify(
+            x => x.UpdateDataSetAsync(dataSetId, updateDto, userId),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateDataSet_WithInvalidId_ReturnsNotFound()
+    {
+        // Arrange
+        var dataSetId = 999;
+        var userId = "test-user-id";
+        var updateDto = new UpdateDataSetDto
+        {
+            Name = "Updated Dataset Name",
+            Description = "Updated dataset description"
+        };
+
+        _mockDataProcessingService
+            .Setup(x => x.UpdateDataSetAsync(dataSetId, updateDto, userId))
+            .ReturnsAsync((DataSetDto?)null);
+
+        // Act
+        var result = await _controller.UpdateDataSet(dataSetId, updateDto);
+
+        // Assert
+        var notFoundResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(404, notFoundResult.StatusCode);
+        var apiResponse = Assert.IsType<ApiResponse<DataSetDto>>(notFoundResult.Value);
+        Assert.False(apiResponse.Success);
+
+        _mockDataProcessingService.Verify(
+            x => x.UpdateDataSetAsync(dataSetId, updateDto, userId),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateDataSet_WithException_ReturnsInternalServerError()
+    {
+        // Arrange
+        var dataSetId = 1;
+        var userId = "test-user-id";
+        var updateDto = new UpdateDataSetDto
+        {
+            Name = "Updated Dataset Name",
+            Description = "Updated dataset description"
+        };
+
+        _mockDataProcessingService
+            .Setup(x => x.UpdateDataSetAsync(dataSetId, updateDto, userId))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        // Act
+        var result = await _controller.UpdateDataSet(dataSetId, updateDto);
+
+        // Assert
+        var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(500, statusCodeResult.StatusCode);
+        var apiResponse = Assert.IsType<ApiResponse<DataSetDto>>(statusCodeResult.Value);
+        Assert.False(apiResponse.Success);
+
+        _mockDataProcessingService.Verify(
+            x => x.UpdateDataSetAsync(dataSetId, updateDto, userId),
+            Times.Once);
+    }
+
     private static FormFile CreateMockFile(string fileName, string contentType, string content)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(content);
