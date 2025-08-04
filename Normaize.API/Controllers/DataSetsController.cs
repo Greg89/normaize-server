@@ -258,24 +258,24 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
     /// <response code="404">Dataset not found or access denied</response>
     /// <response code="500">Internal server error during preview generation</response>
     [HttpGet("{id}/preview")]
-    [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<DataSetPreviewDto>), 200)]
     [ProducesResponseType(401)]
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
-    public async Task<ActionResult<ApiResponse<string>>> GetDataSetPreview(int id, [FromQuery] int rows = 10)
+    public async Task<ActionResult<ApiResponse<DataSetPreviewDto>>> GetDataSetPreview(int id, [FromQuery] int rows = 10)
     {
         try
         {
             var userId = GetCurrentUserId();
             var preview = await _dataProcessingService.GetDataSetPreviewAsync(id, rows, userId);
             if (preview == null)
-                return NotFound<string>();
+                return NotFound<DataSetPreviewDto>();
 
-            return Success<string>(preview ?? string.Empty);
+            return Success(preview);
         }
         catch (Exception ex)
         {
-            return HandleException<string>(ex, $"GetDataSetPreview({id})");
+            return HandleException<DataSetPreviewDto>(ex, $"GetDataSetPreview({id})");
         }
     }
 

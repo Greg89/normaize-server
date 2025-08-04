@@ -213,7 +213,18 @@ public class DataSetsControllerTests
     {
         // Arrange
         var datasetId = 1;
-        var expectedPreview = "Sample preview data";
+        var expectedPreview = new DataSetPreviewDto
+        {
+            Columns = new List<string> { "name", "age", "city" },
+            Rows = new List<Dictionary<string, object>>
+            {
+                new() { ["name"] = "John", ["age"] = 25, ["city"] = "New York" },
+                new() { ["name"] = "Jane", ["age"] = 30, ["city"] = "Los Angeles" }
+            },
+            TotalRows = 100,
+            PreviewRowCount = 2,
+            MaxPreviewRows = 10
+        };
         _mockDataProcessingService
             .Setup(x => x.GetDataSetPreviewAsync(datasetId, It.IsAny<int>(), It.IsAny<string>()))
             .ReturnsAsync(expectedPreview);
@@ -222,12 +233,12 @@ public class DataSetsControllerTests
         var result = await _controller.GetDataSetPreview(datasetId);
 
         // Assert
-        result.Should().BeOfType<ActionResult<ApiResponse<string>>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<DataSetPreviewDto>>>();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject!;
-        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<string>>().Subject!;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<DataSetPreviewDto>>().Subject!;
         apiResponse.Data.Should().NotBeNull();
         var returnedPreview = apiResponse.Data!;
-        returnedPreview.Should().Be(expectedPreview);
+        returnedPreview.Should().BeEquivalentTo(expectedPreview);
     }
 
     [Fact]
@@ -237,13 +248,13 @@ public class DataSetsControllerTests
         var datasetId = 999;
         _mockDataProcessingService
             .Setup(x => x.GetDataSetPreviewAsync(datasetId, It.IsAny<int>(), It.IsAny<string>()))
-            .ReturnsAsync((string?)null);
+            .ReturnsAsync((DataSetPreviewDto?)null);
 
         // Act
         var result = await _controller.GetDataSetPreview(datasetId);
 
         // Assert
-        result.Should().BeOfType<ActionResult<ApiResponse<string>>>();
+        result.Should().BeOfType<ActionResult<ApiResponse<DataSetPreviewDto>>>();
         result.Result.Should().BeOfType<ObjectResult>();
     }
 

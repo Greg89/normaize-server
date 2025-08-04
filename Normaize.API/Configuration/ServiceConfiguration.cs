@@ -156,9 +156,9 @@ public static class ServiceConfiguration
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo 
-                { 
-                    Title = "Normaize API", 
+                c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                {
+                    Title = "Normaize API",
                     Version = "v1",
                     Description = "API for Normaize data processing and analysis platform"
                 });
@@ -187,7 +187,7 @@ public static class ServiceConfiguration
                         Array.Empty<string>()
                     }
                 });
-                
+
                 // Include XML comments if available
                 var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
@@ -246,7 +246,7 @@ public static class ServiceConfiguration
                     },
                     OnTokenValidated = context =>
                     {
-                        logger.LogInformation("JWT Token validated successfully for user: {User}", 
+                        logger.LogInformation("JWT Token validated successfully for user: {User}",
                             context.Principal?.Identity?.Name ?? "unknown");
                         return Task.CompletedTask;
                     },
@@ -257,7 +257,7 @@ public static class ServiceConfiguration
                     },
                     OnChallenge = context =>
                     {
-                        logger.LogWarning("JWT Challenge issued for path: {Path}, Error: {Error}", 
+                        logger.LogWarning("JWT Challenge issued for path: {Path}, Error: {Error}",
                             context.Request.Path, context.Error);
                         return Task.CompletedTask;
                     }

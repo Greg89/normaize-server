@@ -41,10 +41,10 @@ public static class Auth0Middleware
                 // Only log warnings for protected endpoints that are not authenticated
                 var endpoint = context.GetEndpoint();
                 var requiresAuth = endpoint?.Metadata?.GetMetadata<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>() != null;
-                
+
                 if (requiresAuth)
                 {
-                    logger.LogWarning("Unauthenticated request to protected endpoint: {Method} {Path}", 
+                    logger.LogWarning("Unauthenticated request to protected endpoint: {Method} {Path}",
                         context.Request.Method, context.Request.Path);
                 }
             }

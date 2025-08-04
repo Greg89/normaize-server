@@ -142,10 +142,10 @@ public static class MiddlewareConfiguration
         // Add standard authentication and authorization
         app.UseAuthentication();
         app.UseAuthorization();
-        
+
         // Add custom Auth0 middleware to extract user information from validated tokens
         app.UseAuth0();
-        
+
         loggingService?.LogUserAction("Authentication and authorization configured");
     }
 

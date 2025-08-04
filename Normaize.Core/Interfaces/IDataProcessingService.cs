@@ -12,7 +12,7 @@ public interface IDataProcessingService
     Task<bool> DeleteDataSetAsync(int id, string userId);
     Task<bool> RestoreDataSetAsync(int id, string userId);
     Task<bool> HardDeleteDataSetAsync(int id, string userId);
-    Task<string?> GetDataSetPreviewAsync(int id, int rows, string userId);
+    Task<DataSetPreviewDto?> GetDataSetPreviewAsync(int id, int rows, string userId);
     Task<object?> GetDataSetSchemaAsync(int id, string userId);
     Task<IEnumerable<DataSetDto>> GetDeletedDataSetsAsync(string userId, int page = 1, int pageSize = 20);
     Task<IEnumerable<DataSetDto>> SearchDataSetsAsync(string searchTerm, string userId, int page = 1, int pageSize = 20);

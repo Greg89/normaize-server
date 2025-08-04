@@ -431,3 +431,44 @@ public class FileUploadDto
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 }
+
+/// <summary>
+/// Data Transfer Object for dataset preview information
+/// </summary>
+/// <remarks>
+/// This DTO provides structured preview data for datasets, including column headers
+/// and a limited number of rows for display purposes. The data is returned as
+/// structured objects rather than JSON strings for better API design.
+/// </remarks>
+public class DataSetPreviewDto
+{
+    /// <summary>
+    /// Gets or sets the column headers/schema
+    /// </summary>
+    [JsonPropertyName("columns")]
+    public List<string> Columns { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the preview rows as a list of dictionaries
+    /// </summary>
+    [JsonPropertyName("rows")]
+    public List<Dictionary<string, object>> Rows { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the total number of rows in the dataset
+    /// </summary>
+    [JsonPropertyName("totalRows")]
+    public int TotalRows { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of rows returned in this preview
+    /// </summary>
+    [JsonPropertyName("previewRowCount")]
+    public int PreviewRowCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of rows that can be previewed
+    /// </summary>
+    [JsonPropertyName("maxPreviewRows")]
+    public int MaxPreviewRows { get; set; }
+}

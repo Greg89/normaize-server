@@ -3,6 +3,7 @@ using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using Normaize.Core.Mapping;
+using Normaize.Core.Configuration;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using System.Diagnostics;
@@ -352,7 +353,7 @@ public class DataProcessingService : IDataProcessingService
             });
     }
 
-    public async Task<string?> GetDataSetPreviewAsync(int id, int rows, string userId)
+    public async Task<DataSetPreviewDto?> GetDataSetPreviewAsync(int id, int rows, string userId)
     {
         return await ExecuteDataSetOperationAsync(
             operationName: nameof(GetDataSetPreviewAsync),
@@ -366,17 +367,51 @@ public class DataProcessingService : IDataProcessingService
             operation: async (context) =>
             {
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
-                if (dataSet == null || string.IsNullOrEmpty(dataSet.PreviewData))
+                if (dataSet == null || string.IsNullOrEmpty(dataSet.PreviewData) || string.IsNullOrEmpty(dataSet.Schema))
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.ACCESS_DENIED_OR_NO_PREVIEW_DATA, new Dictionary<string, object>
                     {
-                        ["HasPreviewData"] = !string.IsNullOrEmpty(dataSet?.PreviewData)
+                        ["HasPreviewData"] = !string.IsNullOrEmpty(dataSet?.PreviewData),
+                        ["HasSchema"] = !string.IsNullOrEmpty(dataSet?.Schema)
                     });
                     return null;
                 }
 
-                await LogAuditActionAsync(id, userId, "Previewed", context, new { rows });
-                return dataSet.PreviewData;
+                // Parse the schema (column headers)
+                var columns = JsonConfiguration.Deserialize<List<string>>(dataSet.Schema);
+                if (columns == null)
+                {
+                    _infrastructure.StructuredLogging.LogStep(context, "Failed to deserialize schema", new Dictionary<string, object>
+                    {
+                        ["Schema"] = dataSet.Schema
+                    });
+                    return null;
+                }
+
+                // Parse the preview data
+                var previewRows = JsonConfiguration.Deserialize<List<Dictionary<string, object>>>(dataSet.PreviewData);
+                if (previewRows == null)
+                {
+                    _infrastructure.StructuredLogging.LogStep(context, "Failed to deserialize preview data", new Dictionary<string, object>
+                    {
+                        ["PreviewData"] = dataSet.PreviewData
+                    });
+                    return null;
+                }
+
+                // Limit rows to requested amount
+                var limitedRows = previewRows.Take(rows).ToList();
+
+                await LogAuditActionAsync(id, userId, "Previewed", context, new { rows, actualRows = limitedRows.Count });
+
+                return new DataSetPreviewDto
+                {
+                    Columns = columns,
+                    Rows = limitedRows,
+                    TotalRows = dataSet.RowCount,
+                    PreviewRowCount = limitedRows.Count,
+                    MaxPreviewRows = previewRows.Count
+                };
             });
     }
 
