@@ -142,14 +142,14 @@ async (context) =>
             async (context) =>
             {
                 // Chaos engineering: Simulate cache failure during statistics calculation
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("CacheFailure", context.CorrelationId, context.OperationName, async () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("CacheFailure", context.CorrelationId, context.OperationName, () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating cache failure during statistics calculation", new Dictionary<string, object>
                     {
                         ["ChaosType"] = "CacheFailure",
                         ["Operation"] = "StatisticsCalculation"
                     });
-                    throw new InvalidOperationException("Simulated cache failure during statistics calculation");
+                    return Task.FromException(new InvalidOperationException("Simulated cache failure during statistics calculation"));
                 }, new Dictionary<string, object> { ["UserId"] = userId });
 
                 var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);

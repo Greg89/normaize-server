@@ -157,7 +157,7 @@ public class DataSetLifecycleServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.RestoreDataSetEnhancedAsync(dataSetId, restoreDto, userId));
+            _service.RestoreDataSetEnhancedAsync(dataSetId, restoreDto!, userId));
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class DataSetLifecycleServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.RestoreDataSetEnhancedAsync(dataSetId, restoreDto, userId));
+            _service.RestoreDataSetEnhancedAsync(dataSetId, restoreDto, userId!));
     }
 
     [Fact]

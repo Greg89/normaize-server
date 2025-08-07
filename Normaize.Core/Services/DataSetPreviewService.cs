@@ -58,7 +58,7 @@ public class DataSetPreviewService : IDataSetPreviewService
 
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
 
-                if (string.IsNullOrEmpty(dataSet.PreviewData))
+                if (dataSet == null || string.IsNullOrEmpty(dataSet.PreviewData))
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.NO_PREVIEW_DATA_AVAILABLE);
                     return null;
@@ -120,7 +120,7 @@ public class DataSetPreviewService : IDataSetPreviewService
 
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
 
-                if (string.IsNullOrEmpty(dataSet.Schema))
+                if (dataSet == null || string.IsNullOrEmpty(dataSet.Schema))
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.NO_SCHEMA_DATA_AVAILABLE);
                     return null;
@@ -188,7 +188,7 @@ public class DataSetPreviewService : IDataSetPreviewService
         try
         {
             // Try to deserialize as List<string> first (most common case)
-            var schemaList = JsonSerializer.Deserialize<List<string>>(schema, JsonConfiguration.DefaultOptions);
+            var schemaList = await Task.Run(() => JsonSerializer.Deserialize<List<string>>(schema, JsonConfiguration.DefaultOptions));
             if (schemaList != null)
             {
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.SCHEMA_DESERIALIZED_SUCCESSFULLY);
@@ -196,7 +196,7 @@ public class DataSetPreviewService : IDataSetPreviewService
             }
 
             // Fallback to generic object deserialization
-            var schemaObject = JsonSerializer.Deserialize<object>(schema, JsonConfiguration.DefaultOptions);
+            var schemaObject = await Task.Run(() => JsonSerializer.Deserialize<object>(schema, JsonConfiguration.DefaultOptions));
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.SCHEMA_DESERIALIZED_SUCCESSFULLY);
             return schemaObject;
         }
