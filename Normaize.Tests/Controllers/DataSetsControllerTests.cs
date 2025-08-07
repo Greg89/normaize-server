@@ -28,7 +28,7 @@ public class DataSetsControllerTests
         _mockDataSetPreviewService = new Mock<IDataSetPreviewService>();
         _mockLoggingService = new Mock<IStructuredLoggingService>();
         _controller = new DataSetsController(
-            _mockDataProcessingService.Object, 
+            _mockDataProcessingService.Object,
             _mockDataSetLifecycleService.Object,
             _mockDataSetQueryService.Object,
             _mockDataSetPreviewService.Object,

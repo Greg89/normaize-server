@@ -80,7 +80,7 @@ public class DataSetQueryServiceTests
         var pageSize = 20;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetsByUserAsync(userId, page, pageSize));
     }
 
@@ -93,7 +93,7 @@ public class DataSetQueryServiceTests
         var pageSize = 0;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetsByUserAsync(userId, page, pageSize));
     }
 
@@ -106,7 +106,7 @@ public class DataSetQueryServiceTests
         var pageSize = 20;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetsByUserAsync(userId!, page, pageSize));
     }
 
@@ -168,7 +168,7 @@ public class DataSetQueryServiceTests
         var pageSize = 20;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDeletedDataSetsAsync(userId, page, pageSize));
     }
 
@@ -214,7 +214,7 @@ public class DataSetQueryServiceTests
         var pageSize = 20;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.SearchDataSetsAsync(searchTerm!, userId, page, pageSize));
     }
 
@@ -228,7 +228,7 @@ public class DataSetQueryServiceTests
         var pageSize = 20;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.SearchDataSetsAsync(searchTerm, userId, page, pageSize));
     }
 
@@ -242,7 +242,7 @@ public class DataSetQueryServiceTests
         var pageSize = 20;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.SearchDataSetsAsync(searchTerm, userId, page, pageSize));
     }
 
@@ -288,7 +288,7 @@ public class DataSetQueryServiceTests
         var pageSize = 20;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetsByFileTypeAsync(fileType, userId, page, pageSize));
     }
 
@@ -336,7 +336,7 @@ public class DataSetQueryServiceTests
         var pageSize = 20;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetsByDateRangeAsync(startDate, endDate, userId, page, pageSize));
     }
 
@@ -351,7 +351,7 @@ public class DataSetQueryServiceTests
         var pageSize = 20;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetsByDateRangeAsync(startDate, endDate, userId, page, pageSize));
     }
 
@@ -419,7 +419,7 @@ public class DataSetQueryServiceTests
         string? userId = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetStatisticsAsync(userId!));
     }
 
@@ -430,7 +430,7 @@ public class DataSetQueryServiceTests
         var userId = "";
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetStatisticsAsync(userId));
     }
 
@@ -459,7 +459,7 @@ public class DataSetQueryServiceTests
         // Assert
         result.Should().NotBeNull();
         result.Should().HaveCount(2);
-        
+
         // Verify that the result contains DataSetDto objects (not raw DataSet objects)
         result.First().Should().BeOfType<DataSetDto>();
         result.Last().Should().BeOfType<DataSetDto>();
@@ -481,7 +481,7 @@ public class DataSetQueryServiceTests
         _mockRepository.Setup(x => x.GetByUserIdAsync(userId)).ThrowsAsync(exception);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(() => 
+        await Assert.ThrowsAsync<Exception>(() =>
             _service.GetDataSetsByUserAsync(userId, page, pageSize));
 
         _mockStructuredLogging.Verify(x => x.LogException(exception, It.IsAny<string>()), Times.Once);
@@ -497,11 +497,11 @@ public class DataSetQueryServiceTests
         _mockRepository.Setup(x => x.GetByUserIdAsync(userId)).ThrowsAsync(exception);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(() => 
+        await Assert.ThrowsAsync<Exception>(() =>
             _service.GetDataSetStatisticsAsync(userId));
 
         _mockStructuredLogging.Verify(x => x.LogException(exception, It.IsAny<string>()), Times.Once);
     }
 
     #endregion
-} 
+}

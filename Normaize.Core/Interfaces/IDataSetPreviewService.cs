@@ -11,9 +11,9 @@ public interface IDataSetPreviewService
     /// Get preview data for a dataset.
     /// </summary>
     Task<DataSetPreviewDto?> GetDataSetPreviewAsync(int id, int rows, string userId);
-    
+
     /// <summary>
     /// Get schema information for a dataset.
     /// </summary>
     Task<object?> GetDataSetSchemaAsync(int id, string userId);
-} 
+}

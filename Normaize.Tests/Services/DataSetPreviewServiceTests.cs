@@ -52,10 +52,10 @@ public class DataSetPreviewServiceTests
         var dataSetId = 1;
         var userId = "test-user";
         var rows = 5;
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = true,
             PreviewData = "{\"columns\":[\"name\",\"age\"],\"rows\":[{\"name\":\"John\",\"age\":30},{\"name\":\"Jane\",\"age\":25}],\"totalRows\":2,\"previewRowCount\":5,\"maxPreviewRows\":1000}"
         };
@@ -82,10 +82,10 @@ public class DataSetPreviewServiceTests
         var dataSetId = 1;
         var userId = "test-user";
         var rows = 5;
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = false
         };
 
@@ -107,10 +107,10 @@ public class DataSetPreviewServiceTests
         var dataSetId = 1;
         var userId = "test-user";
         var rows = 5;
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = true,
             PreviewData = null
         };
@@ -131,10 +131,10 @@ public class DataSetPreviewServiceTests
         var dataSetId = 1;
         var userId = "test-user";
         var rows = 5;
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = true,
             PreviewData = "invalid json"
         };
@@ -155,10 +155,10 @@ public class DataSetPreviewServiceTests
         var dataSetId = 1;
         var userId = "test-user";
         var rows = 1000; // Larger than max
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = true,
             PreviewData = "{\"columns\":[\"name\",\"age\"],\"rows\":[{\"name\":\"John\",\"age\":30},{\"name\":\"Jane\",\"age\":25}],\"totalRows\":2,\"previewRowCount\":5,\"maxPreviewRows\":1000}"
         };
@@ -182,7 +182,7 @@ public class DataSetPreviewServiceTests
         var rows = 5;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetPreviewAsync(dataSetId, rows, userId));
     }
 
@@ -195,7 +195,7 @@ public class DataSetPreviewServiceTests
         var rows = 5;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetPreviewAsync(dataSetId, rows, userId));
     }
 
@@ -208,7 +208,7 @@ public class DataSetPreviewServiceTests
         var rows = 0;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetPreviewAsync(dataSetId, rows, userId));
     }
 
@@ -223,7 +223,7 @@ public class DataSetPreviewServiceTests
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync((DataSet?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.GetDataSetPreviewAsync(dataSetId, rows, userId));
     }
 
@@ -240,7 +240,7 @@ public class DataSetPreviewServiceTests
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => 
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             _service.GetDataSetPreviewAsync(dataSetId, rows, userId));
     }
 
@@ -251,10 +251,10 @@ public class DataSetPreviewServiceTests
         var dataSetId = 1;
         var userId = "test-user";
         var rows = 10; // Request more than available
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = true,
             PreviewData = "{\"columns\":[\"name\",\"age\"],\"rows\":[{\"name\":\"John\",\"age\":30},{\"name\":\"Jane\",\"age\":25}],\"totalRows\":2,\"previewRowCount\":5,\"maxPreviewRows\":1000}"
         };
@@ -281,10 +281,10 @@ public class DataSetPreviewServiceTests
         // Arrange
         var dataSetId = 1;
         var userId = "test-user";
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = true,
             Schema = "[\"name\",\"age\",\"email\"]"
         };
@@ -312,10 +312,10 @@ public class DataSetPreviewServiceTests
         // Arrange
         var dataSetId = 1;
         var userId = "test-user";
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = false
         };
 
@@ -336,10 +336,10 @@ public class DataSetPreviewServiceTests
         // Arrange
         var dataSetId = 1;
         var userId = "test-user";
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = true,
             Schema = null
         };
@@ -359,10 +359,10 @@ public class DataSetPreviewServiceTests
         // Arrange
         var dataSetId = 1;
         var userId = "test-user";
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = true,
             Schema = "invalid json"
         };
@@ -384,7 +384,7 @@ public class DataSetPreviewServiceTests
         var userId = "test-user";
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetSchemaAsync(dataSetId, userId));
     }
 
@@ -396,7 +396,7 @@ public class DataSetPreviewServiceTests
         string? userId = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetSchemaAsync(dataSetId, userId!));
     }
 
@@ -410,7 +410,7 @@ public class DataSetPreviewServiceTests
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync((DataSet?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.GetDataSetSchemaAsync(dataSetId, userId));
     }
 
@@ -426,7 +426,7 @@ public class DataSetPreviewServiceTests
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => 
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             _service.GetDataSetSchemaAsync(dataSetId, userId));
     }
 
@@ -451,10 +451,10 @@ public class DataSetPreviewServiceTests
             ""previewRowCount"":5,
             ""maxPreviewRows"":1000
         }";
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = true,
             PreviewData = complexJson
         };
@@ -467,7 +467,7 @@ public class DataSetPreviewServiceTests
         // Assert
         result.Should().NotBeNull();
         result!.Rows.Should().HaveCount(2);
-        
+
         var firstRow = result.Rows.First();
         firstRow.Should().NotBeNull();
         firstRow["name"].ToString().Should().Be("John");
@@ -481,10 +481,10 @@ public class DataSetPreviewServiceTests
         // Arrange
         var dataSetId = 1;
         var userId = "test-user";
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = true,
             Schema = "[\"id\",\"name\",\"email\",\"created_at\",\"status\"]"
         };
@@ -522,7 +522,7 @@ public class DataSetPreviewServiceTests
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ThrowsAsync(exception);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(() => 
+        await Assert.ThrowsAsync<Exception>(() =>
             _service.GetDataSetPreviewAsync(dataSetId, rows, userId));
 
         _mockStructuredLogging.Verify(x => x.LogException(exception, It.IsAny<string>()), Times.Once);
@@ -539,7 +539,7 @@ public class DataSetPreviewServiceTests
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ThrowsAsync(exception);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(() => 
+        await Assert.ThrowsAsync<Exception>(() =>
             _service.GetDataSetSchemaAsync(dataSetId, userId));
 
         _mockStructuredLogging.Verify(x => x.LogException(exception, It.IsAny<string>()), Times.Once);
@@ -556,10 +556,10 @@ public class DataSetPreviewServiceTests
         var dataSetId = 1;
         var userId = "test-user";
         var rows = 5;
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = true,
             PreviewData = "{\"columns\":[],\"rows\":[],\"totalRows\":0,\"previewRowCount\":5,\"maxPreviewRows\":1000}"
         };
@@ -581,10 +581,10 @@ public class DataSetPreviewServiceTests
         // Arrange
         var dataSetId = 1;
         var userId = "test-user";
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = true,
             Schema = "[]"
         };
@@ -602,4 +602,4 @@ public class DataSetPreviewServiceTests
     }
 
     #endregion
-} 
+}

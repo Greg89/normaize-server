@@ -666,7 +666,7 @@ public class FileProcessingService : IFileProcessingService
         if (records.Count > AppConstants.FileProcessing.DEFAULT_ROW_COUNT)
         {
             var previewRecords = records.Take(_dataProcessingConfig.MaxPreviewRows).ToList();
-            
+
             // Create standardized PreviewData format
             var previewData = new DataSetPreviewDto
             {
@@ -676,7 +676,7 @@ public class FileProcessingService : IFileProcessingService
                 MaxPreviewRows = _dataProcessingConfig.MaxPreviewRows,
                 PreviewRowCount = previewRecords.Count
             };
-            
+
             dataSet.PreviewData = JsonConfiguration.Serialize(previewData);
         }
 

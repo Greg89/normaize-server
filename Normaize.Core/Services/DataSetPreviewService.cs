@@ -45,7 +45,7 @@ public class DataSetPreviewService : IDataSetPreviewService
                         ["DataSetId"] = id,
                         ["RequestedRows"] = rows
                     });
-                    
+
                     // Simulate memory pressure by allocating temporary objects
                     var tempObjects = new List<byte[]>();
                     for (int i = 0; i < AppConstants.ChaosEngineering.MEMORY_PRESSURE_OBJECT_COUNT; i++)
@@ -57,36 +57,36 @@ public class DataSetPreviewService : IDataSetPreviewService
                 }, new Dictionary<string, object> { ["UserId"] = userId, ["DataSetId"] = id, ["Rows"] = rows });
 
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
-                
+
                 if (string.IsNullOrEmpty(dataSet.PreviewData))
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.NO_PREVIEW_DATA_AVAILABLE);
                     return null;
                 }
-                
+
                 try
                 {
                     // Deserialize as DataSetPreviewDto format (standardized format)
                     var previewData = JsonSerializer.Deserialize<DataSetPreviewDto>(dataSet.PreviewData, JsonConfiguration.DefaultOptions);
-                    
+
                     if (previewData == null || previewData.Rows == null)
                     {
                         _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.NO_PREVIEW_DATA_AVAILABLE);
                         return null;
                     }
-                    
+
                     // Limit the number of rows returned
                     var limitedRows = previewData.Rows.Take(rows).ToList();
                     previewData.Rows = limitedRows;
                     previewData.PreviewRowCount = rows;
-                    
+
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.PREVIEW_DATA_RETRIEVED_SUCCESSFULLY, new Dictionary<string, object>
                     {
                         ["RequestedRows"] = rows,
                         ["ActualRows"] = limitedRows.Count,
                         ["TotalAvailableRows"] = previewData.TotalRows
                     });
-                    
+
                     return previewData;
                 }
                 catch (JsonException ex)
@@ -119,13 +119,13 @@ public class DataSetPreviewService : IDataSetPreviewService
                 }, new Dictionary<string, object> { ["UserId"] = userId, ["DataSetId"] = id });
 
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
-                
+
                 if (string.IsNullOrEmpty(dataSet.Schema))
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.NO_SCHEMA_DATA_AVAILABLE);
                     return null;
                 }
-                
+
                 return await DeserializeSchemaSafelyAsync(dataSet.Schema, context);
             });
     }
@@ -149,11 +149,11 @@ public class DataSetPreviewService : IDataSetPreviewService
         try
         {
             validation();
-            
+
             _infrastructure.StructuredLogging.LogStep(context, $"{operationName} started");
-            
+
             var result = await operation(context);
-            
+
             _infrastructure.StructuredLogging.LogSummary(context, true, $"{operationName} completed successfully");
             return result;
         }
@@ -167,19 +167,19 @@ public class DataSetPreviewService : IDataSetPreviewService
     private async Task<DataSet?> RetrieveDataSetWithAccessControlAsync(int id, string userId, IOperationContext context)
     {
         var dataSet = await _dataSetRepository.GetByIdAsync(id);
-        
+
         if (dataSet == null)
         {
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.DATASET_NOT_FOUND);
             throw new InvalidOperationException($"Dataset with ID {id} not found");
         }
-        
+
         if (dataSet.UserId != userId)
         {
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
             throw new UnauthorizedAccessException($"{AppConstants.DataSetPreview.ACCESS_DENIED_TO_DATASET} {id}");
         }
-        
+
         return dataSet;
     }
 
@@ -194,7 +194,7 @@ public class DataSetPreviewService : IDataSetPreviewService
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.SCHEMA_DESERIALIZED_SUCCESSFULLY);
                 return schemaList;
             }
-            
+
             // Fallback to generic object deserialization
             var schemaObject = JsonSerializer.Deserialize<object>(schema, JsonConfiguration.DefaultOptions);
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.SCHEMA_DESERIALIZED_SUCCESSFULLY);
@@ -229,4 +229,4 @@ public class DataSetPreviewService : IDataSetPreviewService
     }
 
     #endregion
-} 
+}

@@ -109,16 +109,16 @@ public class DataSetLifecycleService : IDataSetLifecycleService
 
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
                 if (dataSet == null) throw new InvalidOperationException($"Dataset with ID {id} not found");
-                
+
                 // Calculate new expiry date
                 var expiryDate = DateTime.UtcNow.AddDays(retentionDto?.RetentionDays ?? 0);
-                
+
                 // Update retention policy
                 dataSet!.RetentionDays = retentionDto?.RetentionDays ?? 0;
                 dataSet!.RetentionExpiryDate = expiryDate;
-                
+
                 await _dataSetRepository.UpdateAsync(dataSet);
-                
+
                 // Log audit action
                 await LogAuditActionAsync(id, userId, "UpdateRetentionPolicy", context, new
                 {
@@ -126,7 +126,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
                     NewRetentionDays = retentionDto?.RetentionDays ?? 0,
                     NewExpiryDate = expiryDate
                 });
-                
+
                 return new OperationResultDto
                 {
                     Success = true,
@@ -153,14 +153,14 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             {
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
                 if (dataSet == null) throw new InvalidOperationException($"Dataset with ID {id} not found");
-                
-                var isExpired = dataSet!.RetentionExpiryDate.HasValue && 
+
+                var isExpired = dataSet!.RetentionExpiryDate.HasValue &&
                                dataSet.RetentionExpiryDate.Value < DateTime.UtcNow;
-                
+
                 var daysRemaining = dataSet!.RetentionExpiryDate.HasValue && !isExpired
                     ? (int)(dataSet.RetentionExpiryDate.Value - DateTime.UtcNow).TotalDays
                     : 0;
-                
+
                 return new DataSetRetentionStatusDto
                 {
                     DataSetId = id,
@@ -183,19 +183,19 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             {
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
                 if (dataSet == null) throw new InvalidOperationException($"Dataset with ID {id} not found");
-                
+
                 if (!dataSet!.IsDeleted)
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Dataset is not deleted, no action needed");
                     return true;
                 }
-                
+
                 dataSet!.IsDeleted = false;
                 dataSet.DeletedAt = null;
-                
+
                 await _dataSetRepository.UpdateAsync(dataSet);
                 await HandleSuccessfulRestoreAsync(id, userId, context);
-                
+
                 return true;
             });
     }
@@ -221,15 +221,15 @@ public class DataSetLifecycleService : IDataSetLifecycleService
                 }, new Dictionary<string, object> { ["UserId"] = userId, ["DataSetId"] = id });
 
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
-                
+
                 // Delete the file from storage
                 await DeleteDataSetFileAsync(dataSet!, context);
-                
+
                 // Remove from database
                 await _dataSetRepository.DeleteAsync(dataSet!.Id);
-                
+
                 await HandleSuccessfulHardDeleteAsync(id, userId, dataSet, context);
-                
+
                 return true;
             });
     }
@@ -253,11 +253,11 @@ public class DataSetLifecycleService : IDataSetLifecycleService
         try
         {
             validation();
-            
+
             _infrastructure.StructuredLogging.LogStep(context, $"{operationName} started");
-            
+
             var result = await operation(context);
-            
+
             _infrastructure.StructuredLogging.LogSummary(context, true, $"{operationName} completed successfully");
             return result;
         }
@@ -271,19 +271,19 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     private async Task<DataSet?> RetrieveDataSetWithAccessControlAsync(int id, string userId, IOperationContext context)
     {
         var dataSet = await _dataSetRepository.GetByIdAsync(id);
-        
+
         if (dataSet == null)
         {
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetLifecycle.DATASET_NOT_FOUND);
             throw new InvalidOperationException($"Dataset with ID {id} not found");
         }
-        
+
         if (dataSet.UserId != userId)
         {
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetLifecycle.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
             throw new UnauthorizedAccessException($"{AppConstants.DataSetLifecycle.ACCESS_DENIED_TO_DATASET} {id}");
         }
-        
+
         return dataSet;
     }
 
@@ -400,7 +400,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
         try
         {
             var fileExists = await _fileUploadService.FileExistsAsync(dataSet.FilePath);
-            
+
             if (!fileExists)
             {
                 return new FileAvailabilityResult
@@ -444,10 +444,10 @@ public class DataSetLifecycleService : IDataSetLifecycleService
         {
             case RestoreType.Simple:
                 return await PerformSimpleRestoreAsync(dataSet, context);
-            
+
             case RestoreType.WithReset:
                 return await PerformFullRestoreAsync(dataSet, context);
-            
+
             default:
                 throw new ArgumentException($"Unsupported restore type: {restoreDto.RestoreType}");
         }
@@ -457,10 +457,10 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     {
         dataSet.IsDeleted = false;
         dataSet.DeletedAt = null;
-        
+
         await _dataSetRepository.UpdateAsync(dataSet);
         await LogAuditActionAsync(dataSet.Id, dataSet.UserId, AppConstants.DataSetLifecycle.RESTORE_DATA_SET_SIMPLE, context);
-        
+
         return new OperationResultDto
         {
             Success = true,
@@ -479,10 +479,10 @@ public class DataSetLifecycleService : IDataSetLifecycleService
         dataSet.Schema = null;
         dataSet.RowCount = 0;
         dataSet.ColumnCount = 0;
-        
+
         await _dataSetRepository.UpdateAsync(dataSet);
         await LogAuditActionAsync(dataSet.Id, dataSet.UserId, AppConstants.DataSetLifecycle.RESTORE_DATA_SET_FULL, context);
-        
+
         return new OperationResultDto
         {
             Success = true,
@@ -497,10 +497,10 @@ public class DataSetLifecycleService : IDataSetLifecycleService
         {
             case ResetType.OriginalFile:
                 return await PerformFileResetAsync(dataSet, context);
-            
+
             case ResetType.Database:
                 return await PerformDatabaseResetAsync(dataSet, context);
-            
+
             default:
                 throw new ArgumentException($"Unsupported reset type: {resetDto.ResetType}");
         }
@@ -510,7 +510,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     {
         // Check if original file is still available
         var fileAvailability = await CheckFileAvailabilityAsync(dataSet, context);
-        
+
         if (!fileAvailability.IsAvailable)
         {
             return new OperationResultDto
@@ -546,7 +546,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
 
             // Reprocess the original file
             var processedDataSet = await _fileUploadService.ProcessFileAsync(dataSet.FilePath, Path.GetExtension(dataSet.FileName));
-            
+
             // Update with reprocessed data
             dataSet.PreviewData = processedDataSet.PreviewData;
             dataSet.Schema = processedDataSet.Schema;
@@ -636,4 +636,4 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     }
 
     #endregion
-} 
+}

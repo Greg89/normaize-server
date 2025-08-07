@@ -170,25 +170,25 @@ public class DataProcessingService : IDataProcessingService
             async (context) =>
             {
                 var dataSet = await _dataSetRepository.GetByIdAsync(id);
-                
+
                 if (dataSet == null)
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_NOT_FOUND);
                     return null;
                 }
-                
+
                 if (dataSet.UserId != userId)
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
                     throw new UnauthorizedAccessException($"{AppConstants.DataProcessing.ACCESS_DENIED_TO_DATASET} {id}");
                 }
-                
+
                 // Log audit action
                 await _auditService.LogDataSetActionAsync(id, userId, AppConstants.DataProcessing.AUDIT_ACTION_VIEWED, new Dictionary<string, object>
                 {
                     ["CorrelationId"] = context.CorrelationId
                 });
-                
+
                 return dataSet.ToDto();
             });
     }
@@ -203,31 +203,31 @@ public class DataProcessingService : IDataProcessingService
             async (context) =>
             {
                 var dataSet = await _dataSetRepository.GetByIdAsync(id);
-                
+
                 if (dataSet == null)
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_NOT_FOUND);
                     return null;
                 }
-                
+
                 if (dataSet.UserId != userId)
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
                     throw new UnauthorizedAccessException($"{AppConstants.DataProcessing.ACCESS_DENIED_TO_DATASET} {id}");
                 }
-                
+
                 // Update properties
                 dataSet.Name = updateDto.Name;
                 dataSet.Description = updateDto.Description;
-                
+
                 var updatedDataSet = await _dataSetRepository.UpdateAsync(dataSet);
-                
+
                 // Log audit action
                 await _auditService.LogDataSetActionAsync(id, userId, AppConstants.DataProcessing.AUDIT_ACTION_UPDATE_DATA_SET, new Dictionary<string, object>
                 {
                     ["CorrelationId"] = context.CorrelationId
                 });
-                
+
                 return updatedDataSet.ToDto();
             });
     }
@@ -242,37 +242,37 @@ public class DataProcessingService : IDataProcessingService
             async (context) =>
             {
                 var dataSet = await _dataSetRepository.GetByIdAsync(id);
-                
+
                 if (dataSet == null)
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_NOT_FOUND);
                     return false;
                 }
-                
+
                 if (dataSet.UserId != userId)
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
                     throw new UnauthorizedAccessException($"{AppConstants.DataProcessing.ACCESS_DENIED_TO_DATASET} {id}");
                 }
-                
+
                 if (dataSet.IsDeleted)
                 {
                     _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_IS_ALREADY_DELETED);
                     return true;
                 }
-                
+
                 // Soft delete
                 dataSet.IsDeleted = true;
                 dataSet.DeletedAt = DateTime.UtcNow;
-                
+
                 await _dataSetRepository.UpdateAsync(dataSet);
-                
+
                 // Log audit action
                 await _auditService.LogDataSetActionAsync(id, userId, AppConstants.DataProcessing.AUDIT_ACTION_DELETE_DATA_SET, new Dictionary<string, object>
                 {
                     ["CorrelationId"] = context.CorrelationId
                 });
-                
+
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_SOFT_DELETED_SUCCESSFULLY);
                 return true;
             });
@@ -297,11 +297,11 @@ public class DataProcessingService : IDataProcessingService
         try
         {
             validation();
-            
+
             _infrastructure.StructuredLogging.LogStep(context, $"{operationName} started");
 
             var result = await operation(context);
-            
+
             _infrastructure.StructuredLogging.LogSummary(context, true, $"{operationName} completed successfully");
             return result;
         }
@@ -360,7 +360,7 @@ public class DataProcessingService : IDataProcessingService
         if (string.IsNullOrWhiteSpace(createDto.Name)) throw new ArgumentException(AppConstants.DataProcessing.NAME_CANNOT_BE_NULL_OR_EMPTY, nameof(createDto));
         if (string.IsNullOrWhiteSpace(fileRequest.FileName)) throw new ArgumentException(AppConstants.DataProcessing.FILE_NAME_CANNOT_BE_NULL_OR_EMPTY, nameof(fileRequest));
         if (fileRequest.FileSize <= 0) throw new ArgumentException(AppConstants.DataProcessing.FILE_SIZE_MUST_BE_POSITIVE, nameof(fileRequest));
-        
+
         // Validate file name for security (prevent path traversal attacks)
         if (fileRequest.FileName.Contains("..") || fileRequest.FileName.Contains("/") || fileRequest.FileName.Contains("\\"))
             throw new ArgumentException(AppConstants.DataProcessing.INVALID_FILE_NAME, nameof(fileRequest));

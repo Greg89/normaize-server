@@ -84,11 +84,11 @@ public class DataSetLifecycleServiceTests
         var dataSetId = 1;
         var userId = "test-user";
         var restoreDto = new DataSetRestoreDto { RestoreType = RestoreType.WithReset };
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
-            IsDeleted = true, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
+            IsDeleted = true,
             DeletedAt = DateTime.UtcNow,
             IsProcessed = true,
             ProcessedAt = DateTime.UtcNow,
@@ -112,8 +112,8 @@ public class DataSetLifecycleServiceTests
         result.Message.Should().Contain("restored successfully");
         result.Data.Should().NotBeNull();
 
-        _mockRepository.Verify(x => x.UpdateAsync(It.Is<DataSet>(ds => 
-            !ds.IsDeleted && 
+        _mockRepository.Verify(x => x.UpdateAsync(It.Is<DataSet>(ds =>
+            !ds.IsDeleted &&
             ds.DeletedAt == null &&
             !ds.IsProcessed &&
             ds.ProcessedAt == null &&
@@ -156,7 +156,7 @@ public class DataSetLifecycleServiceTests
         var restoreDto = new DataSetRestoreDto { RestoreType = RestoreType.Simple };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.RestoreDataSetEnhancedAsync(dataSetId, restoreDto, userId));
     }
 
@@ -169,7 +169,7 @@ public class DataSetLifecycleServiceTests
         var restoreDto = new DataSetRestoreDto { RestoreType = RestoreType.Simple };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.RestoreDataSetEnhancedAsync(dataSetId, restoreDto, userId));
     }
 
@@ -182,7 +182,7 @@ public class DataSetLifecycleServiceTests
         DataSetRestoreDto? restoreDto = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() => 
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
             _service.RestoreDataSetEnhancedAsync(dataSetId, restoreDto, userId));
     }
 
@@ -197,7 +197,7 @@ public class DataSetLifecycleServiceTests
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync((DataSet?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.RestoreDataSetEnhancedAsync(dataSetId, restoreDto, userId));
     }
 
@@ -214,7 +214,7 @@ public class DataSetLifecycleServiceTests
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => 
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             _service.RestoreDataSetEnhancedAsync(dataSetId, restoreDto, userId));
     }
 
@@ -229,10 +229,10 @@ public class DataSetLifecycleServiceTests
         var dataSetId = 1;
         var userId = "test-user";
         var resetDto = new DataSetResetDto { ResetType = ResetType.OriginalFile };
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             FilePath = "test/path.csv",
             FileName = "test.csv",
             IsProcessed = true,
@@ -268,7 +268,7 @@ public class DataSetLifecycleServiceTests
         result.Message.Should().Contain("reset successfully");
         result.Data.Should().NotBeNull();
 
-        _mockRepository.Verify(x => x.UpdateAsync(It.Is<DataSet>(ds => 
+        _mockRepository.Verify(x => x.UpdateAsync(It.Is<DataSet>(ds =>
             ds.IsProcessed &&
             ds.ProcessedAt != null &&
             ds.PreviewData == "new-preview" &&
@@ -286,10 +286,10 @@ public class DataSetLifecycleServiceTests
         var dataSetId = 1;
         var userId = "test-user";
         var resetDto = new DataSetResetDto { ResetType = ResetType.Database };
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsProcessed = true,
             ProcessedAt = DateTime.UtcNow,
             PreviewData = "test",
@@ -312,7 +312,7 @@ public class DataSetLifecycleServiceTests
         result.Message.Should().Contain("reset successfully");
         result.Data.Should().NotBeNull();
 
-        _mockRepository.Verify(x => x.UpdateAsync(It.Is<DataSet>(ds => 
+        _mockRepository.Verify(x => x.UpdateAsync(It.Is<DataSet>(ds =>
             !ds.IsProcessed &&
             ds.ProcessedAt == null &&
             ds.PreviewData == null &&
@@ -329,10 +329,10 @@ public class DataSetLifecycleServiceTests
         var dataSetId = 1;
         var userId = "test-user";
         var resetDto = new DataSetResetDto { ResetType = ResetType.OriginalFile };
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             FilePath = "test/path.csv",
             FileName = "test.csv"
         };
@@ -357,10 +357,10 @@ public class DataSetLifecycleServiceTests
         var dataSetId = 1;
         var userId = "test-user";
         var resetDto = new DataSetResetDto { ResetType = ResetType.Database };
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             IsDeleted = true,
             DeletedAt = DateTime.UtcNow
         };
@@ -407,7 +407,7 @@ public class DataSetLifecycleServiceTests
         result.Message.Should().Contain("updated successfully");
         result.Data.Should().NotBeNull();
 
-        _mockRepository.Verify(x => x.UpdateAsync(It.Is<DataSet>(ds => 
+        _mockRepository.Verify(x => x.UpdateAsync(It.Is<DataSet>(ds =>
             ds.RetentionDays == 30 &&
             ds.RetentionExpiryDate.HasValue)), Times.Once);
         _mockAuditService.Verify(x => x.LogDataSetActionAsync(dataSetId, userId, "UpdateRetentionPolicy", It.IsAny<object>(), null, null), Times.Once);
@@ -422,7 +422,7 @@ public class DataSetLifecycleServiceTests
         var retentionDto = new DataSetRetentionDto { RetentionDays = 0 };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.UpdateRetentionPolicyAsync(dataSetId, retentionDto, userId));
     }
 
@@ -435,7 +435,7 @@ public class DataSetLifecycleServiceTests
         DataSetRetentionDto? retentionDto = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() => 
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
             _service.UpdateRetentionPolicyAsync(dataSetId, retentionDto!, userId));
     }
 
@@ -449,10 +449,10 @@ public class DataSetLifecycleServiceTests
         // Arrange
         var dataSetId = 1;
         var userId = "test-user";
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             RetentionDays = 30,
             RetentionExpiryDate = DateTime.UtcNow.AddDays(15)
         };
@@ -477,10 +477,10 @@ public class DataSetLifecycleServiceTests
         // Arrange
         var dataSetId = 1;
         var userId = "test-user";
-        var dataSet = new DataSet 
-        { 
-            Id = dataSetId, 
-            UserId = userId, 
+        var dataSet = new DataSet
+        {
+            Id = dataSetId,
+            UserId = userId,
             RetentionDays = 30,
             RetentionExpiryDate = DateTime.UtcNow.AddDays(-5)
         };
@@ -596,4 +596,4 @@ public class DataSetLifecycleServiceTests
     }
 
     #endregion
-} 
+}

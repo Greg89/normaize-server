@@ -10,4 +10,4 @@ public interface IDataMigrationService
     /// </summary>
     /// <returns>Number of datasets that were standardized</returns>
     Task<int> StandardizePreviewDataFormatAsync();
-} 
+}

@@ -55,7 +55,7 @@ public class DataMigrationService : IDataMigrationService
                     if (await StandardizeSingleDataSetPreviewDataAsync(dataSet))
                     {
                         standardizedCount++;
-                        _infrastructure.StructuredLogging.LogStep(context, $"Standardized PreviewData for dataset {dataSet.Id}", 
+                        _infrastructure.StructuredLogging.LogStep(context, $"Standardized PreviewData for dataset {dataSet.Id}",
                             new Dictionary<string, object> { ["DataSetId"] = dataSet.Id });
                     }
                 }
@@ -91,7 +91,7 @@ public class DataMigrationService : IDataMigrationService
 
             // Convert old format to new format
             var standardizedPreviewData = ConvertPreviewDataToStandardFormat(dataSet.PreviewData, dataSet.RowCount);
-            
+
             // Update the dataset
             dataSet.PreviewData = standardizedPreviewData;
             dataSet.LastModifiedAt = DateTime.UtcNow;
@@ -115,8 +115,8 @@ public class DataMigrationService : IDataMigrationService
         try
         {
             var deserialized = JsonSerializer.Deserialize<DataSetPreviewDto>(previewData, JsonConfiguration.DefaultOptions);
-            return deserialized != null && 
-                   deserialized.Columns != null && 
+            return deserialized != null &&
+                   deserialized.Columns != null &&
                    deserialized.Rows != null &&
                    deserialized.TotalRows > 0;
         }
@@ -135,7 +135,7 @@ public class DataMigrationService : IDataMigrationService
         {
             // Try to deserialize as old format (array of records)
             var oldRecords = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(oldPreviewData, JsonConfiguration.DefaultOptions);
-            
+
             if (oldRecords == null || oldRecords.Count == 0)
                 throw new InvalidOperationException("No valid records found in old PreviewData format");
 
@@ -156,4 +156,4 @@ public class DataMigrationService : IDataMigrationService
             throw new InvalidOperationException($"Failed to convert PreviewData format: {ex.Message}", ex);
         }
     }
-} 
+}

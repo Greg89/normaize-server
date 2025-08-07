@@ -21,4 +21,4 @@ namespace Normaize.Data.Migrations
             // No rollback needed for data standardization
         }
     }
-} 
+}

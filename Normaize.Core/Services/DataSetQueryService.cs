@@ -27,31 +27,31 @@ public class DataSetQueryService : IDataSetQueryService
 
     public async Task<IEnumerable<DataSetDto>> GetDataSetsByUserAsync(string userId, int page = 1, int pageSize = 20)
     {
-                    return await ExecuteQueryOperationAsync(
-            AppConstants.DataSetQuery.GET_DATA_SETS_BY_USER,
-            userId,
-            new Dictionary<string, object> { ["Page"] = page, ["PageSize"] = pageSize },
-            () => ValidateQueryInputs(userId, page, pageSize),
-            async (context) =>
-            {
-                // Chaos engineering: Simulate network latency during dataset retrieval
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync("NetworkLatency", context.CorrelationId, context.OperationName, async () =>
-                {
-                    var delayMs = new Random().Next(AppConstants.ChaosEngineering.MIN_NETWORK_LATENCY_MS, AppConstants.ChaosEngineering.MAX_NETWORK_LATENCY_MS);
-                    _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating network latency during dataset retrieval", new Dictionary<string, object>
-                    {
-                        ["DelayMs"] = delayMs,
-                        ["ChaosType"] = "NetworkLatency"
-                    });
-                    await Task.Delay(delayMs);
-                }, new Dictionary<string, object> { ["UserId"] = userId, ["Page"] = page, ["PageSize"] = pageSize });
+        return await ExecuteQueryOperationAsync(
+AppConstants.DataSetQuery.GET_DATA_SETS_BY_USER,
+userId,
+new Dictionary<string, object> { ["Page"] = page, ["PageSize"] = pageSize },
+() => ValidateQueryInputs(userId, page, pageSize),
+async (context) =>
+{
+    // Chaos engineering: Simulate network latency during dataset retrieval
+    await _infrastructure.ChaosEngineering.ExecuteChaosAsync("NetworkLatency", context.CorrelationId, context.OperationName, async () =>
+    {
+        var delayMs = new Random().Next(AppConstants.ChaosEngineering.MIN_NETWORK_LATENCY_MS, AppConstants.ChaosEngineering.MAX_NETWORK_LATENCY_MS);
+        _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating network latency during dataset retrieval", new Dictionary<string, object>
+        {
+            ["DelayMs"] = delayMs,
+            ["ChaosType"] = "NetworkLatency"
+        });
+        await Task.Delay(delayMs);
+    }, new Dictionary<string, object> { ["UserId"] = userId, ["Page"] = page, ["PageSize"] = pageSize });
 
-                var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
-                var activeDataSets = dataSets.Where(ds => !ds.IsDeleted);
-                var paginatedDataSets = ApplyPagination(activeDataSets, page, pageSize, context);
-                
-                return paginatedDataSets.Select(ds => ds.ToDto());
-            });
+    var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
+    var activeDataSets = dataSets.Where(ds => !ds.IsDeleted);
+    var paginatedDataSets = ApplyPagination(activeDataSets, page, pageSize, context);
+
+    return paginatedDataSets.Select(ds => ds.ToDto());
+});
     }
 
     public async Task<IEnumerable<DataSetDto>> GetDeletedDataSetsAsync(string userId, int page = 1, int pageSize = 20)
@@ -66,7 +66,7 @@ public class DataSetQueryService : IDataSetQueryService
                 var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
                 var deletedDataSets = dataSets.Where(ds => ds.IsDeleted);
                 var paginatedDataSets = ApplyPagination(deletedDataSets, page, pageSize, context);
-                
+
                 return paginatedDataSets.Select(ds => ds.ToDto());
             });
     }
@@ -82,14 +82,14 @@ public class DataSetQueryService : IDataSetQueryService
             {
                 var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
                 var activeDataSets = dataSets.Where(ds => !ds.IsDeleted);
-                
+
                 var searchResults = activeDataSets.Where(ds =>
                     ds.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                     ds.Description?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
                     ds.FileName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
-                
+
                 var paginatedDataSets = ApplyPagination(searchResults, page, pageSize, context);
-                
+
                 return paginatedDataSets.Select(ds => ds.ToDto());
             });
     }
@@ -106,7 +106,7 @@ public class DataSetQueryService : IDataSetQueryService
                 var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
                 var activeDataSets = dataSets.Where(ds => !ds.IsDeleted && ds.FileType == fileType);
                 var paginatedDataSets = ApplyPagination(activeDataSets, page, pageSize, context);
-                
+
                 return paginatedDataSets.Select(ds => ds.ToDto());
             });
     }
@@ -122,12 +122,12 @@ public class DataSetQueryService : IDataSetQueryService
             {
                 var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
                 var activeDataSets = dataSets.Where(ds => !ds.IsDeleted);
-                
+
                 var dateRangeResults = activeDataSets.Where(ds =>
                     ds.UploadedAt >= startDate && ds.UploadedAt <= endDate);
-                
+
                 var paginatedDataSets = ApplyPagination(dateRangeResults, page, pageSize, context);
-                
+
                 return paginatedDataSets.Select(ds => ds.ToDto());
             });
     }
@@ -155,28 +155,28 @@ public class DataSetQueryService : IDataSetQueryService
                 var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
                 var activeDataSets = dataSets.Where(ds => !ds.IsDeleted);
                 var deletedDataSets = dataSets.Where(ds => ds.IsDeleted);
-                
+
                 var totalSize = activeDataSets.Sum(ds => ds.FileSize);
                 var averageFileSize = activeDataSets.Any() ? activeDataSets.Average(ds => ds.FileSize) : 0;
-                
+
                 var fileTypeBreakdown = activeDataSets
                     .GroupBy(ds => ds.FileType)
                     .Select(g => new { FileType = g.Key, Count = g.Count() })
                     .ToDictionary(x => x.FileType.ToString(), x => x.Count);
-                
-                var processingStatusBreakdown = activeDataSets.Any() 
+
+                var processingStatusBreakdown = activeDataSets.Any()
                     ? new Dictionary<string, int>
                     {
                         [AppConstants.DataSetQuery.PROCESSED] = activeDataSets.Count(ds => ds.IsProcessed),
                         ["Pending"] = activeDataSets.Count(ds => !ds.IsProcessed)
                     }
                     : new Dictionary<string, int>();
-                
+
                 var recentUploads = activeDataSets
                     .OrderByDescending(ds => ds.UploadedAt)
                     .Take(AppConstants.DataSetQuery.RECENT_UPLOADS_COUNT)
                     .Select(ds => ds.ToDto());
-                
+
                 return new DataSetStatisticsDto
                 {
                     TotalDataSets = activeDataSets.Count(),
@@ -209,11 +209,11 @@ public class DataSetQueryService : IDataSetQueryService
         try
         {
             validation();
-            
+
             _infrastructure.StructuredLogging.LogStep(context, $"{operationName} started");
-            
+
             var result = await operation(context);
-            
+
             _infrastructure.StructuredLogging.LogSummary(context, true, $"{operationName} completed successfully");
             return result;
         }
@@ -230,7 +230,7 @@ public class DataSetQueryService : IDataSetQueryService
         var actualPageSize = Math.Min(pageSize, AppConstants.DataSetQuery.MAX_PAGE_SIZE);
         var totalCount = dataSets.Count();
         var totalPages = (int)Math.Ceiling((double)totalCount / actualPageSize);
-        
+
         _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetQuery.PAGINATION_APPLIED, new Dictionary<string, object>
         {
             ["TotalCount"] = totalCount,
@@ -238,7 +238,7 @@ public class DataSetQueryService : IDataSetQueryService
             ["PageSize"] = actualPageSize,
             ["TotalPages"] = totalPages
         });
-        
+
         return dataSets
             .Skip((page - 1) * actualPageSize)
             .Take(actualPageSize)
@@ -261,10 +261,10 @@ public class DataSetQueryService : IDataSetQueryService
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
             throw new ArgumentException(AppConstants.DataSetQuery.SEARCH_TERM_CANNOT_BE_NULL_OR_EMPTY, nameof(searchTerm));
-        
+
         if (searchTerm.Length < 3)
             throw new ArgumentException("Search term must be at least 3 characters long", nameof(searchTerm));
-        
+
         ValidateQueryInputs(userId, page, pageSize);
     }
 
@@ -272,10 +272,10 @@ public class DataSetQueryService : IDataSetQueryService
     {
         if (startDate > endDate)
             throw new ArgumentException(AppConstants.DataSetQuery.START_DATE_CANNOT_BE_AFTER_END_DATE, nameof(startDate));
-        
+
         if (startDate > DateTime.UtcNow)
             throw new ArgumentException("Start date cannot be in the future", nameof(startDate));
-        
+
         ValidateQueryInputs(userId, page, pageSize);
     }
 
@@ -292,4 +292,4 @@ public class DataSetQueryService : IDataSetQueryService
     }
 
     #endregion
-} 
+}
