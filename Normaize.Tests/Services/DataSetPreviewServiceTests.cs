@@ -196,7 +196,7 @@ public class DataSetPreviewServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.GetDataSetPreviewAsync(dataSetId, rows, userId));
+            _service.GetDataSetPreviewAsync(dataSetId, rows, userId!));
     }
 
     [Fact]

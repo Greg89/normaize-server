@@ -183,7 +183,7 @@ public class DataSetLifecycleServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _service.RestoreDataSetEnhancedAsync(dataSetId, restoreDto, userId));
+            _service.RestoreDataSetEnhancedAsync(dataSetId, restoreDto!, userId));
     }
 
     [Fact]
