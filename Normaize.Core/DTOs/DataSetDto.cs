@@ -26,7 +26,11 @@ public enum FileType
     /// <summary>Plain text file format</summary>
     TXT,
     /// <summary>Custom or unsupported file format</summary>
-    Custom
+    Custom,
+    /// <summary>Microsoft Excel file format (legacy alias)</summary>
+    EXCEL = Excel,
+    /// <summary>Unknown or unsupported file format</summary>
+    UNKNOWN = Custom
 }
 
 /// <summary>
@@ -471,4 +475,202 @@ public class DataSetPreviewDto
     /// </summary>
     [JsonPropertyName("maxPreviewRows")]
     public int MaxPreviewRows { get; set; }
+}
+
+/// <summary>
+/// Data Transfer Object for dataset reset operation
+/// </summary>
+/// <remarks>
+/// This DTO provides options for resetting a dataset to its original state,
+/// either from the database or by re-processing the original file from storage.
+/// </remarks>
+public class DataSetResetDto
+{
+    /// <summary>
+    /// Gets or sets the type of reset operation
+    /// </summary>
+    [JsonPropertyName("resetType")]
+    public ResetType ResetType { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to also restore if the dataset is deleted
+    /// </summary>
+    [JsonPropertyName("restoreIfDeleted")]
+    public bool RestoreIfDeleted { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets optional reason for the reset operation
+    /// </summary>
+    [JsonPropertyName("reason")]
+    public string? Reason { get; set; }
+}
+
+/// <summary>
+/// Data Transfer Object for dataset restore operation
+/// </summary>
+/// <remarks>
+/// This DTO provides options for restoring a deleted dataset with various
+/// restoration strategies.
+/// </remarks>
+public class DataSetRestoreDto
+{
+    /// <summary>
+    /// Gets or sets the type of restore operation
+    /// </summary>
+    [JsonPropertyName("restoreType")]
+    public RestoreType RestoreType { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to reset the dataset during restore
+    /// </summary>
+    [JsonPropertyName("resetDuringRestore")]
+    public bool ResetDuringRestore { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets optional reason for the restore operation
+    /// </summary>
+    [JsonPropertyName("reason")]
+    public string? Reason { get; set; }
+}
+
+/// <summary>
+/// Data Transfer Object for retention policy update
+/// </summary>
+/// <remarks>
+/// This DTO allows users to update the retention policy for their datasets.
+/// </remarks>
+public class DataSetRetentionDto
+{
+    /// <summary>
+    /// Gets or sets the number of days to retain the data
+    /// </summary>
+    [JsonPropertyName("retentionDays")]
+    [Range(1, 3650)] // 1 day to 10 years
+    public int RetentionDays { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to apply this retention policy to all user datasets
+    /// </summary>
+    [JsonPropertyName("applyToAllDatasets")]
+    public bool ApplyToAllDatasets { get; set; } = false;
+}
+
+/// <summary>
+/// Enumeration for dataset reset types
+/// </summary>
+public enum ResetType
+{
+    /// <summary>Reset to database state (keep current data)</summary>
+    Database,
+    /// <summary>Reset to original file state (re-process from storage)</summary>
+    OriginalFile
+}
+
+/// <summary>
+/// Enumeration for dataset restore types
+/// </summary>
+public enum RestoreType
+{
+    /// <summary>Simple restore (just unmark as deleted)</summary>
+    Simple,
+    /// <summary>Restore and reset to original state</summary>
+    WithReset
+}
+
+/// <summary>
+/// Data Transfer Object for retention status information
+/// </summary>
+/// <remarks>
+/// This DTO provides comprehensive information about a dataset's retention status
+/// and file availability for reset operations.
+/// </remarks>
+public class DataSetRetentionStatusDto
+{
+    /// <summary>
+    /// Gets or sets the dataset ID
+    /// </summary>
+    [JsonPropertyName("dataSetId")]
+    public int DataSetId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the retention period in days
+    /// </summary>
+    [JsonPropertyName("retentionDays")]
+    public int? RetentionDays { get; set; }
+
+    /// <summary>
+    /// Gets or sets the retention expiry date
+    /// </summary>
+    [JsonPropertyName("retentionExpiryDate")]
+    public DateTime? RetentionExpiryDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the retention period has expired
+    /// </summary>
+    [JsonPropertyName("isRetentionExpired")]
+    public bool IsRetentionExpired { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the original file is available
+    /// </summary>
+    [JsonPropertyName("isOriginalFileAvailable")]
+    public bool IsOriginalFileAvailable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reason why the file is unavailable
+    /// </summary>
+    [JsonPropertyName("fileUnavailableReason")]
+    public string? FileUnavailableReason { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of days until expiry
+    /// </summary>
+    [JsonPropertyName("daysUntilExpiry")]
+    public int? DaysUntilExpiry { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the dataset can be reset
+    /// </summary>
+    [JsonPropertyName("canReset")]
+    public bool CanReset { get; set; }
+}
+
+/// <summary>
+/// Data Transfer Object for operation results
+/// </summary>
+/// <remarks>
+/// This DTO provides standardized operation results with success status,
+/// messages, and error codes for enhanced error handling.
+/// </remarks>
+public class OperationResultDto
+{
+    /// <summary>
+    /// Gets or sets whether the operation was successful
+    /// </summary>
+    [JsonPropertyName("success")]
+    public bool Success { get; set; }
+
+    /// <summary>
+    /// Gets or sets the operation message
+    /// </summary>
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the error code if the operation failed
+    /// </summary>
+    [JsonPropertyName("errorCode")]
+    public string? ErrorCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets additional metadata about the operation
+    /// </summary>
+    [JsonPropertyName("metadata")]
+    public Dictionary<string, object>? Metadata { get; set; }
+
+    /// <summary>
+    /// Gets or sets additional data returned by the operation
+    /// </summary>
+    [JsonPropertyName("data")]
+    public object? Data { get; set; }
 }

@@ -112,6 +112,10 @@ public class FileValidationService : IFileValidationService
 
         if (fileRequest.FileSize <= 0)
             throw new ArgumentException(AppConstants.FileUpload.FILE_SIZE_MUST_BE_POSITIVE, nameof(fileRequest));
+
+        // Validate file name for security (prevent path traversal attacks)
+        if (fileRequest.FileName.Contains("..") || fileRequest.FileName.Contains("/") || fileRequest.FileName.Contains("\\"))
+            throw new ArgumentException("Invalid file name", nameof(fileRequest));
     }
 
     public void ValidateFileProcessingInputs(string filePath, string fileType)

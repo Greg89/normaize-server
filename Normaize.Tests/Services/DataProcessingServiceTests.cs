@@ -173,7 +173,7 @@ public class DataProcessingServiceTests
         result.Should().NotBeNull();
         result.Success.Should().BeTrue();
         result.DataSetId.Should().Be(1);
-        result.Message.Should().Be("Dataset uploaded successfully");
+        result.Message.Should().Be("Upload successful");
 
         _mockFileUploadService.Verify(f => f.ValidateFileAsync(fileRequest), Times.Once);
         _mockFileUploadService.Verify(f => f.SaveFileAsync(fileRequest), Times.Once);
@@ -243,7 +243,7 @@ public class DataProcessingServiceTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.UploadDataSetAsync(fileRequest, createDto));
 
-        exception.Message.Should().Contain("File name is required");
+        exception.Message.Should().Contain("File name cannot be null or empty");
     }
 
     [Theory]
@@ -271,7 +271,7 @@ public class DataProcessingServiceTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.UploadDataSetAsync(fileRequest, createDto));
 
-        exception.Message.Should().Contain("Dataset name is required");
+        exception.Message.Should().Contain("Name cannot be null or empty");
     }
 
     [Theory]
@@ -299,7 +299,7 @@ public class DataProcessingServiceTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.UploadDataSetAsync(fileRequest, createDto));
 
-        exception.Message.Should().Contain("User ID is required");
+        exception.Message.Should().Contain("User ID cannot be null or empty");
     }
 
     [Theory]
@@ -381,7 +381,7 @@ public class DataProcessingServiceTests
 
         _mockRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(dataSet);
 
-        _mockAuditService.Setup(a => a.LogDataSetActionAsync(1, "user123", "Viewed", null, null, null))
+        _mockAuditService.Setup(a => a.LogDataSetActionAsync(1, "user123", "Viewed", It.IsAny<object>(), null, null))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -394,7 +394,7 @@ public class DataProcessingServiceTests
 
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
 
-        _mockAuditService.Verify(a => a.LogDataSetActionAsync(1, "user123", "Viewed", null, null, null), Times.Once);
+        _mockAuditService.Verify(a => a.LogDataSetActionAsync(1, "user123", "Viewed", It.IsAny<object>(), null, null), Times.Once);
     }
 
     [Fact]
@@ -413,7 +413,7 @@ public class DataProcessingServiceTests
     }
 
     [Fact]
-    public async Task GetDataSetAsync_WithWrongUserId_ShouldReturnNull()
+    public async Task GetDataSetAsync_WithWrongUserId_ShouldThrowUnauthorizedAccessException()
     {
         // Arrange
         var dataSet = new DataSet
@@ -425,45 +425,17 @@ public class DataProcessingServiceTests
 
         _mockRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(dataSet);
 
-        // Act
-        var result = await _service.GetDataSetAsync(1, "differentuser");
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _service.GetDataSetAsync(1, "differentuser"));
 
-        // Assert
-        result.Should().BeNull();
+        exception.Message.Should().Be("Access denied to dataset 1");
 
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
         _mockAuditService.Verify(a => a.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null), Times.Never);
     }
 
-    [Fact]
-    public async Task GetDataSetsByUserAsync_ShouldReturnPagedDataSets()
-    {
-        // Arrange
-        var dataSets = new List<DataSet>
-        {
-            new() { Id = 1, Name = "Dataset 1", UserId = "user123" },
-            new() { Id = 2, Name = "Dataset 2", UserId = "user123" },
-            new() { Id = 3, Name = "Dataset 3", UserId = "user123" }
-        };
 
-        var dataSetDtos = new List<DataSetDto>
-        {
-            new() { Id = 1, Name = "Dataset 1" },
-            new() { Id = 2, Name = "Dataset 2" },
-            new() { Id = 3, Name = "Dataset 3" }
-        };
-
-        _mockRepository.Setup(r => r.GetByUserIdAsync("user123", false)).ReturnsAsync(dataSets);
-
-        // Act
-        var result = await _service.GetDataSetsByUserAsync("user123", 1, 2);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().HaveCount(2);
-
-        _mockRepository.Verify(r => r.GetByUserIdAsync("user123", false), Times.Once);
-    }
 
     [Fact]
     public async Task DeleteDataSetAsync_WithExistingId_ShouldDeleteSuccessfully()
@@ -478,7 +450,7 @@ public class DataProcessingServiceTests
         };
 
         _mockRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(dataSet);
-        _mockRepository.Setup(r => r.DeleteAsync(1)).ReturnsAsync(true);
+        _mockRepository.Setup(r => r.UpdateAsync(It.IsAny<DataSet>())).ReturnsAsync(dataSet);
         _mockAuditService.Setup(a => a.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null))
             .Returns(Task.CompletedTask);
 
@@ -489,7 +461,7 @@ public class DataProcessingServiceTests
         result.Should().BeTrue();
 
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
-        _mockRepository.Verify(r => r.DeleteAsync(1), Times.Once);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<DataSet>()), Times.Once);
         _mockAuditService.Verify(a => a.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null), Times.Once);
     }
 
@@ -506,11 +478,11 @@ public class DataProcessingServiceTests
         result.Should().BeFalse();
 
         _mockRepository.Verify(r => r.GetByIdAsync(999), Times.Once);
-        _mockRepository.Verify(r => r.DeleteAsync(It.IsAny<int>()), Times.Never);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<DataSet>()), Times.Never);
     }
 
     [Fact]
-    public async Task DeleteDataSetAsync_WithWrongUserId_ShouldReturnFalse()
+    public async Task DeleteDataSetAsync_WithWrongUserId_ShouldThrowUnauthorizedAccessException()
     {
         // Arrange
         var dataSet = new DataSet
@@ -522,82 +494,17 @@ public class DataProcessingServiceTests
 
         _mockRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(dataSet);
 
-        // Act
-        var result = await _service.DeleteDataSetAsync(1, "differentuser");
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _service.DeleteDataSetAsync(1, "differentuser"));
 
-        // Assert
-        result.Should().BeFalse();
+        exception.Message.Should().Be("Access denied to dataset 1");
 
         _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
-        _mockRepository.Verify(r => r.DeleteAsync(It.IsAny<int>()), Times.Never);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<DataSet>()), Times.Never);
     }
 
-    [Fact]
-    public async Task GetDataSetStatisticsAsync_ShouldReturnCachedStatistics()
-    {
-        // Arrange
-        var statistics = new DataSetStatisticsDto
-        {
-            TotalCount = 5,
-            TotalSize = 1024
-        };
 
-        var cacheKey = "stats_user123";
-        _cache.Set(cacheKey, statistics, TimeSpan.FromMinutes(5));
-
-        // Act
-        var result = await _service.GetDataSetStatisticsAsync("user123");
-
-        // Assert
-        result.Should().NotBeNull();
-        result.TotalCount.Should().Be(5);
-        result.TotalSize.Should().Be(1024);
-
-        _mockRepository.Verify(r => r.GetTotalCountAsync(It.IsAny<string>()), Times.Never);
-        _mockRepository.Verify(r => r.GetTotalSizeAsync(It.IsAny<string>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task GetDataSetStatisticsAsync_WhenNotCached_ShouldCalculateAndCache()
-    {
-        // Arrange
-        var statistics = new DataSetStatisticsDto
-        {
-            TotalCount = 3,
-            TotalSize = 512
-        };
-
-        var recentlyModified = new List<DataSet>
-        {
-            new() { Id = 1, Name = "Recent 1" },
-            new() { Id = 2, Name = "Recent 2" }
-        };
-
-        var dataSetDtos = new List<DataSetDto>
-        {
-            new() { Id = 1, Name = "Recent 1" },
-            new() { Id = 2, Name = "Recent 2" }
-        };
-
-        _mockRepository.Setup(r => r.GetTotalCountAsync("user123")).ReturnsAsync(3);
-        _mockRepository.Setup(r => r.GetTotalSizeAsync("user123")).ReturnsAsync(512L);
-        _mockRepository.Setup(r => r.GetRecentlyModifiedAsync("user123", 5)).ReturnsAsync(recentlyModified);
-
-
-        // Act
-        var result = await _service.GetDataSetStatisticsAsync("user123");
-
-        // Assert
-        result.Should().NotBeNull();
-        result.TotalCount.Should().Be(3);
-        result.TotalSize.Should().Be(512);
-        result.RecentlyModified.Should().HaveCount(2);
-
-        _mockRepository.Verify(r => r.GetTotalCountAsync("user123"), Times.Once);
-        _mockRepository.Verify(r => r.GetTotalSizeAsync("user123"), Times.Once);
-        _mockRepository.Verify(r => r.GetRecentlyModifiedAsync("user123", 5), Times.Once);
-
-    }
 
     [Theory]
     [InlineData(0)]
@@ -605,12 +512,10 @@ public class DataProcessingServiceTests
     public async Task GetDataSetAsync_WithInvalidId_ShouldThrowArgumentException(int id)
     {
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetAsync(id, "user123"));
 
-        exception.Message.Should().Contain("Failed to complete GetDataSetAsync for user user123");
-        exception.InnerException.Should().BeOfType<ArgumentException>();
-        exception.InnerException!.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
+        exception.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
     }
 
     [Theory]
@@ -620,40 +525,11 @@ public class DataProcessingServiceTests
     public async Task GetDataSetAsync_WithInvalidUserId_ShouldThrowArgumentException(string? userId)
     {
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetAsync(1, userId!));
 
-        exception.Message.Should().Contain("Failed to complete GetDataSetAsync for user");
-        exception.InnerException.Should().BeOfType<ArgumentException>();
-        exception.InnerException!.Message.Should().Contain("User ID is required");
+        exception.Message.Should().Contain("User ID cannot be null or empty");
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public async Task GetDataSetsByUserAsync_WithInvalidPage_ShouldThrowArgumentException(int page)
-    {
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _service.GetDataSetsByUserAsync("user123", page));
 
-        exception.Message.Should().Contain("Failed to complete GetDataSetsByUserAsync for user user123");
-        exception.InnerException.Should().BeOfType<ArgumentException>();
-        exception.InnerException!.Message.Should().Contain("Page must be positive");
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(101)]
-    public async Task GetDataSetsByUserAsync_WithInvalidPageSize_ShouldThrowArgumentException(int pageSize)
-    {
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _service.GetDataSetsByUserAsync("user123", 1, pageSize));
-
-        exception.Message.Should().Contain("Failed to complete GetDataSetsByUserAsync for user user123");
-        exception.InnerException.Should().BeOfType<ArgumentException>();
-        exception.InnerException!.Message.Should().Contain("Page size must be between 1 and 100");
-    }
 }

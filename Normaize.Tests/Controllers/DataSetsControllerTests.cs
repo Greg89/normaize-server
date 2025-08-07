@@ -14,14 +14,25 @@ namespace Normaize.Tests.Controllers;
 public class DataSetsControllerTests
 {
     private readonly Mock<IDataProcessingService> _mockDataProcessingService;
+    private readonly Mock<IDataSetLifecycleService> _mockDataSetLifecycleService;
+    private readonly Mock<IDataSetQueryService> _mockDataSetQueryService;
+    private readonly Mock<IDataSetPreviewService> _mockDataSetPreviewService;
     private readonly Mock<IStructuredLoggingService> _mockLoggingService;
     private readonly DataSetsController _controller;
 
     public DataSetsControllerTests()
     {
         _mockDataProcessingService = new Mock<IDataProcessingService>();
+        _mockDataSetLifecycleService = new Mock<IDataSetLifecycleService>();
+        _mockDataSetQueryService = new Mock<IDataSetQueryService>();
+        _mockDataSetPreviewService = new Mock<IDataSetPreviewService>();
         _mockLoggingService = new Mock<IStructuredLoggingService>();
-        _controller = new DataSetsController(_mockDataProcessingService.Object, _mockLoggingService.Object);
+        _controller = new DataSetsController(
+            _mockDataProcessingService.Object, 
+            _mockDataSetLifecycleService.Object,
+            _mockDataSetQueryService.Object,
+            _mockDataSetPreviewService.Object,
+            _mockLoggingService.Object);
         // Set up mock user for controller context
         _controller.ControllerContext = new ControllerContext
         {
@@ -44,7 +55,7 @@ public class DataSetsControllerTests
             new() { Id = 2, Name = "Test Dataset 2", Description = "Test Description 2" }
         };
 
-        _mockDataProcessingService
+        _mockDataSetQueryService
             .Setup(x => x.GetDataSetsByUserAsync(It.IsAny<string>(), 1, 20))
             .ReturnsAsync(expectedDataSets);
 
@@ -66,7 +77,7 @@ public class DataSetsControllerTests
     {
         // Arrange
         var exception = new InvalidOperationException("Database connection failed");
-        _mockDataProcessingService
+        _mockDataSetQueryService
             .Setup(x => x.GetDataSetsByUserAsync(It.IsAny<string>(), 1, 20))
             .ThrowsAsync(exception);
 
@@ -225,7 +236,7 @@ public class DataSetsControllerTests
             PreviewRowCount = 2,
             MaxPreviewRows = 10
         };
-        _mockDataProcessingService
+        _mockDataSetPreviewService
             .Setup(x => x.GetDataSetPreviewAsync(datasetId, It.IsAny<int>(), It.IsAny<string>()))
             .ReturnsAsync(expectedPreview);
 
@@ -246,7 +257,7 @@ public class DataSetsControllerTests
     {
         // Arrange
         var datasetId = 999;
-        _mockDataProcessingService
+        _mockDataSetPreviewService
             .Setup(x => x.GetDataSetPreviewAsync(datasetId, It.IsAny<int>(), It.IsAny<string>()))
             .ReturnsAsync((DataSetPreviewDto?)null);
 
@@ -264,7 +275,7 @@ public class DataSetsControllerTests
         // Arrange
         var datasetId = 1;
         var expectedSchema = new { columns = 5, rows = 100 };
-        _mockDataProcessingService
+        _mockDataSetPreviewService
             .Setup(x => x.GetDataSetSchemaAsync(datasetId, It.IsAny<string>()))
             .ReturnsAsync(expectedSchema);
 
@@ -284,7 +295,7 @@ public class DataSetsControllerTests
     {
         // Arrange
         var datasetId = 999;
-        _mockDataProcessingService
+        _mockDataSetPreviewService
             .Setup(x => x.GetDataSetSchemaAsync(datasetId, It.IsAny<string>()))
             .ReturnsAsync((object?)null);
 
@@ -301,7 +312,7 @@ public class DataSetsControllerTests
     {
         // Arrange
         var datasetId = 1;
-        _mockDataProcessingService
+        _mockDataSetLifecycleService
             .Setup(x => x.RestoreDataSetAsync(datasetId, It.IsAny<string>()))
             .ReturnsAsync(true);
 
@@ -320,7 +331,7 @@ public class DataSetsControllerTests
     {
         // Arrange
         var datasetId = 999;
-        _mockDataProcessingService
+        _mockDataSetLifecycleService
             .Setup(x => x.RestoreDataSetAsync(datasetId, It.IsAny<string>()))
             .ReturnsAsync(false);
 
@@ -337,7 +348,7 @@ public class DataSetsControllerTests
     {
         // Arrange
         var datasetId = 1;
-        _mockDataProcessingService
+        _mockDataSetLifecycleService
             .Setup(x => x.HardDeleteDataSetAsync(datasetId, It.IsAny<string>()))
             .ReturnsAsync(true);
 
@@ -354,7 +365,7 @@ public class DataSetsControllerTests
     {
         // Arrange
         var datasetId = 999;
-        _mockDataProcessingService
+        _mockDataSetLifecycleService
             .Setup(x => x.HardDeleteDataSetAsync(datasetId, It.IsAny<string>()))
             .ReturnsAsync(false);
 
@@ -464,7 +475,7 @@ public class DataSetsControllerTests
 
         // Assert
         result.Should().BeOfType<ActionResult<ApiResponse<DataSetUploadResponse>>>();
-        result.Result.Should().BeOfType<ObjectResult>();
+        result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
@@ -489,7 +500,7 @@ public class DataSetsControllerTests
         // Assert
         result.Should().BeOfType<ActionResult<ApiResponse<DataSetUploadResponse>>>();
         var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject!;
-        statusResult.StatusCode.Should().Be(500);
+        statusResult.StatusCode.Should().Be(400);
 
         _mockLoggingService.Verify(
             x => x.LogException(exception, "UploadDataSet"),
@@ -506,7 +517,7 @@ public class DataSetsControllerTests
             new() { Id = 2, Name = "Deleted Dataset 2", Description = "Deleted Description 2" }
         };
 
-        _mockDataProcessingService
+        _mockDataSetQueryService
             .Setup(x => x.GetDeletedDataSetsAsync(It.IsAny<string>(), 1, 20))
             .ReturnsAsync(expectedDataSets);
 
@@ -528,7 +539,7 @@ public class DataSetsControllerTests
     {
         // Arrange
         var exception = new InvalidOperationException("Database connection failed");
-        _mockDataProcessingService
+        _mockDataSetQueryService
             .Setup(x => x.GetDeletedDataSetsAsync(It.IsAny<string>(), 1, 20))
             .ThrowsAsync(exception);
 
@@ -556,7 +567,7 @@ public class DataSetsControllerTests
             new() { Id = 2, Name = "Test Dataset 2", Description = "Test Description 2" }
         };
 
-        _mockDataProcessingService
+        _mockDataSetQueryService
             .Setup(x => x.SearchDataSetsAsync(searchQuery, It.IsAny<string>(), 1, 10))
             .ReturnsAsync(expectedDataSets);
 
@@ -579,7 +590,7 @@ public class DataSetsControllerTests
         // Arrange
         var searchQuery = "test";
         var exception = new InvalidOperationException("Search failed");
-        _mockDataProcessingService
+        _mockDataSetQueryService
             .Setup(x => x.SearchDataSetsAsync(searchQuery, It.IsAny<string>(), 1, 10))
             .ThrowsAsync(exception);
 
@@ -592,7 +603,7 @@ public class DataSetsControllerTests
         statusResult.StatusCode.Should().Be(400);
 
         _mockLoggingService.Verify(
-            x => x.LogException(exception, $"SearchDataSets({searchQuery})"),
+            x => x.LogException(exception, "SearchDataSets"),
             Times.Once);
     }
 
@@ -607,7 +618,7 @@ public class DataSetsControllerTests
             new() { Id = 2, Name = "CSV Dataset 2", Description = "CSV Description 2", FileType = fileType }
         };
 
-        _mockDataProcessingService
+        _mockDataSetQueryService
             .Setup(x => x.GetDataSetsByFileTypeAsync(fileType, It.IsAny<string>(), 1, 10))
             .ReturnsAsync(expectedDataSets);
 
@@ -630,7 +641,7 @@ public class DataSetsControllerTests
         // Arrange
         var fileType = FileType.CSV;
         var exception = new InvalidOperationException("File type filter failed");
-        _mockDataProcessingService
+        _mockDataSetQueryService
             .Setup(x => x.GetDataSetsByFileTypeAsync(fileType, It.IsAny<string>(), 1, 10))
             .ThrowsAsync(exception);
 
@@ -659,7 +670,7 @@ public class DataSetsControllerTests
             new() { Id = 2, Name = "Recent Dataset 2", Description = "Recent Description 2" }
         };
 
-        _mockDataProcessingService
+        _mockDataSetQueryService
             .Setup(x => x.GetDataSetsByDateRangeAsync(startDate, endDate, It.IsAny<string>(), 1, 10))
             .ReturnsAsync(expectedDataSets);
 
@@ -683,7 +694,7 @@ public class DataSetsControllerTests
         var startDate = DateTime.Now.AddDays(-7);
         var endDate = DateTime.Now;
         var exception = new InvalidOperationException("Date range filter failed");
-        _mockDataProcessingService
+        _mockDataSetQueryService
             .Setup(x => x.GetDataSetsByDateRangeAsync(startDate, endDate, It.IsAny<string>(), 1, 10))
             .ThrowsAsync(exception);
 
@@ -696,7 +707,7 @@ public class DataSetsControllerTests
         statusResult.StatusCode.Should().Be(400);
 
         _mockLoggingService.Verify(
-            x => x.LogException(exception, $"GetDataSetsByDateRange({startDate}, {endDate})"),
+            x => x.LogException(exception, "GetDataSetsByDateRange"),
             Times.Once);
     }
 
@@ -715,7 +726,7 @@ public class DataSetsControllerTests
             }
         };
 
-        _mockDataProcessingService
+        _mockDataSetQueryService
             .Setup(x => x.GetDataSetStatisticsAsync(It.IsAny<string>()))
             .ReturnsAsync(expectedStatistics);
 
@@ -736,7 +747,7 @@ public class DataSetsControllerTests
     {
         // Arrange
         var exception = new InvalidOperationException("Statistics calculation failed");
-        _mockDataProcessingService
+        _mockDataSetQueryService
             .Setup(x => x.GetDataSetStatisticsAsync(It.IsAny<string>()))
             .ThrowsAsync(exception);
 

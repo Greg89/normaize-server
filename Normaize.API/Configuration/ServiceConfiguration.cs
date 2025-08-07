@@ -514,7 +514,13 @@ public static class ServiceConfiguration
         builder.Services.AddScoped<IFileStorageService, FileStorageService>();
         builder.Services.AddScoped<IFileUploadServices, FileUploadServices>();
 
+        // Register core data processing services
         builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
+        builder.Services.AddScoped<IDataSetLifecycleService, DataSetLifecycleService>();
+        builder.Services.AddScoped<IDataSetQueryService, DataSetQueryService>();
+        builder.Services.AddScoped<IDataSetPreviewService, DataSetPreviewService>();
+        builder.Services.AddScoped<IDataMigrationService, DataMigrationService>();
+        
         builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();
         builder.Services.AddScoped<IDataVisualizationService, DataVisualizationService>();
         builder.Services.AddScoped<IFileUploadService, FileUploadService>();

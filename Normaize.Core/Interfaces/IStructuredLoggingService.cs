@@ -56,6 +56,12 @@ public interface IStructuredLoggingService
     void LogPerformance(string operation, long durationMs, object? metadata = null);
     void LogPerformance(string operation, long durationMs, object? metadata, LogLevel level);
     IDisposable CreateUserScope(string? userId, string? userEmail);
+
+    // Additional logging methods for error and warning levels
+    void LogError(string message, object? data = null);
+    void LogError(string message, object? data, LogLevel level);
+    void LogWarning(string message, object? data = null);
+    void LogWarning(string message, object? data, LogLevel level);
 }
 
 /// <summary>

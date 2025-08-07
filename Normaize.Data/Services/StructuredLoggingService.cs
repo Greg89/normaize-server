@@ -249,6 +249,70 @@ public class StructuredLoggingService : IStructuredLoggingService
         return new NoOpDisposable();
     }
 
+    public void LogError(string message, object? data = null)
+    {
+        LogError(message, data, LogLevel.Error);
+    }
+
+    public void LogError(string message, object? data, LogLevel level)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(message);
+
+        var userId = GetCurrentUserId();
+        var userEmail = GetCurrentUserEmail();
+        var requestContext = GetRequestContext();
+
+        var errorData = new
+        {
+            Message = message,
+            UserId = userId ?? AppConstants.Auth.AnonymousUser,
+            UserEmail = userEmail ?? AppConstants.Messages.UNKNOWN,
+            RequestPath = requestContext.Path,
+            RequestMethod = requestContext.Method,
+            Timestamp = DateTime.UtcNow
+        };
+
+        _logger.Log(level, "Error: {Message} - User: {UserId} ({UserEmail}) - Request: {Method} {Path}",
+            message, errorData.UserId, errorData.UserEmail, requestContext.Method, requestContext.Path);
+
+        if (data != null)
+        {
+            _logger.Log(level, "Error Data: {@ErrorData}", data);
+        }
+    }
+
+    public void LogWarning(string message, object? data = null)
+    {
+        LogWarning(message, data, LogLevel.Warning);
+    }
+
+    public void LogWarning(string message, object? data, LogLevel level)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(message);
+
+        var userId = GetCurrentUserId();
+        var userEmail = GetCurrentUserEmail();
+        var requestContext = GetRequestContext();
+
+        var warningData = new
+        {
+            Message = message,
+            UserId = userId ?? AppConstants.Auth.AnonymousUser,
+            UserEmail = userEmail ?? AppConstants.Messages.UNKNOWN,
+            RequestPath = requestContext.Path,
+            RequestMethod = requestContext.Method,
+            Timestamp = DateTime.UtcNow
+        };
+
+        _logger.Log(level, "Warning: {Message} - User: {UserId} ({UserEmail}) - Request: {Method} {Path}",
+            message, warningData.UserId, warningData.UserEmail, requestContext.Method, requestContext.Path);
+
+        if (data != null)
+        {
+            _logger.Log(level, "Warning Data: {@WarningData}", data);
+        }
+    }
+
     private string? GetCurrentUserId()
     {
         var httpContext = _httpContextAccessor.HttpContext;
