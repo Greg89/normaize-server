@@ -28,7 +28,7 @@ public class MigrationController(
         try
         {
             var standardizedCount = await _dataMigrationService.StandardizePreviewDataFormatAsync();
-            
+
             return Ok(new ApiResponse<int>
             {
                 Success = true,
@@ -39,8 +39,8 @@ public class MigrationController(
         catch (Exception ex)
         {
             _structuredLogging.LogException(ex, "Failed to standardize PreviewData format");
-            
+
             return StatusCode(500, ApiResponse<int>.ErrorResponse("Failed to standardize PreviewData format", "MIGRATION_FAILED"));
         }
     }
-} 
+}

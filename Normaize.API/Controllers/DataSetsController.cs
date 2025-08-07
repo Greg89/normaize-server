@@ -201,7 +201,7 @@ public class DataSetsController(
         try
         {
             var userId = GetCurrentUserId();
-            
+
             // Validate file
             if (uploadDto.File == null || uploadDto.File.Length == 0)
                 return BadRequest<DataSetUploadResponse>("No file provided");
@@ -452,7 +452,7 @@ public class DataSetsController(
         {
             var userId = GetCurrentUserId();
             var result = await _dataSetLifecycleService.RestoreDataSetEnhancedAsync(id, restoreDto, userId);
-            
+
             if (!result.Success)
             {
                 if (result.Message.Contains("not deleted"))
@@ -516,7 +516,7 @@ public class DataSetsController(
         {
             var userId = GetCurrentUserId();
             var result = await _dataSetLifecycleService.ResetDataSetAsync(id, resetDto, userId);
-            
+
             if (!result.Success)
             {
                 if (result.Message.Contains("no longer available") || result.Message.Contains("not found"))
@@ -621,7 +621,7 @@ public class DataSetsController(
         {
             var userId = GetCurrentUserId();
             var result = await _dataSetLifecycleService.UpdateRetentionPolicyAsync(id, retentionDto, userId);
-            
+
             if (!result.Success)
                 return BadRequest<string?>(result.Message);
 
