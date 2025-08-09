@@ -56,7 +56,7 @@ public class DataSetsControllerTests
         };
 
         _mockDataSetQueryService
-            .Setup(x => x.GetDataSetsByUserAsync(It.IsAny<string>(), 1, 20))
+            .Setup(x => x.GetDataSetsByUserAsync(It.IsAny<string>(), 1, 20, false))
             .ReturnsAsync(expectedDataSets);
 
         // Act
@@ -78,7 +78,7 @@ public class DataSetsControllerTests
         // Arrange
         var exception = new InvalidOperationException("Database connection failed");
         _mockDataSetQueryService
-            .Setup(x => x.GetDataSetsByUserAsync(It.IsAny<string>(), 1, 20))
+            .Setup(x => x.GetDataSetsByUserAsync(It.IsAny<string>(), 1, 20, false))
             .ThrowsAsync(exception);
 
         // Act

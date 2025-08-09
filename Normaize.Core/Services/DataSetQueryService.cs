@@ -25,12 +25,12 @@ public class DataSetQueryService : IDataSetQueryService
         _infrastructure = infrastructure;
     }
 
-    public async Task<IEnumerable<DataSetDto>> GetDataSetsByUserAsync(string userId, int page = 1, int pageSize = 20)
+    public async Task<IEnumerable<DataSetDto>> GetDataSetsByUserAsync(string userId, int page = 1, int pageSize = 20, bool includeDeleted = false)
     {
         return await ExecuteQueryOperationAsync(
 AppConstants.DataSetQuery.GET_DATA_SETS_BY_USER,
 userId,
-new Dictionary<string, object> { [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize },
+new Dictionary<string, object> { [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize, ["IncludeDeleted"] = includeDeleted },
 () => ValidateQueryInputs(userId, page, pageSize),
 async (context) =>
 {
@@ -47,8 +47,8 @@ async (context) =>
     }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId, [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize });
 
     var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
-    var activeDataSets = dataSets.Where(ds => !ds.IsDeleted);
-    var paginatedDataSets = ApplyPagination(activeDataSets, page, pageSize, context);
+    var filteredDataSets = includeDeleted ? dataSets : dataSets.Where(ds => !ds.IsDeleted);
+    var paginatedDataSets = ApplyPagination(filteredDataSets, page, pageSize, context);
 
     return paginatedDataSets.Select(ds => ds.ToDto());
 });

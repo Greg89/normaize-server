@@ -4,6 +4,7 @@ using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using Normaize.Core.Extensions;
+using System.Linq;
 
 namespace Normaize.API.Controllers;
 
@@ -51,8 +52,9 @@ public class DataSetsController(
     }
 
     /// <summary>
-    /// Retrieves all datasets for the authenticated user
+    /// Retrieves datasets for the authenticated user
     /// </summary>
+    /// <param name="includeDeleted">Optional. When true, returns both active and deleted datasets; default is false (active only)</param>
     /// <returns>
     /// A list of datasets owned by the current user with pagination support
     /// </returns>
@@ -68,12 +70,12 @@ public class DataSetsController(
     [ProducesResponseType(typeof(ApiResponse<List<DataSetDto>>), 200)]
     [ProducesResponseType(401)]
     [ProducesResponseType(500)]
-    public async Task<ActionResult<ApiResponse<List<DataSetDto>>>> GetDataSets()
+    public async Task<ActionResult<ApiResponse<List<DataSetDto>>>> GetDataSets([FromQuery] bool includeDeleted = false)
     {
         try
         {
             var userId = GetCurrentUserId();
-            var dataSets = await _dataSetQueryService.GetDataSetsByUserAsync(userId);
+            var dataSets = await _dataSetQueryService.GetDataSetsByUserAsync(userId, 1, 20, includeDeleted);
             return Success(dataSets?.ToList() ?? []);
         }
         catch (Exception ex)

@@ -10,7 +10,11 @@ public interface IDataSetQueryService
     /// <summary>
     /// Get datasets by user with pagination.
     /// </summary>
-    Task<IEnumerable<DataSetDto>> GetDataSetsByUserAsync(string userId, int page = 1, int pageSize = 20);
+    /// <param name="userId">User identifier</param>
+    /// <param name="page">Page number (default: 1)</param>
+    /// <param name="pageSize">Items per page (default: 20)</param>
+    /// <param name="includeDeleted">When true, include deleted datasets; default false returns active only</param>
+    Task<IEnumerable<DataSetDto>> GetDataSetsByUserAsync(string userId, int page = 1, int pageSize = 20, bool includeDeleted = false);
 
     /// <summary>
     /// Get deleted datasets by user with pagination.

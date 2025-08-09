@@ -60,7 +60,7 @@ public class DataSetQueryServiceTests
         _mockRepository.Setup(x => x.GetByUserIdAsync(userId)).ReturnsAsync(dataSets);
 
         // Act
-        var result = await _service.GetDataSetsByUserAsync(userId, page, pageSize);
+        var result = await _service.GetDataSetsByUserAsync(userId, page, pageSize, false);
 
         // Assert
         result.Should().NotBeNull();
@@ -81,7 +81,7 @@ public class DataSetQueryServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.GetDataSetsByUserAsync(userId, page, pageSize));
+            _service.GetDataSetsByUserAsync(userId, page, pageSize, false));
     }
 
     [Fact]
@@ -94,7 +94,7 @@ public class DataSetQueryServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.GetDataSetsByUserAsync(userId, page, pageSize));
+            _service.GetDataSetsByUserAsync(userId, page, pageSize, false));
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class DataSetQueryServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.GetDataSetsByUserAsync(userId!, page, pageSize));
+            _service.GetDataSetsByUserAsync(userId!, page, pageSize, false));
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class DataSetQueryServiceTests
         _mockRepository.Setup(x => x.GetByUserIdAsync(userId)).ReturnsAsync(dataSets);
 
         // Act
-        var result = await _service.GetDataSetsByUserAsync(userId, page, pageSize);
+        var result = await _service.GetDataSetsByUserAsync(userId, page, pageSize, false);
 
         // Assert
         _mockRepository.Verify(x => x.GetByUserIdAsync(userId), Times.Once);
@@ -454,7 +454,7 @@ public class DataSetQueryServiceTests
         _mockRepository.Setup(x => x.GetByUserIdAsync(userId)).ReturnsAsync(dataSets);
 
         // Act
-        var result = await _service.GetDataSetsByUserAsync(userId, page, pageSize);
+        var result = await _service.GetDataSetsByUserAsync(userId, page, pageSize, false);
 
         // Assert
         result.Should().NotBeNull();
