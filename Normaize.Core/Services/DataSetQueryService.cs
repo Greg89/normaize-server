@@ -30,7 +30,7 @@ public class DataSetQueryService : IDataSetQueryService
         return await ExecuteQueryOperationAsync(
 AppConstants.DataSetQuery.GET_DATA_SETS_BY_USER,
 userId,
-new Dictionary<string, object> { ["Page"] = page, ["PageSize"] = pageSize },
+new Dictionary<string, object> { [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize },
 () => ValidateQueryInputs(userId, page, pageSize),
 async (context) =>
 {
@@ -44,7 +44,7 @@ async (context) =>
             ["ChaosType"] = "NetworkLatency"
         });
         await Task.Delay(delayMs);
-    }, new Dictionary<string, object> { ["UserId"] = userId, ["Page"] = page, ["PageSize"] = pageSize });
+    }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId, [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize });
 
     var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
     var activeDataSets = dataSets.Where(ds => !ds.IsDeleted);
@@ -59,7 +59,7 @@ async (context) =>
         return await ExecuteQueryOperationAsync(
             AppConstants.DataSetQuery.GET_DELETED_DATA_SETS,
             userId,
-            new Dictionary<string, object> { ["Page"] = page, ["PageSize"] = pageSize },
+            new Dictionary<string, object> { [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize },
             () => ValidateQueryInputs(userId, page, pageSize),
             async (context) =>
             {
@@ -76,7 +76,7 @@ async (context) =>
         return await ExecuteQueryOperationAsync(
             AppConstants.DataSetQuery.SEARCH_DATA_SETS,
             userId,
-            new Dictionary<string, object> { ["SearchTerm"] = searchTerm, ["Page"] = page, ["PageSize"] = pageSize },
+            new Dictionary<string, object> { [AppConstants.DataStructures.SEARCH_TERM] = searchTerm, [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize },
             () => ValidateSearchInputs(searchTerm, userId, page, pageSize),
             async (context) =>
             {
@@ -99,7 +99,7 @@ async (context) =>
         return await ExecuteQueryOperationAsync(
             AppConstants.DataSetQuery.GET_DATA_SETS_BY_FILE_TYPE,
             userId,
-            new Dictionary<string, object> { ["FileType"] = fileType.ToString(), ["Page"] = page, ["PageSize"] = pageSize },
+            new Dictionary<string, object> { [AppConstants.DataStructures.FILE_TYPE] = fileType.ToString(), [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize },
             () => ValidateQueryInputs(userId, page, pageSize),
             async (context) =>
             {
@@ -116,7 +116,7 @@ async (context) =>
         return await ExecuteQueryOperationAsync(
             AppConstants.DataSetQuery.GET_DATA_SETS_BY_DATE_RANGE,
             userId,
-            new Dictionary<string, object> { ["StartDate"] = startDate, ["EndDate"] = endDate, ["Page"] = page, ["PageSize"] = pageSize },
+            new Dictionary<string, object> { [AppConstants.DataStructures.START_DATE] = startDate, [AppConstants.DataStructures.END_DATE] = endDate, [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize },
             () => ValidateDateRangeInputs(startDate, endDate, userId, page, pageSize),
             async (context) =>
             {
@@ -146,11 +146,11 @@ async (context) =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating cache failure during statistics calculation", new Dictionary<string, object>
                     {
-                        ["ChaosType"] = "CacheFailure",
-                        ["Operation"] = "StatisticsCalculation"
+                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.CACHE_FAILURE,
+                        [AppConstants.DataStructures.OPERATION] = "StatisticsCalculation"
                     });
                     return Task.FromException(new InvalidOperationException("Simulated cache failure during statistics calculation"));
-                }, new Dictionary<string, object> { ["UserId"] = userId });
+                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId });
 
                 var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
                 var activeDataSets = dataSets.Where(ds => !ds.IsDeleted);
@@ -170,7 +170,7 @@ async (context) =>
                         [AppConstants.DataSetQuery.PROCESSED] = activeDataSets.Count(ds => ds.IsProcessed),
                         ["Pending"] = activeDataSets.Count(ds => !ds.IsProcessed)
                     }
-                    : new Dictionary<string, int>();
+                    : [];
 
                 var recentUploads = activeDataSets
                     .OrderByDescending(ds => ds.UploadedAt)
@@ -234,8 +234,8 @@ async (context) =>
         _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetQuery.PAGINATION_APPLIED, new Dictionary<string, object>
         {
             ["TotalCount"] = totalCount,
-            ["Page"] = page,
-            ["PageSize"] = actualPageSize,
+            [AppConstants.DataStructures.PAGE] = page,
+            [AppConstants.DataStructures.PAGE_SIZE] = actualPageSize,
             ["TotalPages"] = totalPages
         });
 

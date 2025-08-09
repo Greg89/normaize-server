@@ -2,7 +2,6 @@ using Normaize.Core.Constants;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
-using Normaize.Core.Mapping;
 using Normaize.Core.Configuration;
 using System.Text.Json;
 using System.Diagnostics;
@@ -32,7 +31,7 @@ public class DataSetPreviewService : IDataSetPreviewService
         return await ExecutePreviewOperationAsync(
             AppConstants.DataSetPreview.GET_DATA_SET_PREVIEW,
             userId,
-            new Dictionary<string, object> { ["DataSetId"] = id, ["Rows"] = rows },
+            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id, ["Rows"] = rows },
             () => ValidatePreviewInputs(id, rows, userId),
             async (context) =>
             {
@@ -42,7 +41,7 @@ public class DataSetPreviewService : IDataSetPreviewService
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating memory pressure during preview data processing", new Dictionary<string, object>
                     {
                         ["ChaosType"] = "MemoryPressure",
-                        ["DataSetId"] = id,
+                        [AppConstants.DataStructures.DATASETID] = id,
                         ["RequestedRows"] = rows
                     });
 
@@ -54,7 +53,7 @@ public class DataSetPreviewService : IDataSetPreviewService
                     }
                     await Task.Delay(AppConstants.ChaosEngineering.MEMORY_PRESSURE_DELAY_MS);
                     tempObjects.Clear();
-                }, new Dictionary<string, object> { ["UserId"] = userId, ["DataSetId"] = id, ["Rows"] = rows });
+                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId, [AppConstants.DataStructures.DATASETID] = id, ["Rows"] = rows });
 
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
 
@@ -102,7 +101,7 @@ public class DataSetPreviewService : IDataSetPreviewService
         return await ExecutePreviewOperationAsync(
             AppConstants.DataSetPreview.GET_DATA_SET_SCHEMA,
             userId,
-            new Dictionary<string, object> { ["DataSetId"] = id },
+            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id },
             () => ValidateSchemaInputs(id, userId),
             async (context) =>
             {
