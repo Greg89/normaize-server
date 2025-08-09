@@ -25,7 +25,8 @@ public static class AppConstants
         public const string PRODUCTION = "Production";
         public const string BETA = "Beta";
         public const string TEST = "Test";
-        public const string ASPNETCORE_ENVIRONMENT = "ASPNETCORE_ENVIRONMENT";
+        // Alias to canonical environment variable name
+        public const string ASPNETCORE_ENVIRONMENT = EnvironmentVariables.ASPNETCORE_ENVIRONMENT;
     }
 
     /// <summary>
@@ -147,11 +148,22 @@ public static class AppConstants
     /// </summary>
     public static class ValidationMessages
     {
-        public const string DATASET_ID_MUST_BE_POSITIVE = "Dataset ID must be positive";
+        public const string DATASET_ID_MUST_BE_POSITIVE = "Dataset ID must be positive"; // canonical
         public const string ANALYSIS_ID_MUST_BE_POSITIVE = "Analysis ID must be positive";
         public const string INVALID_ANALYSIS_STATUS = "Invalid analysis status: {0}";
         public const string INVALID_ANALYSIS_TYPE = "Invalid analysis type: {0}";
         public const string DATASET_NOT_FOUND_OR_ACCESS_DENIED = "Dataset not found or access denied";
+        public const string USER_ID_CANNOT_BE_NULL_OR_EMPTY = "User ID cannot be null or empty";
+    }
+
+    /// <summary>
+    /// Dataset-related common messages (canonical)
+    /// </summary>
+    public static class DataSetMessages
+    {
+    public const string DATASET_NOT_FOUND = "Dataset not found";
+    public const string ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER = "Access denied - dataset belongs to different user";
+    public const string ACCESS_DENIED_TO_DATASET = "Access denied to dataset";
     }
 
     /// <summary>
@@ -200,7 +212,7 @@ public static class AppConstants
         public const string CHART_DATA_GENERATION_COMPLETED = "Chart data generation completed";
         public const string CONFIGURATION_VALIDATION_STARTED = "Configuration validation started";
         public const string CONFIGURATION_VALIDATION_COMPLETED = "Configuration validation completed";
-        public const string DATASET_NOT_FOUND = "Dataset not found";
+        public const string DATASET_NOT_FOUND = DataSetMessages.DATASET_NOT_FOUND;
         public const string DATASET_ACCESS_DENIED = "Dataset access denied";
         public const string INVALID_CHART_TYPE = "Invalid chart type";
         public const string INVALID_DATASET_ID = "Invalid dataset ID";
@@ -273,7 +285,7 @@ public static class AppConstants
         public const int BYTES_PER_MEGABYTE = 1024 * 1024;
         public const int BYTES_PER_KILOBYTE = 1024;
 
-        // File extensions
+        // File extensions (canonical definitions)
         public const string CSV_EXTENSION = ".csv";
         public const string JSON_EXTENSION = ".json";
         public const string XLSX_EXTENSION = ".xlsx";
@@ -423,8 +435,8 @@ public static class AppConstants
 
         // Logging messages
         public const string DATASET_NOT_FOUND = "Dataset not found";
-        public const string ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER = "Access denied - dataset belongs to different user";
-        public const string ACCESS_DENIED_TO_DATASET = "Access denied to dataset";
+        public const string ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER = DataSetMessages.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER;
+        public const string ACCESS_DENIED_TO_DATASET = DataSetMessages.ACCESS_DENIED_TO_DATASET;
         public const string DATASET_IS_ALREADY_DELETED = "Dataset is already deleted";
         public const string DATASET_SOFT_DELETED_SUCCESSFULLY = "Dataset soft deleted successfully";
         public const string OPERATION_TIMED_OUT = "Operation timed out";
@@ -435,13 +447,13 @@ public static class AppConstants
         public const string FILE_NAME_CANNOT_BE_NULL_OR_EMPTY = "File name cannot be null or empty";
         public const string FILE_SIZE_MUST_BE_POSITIVE = "File size must be positive";
         public const string INVALID_FILE_NAME = "Invalid file name";
-        public const string DATASET_ID_MUST_BE_POSITIVE = "Dataset ID must be positive";
+        public const string DATASET_ID_MUST_BE_POSITIVE = ValidationMessages.DATASET_ID_MUST_BE_POSITIVE;
 
-        // File extension mappings
-        public const string CSV_EXTENSION = ".csv";
-        public const string JSON_EXTENSION = ".json";
-        public const string XML_EXTENSION = ".xml";
-        public const string XLSX_EXTENSION = ".xlsx";
+        // File extension mappings (alias to FileProcessing canonical values)
+        public const string CSV_EXTENSION = FileProcessing.CSV_EXTENSION;
+        public const string JSON_EXTENSION = FileProcessing.JSON_EXTENSION;
+        public const string XML_EXTENSION = FileProcessing.XML_EXTENSION;
+        public const string XLSX_EXTENSION = FileProcessing.XLSX_EXTENSION;
     }
 
     /// <summary>
@@ -613,7 +625,7 @@ public static class AppConstants
         public const string GENERATED_STATISTICAL_SUMMARY_SUCCESSFULLY = "Generated statistical summary successfully";
 
         // Error and validation messages
-        public const string DATASET_NOT_FOUND_LOG = "Dataset not found";
+        public const string DATASET_NOT_FOUND_LOG = DataSetMessages.DATASET_NOT_FOUND;
         public const string UNAUTHORIZED_ACCESS_ATTEMPT = "Unauthorized access attempt";
         public const string ATTEMPTED_TO_ACCESS_DELETED_DATASET = "Attempted to access deleted dataset";
         public const string DATASET_HAS_NO_PROCESSED_DATA = "Dataset has no processed data";
@@ -775,10 +787,10 @@ public static class AppConstants
         public const string RESET_DATA_SET_DATABASE_ONLY = "ResetDataSetDatabaseOnly";
 
         // Error messages
-        public const string DATASET_NOT_FOUND = "Dataset not found";
-        public const string ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER = "Access denied - dataset belongs to different user";
-        public const string ACCESS_DENIED_TO_DATASET = "Access denied to dataset";
-        public const string DATASET_ID_MUST_BE_POSITIVE = "Dataset ID must be positive";
+        public const string DATASET_NOT_FOUND = DataSetMessages.DATASET_NOT_FOUND;
+        public const string ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER = DataSetMessages.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER;
+        public const string ACCESS_DENIED_TO_DATASET = DataSetMessages.ACCESS_DENIED_TO_DATASET;
+        public const string DATASET_ID_MUST_BE_POSITIVE = ValidationMessages.DATASET_ID_MUST_BE_POSITIVE;
         public const string USER_ID_CANNOT_BE_NULL_OR_EMPTY = "User ID cannot be null or empty";
         public const string RETENTION_DAYS_MUST_BE_POSITIVE = "Retention days must be positive";
 
@@ -864,7 +876,7 @@ public static class AppConstants
         public const string GET_DATA_SET_SCHEMA = "GetDataSetSchema";
 
         // Validation messages
-        public const string DATASET_ID_MUST_BE_POSITIVE = "Dataset ID must be positive";
+        public const string DATASET_ID_MUST_BE_POSITIVE = ValidationMessages.DATASET_ID_MUST_BE_POSITIVE;
         public const string USER_ID_CANNOT_BE_NULL_OR_EMPTY = "User ID cannot be null or empty";
         public const string ROWS_MUST_BE_POSITIVE = "Rows must be positive";
         public const string ROWS_CANNOT_EXCEED_1000 = "Rows cannot exceed 1000";
@@ -876,7 +888,7 @@ public static class AppConstants
         public const string NO_SCHEMA_DATA_AVAILABLE = "No schema data available";
         public const string SCHEMA_DESERIALIZED_SUCCESSFULLY = "Schema deserialized successfully";
         public const string FAILED_TO_DESERIALIZE_SCHEMA = "Failed to deserialize schema";
-        public const string DATASET_NOT_FOUND = "Dataset not found";
+        public const string DATASET_NOT_FOUND = DataSetMessages.DATASET_NOT_FOUND;
         public const string ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER = "Access denied - dataset belongs to different user";
         public const string ACCESS_DENIED_TO_DATASET = "Access denied to dataset";
 

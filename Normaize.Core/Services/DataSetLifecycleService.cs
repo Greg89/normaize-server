@@ -372,14 +372,14 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     {
         ValidateDataSetIdAndUserId(id, userId);
         ArgumentNullException.ThrowIfNull(retentionDto);
-        if (retentionDto.RetentionDays <= 0) throw new ArgumentOutOfRangeException(nameof(retentionDto), AppConstants.DataSetLifecycle.RETENTION_DAYS_MUST_BE_POSITIVE);
+        if (retentionDto.RetentionDays <= 0) throw new ArgumentException(AppConstants.DataSetLifecycle.RETENTION_DAYS_MUST_BE_POSITIVE, nameof(retentionDto));
     }
 
     #endregion
 
     #region Operation Implementation Methods
 
-    private async Task<FileAvailabilityResult> CheckFileAvailabilityAsync(DataSet dataSet, IOperationContext context)
+    private async Task<FileAvailabilityResult> CheckFileAvailabilityAsync(DataSet dataSet)
     {
         if (string.IsNullOrEmpty(dataSet.FilePath))
         {
@@ -493,7 +493,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     private async Task<OperationResultDto> PerformFileResetAsync(DataSet dataSet, IOperationContext context)
     {
         // Check if original file is still available
-        var fileAvailability = await CheckFileAvailabilityAsync(dataSet, context);
+        var fileAvailability = await CheckFileAvailabilityAsync(dataSet);
 
         if (!fileAvailability.IsAvailable)
         {
