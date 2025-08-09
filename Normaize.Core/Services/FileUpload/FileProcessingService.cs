@@ -574,7 +574,7 @@ public class FileProcessingService : IFileProcessingService
         records.Capacity = Math.Min(maxRows, AppConstants.FileProcessing.DEFAULT_RECORDS_CAPACITY);
 
         // Assume first child is the template for data rows
-        var firstChild = children.First();
+        var firstChild = children[0];
         var childElements = firstChild.Elements().ToList();
 
         // Extract headers from first element

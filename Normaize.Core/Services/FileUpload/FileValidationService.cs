@@ -114,7 +114,7 @@ public class FileValidationService : IFileValidationService
             throw new ArgumentException(AppConstants.FileUpload.FILE_SIZE_MUST_BE_POSITIVE, nameof(fileRequest));
 
         // Validate file name for security (prevent path traversal attacks)
-        if (fileRequest.FileName.Contains("..") || fileRequest.FileName.Contains("/") || fileRequest.FileName.Contains("\\"))
+        if (fileRequest.FileName.Contains("..") || fileRequest.FileName.Contains('/') || fileRequest.FileName.Contains('\\'))
             throw new ArgumentException("Invalid file name", nameof(fileRequest));
     }
 
@@ -141,7 +141,7 @@ public class FileValidationService : IFileValidationService
             var error = string.Format(AppConstants.FileUpload.FILE_NOT_FOUND_ERROR, filePath);
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.FILE_NOT_FOUND_PROCESSING_WARNING, new Dictionary<string, object>
             {
-                ["FilePath"] = filePath
+                [AppConstants.FileProcessing.FILE_PATH_KEY] = filePath
             });
             throw new FileNotFoundException(error);
         }
