@@ -164,9 +164,9 @@ public static class AppConstants
     /// </summary>
     public static class DataSetMessages
     {
-    public const string DATASET_NOT_FOUND = "Dataset not found";
-    public const string ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER = "Access denied - dataset belongs to different user";
-    public const string ACCESS_DENIED_TO_DATASET = "Access denied to dataset";
+        public const string DATASET_NOT_FOUND = "Dataset not found";
+        public const string ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER = "Access denied - dataset belongs to different user";
+        public const string ACCESS_DENIED_TO_DATASET = "Access denied to dataset";
     }
 
     /// <summary>
