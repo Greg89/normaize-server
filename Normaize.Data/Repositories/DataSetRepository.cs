@@ -29,7 +29,7 @@ public class DataSetRepository(NormaizeContext context) : IDataSetRepository
     public async Task<IEnumerable<DataSet>> GetByUserIdAsync(string userId)
     {
         return await _context.DataSets
-            .Where(d => d.UserId == userId && !d.IsDeleted)
+            .Where(d => d.UserId == userId)
             .OrderByDescending(d => d.UploadedAt)
             .ToListAsync();
     }
