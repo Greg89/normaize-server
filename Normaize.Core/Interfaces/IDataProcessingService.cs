@@ -3,19 +3,28 @@ using Normaize.Core.Models;
 
 namespace Normaize.Core.Interfaces;
 
+/// <summary>
+/// Core service for dataset CRUD operations and file processing.
+/// </summary>
 public interface IDataProcessingService
 {
+    /// <summary>
+    /// Upload and process a new dataset.
+    /// </summary>
     Task<DataSetUploadResponse> UploadDataSetAsync(FileUploadRequest fileRequest, CreateDataSetDto createDto);
+
+    /// <summary>
+    /// Get a dataset by ID.
+    /// </summary>
     Task<DataSetDto?> GetDataSetAsync(int id, string userId);
-    Task<IEnumerable<DataSetDto>> GetDataSetsByUserAsync(string userId, int page = 1, int pageSize = 20);
+
+    /// <summary>
+    /// Update a dataset.
+    /// </summary>
+    Task<DataSetDto?> UpdateDataSetAsync(int id, UpdateDataSetDto updateDto, string userId);
+
+    /// <summary>
+    /// Soft delete a dataset.
+    /// </summary>
     Task<bool> DeleteDataSetAsync(int id, string userId);
-    Task<bool> RestoreDataSetAsync(int id, string userId);
-    Task<bool> HardDeleteDataSetAsync(int id, string userId);
-    Task<string?> GetDataSetPreviewAsync(int id, int rows, string userId);
-    Task<object?> GetDataSetSchemaAsync(int id, string userId);
-    Task<IEnumerable<DataSetDto>> GetDeletedDataSetsAsync(string userId, int page = 1, int pageSize = 20);
-    Task<IEnumerable<DataSetDto>> SearchDataSetsAsync(string searchTerm, string userId, int page = 1, int pageSize = 20);
-    Task<IEnumerable<DataSetDto>> GetDataSetsByFileTypeAsync(FileType fileType, string userId, int page = 1, int pageSize = 20);
-    Task<IEnumerable<DataSetDto>> GetDataSetsByDateRangeAsync(DateTime startDate, DateTime endDate, string userId, int page = 1, int pageSize = 20);
-    Task<DataSetStatisticsDto> GetDataSetStatisticsAsync(string userId);
 }

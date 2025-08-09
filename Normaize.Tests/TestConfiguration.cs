@@ -40,4 +40,4 @@ namespace Normaize.Tests
             return Environment.GetEnvironmentVariable(name) ?? defaultValue;
         }
     }
-} 
+}

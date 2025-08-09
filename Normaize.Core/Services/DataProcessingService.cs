@@ -3,14 +3,12 @@ using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using Normaize.Core.Mapping;
-using System.Text.Json;
-using Microsoft.Extensions.Caching.Memory;
 using System.Diagnostics;
 
 namespace Normaize.Core.Services;
 
 /// <summary>
-/// Service for managing data processing operations with chaos engineering resilience.
+/// Core service for dataset CRUD operations and file processing.
 /// Implements industry-standard error handling and distributed tracing.
 /// </summary>
 public class DataProcessingService : IDataProcessingService
@@ -45,7 +43,7 @@ public class DataProcessingService : IDataProcessingService
             createDto?.UserId,
             new Dictionary<string, object>
             {
-                ["FileName"] = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN
+                [AppConstants.FileProcessing.FILE_NAME_KEY] = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN
             });
 
         // Validate inputs first (before try-catch so exceptions are thrown)
@@ -68,8 +66,7 @@ public class DataProcessingService : IDataProcessingService
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_VALIDATION_STARTED);
             if (!await ExecuteWithTimeoutAsync(
                 () => _fileUploadService.ValidateFileAsync(fileRequest!),
-                _infrastructure.QuickTimeout,
-                context))
+                _infrastructure.QuickTimeout))
             {
                 _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_VALIDATION_FAILED);
                 _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.DataProcessing.INVALID_FILE_FORMAT_OR_SIZE);
@@ -85,76 +82,76 @@ public class DataProcessingService : IDataProcessingService
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.FILE_SAVE_STARTED);
             var filePath = await ExecuteWithTimeoutAsync(
                 () => _fileUploadService.SaveFileAsync(fileRequest!),
-                _infrastructure.DefaultTimeout,
-                context);
+                _infrastructure.DefaultTimeout);
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.FILE_SAVED, new Dictionary<string, object>
             {
-                ["FilePath"] = filePath
+                [AppConstants.FileProcessing.FILE_PATH_KEY] = filePath
             });
 
             // Process file and create dataset
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.FILE_PROCESSING_STARTED);
             var dataSet = await ExecuteWithTimeoutAsync(
                 () => _fileUploadService.ProcessFileAsync(filePath, Path.GetExtension(fileRequest!.FileName)),
-                _infrastructure.DefaultTimeout,
-                context);
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.FILE_PROCESSING_COMPLETED, new Dictionary<string, object>
+                _infrastructure.DefaultTimeout);
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.FILE_PROCESSED, new Dictionary<string, object>
             {
                 ["RowCount"] = dataSet.RowCount,
-                ["ColumnCount"] = dataSet.ColumnCount,
-                ["FileSize"] = dataSet.FileSize
+                ["ColumnCount"] = dataSet.ColumnCount
             });
 
-            // Update with user-provided information
-            dataSet.Name = createDto!.Name ?? AppConstants.DataProcessing.UNNAMED_DATASET;
-            dataSet.Description = createDto.Description ?? string.Empty;
-            dataSet.UserId = createDto.UserId ?? AppConstants.Messages.UNKNOWN;
+            // Set user-specific properties
+            dataSet.UserId = createDto!.UserId;
+            dataSet.Name = createDto.Name;
+            dataSet.Description = createDto.Description;
+            dataSet.FileName = fileRequest!.FileName;
+            dataSet.FilePath = filePath;
+            dataSet.FileSize = fileRequest.FileSize;
+            dataSet.FileType = Path.GetExtension(fileRequest.FileName).ToLowerInvariant() switch
+            {
+                AppConstants.DataProcessing.CSV_EXTENSION => FileType.CSV,
+                AppConstants.DataProcessing.JSON_EXTENSION => FileType.JSON,
+                AppConstants.DataProcessing.XML_EXTENSION => FileType.XML,
+                AppConstants.DataProcessing.XLSX_EXTENSION => FileType.EXCEL,
+                _ => FileType.UNKNOWN
+            };
+            dataSet.StorageProvider = StorageProvider.S3;
+            dataSet.UploadedAt = DateTime.UtcNow;
+            dataSet.IsProcessed = true;
+            dataSet.ProcessedAt = DateTime.UtcNow;
 
             // Save to database
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATABASE_SAVE_STARTED);
             var savedDataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.AddAsync(dataSet),
-                _infrastructure.QuickTimeout,
-                context);
-            context.SetMetadata(AppConstants.DataStructures.DATASET_ID, savedDataSet.Id);
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATABASE_SAVE_COMPLETED);
+                _infrastructure.DefaultTimeout);
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATABASE_SAVED, new Dictionary<string, object>
+            {
+                [AppConstants.DataStructures.DATASETID] = savedDataSet.Id
+            });
 
-            // Clear cache for this user
-            _infrastructure.Cache.Remove($"{AppConstants.DataProcessing.STATS_CACHE_KEY_PREFIX}{createDto.UserId}");
+            // Log audit action
+            await _auditService.LogDataSetActionAsync(savedDataSet.Id, createDto.UserId, AppConstants.DataProcessing.AUDIT_ACTION_UPLOAD_DATA_SET, new Dictionary<string, object>
+            {
+                ["FileName"] = fileRequest.FileName,
+                ["FileSize"] = fileRequest.FileSize,
+                [AppConstants.DataStructures.CORRELATION_ID] = correlationId
+            });
 
-            // Log audit trail
-            await ExecuteWithTimeoutAsync(
-                () => _auditService.LogDataSetActionAsync(
-                    savedDataSet.Id,
-                    createDto.UserId ?? AppConstants.Messages.UNKNOWN,
-                    "Created",
-                    new
-                    {
-                        fileName = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN,
-                        fileSize = dataSet.FileSize,
-                        rowCount = dataSet.RowCount,
-                        columnCount = dataSet.ColumnCount,
-                        filePath
-                    }),
-                _infrastructure.QuickTimeout,
-                context);
-
-            _infrastructure.StructuredLogging.LogSummary(context, true);
-
+            _infrastructure.StructuredLogging.LogSummary(context, true, AppConstants.DataProcessing.UPLOAD_SUCCESSFUL);
             return new DataSetUploadResponse
             {
-                DataSetId = savedDataSet.Id,
                 Success = true,
-                Message = AppConstants.DataProcessing.DATASET_UPLOADED_SUCCESSFULLY
+                Message = AppConstants.DataProcessing.UPLOAD_SUCCESSFUL,
+                DataSetId = savedDataSet.Id
             };
         }
         catch (Exception ex)
         {
-            _infrastructure.StructuredLogging.LogSummary(context, false, ex.Message);
+            _infrastructure.StructuredLogging.LogException(ex, AppConstants.DataProcessing.UPLOAD_FAILED);
             return new DataSetUploadResponse
             {
                 Success = false,
-                Message = AppConstants.DataProcessing.ERROR_UPLOADING_DATASET + ex.Message
+                Message = $"{AppConstants.DataProcessing.UPLOAD_FAILED}: {ex.Message}"
             };
         }
     }
@@ -162,389 +159,122 @@ public class DataProcessingService : IDataProcessingService
     public async Task<DataSetDto?> GetDataSetAsync(int id, string userId)
     {
         return await ExecuteDataSetOperationAsync(
-            operationName: nameof(GetDataSetAsync),
-            userId: userId,
-            additionalMetadata: new Dictionary<string, object> { [AppConstants.DataStructures.DATASET_ID] = id },
-            validation: () => ValidateGetDataSetInputs(id, userId),
-            operation: async (context) =>
+            AppConstants.DataProcessing.GET_DATA_SET,
+            userId,
+            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id },
+            () => ValidateGetDataSetInputs(id, userId),
+            async (context) =>
             {
-                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
-                if (dataSet == null) return null;
+                var dataSet = await _dataSetRepository.GetByIdAsync(id);
 
-                await LogAuditActionAsync(id, userId, "Viewed", context);
+                if (dataSet == null)
+                {
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_NOT_FOUND);
+                    return null;
+                }
+
+                if (dataSet.UserId != userId)
+                {
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
+                    throw new UnauthorizedAccessException($"{AppConstants.DataProcessing.ACCESS_DENIED_TO_DATASET} {id}");
+                }
+
+                // Log audit action
+                await _auditService.LogDataSetActionAsync(id, userId, AppConstants.DataProcessing.AUDIT_ACTION_VIEWED, new Dictionary<string, object>
+                {
+                    [AppConstants.DataStructures.CORRELATION_ID] = context.CorrelationId
+                });
+
                 return dataSet.ToDto();
             });
     }
 
-    public async Task<IEnumerable<DataSetDto>> GetDataSetsByUserAsync(string userId, int page = 1, int pageSize = 20)
+    public async Task<DataSetDto?> UpdateDataSetAsync(int id, UpdateDataSetDto updateDto, string userId)
     {
         return await ExecuteDataSetOperationAsync(
-            operationName: nameof(GetDataSetsByUserAsync),
-            userId: userId,
-            additionalMetadata: new Dictionary<string, object>
+            AppConstants.DataProcessing.UPDATE_DATA_SET,
+            userId,
+            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id },
+            () => ValidateUpdateDataSetInputs(id, updateDto, userId),
+            async (context) =>
             {
-                [AppConstants.DataStructures.PAGE] = page,
-                [AppConstants.DataStructures.PAGE_SIZE] = pageSize
-            },
-            validation: () =>
-            {
-                ValidatePaginationInputs(page, pageSize);
-                ValidateUserId(userId);
-            },
-            operation: async (context) =>
-            {
-                var dataSets = await ExecuteWithTimeoutAsync(
-                    () => _dataSetRepository.GetByUserIdAsync(userId, false),
-                    _infrastructure.QuickTimeout,
-                    context);
+                var dataSet = await _dataSetRepository.GetByIdAsync(id);
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
+                if (dataSet == null)
                 {
-                    [AppConstants.DataStructures.TOTAL_DATASETS] = dataSets.Count()
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_NOT_FOUND);
+                    return null;
+                }
+
+                if (dataSet.UserId != userId)
+                {
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
+                    throw new UnauthorizedAccessException($"{AppConstants.DataProcessing.ACCESS_DENIED_TO_DATASET} {id}");
+                }
+
+                // Update properties
+                dataSet.Name = updateDto.Name;
+                dataSet.Description = updateDto.Description;
+
+                var updatedDataSet = await _dataSetRepository.UpdateAsync(dataSet);
+
+                // Log audit action
+                await _auditService.LogDataSetActionAsync(id, userId, AppConstants.DataProcessing.AUDIT_ACTION_UPDATE_DATA_SET, new Dictionary<string, object>
+                {
+                    [AppConstants.DataStructures.CORRELATION_ID] = context.CorrelationId
                 });
 
-                var pagedDataSets = ApplyPagination(dataSets, page, pageSize, context);
-                return pagedDataSets.ToDtoCollection();
+                return updatedDataSet.ToDto();
             });
     }
 
     public async Task<bool> DeleteDataSetAsync(int id, string userId)
     {
         return await ExecuteDataSetOperationAsync(
-            operationName: nameof(DeleteDataSetAsync),
-            userId: userId,
-            additionalMetadata: new Dictionary<string, object> { [AppConstants.DataStructures.DATASET_ID] = id },
-            validation: () => ValidateDeleteInputs(id, userId),
-            operation: async (context) =>
+            AppConstants.DataProcessing.DELETE_DATA_SET,
+            userId,
+            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id },
+            () => ValidateDeleteInputs(id, userId),
+            async (context) =>
             {
-                // Chaos engineering: Simulate deletion failure
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.DataProcessing.DELETION_FAILURE, () =>
+                var dataSet = await _dataSetRepository.GetByIdAsync(id);
+
+                if (dataSet == null)
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.CHAOS_ENGINEERING_SIMULATING_DELETION_FAILURE, new Dictionary<string, object>
-                    {
-                        ["ChaosType"] = AppConstants.DataProcessing.DELETION_FAILURE
-                    });
-                    throw new InvalidOperationException(AppConstants.DataProcessing.SIMULATED_DELETION_FAILURE_MESSAGE);
-                }, new Dictionary<string, object> { ["UserId"] = userId });
-
-                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
-                if (dataSet == null) return false;
-
-                var result = await ExecuteWithTimeoutAsync(
-                    () => _dataSetRepository.DeleteAsync(id),
-                    _infrastructure.QuickTimeout,
-                    context);
-
-                if (result)
-                {
-                    await HandleSuccessfulDeletionAsync(id, userId, dataSet, context);
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_NOT_FOUND);
+                    return false;
                 }
 
-                return result;
-            });
-    }
-
-    public async Task<bool> RestoreDataSetAsync(int id, string userId)
-    {
-        return await ExecuteDataSetOperationAsync(
-            operationName: nameof(RestoreDataSetAsync),
-            userId: userId,
-            additionalMetadata: new Dictionary<string, object> { [AppConstants.DataStructures.DATASET_ID] = id },
-            validation: () => ValidateRestoreInputs(id, userId),
-            operation: async (context) =>
-            {
-                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
-                if (dataSet == null) return false;
-
-                var result = await ExecuteWithTimeoutAsync(
-                    () => _dataSetRepository.RestoreAsync(id),
-                    _infrastructure.QuickTimeout,
-                    context);
-
-                if (result)
+                if (dataSet.UserId != userId)
                 {
-                    await HandleSuccessfulRestoreAsync(id, userId, context);
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
+                    throw new UnauthorizedAccessException($"{AppConstants.DataProcessing.ACCESS_DENIED_TO_DATASET} {id}");
                 }
 
-                return result;
-            });
-    }
-
-    public async Task<bool> HardDeleteDataSetAsync(int id, string userId)
-    {
-        return await ExecuteDataSetOperationAsync(
-            operationName: nameof(HardDeleteDataSetAsync),
-            userId: userId,
-            additionalMetadata: new Dictionary<string, object> { [AppConstants.DataStructures.DATASET_ID] = id },
-            validation: () => ValidateHardDeleteInputs(id, userId),
-            operation: async (context) =>
-            {
-                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
-                if (dataSet == null) return false;
-
-                await DeleteDataSetFileAsync(dataSet, context);
-
-                var result = await ExecuteWithTimeoutAsync(
-                    () => _dataSetRepository.HardDeleteAsync(id),
-                    _infrastructure.QuickTimeout,
-                    context);
-
-                if (result)
+                if (dataSet.IsDeleted)
                 {
-                    await HandleSuccessfulHardDeleteAsync(id, userId, dataSet, context);
+                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_IS_ALREADY_DELETED);
+                    return true;
                 }
 
-                return result;
-            });
-    }
+                // Soft delete
+                dataSet.IsDeleted = true;
+                dataSet.DeletedAt = DateTime.UtcNow;
 
-    public async Task<string?> GetDataSetPreviewAsync(int id, int rows, string userId)
-    {
-        return await ExecuteDataSetOperationAsync(
-            operationName: nameof(GetDataSetPreviewAsync),
-            userId: userId,
-            additionalMetadata: new Dictionary<string, object>
-            {
-                [AppConstants.DataStructures.DATASET_ID] = id,
-                ["RequestedRows"] = rows
-            },
-            validation: () => ValidatePreviewInputs(id, rows, userId),
-            operation: async (context) =>
-            {
-                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
-                if (dataSet == null || string.IsNullOrEmpty(dataSet.PreviewData))
+                await _dataSetRepository.UpdateAsync(dataSet);
+
+                // Log audit action
+                await _auditService.LogDataSetActionAsync(id, userId, AppConstants.DataProcessing.AUDIT_ACTION_DELETE_DATA_SET, new Dictionary<string, object>
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.ACCESS_DENIED_OR_NO_PREVIEW_DATA, new Dictionary<string, object>
-                    {
-                        ["HasPreviewData"] = !string.IsNullOrEmpty(dataSet?.PreviewData)
-                    });
-                    return null;
-                }
-
-                await LogAuditActionAsync(id, userId, "Previewed", context, new { rows });
-                return dataSet.PreviewData;
-            });
-    }
-
-    public async Task<object?> GetDataSetSchemaAsync(int id, string userId)
-    {
-        return await ExecuteDataSetOperationAsync(
-            operationName: nameof(GetDataSetSchemaAsync),
-            userId: userId,
-            additionalMetadata: new Dictionary<string, object> { [AppConstants.DataStructures.DATASET_ID] = id },
-            validation: () => ValidateSchemaInputs(id, userId),
-            operation: async (context) =>
-            {
-                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
-                if (dataSet == null || string.IsNullOrEmpty(dataSet.Schema))
-                {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.ACCESS_DENIED_OR_NO_SCHEMA, new Dictionary<string, object>
-                    {
-                        ["HasSchema"] = !string.IsNullOrEmpty(dataSet?.Schema)
-                    });
-                    return null;
-                }
-
-                var schema = await DeserializeSchemaSafelyAsync(dataSet.Schema, id, context);
-                return schema;
-            });
-    }
-
-    public async Task<IEnumerable<DataSetDto>> GetDeletedDataSetsAsync(string userId, int page = 1, int pageSize = 20)
-    {
-        return await ExecuteDataSetOperationAsync(
-            operationName: nameof(GetDeletedDataSetsAsync),
-            userId: userId,
-            additionalMetadata: new Dictionary<string, object>
-            {
-                [AppConstants.DataStructures.PAGE] = page,
-                [AppConstants.DataStructures.PAGE_SIZE] = pageSize
-            },
-            validation: () =>
-            {
-                ValidatePaginationInputs(page, pageSize);
-                ValidateUserId(userId);
-            },
-            operation: async (context) =>
-            {
-                var dataSets = await ExecuteWithTimeoutAsync(
-                    () => _dataSetRepository.GetByUserIdAsync(userId, includeDeleted: true),
-                    _infrastructure.QuickTimeout,
-                    context);
-
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
-                {
-                    [AppConstants.DataStructures.TOTAL_DATASETS] = dataSets.Count()
+                    [AppConstants.DataStructures.CORRELATION_ID] = context.CorrelationId
                 });
 
-                var deletedDataSets = dataSets
-                    .Where(d => d.IsDeleted)
-                    .Skip((page - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToList();
-
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.FILTERING_DELETED_DATASETS_COMPLETED, new Dictionary<string, object>
-                {
-                    ["DeletedDataSets"] = deletedDataSets.Count
-                });
-
-                return deletedDataSets.ToDtoCollection();
+                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_SOFT_DELETED_SUCCESSFULLY);
+                return true;
             });
     }
 
-    public async Task<IEnumerable<DataSetDto>> SearchDataSetsAsync(string searchTerm, string userId, int page = 1, int pageSize = 20)
-    {
-        return await ExecuteDataSetOperationAsync(
-            operationName: nameof(SearchDataSetsAsync),
-            userId: userId,
-            additionalMetadata: new Dictionary<string, object>
-            {
-                [AppConstants.DataStructures.SEARCH_TERM] = searchTerm,
-                [AppConstants.DataStructures.PAGE] = page,
-                [AppConstants.DataStructures.PAGE_SIZE] = pageSize
-            },
-            validation: () => ValidateSearchInputs(searchTerm, userId, page, pageSize),
-            operation: async (context) =>
-            {
-                var dataSets = await ExecuteWithTimeoutAsync(
-                    () => _dataSetRepository.SearchAsync(searchTerm, userId),
-                    _infrastructure.QuickTimeout,
-                    context);
-
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.SEARCH_OPERATION_COMPLETED, new Dictionary<string, object>
-                {
-                    ["TotalMatches"] = dataSets.Count()
-                });
-
-                var pagedDataSets = ApplyPagination(dataSets, page, pageSize, context);
-                return pagedDataSets.ToDtoCollection();
-            });
-    }
-
-    public async Task<IEnumerable<DataSetDto>> GetDataSetsByFileTypeAsync(FileType fileType, string userId, int page = 1, int pageSize = 20)
-    {
-        return await ExecuteDataSetOperationAsync(
-            operationName: nameof(GetDataSetsByFileTypeAsync),
-            userId: userId,
-            additionalMetadata: new Dictionary<string, object>
-            {
-                [AppConstants.DataStructures.FILE_TYPE] = fileType.ToString(),
-                [AppConstants.DataStructures.PAGE] = page,
-                [AppConstants.DataStructures.PAGE_SIZE] = pageSize
-            },
-            validation: () =>
-            {
-                ValidatePaginationInputs(page, pageSize);
-                ValidateUserId(userId);
-            },
-            operation: async (context) =>
-            {
-                var dataSets = await ExecuteWithTimeoutAsync(
-                    () => _dataSetRepository.GetByFileTypeAsync(fileType, userId),
-                    _infrastructure.QuickTimeout,
-                    context);
-
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATABASE_RETRIEVAL_BY_FILE_TYPE_COMPLETED, new Dictionary<string, object>
-                {
-                    [AppConstants.DataStructures.TOTAL_DATASETS] = dataSets.Count()
-                });
-
-                var pagedDataSets = ApplyPagination(dataSets, page, pageSize, context);
-                return pagedDataSets.ToDtoCollection();
-            });
-    }
-
-    public async Task<IEnumerable<DataSetDto>> GetDataSetsByDateRangeAsync(DateTime startDate, DateTime endDate, string userId, int page = 1, int pageSize = 20)
-    {
-        return await ExecuteDataSetOperationAsync(
-            operationName: nameof(GetDataSetsByDateRangeAsync),
-            userId: userId,
-            additionalMetadata: new Dictionary<string, object>
-            {
-                [AppConstants.DataStructures.START_DATE] = startDate.ToString("yyyy-MM-dd"),
-                [AppConstants.DataStructures.END_DATE] = endDate.ToString("yyyy-MM-dd"),
-                [AppConstants.DataStructures.PAGE] = page,
-                [AppConstants.DataStructures.PAGE_SIZE] = pageSize
-            },
-            validation: () => ValidateDateRangeInputs(startDate, endDate, userId, page, pageSize),
-            operation: async (context) =>
-            {
-                var dataSets = await ExecuteWithTimeoutAsync(
-                    () => _dataSetRepository.GetByDateRangeAsync(startDate, endDate, userId),
-                    _infrastructure.QuickTimeout,
-                    context);
-
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATABASE_RETRIEVAL_BY_DATE_RANGE_COMPLETED, new Dictionary<string, object>
-                {
-                    [AppConstants.DataStructures.TOTAL_DATASETS] = dataSets.Count()
-                });
-
-                var pagedDataSets = ApplyPagination(dataSets, page, pageSize, context);
-                return pagedDataSets.ToDtoCollection();
-            });
-    }
-
-    public async Task<DataSetStatisticsDto> GetDataSetStatisticsAsync(string userId)
-    {
-        return await ExecuteDataSetOperationAsync(
-            operationName: nameof(GetDataSetStatisticsAsync),
-            userId: userId,
-            additionalMetadata: null,
-            validation: () => ValidateUserId(userId),
-            operation: async (context) =>
-            {
-                // Chaos engineering: Simulate cache corruption
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.CACHE_FAILURE, () =>
-                {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.CHAOS_ENGINEERING_SIMULATING_CACHE_CORRUPTION, new Dictionary<string, object>
-                    {
-                        ["ChaosType"] = AppConstants.DataProcessing.CACHE_CORRUPTION
-                    });
-                    _infrastructure.Cache.Remove($"{AppConstants.DataProcessing.STATS_CACHE_KEY_PREFIX}{userId}");
-                    return Task.CompletedTask;
-                }, new Dictionary<string, object> { ["UserId"] = userId });
-
-                var cacheKey = $"{AppConstants.DataProcessing.STATS_CACHE_KEY_PREFIX}{userId}";
-
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.CACHE_LOOKUP_STARTED);
-                if (_infrastructure.Cache.TryGetValue(cacheKey, out DataSetStatisticsDto? cachedStats))
-                {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.STATISTICS_RETRIEVED_FROM_CACHE);
-                    return cachedStats!;
-                }
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.CACHE_MISS_CALCULATING_STATISTICS);
-
-                var totalCount = await ExecuteWithTimeoutAsync(
-                    () => _dataSetRepository.GetTotalCountAsync(userId),
-                    _infrastructure.QuickTimeout,
-                    context);
-
-                var totalSize = await ExecuteWithTimeoutAsync(
-                    () => _dataSetRepository.GetTotalSizeAsync(userId),
-                    _infrastructure.QuickTimeout,
-                    context);
-
-                var recentlyModified = await ExecuteWithTimeoutAsync(
-                    () => _dataSetRepository.GetRecentlyModifiedAsync(userId, 5),
-                    _infrastructure.QuickTimeout,
-                    context);
-
-                var statistics = new DataSetStatisticsDto
-                {
-                    TotalCount = totalCount,
-                    TotalSize = totalSize,
-                    RecentlyModified = recentlyModified.ToDtoCollection()
-                };
-
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.CACHE_STORAGE_STARTED);
-                _infrastructure.Cache.Set(cacheKey, statistics, _infrastructure.CacheExpiration);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.CACHE_STORAGE_COMPLETED);
-
-                return statistics;
-            });
-    }
-
-    #region Private Methods
+    #region Private Helper Methods
 
     private async Task<T> ExecuteDataSetOperationAsync<T>(
         string operationName,
@@ -554,193 +284,44 @@ public class DataProcessingService : IDataProcessingService
         Func<IOperationContext, Task<T>> operation)
     {
         var correlationId = GetCorrelationId();
-        var context = _infrastructure.StructuredLogging.CreateContext(operationName, correlationId, userId, additionalMetadata);
+        var context = _infrastructure.StructuredLogging.CreateContext(
+            operationName,
+            correlationId,
+            userId,
+            additionalMetadata);
 
         try
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
             validation();
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
+
+            _infrastructure.StructuredLogging.LogStep(context, $"{operationName} started");
 
             var result = await operation(context);
-            _infrastructure.StructuredLogging.LogSummary(context, true);
+
+            _infrastructure.StructuredLogging.LogSummary(context, true, $"{operationName} completed successfully");
             return result;
         }
         catch (Exception ex)
         {
-            _infrastructure.StructuredLogging.LogSummary(context, false, ex.Message);
-            throw new InvalidOperationException($"Failed to complete {operationName} for user {userId}", ex);
+            _infrastructure.StructuredLogging.LogException(ex, $"{operationName} failed");
+            throw;
         }
     }
 
-    private async Task<DataSet?> RetrieveDataSetWithAccessControlAsync(int id, string userId, IOperationContext context)
-    {
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_RETRIEVAL_STARTED);
-        var dataSet = await ExecuteWithTimeoutAsync(
-            () => _dataSetRepository.GetByIdAsync(id),
-            _infrastructure.QuickTimeout,
-            context);
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_RETRIEVAL_COMPLETED);
-
-        if (dataSet?.UserId != userId)
-        {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.ACCESS_DENIED_USER_MISMATCH, new Dictionary<string, object>
-            {
-                [AppConstants.DataStructures.EXPECTED_USER_ID] = userId,
-                [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet?.UserId ?? "null"
-            });
-            _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.ValidationMessages.DATASET_NOT_FOUND_OR_ACCESS_DENIED);
-            return null;
-        }
-
-        return dataSet;
-    }
-
-    private async Task DeleteDataSetFileAsync(DataSet dataSet, IOperationContext context)
-    {
-        if (!string.IsNullOrEmpty(dataSet.FilePath))
-        {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.FILE_DELETION_STARTED, new Dictionary<string, object>
-            {
-                ["FilePath"] = dataSet.FilePath
-            });
-            try
-            {
-                await ExecuteWithTimeoutAsync(
-                    () => _fileUploadService.DeleteFileAsync(dataSet.FilePath),
-                    _infrastructure.QuickTimeout,
-                    context);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.FILE_DELETION_COMPLETED_SUCCESSFULLY);
-            }
-            catch (Exception ex)
-            {
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.FILE_DELETION_FAILED_CONTINUING, new Dictionary<string, object>
-                {
-                    ["FileDeletionError"] = ex.Message
-                });
-            }
-        }
-        else
-        {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.NO_FILE_PATH_TO_DELETE);
-        }
-    }
-
-    private async Task HandleSuccessfulDeletionAsync(int id, string userId, DataSet dataSet, IOperationContext context)
-    {
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.CACHE_CLEARING_STARTED);
-        _infrastructure.Cache.Remove($"{AppConstants.DataProcessing.STATS_CACHE_KEY_PREFIX}{userId}");
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.CACHE_CLEARING_COMPLETED);
-
-        await LogAuditActionAsync(id, userId, "Deleted", context, new
-        {
-            fileName = dataSet.FileName,
-            fileSize = dataSet.FileSize,
-            rowCount = dataSet.RowCount
-        });
-    }
-
-    private async Task HandleSuccessfulRestoreAsync(int id, string userId, IOperationContext context)
-    {
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.CACHE_CLEARING_STARTED);
-        _infrastructure.Cache.Remove($"{AppConstants.DataProcessing.STATS_CACHE_KEY_PREFIX}{userId}");
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.CACHE_CLEARING_COMPLETED);
-
-        await LogAuditActionAsync(id, userId, "Restored", context);
-    }
-
-    private async Task HandleSuccessfulHardDeleteAsync(int id, string userId, DataSet dataSet, IOperationContext context)
-    {
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.CACHE_CLEARING_STARTED);
-        _infrastructure.Cache.Remove($"{AppConstants.DataProcessing.STATS_CACHE_KEY_PREFIX}{userId}");
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.CACHE_CLEARING_COMPLETED);
-
-        await LogAuditActionAsync(id, userId, "HardDeleted", context, new
-        {
-            fileName = dataSet.FileName,
-            fileSize = dataSet.FileSize,
-            rowCount = dataSet.RowCount
-        });
-    }
-
-    private async Task LogAuditActionAsync(int id, string userId, string action, IOperationContext context, object? additionalData = null)
-    {
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_STARTED);
-        await ExecuteWithTimeoutAsync(
-            () => _auditService.LogDataSetActionAsync(id, userId, action, additionalData),
-            _infrastructure.QuickTimeout,
-            context);
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.AUDIT_LOGGING_COMPLETED);
-    }
-
-    private List<DataSet> ApplyPagination(IEnumerable<DataSet> dataSets, int page, int pageSize, IOperationContext context)
-    {
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_STARTED);
-        var pagedDataSets = dataSets
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.PAGINATION_COMPLETED, new Dictionary<string, object>
-        {
-            ["PagedDataSets"] = pagedDataSets.Count
-        });
-        return pagedDataSets;
-    }
-
-    private async Task<T> ExecuteWithTimeoutAsync<T>(Func<Task<T>> operation, TimeSpan timeout, IOperationContext context)
+    private async Task<T> ExecuteWithTimeoutAsync<T>(Func<Task<T>> operation, TimeSpan timeout)
     {
         using var cts = new CancellationTokenSource(timeout);
-
         try
         {
             return await operation().WaitAsync(cts.Token);
         }
-        catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
-            _infrastructure.StructuredLogging.LogStep(context, "Operation timed out", new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogWarning(AppConstants.DataProcessing.OPERATION_TIMED_OUT, new Dictionary<string, object>
             {
-                ["Timeout"] = timeout.ToString(),
-                ["OperationName"] = context.OperationName,
-                ["ErrorMessage"] = ex.Message
+                ["TimeoutMs"] = timeout.TotalMilliseconds
             });
-            throw new TimeoutException($"Operation {context.OperationName} timed out after {timeout}");
-        }
-    }
-
-    private async Task ExecuteWithTimeoutAsync(Func<Task> operation, TimeSpan timeout, IOperationContext context)
-    {
-        using var cts = new CancellationTokenSource(timeout);
-
-        try
-        {
-            await operation().WaitAsync(cts.Token);
-        }
-        catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
-        {
-            _infrastructure.StructuredLogging.LogStep(context, "Operation timed out", new Dictionary<string, object>
-            {
-                ["Timeout"] = timeout.ToString(),
-                ["OperationName"] = context.OperationName,
-                ["ErrorMessage"] = ex.Message
-            });
-            throw new TimeoutException($"Operation {context.OperationName} timed out after {timeout}");
-        }
-    }
-
-    private async Task<object?> DeserializeSchemaSafelyAsync(string schema, int dataSetId, IOperationContext context)
-    {
-        try
-        {
-            return await Task.Run(() => JsonSerializer.Deserialize<object>(schema));
-        }
-        catch (JsonException jsonEx)
-        {
-            _infrastructure.StructuredLogging.LogStep(context, "Failed to deserialize schema", new Dictionary<string, object>
-            {
-                ["DataSetId"] = dataSetId,
-                ["ErrorMessage"] = jsonEx.Message
-            });
-            return null;
+            throw new TimeoutException($"{AppConstants.DataProcessing.OPERATION_TIMED_OUT} after {timeout.TotalMilliseconds}ms");
         }
     }
 
@@ -754,93 +335,31 @@ public class DataProcessingService : IDataProcessingService
     {
         ArgumentNullException.ThrowIfNull(fileRequest);
         ArgumentNullException.ThrowIfNull(createDto);
+        if (string.IsNullOrWhiteSpace(createDto.UserId)) throw new ArgumentException(AppConstants.DataProcessing.USER_ID_CANNOT_BE_NULL_OR_EMPTY, nameof(createDto));
+        if (string.IsNullOrWhiteSpace(createDto.Name)) throw new ArgumentException(AppConstants.DataProcessing.NAME_CANNOT_BE_NULL_OR_EMPTY, nameof(createDto));
+        if (string.IsNullOrWhiteSpace(fileRequest.FileName)) throw new ArgumentException(AppConstants.DataProcessing.FILE_NAME_CANNOT_BE_NULL_OR_EMPTY, nameof(fileRequest));
+        if (fileRequest.FileSize <= 0) throw new ArgumentException(AppConstants.DataProcessing.FILE_SIZE_MUST_BE_POSITIVE, nameof(fileRequest));
 
-        if (string.IsNullOrWhiteSpace(fileRequest.FileName))
-            throw new ArgumentException("File name is required", nameof(fileRequest));
-
-        if (string.IsNullOrWhiteSpace(createDto.Name))
-            throw new ArgumentException("Dataset name is required", nameof(createDto));
-
-        if (string.IsNullOrWhiteSpace(createDto.UserId))
-            throw new ArgumentException("User ID is required", nameof(createDto));
-
-        // Security: Validate file path to prevent directory traversal
+        // Validate file name for security (prevent path traversal attacks)
         if (fileRequest.FileName.Contains("..") || fileRequest.FileName.Contains('/') || fileRequest.FileName.Contains('\\'))
-            throw new ArgumentException("Invalid file name", nameof(fileRequest));
-    }
-
-    private static void ValidateDataSetIdAndUserId(int id, string userId)
-    {
-        if (id <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
-
-        ValidateUserId(userId);
+            throw new ArgumentException(AppConstants.DataProcessing.INVALID_FILE_NAME, nameof(fileRequest));
     }
 
     private static void ValidateGetDataSetInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
 
+    private static void ValidateUpdateDataSetInputs(int id, UpdateDataSetDto updateDto, string userId)
+    {
+        ValidateDataSetIdAndUserId(id, userId);
+        ArgumentNullException.ThrowIfNull(updateDto);
+        if (string.IsNullOrWhiteSpace(updateDto.Name)) throw new ArgumentException(AppConstants.DataProcessing.NAME_CANNOT_BE_NULL_OR_EMPTY, nameof(updateDto));
+    }
+
     private static void ValidateDeleteInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
 
-    private static void ValidateRestoreInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
-
-    private static void ValidateHardDeleteInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
-
-    private static void ValidatePreviewInputs(int id, int rows, string userId)
+    private static void ValidateDataSetIdAndUserId(int id, string userId)
     {
-        if (id <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
-
-        if (rows <= 0 || rows > 1000)
-            throw new ArgumentException("Rows must be between 1 and 1000", nameof(rows));
-
-        ValidateUserId(userId);
-    }
-
-    private static void ValidateSchemaInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
-
-    private static void ValidateSearchInputs(string searchTerm, string userId, int page, int pageSize)
-    {
-        if (string.IsNullOrWhiteSpace(searchTerm))
-            throw new ArgumentException("Search term is required", nameof(searchTerm));
-
-        if (searchTerm.Length > 100)
-            throw new ArgumentException("Search term cannot exceed 100 characters", nameof(searchTerm));
-
-        ValidateUserId(userId);
-        ValidatePaginationInputs(page, pageSize);
-    }
-
-    private static void ValidateDateRangeInputs(DateTime startDate, DateTime endDate, string userId, int page, int pageSize)
-    {
-        if (startDate >= endDate)
-            throw new ArgumentException("Start date must be before end date");
-
-        if (endDate > DateTime.UtcNow.AddDays(1))
-            throw new ArgumentException("End date cannot be in the future");
-
-        if (startDate < DateTime.UtcNow.AddYears(-10))
-            throw new ArgumentException("Start date cannot be more than 10 years ago");
-
-        ValidateUserId(userId);
-        ValidatePaginationInputs(page, pageSize);
-    }
-
-    private static void ValidatePaginationInputs(int page, int pageSize)
-    {
-        if (page <= 0)
-            throw new ArgumentException("Page must be positive", nameof(page));
-
-        if (pageSize <= 0 || pageSize > 100)
-            throw new ArgumentException("Page size must be between 1 and 100", nameof(pageSize));
-    }
-
-    private static void ValidateUserId(string userId)
-    {
-        if (string.IsNullOrWhiteSpace(userId))
-            throw new ArgumentException("User ID is required", nameof(userId));
-
-        if (userId.Length > 100)
-            throw new ArgumentException("User ID cannot exceed 100 characters", nameof(userId));
+        if (id <= 0) throw new ArgumentException(AppConstants.DataProcessing.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
+        if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentException(AppConstants.DataProcessing.USER_ID_CANNOT_BE_NULL_OR_EMPTY, nameof(userId));
     }
 
     #endregion

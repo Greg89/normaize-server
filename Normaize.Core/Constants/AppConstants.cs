@@ -25,7 +25,8 @@ public static class AppConstants
         public const string PRODUCTION = "Production";
         public const string BETA = "Beta";
         public const string TEST = "Test";
-        public const string ASPNETCORE_ENVIRONMENT = "ASPNETCORE_ENVIRONMENT";
+        // Alias to canonical environment variable name
+        public const string ASPNETCORE_ENVIRONMENT = EnvironmentVariables.ASPNETCORE_ENVIRONMENT;
     }
 
     /// <summary>
@@ -50,6 +51,9 @@ public static class AppConstants
         public const string ANALYSIS_CREATION_FAILURE = "AnalysisCreationFailure";
         public const string DATABASE_TIMEOUT = "DatabaseTimeout";
         public const string STORAGE_FAILURE = "StorageFailure";
+        public const string RESTORE_OPERATION_DELAY = "RestoreOperationDelay";
+        public const string FILE_PROCESSING_FAILURE = "FileProcessingFailure";
+        public const string DELAY_MS_KEY = "DelayMs";
         public const string SIMULATED_PROCESSING_DELAY_MESSAGE = "Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}";
 
         // Chaos engineering delay constants
@@ -69,6 +73,12 @@ public static class AppConstants
         public const int MEMORY_PRESSURE_OBJECT_COUNT = 30;
         public const int MEMORY_PRESSURE_OBJECT_SIZE_BYTES = 1024 * 1024; // 1MB
         public const int MEMORY_PRESSURE_DELAY_MS = 100;
+
+        // Dataset lifecycle chaos engineering constants
+        public const int RESTORE_OPERATION_DELAY_MIN_MS = 2000;
+        public const int RESTORE_OPERATION_DELAY_MAX_MS = 8000;
+        public const int RETENTION_POLICY_TIMEOUT_MIN_MS = 10000;
+        public const int RETENTION_POLICY_TIMEOUT_MAX_MS = 20000;
     }
 
     /// <summary>
@@ -133,6 +143,7 @@ public static class AppConstants
         public const string AUDIT_LOGGING_COMPLETED = "Audit logging completed";
         public const string PAGINATION_STARTED = "Pagination processing started";
         public const string PAGINATION_COMPLETED = "Pagination processing completed";
+        public const string DATASET_UPDATED_SUCCESSFULLY = "Dataset updated successfully";
     }
 
     /// <summary>
@@ -140,11 +151,22 @@ public static class AppConstants
     /// </summary>
     public static class ValidationMessages
     {
-        public const string DATASET_ID_MUST_BE_POSITIVE = "Dataset ID must be positive";
+        public const string DATASET_ID_MUST_BE_POSITIVE = "Dataset ID must be positive"; // canonical
         public const string ANALYSIS_ID_MUST_BE_POSITIVE = "Analysis ID must be positive";
         public const string INVALID_ANALYSIS_STATUS = "Invalid analysis status: {0}";
         public const string INVALID_ANALYSIS_TYPE = "Invalid analysis type: {0}";
         public const string DATASET_NOT_FOUND_OR_ACCESS_DENIED = "Dataset not found or access denied";
+        public const string USER_ID_CANNOT_BE_NULL_OR_EMPTY = "User ID cannot be null or empty";
+    }
+
+    /// <summary>
+    /// Dataset-related common messages (canonical)
+    /// </summary>
+    public static class DataSetMessages
+    {
+        public const string DATASET_NOT_FOUND = "Dataset not found";
+        public const string ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER = "Access denied - dataset belongs to different user";
+        public const string ACCESS_DENIED_TO_DATASET = "Access denied to dataset";
     }
 
     /// <summary>
@@ -193,7 +215,7 @@ public static class AppConstants
         public const string CHART_DATA_GENERATION_COMPLETED = "Chart data generation completed";
         public const string CONFIGURATION_VALIDATION_STARTED = "Configuration validation started";
         public const string CONFIGURATION_VALIDATION_COMPLETED = "Configuration validation completed";
-        public const string DATASET_NOT_FOUND = "Dataset not found";
+        public const string DATASET_NOT_FOUND = DataSetMessages.DATASET_NOT_FOUND;
         public const string DATASET_ACCESS_DENIED = "Dataset access denied";
         public const string INVALID_CHART_TYPE = "Invalid chart type";
         public const string INVALID_DATASET_ID = "Invalid dataset ID";
@@ -225,6 +247,11 @@ public static class AppConstants
         public const string STATUS = "Status";
         public const string TOTAL_DATASETS = "TotalDataSets";
         public const string CHART_TYPE = "ChartType";
+        public const string CORRELATION_ID = "CorrelationId";
+        public const string RESTORE_TYPE_KEY = "RestoreType";
+        public const string RESET_TYPE_KEY = "ResetType";
+        public const string RETENTION_DAYS = "RetentionDays";
+        public const string OPERATION = "Operation";
 
     }
 
@@ -266,7 +293,7 @@ public static class AppConstants
         public const int BYTES_PER_MEGABYTE = 1024 * 1024;
         public const int BYTES_PER_KILOBYTE = 1024;
 
-        // File extensions
+        // File extensions (canonical definitions)
         public const string CSV_EXTENSION = ".csv";
         public const string JSON_EXTENSION = ".json";
         public const string XLSX_EXTENSION = ".xlsx";
@@ -395,6 +422,46 @@ public static class AppConstants
         public const string METADATA_COLUMN_COUNT = "ColumnCount";
         public const string METADATA_MAX_COLUMNS = "MaxColumns";
         public const string METADATA_VALUE_KIND = "ValueKind";
+
+        // File processing status constants
+        public const string FILE_PROCESSED = "File processed successfully";
+        public const string DATABASE_SAVED = "Database saved successfully";
+        public const string UPLOAD_SUCCESSFUL = "Upload successful";
+        public const string UPLOAD_FAILED = "Upload failed";
+
+        // Operation names
+        public const string GET_DATA_SET = "GetDataSet";
+        public const string UPDATE_DATA_SET = "UpdateDataSet";
+        public const string DELETE_DATA_SET = "DeleteDataSet";
+        public const string UPLOAD_DATA_SET = "UploadDataSet";
+
+        // Audit action names
+        public const string AUDIT_ACTION_VIEWED = "Viewed";
+        public const string AUDIT_ACTION_UPLOAD_DATA_SET = "UploadDataSet";
+        public const string AUDIT_ACTION_UPDATE_DATA_SET = "UpdateDataSet";
+        public const string AUDIT_ACTION_DELETE_DATA_SET = "DeleteDataSet";
+
+        // Logging messages
+        public const string DATASET_NOT_FOUND = "Dataset not found";
+        public const string ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER = DataSetMessages.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER;
+        public const string ACCESS_DENIED_TO_DATASET = DataSetMessages.ACCESS_DENIED_TO_DATASET;
+        public const string DATASET_IS_ALREADY_DELETED = "Dataset is already deleted";
+        public const string DATASET_SOFT_DELETED_SUCCESSFULLY = "Dataset soft deleted successfully";
+        public const string OPERATION_TIMED_OUT = "Operation timed out";
+
+        // Validation messages
+        public const string USER_ID_CANNOT_BE_NULL_OR_EMPTY = "User ID cannot be null or empty";
+        public const string NAME_CANNOT_BE_NULL_OR_EMPTY = "Name cannot be null or empty";
+        public const string FILE_NAME_CANNOT_BE_NULL_OR_EMPTY = "File name cannot be null or empty";
+        public const string FILE_SIZE_MUST_BE_POSITIVE = "File size must be positive";
+        public const string INVALID_FILE_NAME = "Invalid file name";
+        public const string DATASET_ID_MUST_BE_POSITIVE = ValidationMessages.DATASET_ID_MUST_BE_POSITIVE;
+
+        // File extension mappings (alias to FileProcessing canonical values)
+        public const string CSV_EXTENSION = FileProcessing.CSV_EXTENSION;
+        public const string JSON_EXTENSION = FileProcessing.JSON_EXTENSION;
+        public const string XML_EXTENSION = FileProcessing.XML_EXTENSION;
+        public const string XLSX_EXTENSION = FileProcessing.XLSX_EXTENSION;
     }
 
     /// <summary>
@@ -566,7 +633,7 @@ public static class AppConstants
         public const string GENERATED_STATISTICAL_SUMMARY_SUCCESSFULLY = "Generated statistical summary successfully";
 
         // Error and validation messages
-        public const string DATASET_NOT_FOUND_LOG = "Dataset not found";
+        public const string DATASET_NOT_FOUND_LOG = DataSetMessages.DATASET_NOT_FOUND;
         public const string UNAUTHORIZED_ACCESS_ATTEMPT = "Unauthorized access attempt";
         public const string ATTEMPTED_TO_ACCESS_DELETED_DATASET = "Attempted to access deleted dataset";
         public const string DATASET_HAS_NO_PROCESSED_DATA = "Dataset has no processed data";
@@ -706,5 +773,138 @@ public static class AppConstants
     {
         // Regex patterns
         public const string NUMERIC_ONLY_PATTERN = @"^\d+$";
+    }
+
+    /// <summary>
+    /// Dataset lifecycle operation constants
+    /// </summary>
+    public static class DataSetLifecycle
+    {
+        // Operation names
+        public const string RESTORE_DATA_SET_ENHANCED = "RestoreDataSetEnhanced";
+        public const string RESET_DATA_SET = "ResetDataSet";
+        public const string UPDATE_RETENTION_POLICY = "UpdateRetentionPolicy";
+        public const string GET_RETENTION_STATUS = "GetRetentionStatus";
+        public const string RESTORE_DATA_SET = "RestoreDataSet";
+        public const string HARD_DELETE_DATA_SET = "HardDeleteDataSet";
+
+        // Audit action names
+        public const string RESTORE_DATA_SET_SIMPLE = "RestoreDataSetSimple";
+        public const string RESTORE_DATA_SET_FULL = "RestoreDataSetFull";
+        public const string RESET_DATA_SET_FILE_BASED = "ResetDataSetFileBased";
+        public const string RESET_DATA_SET_DATABASE_ONLY = "ResetDataSetDatabaseOnly";
+        public const string AUDIT_ACTION_RESTORE_DATA_SET = "RestoreDataSet";
+        public const string AUDIT_ACTION_HARD_DELETE_DATA_SET = "HardDeleteDataSet";
+        public const string AUDIT_ACTION_UPDATE_RETENTION_POLICY = "UpdateRetentionPolicy";
+
+        // Error messages
+        public const string DATASET_NOT_FOUND = DataSetMessages.DATASET_NOT_FOUND;
+        public const string ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER = DataSetMessages.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER;
+        public const string ACCESS_DENIED_TO_DATASET = DataSetMessages.ACCESS_DENIED_TO_DATASET;
+        public const string DATASET_ID_MUST_BE_POSITIVE = ValidationMessages.DATASET_ID_MUST_BE_POSITIVE;
+        public const string USER_ID_CANNOT_BE_NULL_OR_EMPTY = "User ID cannot be null or empty";
+        public const string RETENTION_DAYS_MUST_BE_POSITIVE = "Retention days must be positive";
+        public const string DATASET_NOT_FOUND_WITH_ID = "Dataset not found with ID {0}";
+
+        // File availability messages
+        public const string NO_FILE_PATH_ASSOCIATED_WITH_DATASET = "No file path associated with dataset";
+        public const string ORIGINAL_FILE_NO_LONGER_EXISTS_IN_STORAGE = "Original file no longer exists in storage";
+        public const string FILE_IS_AVAILABLE_FOR_PROCESSING = "File is available for processing";
+        public const string ERROR_CHECKING_FILE_AVAILABILITY = "Error checking file availability";
+
+        // Operation result messages
+        public const string DATASET_IS_NOT_DELETED_NO_RESTORE_ACTION_NEEDED = "Dataset is not deleted, no restore action needed";
+        public const string DATASET_RESTORED_SUCCESSFULLY_SIMPLE_RESTORE = "Dataset restored successfully (simple restore)";
+        public const string DATASET_RESTORED_SUCCESSFULLY_FULL_RESTORE = "Dataset restored successfully (full restore - processing status reset)";
+        public const string CANNOT_RESET_DATASET = "Cannot reset dataset";
+        public const string DATASET_RESET_SUCCESSFULLY_USING_ORIGINAL_FILE = "Dataset reset successfully using original file";
+        public const string FAILED_TO_RESET_DATASET = "Failed to reset dataset";
+        public const string DATASET_RESET_SUCCESSFULLY_DATABASE_ONLY = "Dataset reset successfully (database only - processing status cleared)";
+        public const string RETENTION_POLICY_UPDATED_SUCCESSFULLY = "Retention policy updated successfully. Data will be retained for {0} days.";
+
+        // File operation messages
+        public const string FILE_DELETED_FROM_STORAGE = "File deleted from storage";
+        public const string FAILED_TO_DELETE_FILE_FROM_STORAGE = "Failed to delete file from storage";
+        public const string DATASET_RESTORED_SUCCESSFULLY = "Dataset restored successfully";
+        public const string DATASET_PERMANENTLY_DELETED = "Dataset permanently deleted";
+
+        // Error codes
+        public const string NO_FILE_PATH = "NO_FILE_PATH";
+        public const string FILE_NOT_FOUND = "FILE_NOT_FOUND";
+        public const string CHECK_ERROR = "CHECK_ERROR";
+
+        // Reset types
+        public const string RESET_TYPE_FILE_BASED = "FileBased";
+        public const string RESET_TYPE_DATABASE_ONLY = "DatabaseOnly";
+
+        // Restore types
+        public const string RESTORE_TYPE_SIMPLE = "Simple";
+        public const string RESTORE_TYPE_FULL = "Full";
+
+        // Limits
+        public const int RECENT_UPLOADS_COUNT = 5;
+    }
+
+    /// <summary>
+    /// Dataset query operation constants
+    /// </summary>
+    public static class DataSetQuery
+    {
+        // Operation names
+        public const string GET_DATA_SETS_BY_USER = "GetDataSetsByUser";
+        public const string GET_DELETED_DATA_SETS = "GetDeletedDataSets";
+        public const string SEARCH_DATA_SETS = "SearchDataSets";
+        public const string GET_DATA_SETS_BY_FILE_TYPE = "GetDataSetsByFileType";
+        public const string GET_DATA_SETS_BY_DATE_RANGE = "GetDataSetsByDateRange";
+        public const string GET_DATA_SET_STATISTICS = "GetDataSetStatistics";
+
+        // Validation messages
+        public const string SEARCH_TERM_CANNOT_BE_NULL_OR_EMPTY = "Search term cannot be null or empty";
+        public const string START_DATE_CANNOT_BE_AFTER_END_DATE = "Start date cannot be after end date";
+        public const string PAGE_MUST_BE_POSITIVE = "Page must be positive";
+        public const string PAGE_SIZE_MUST_BE_POSITIVE = "Page size must be positive";
+        public const string PAGE_SIZE_CANNOT_EXCEED_100 = "Page size cannot exceed 100";
+        public const string USER_ID_CANNOT_BE_NULL_OR_EMPTY = "User ID cannot be null or empty";
+
+        // Logging messages
+        public const string PAGINATION_APPLIED = "Pagination applied";
+
+        // Limits
+        public const int MAX_PAGE_SIZE = 100;
+        public const int RECENT_UPLOADS_COUNT = 5;
+
+        // Processing status labels
+        public const string PROCESSED = "Processed";
+        public const string UNPROCESSED = "Unprocessed";
+    }
+
+    /// <summary>
+    /// Dataset preview operation constants
+    /// </summary>
+    public static class DataSetPreview
+    {
+        // Operation names
+        public const string GET_DATA_SET_PREVIEW = "GetDataSetPreview";
+        public const string GET_DATA_SET_SCHEMA = "GetDataSetSchema";
+
+        // Validation messages
+        public const string DATASET_ID_MUST_BE_POSITIVE = ValidationMessages.DATASET_ID_MUST_BE_POSITIVE;
+        public const string USER_ID_CANNOT_BE_NULL_OR_EMPTY = "User ID cannot be null or empty";
+        public const string ROWS_MUST_BE_POSITIVE = "Rows must be positive";
+        public const string ROWS_CANNOT_EXCEED_1000 = "Rows cannot exceed 1000";
+
+        // Logging messages
+        public const string NO_PREVIEW_DATA_AVAILABLE = "No preview data available";
+        public const string PREVIEW_DATA_RETRIEVED_SUCCESSFULLY = "Preview data retrieved successfully";
+        public const string FAILED_TO_DESERIALIZE_PREVIEW_DATA = "Failed to deserialize preview data";
+        public const string NO_SCHEMA_DATA_AVAILABLE = "No schema data available";
+        public const string SCHEMA_DESERIALIZED_SUCCESSFULLY = "Schema deserialized successfully";
+        public const string FAILED_TO_DESERIALIZE_SCHEMA = "Failed to deserialize schema";
+        public const string DATASET_NOT_FOUND = DataSetMessages.DATASET_NOT_FOUND;
+        public const string ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER = "Access denied - dataset belongs to different user";
+        public const string ACCESS_DENIED_TO_DATASET = "Access denied to dataset";
+
+        // Limits
+        public const int MAX_PREVIEW_ROWS = 1000;
     }
 }

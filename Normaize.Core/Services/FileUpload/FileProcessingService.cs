@@ -574,7 +574,12 @@ public class FileProcessingService : IFileProcessingService
         records.Capacity = Math.Min(maxRows, AppConstants.FileProcessing.DEFAULT_RECORDS_CAPACITY);
 
         // Assume first child is the template for data rows
-        var firstChild = children.First();
+        if (children == null || children.Count == 0)
+        {
+            // No child elements to process; nothing to extract
+            return;
+        }
+        var firstChild = children[0];
         var childElements = firstChild.Elements().ToList();
 
         // Extract headers from first element
@@ -666,7 +671,18 @@ public class FileProcessingService : IFileProcessingService
         if (records.Count > AppConstants.FileProcessing.DEFAULT_ROW_COUNT)
         {
             var previewRecords = records.Take(_dataProcessingConfig.MaxPreviewRows).ToList();
-            dataSet.PreviewData = JsonConfiguration.Serialize(previewRecords);
+
+            // Create standardized PreviewData format
+            var previewData = new DataSetPreviewDto
+            {
+                Columns = headers,
+                Rows = previewRecords,
+                TotalRows = records.Count,
+                MaxPreviewRows = _dataProcessingConfig.MaxPreviewRows,
+                PreviewRowCount = previewRecords.Count
+            };
+
+            dataSet.PreviewData = JsonConfiguration.Serialize(previewData);
         }
 
         // Only serialize full data if within limits

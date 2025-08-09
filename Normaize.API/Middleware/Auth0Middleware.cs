@@ -14,6 +14,13 @@ public static class Auth0Middleware
             var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
             var logger = loggerFactory.CreateLogger("Auth0Middleware");
 
+            // Check if this is an OPTIONS request (CORS preflight)
+            if (context.Request.Method == "OPTIONS")
+            {
+                await next();
+                return;
+            }
+
             // Extract user information from JWT token
             if (context.User.Identity?.IsAuthenticated == true)
             {
@@ -22,18 +29,24 @@ public static class Auth0Middleware
                 var email = context.User.FindFirst(ClaimTypes.Email)?.Value;
                 var name = context.User.FindFirst(ClaimTypes.Name)?.Value;
 
-                // Log successful authentication
-                logger.LogDebug("User authenticated: UserId={UserId}, Email={Email}, Name={Name}",
-                    userId, email, name);
-
                 // Add user info to context for use in controllers
                 context.Items["UserId"] = userId;
                 context.Items["UserEmail"] = email;
                 context.Items["UserName"] = name;
+
+                logger.LogDebug("User information extracted: UserId={UserId}", userId);
             }
             else
             {
-                logger.LogDebug("Request not authenticated for path: {Path}", context.Request.Path);
+                // Only log warnings for protected endpoints that are not authenticated
+                var endpoint = context.GetEndpoint();
+                var requiresAuth = endpoint?.Metadata?.GetMetadata<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>() != null;
+
+                if (requiresAuth)
+                {
+                    logger.LogWarning("Unauthenticated request to protected endpoint: {Method} {Path}",
+                        context.Request.Method, context.Request.Path);
+                }
             }
 
             await next();

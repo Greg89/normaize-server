@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Normaize.Core.Configuration;
 using Normaize.Core.Constants;
 using Normaize.Core.Interfaces;
@@ -114,6 +115,11 @@ public static class ServiceConfiguration
                 options.JsonSerializerOptions.DefaultIgnoreCondition = defaultOptions.DefaultIgnoreCondition;
                 options.JsonSerializerOptions.Encoder = defaultOptions.Encoder;
                 options.JsonSerializerOptions.ReferenceHandler = defaultOptions.ReferenceHandler;
+                options.JsonSerializerOptions.Converters.Clear();
+                foreach (var converter in defaultOptions.Converters)
+                {
+                    options.JsonSerializerOptions.Converters.Add(converter);
+                }
             });
 
         // Configure global JSON options for HttpClient and other services
@@ -126,6 +132,11 @@ public static class ServiceConfiguration
             options.DefaultIgnoreCondition = defaultOptions.DefaultIgnoreCondition;
             options.Encoder = defaultOptions.Encoder;
             options.ReferenceHandler = defaultOptions.ReferenceHandler;
+            options.Converters.Clear();
+            foreach (var converter in defaultOptions.Converters)
+            {
+                options.Converters.Add(converter);
+            }
         });
 
         logger.LogDebug("JSON serialization configured with camelCase naming policy. CorrelationId: {CorrelationId}", correlationId);
@@ -145,7 +156,12 @@ public static class ServiceConfiguration
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new() { Title = "Normaize API", Version = "v1" });
+                c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                {
+                    Title = "Normaize API",
+                    Version = "v1",
+                    Description = "API for Normaize data processing and analysis platform"
+                });
 
                 // Add JWT authentication to Swagger
                 c.AddSecurityDefinition(AppConstants.Auth.BEARER, new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -171,6 +187,14 @@ public static class ServiceConfiguration
                         Array.Empty<string>()
                     }
                 });
+
+                // Include XML comments if available
+                var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                if (File.Exists(xmlPath))
+                {
+                    c.IncludeXmlComments(xmlPath);
+                }
             });
         }
         else
@@ -210,6 +234,33 @@ public static class ServiceConfiguration
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true
+                };
+
+                // Add JWT event handlers for debugging
+                options.Events = new JwtBearerEvents
+                {
+                    OnAuthenticationFailed = context =>
+                    {
+                        logger.LogError("JWT Authentication failed: {Error}", context.Exception.Message);
+                        return Task.CompletedTask;
+                    },
+                    OnTokenValidated = context =>
+                    {
+                        logger.LogInformation("JWT Token validated successfully for user: {User}",
+                            context.Principal?.Identity?.Name ?? "unknown");
+                        return Task.CompletedTask;
+                    },
+                    OnMessageReceived = context =>
+                    {
+                        logger.LogInformation("JWT Message received for path: {Path}", context.Request.Path);
+                        return Task.CompletedTask;
+                    },
+                    OnChallenge = context =>
+                    {
+                        logger.LogWarning("JWT Challenge issued for path: {Path}, Error: {Error}",
+                            context.Request.Path, context.Error);
+                        return Task.CompletedTask;
+                    }
                 };
             });
     }
@@ -463,7 +514,13 @@ public static class ServiceConfiguration
         builder.Services.AddScoped<IFileStorageService, FileStorageService>();
         builder.Services.AddScoped<IFileUploadServices, FileUploadServices>();
 
+        // Register core data processing services
         builder.Services.AddScoped<IDataProcessingService, DataProcessingService>();
+        builder.Services.AddScoped<IDataSetLifecycleService, DataSetLifecycleService>();
+        builder.Services.AddScoped<IDataSetQueryService, DataSetQueryService>();
+        builder.Services.AddScoped<IDataSetPreviewService, DataSetPreviewService>();
+        builder.Services.AddScoped<IDataMigrationService, DataMigrationService>();
+
         builder.Services.AddScoped<IDataAnalysisService, DataAnalysisService>();
         builder.Services.AddScoped<IDataVisualizationService, DataVisualizationService>();
         builder.Services.AddScoped<IFileUploadService, FileUploadService>();

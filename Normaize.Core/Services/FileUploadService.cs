@@ -88,6 +88,25 @@ public class FileUploadService : IFileUploadService
             // The storage service already handles logging internally
         }
     }
+
+    /// <summary>
+    /// Checks if a file exists at the specified path.
+    /// </summary>
+    /// <param name="filePath">The path to the file to check</param>
+    /// <returns>True if the file exists, false otherwise</returns>
+    public async Task<bool> FileExistsAsync(string filePath)
+    {
+        try
+        {
+            return await _fileUploadServices.Storage.FileExistsAsync(filePath);
+        }
+        catch (Exception)
+        {
+            // Log the error but don't re-throw
+            // Return false if we can't determine file existence
+            return false;
+        }
+    }
 }
 
 // Custom exception types for better error handling

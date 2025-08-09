@@ -4,6 +4,7 @@ using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
 using Normaize.Core.Extensions;
+using System.Linq;
 
 namespace Normaize.API.Controllers;
 
@@ -28,10 +29,18 @@ namespace Normaize.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class DataSetsController(IDataProcessingService dataProcessingService, IStructuredLoggingService loggingService)
+public class DataSetsController(
+    IDataProcessingService dataProcessingService,
+    IDataSetLifecycleService dataSetLifecycleService,
+    IDataSetQueryService dataSetQueryService,
+    IDataSetPreviewService dataSetPreviewService,
+    IStructuredLoggingService loggingService)
     : BaseApiController(loggingService)
 {
     private readonly IDataProcessingService _dataProcessingService = dataProcessingService;
+    private readonly IDataSetLifecycleService _dataSetLifecycleService = dataSetLifecycleService;
+    private readonly IDataSetQueryService _dataSetQueryService = dataSetQueryService;
+    private readonly IDataSetPreviewService _dataSetPreviewService = dataSetPreviewService;
 
     /// <summary>
     /// Gets the current user ID from the authenticated user claims
@@ -43,8 +52,9 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
     }
 
     /// <summary>
-    /// Retrieves all datasets for the authenticated user
+    /// Retrieves datasets for the authenticated user
     /// </summary>
+    /// <param name="includeDeleted">Optional. When true, returns both active and deleted datasets; default is false (active only)</param>
     /// <returns>
     /// A list of datasets owned by the current user with pagination support
     /// </returns>
@@ -60,12 +70,12 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
     [ProducesResponseType(typeof(ApiResponse<List<DataSetDto>>), 200)]
     [ProducesResponseType(401)]
     [ProducesResponseType(500)]
-    public async Task<ActionResult<ApiResponse<List<DataSetDto>>>> GetDataSets()
+    public async Task<ActionResult<ApiResponse<List<DataSetDto>>>> GetDataSets([FromQuery] bool includeDeleted = false)
     {
         try
         {
             var userId = GetCurrentUserId();
-            var dataSets = await _dataProcessingService.GetDataSetsByUserAsync(userId);
+            var dataSets = await _dataSetQueryService.GetDataSetsByUserAsync(userId, 1, 20, includeDeleted);
             return Success(dataSets?.ToList() ?? []);
         }
         catch (Exception ex)
@@ -113,6 +123,54 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
     }
 
     /// <summary>
+    /// Updates an existing dataset
+    /// </summary>
+    /// <param name="id">The unique identifier of the dataset to update</param>
+    /// <param name="updateDto">The update data containing new values</param>
+    /// <returns>
+    /// The updated dataset with current values
+    /// </returns>
+    /// <remarks>
+    /// This endpoint allows updating dataset metadata such as name and description.
+    /// The file content cannot be modified through this endpoint. To replace the file
+    /// content, use the upload endpoint with a new file.
+    /// 
+    /// Updateable fields:
+    /// - Name: The display name of the dataset
+    /// - Description: Detailed description of the dataset
+    /// 
+    /// The endpoint validates that the dataset belongs to the authenticated user
+    /// and that all required fields are provided.
+    /// </remarks>
+    /// <response code="200">Dataset updated successfully</response>
+    /// <response code="400">Invalid update data provided</response>
+    /// <response code="401">Unauthorized - Authentication required</response>
+    /// <response code="404">Dataset not found or access denied</response>
+    /// <response code="500">Internal server error during update</response>
+    [HttpPut("{id}")]
+    [ProducesResponseType(typeof(ApiResponse<DataSetDto>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<ApiResponse<DataSetDto>>> UpdateDataSet(int id, [FromBody] UpdateDataSetDto updateDto)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var dataSet = await _dataProcessingService.UpdateDataSetAsync(id, updateDto, userId);
+            if (dataSet == null)
+                return NotFound<DataSetDto>();
+
+            return Success(dataSet, "Dataset updated successfully");
+        }
+        catch (Exception ex)
+        {
+            return HandleException<DataSetDto>(ex, $"UpdateDataSet({id})");
+        }
+    }
+
+    /// <summary>
     /// Uploads a new dataset file with metadata
     /// </summary>
     /// <param name="uploadDto">The file upload data transfer object containing file and metadata</param>
@@ -144,18 +202,13 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
     {
         try
         {
+            var userId = GetCurrentUserId();
+
+            // Validate file
             if (uploadDto.File == null || uploadDto.File.Length == 0)
                 return BadRequest<DataSetUploadResponse>("No file provided");
 
-            var userId = GetCurrentUserId();
-            var createDto = new CreateDataSetDto
-            {
-                Name = uploadDto.Name,
-                Description = uploadDto.Description,
-                UserId = userId
-            };
-
-            // Convert IFormFile to FileUploadRequest (abstraction)
+            // Create file request
             var fileRequest = new FileUploadRequest
             {
                 FileName = uploadDto.File.FileName,
@@ -164,65 +217,70 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
                 FileStream = uploadDto.File.OpenReadStream()
             };
 
+            // Create dataset DTO
+            var createDto = new CreateDataSetDto
+            {
+                Name = uploadDto.Name,
+                Description = uploadDto.Description,
+                UserId = userId
+            };
+
             var result = await _dataProcessingService.UploadDataSetAsync(fileRequest, createDto);
-
-            if (!result.Success)
-                return BadRequest<DataSetUploadResponse>(result.Message);
-
-            return Success(result, "Dataset uploaded successfully");
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
+            return Success(result);
         }
         catch (Exception ex)
         {
-            _loggingService?.LogException(ex, "UploadDataSet");
-            return StatusCode(500, "Error uploading dataset");
+            return HandleException<DataSetUploadResponse>(ex, "UploadDataSet");
         }
     }
 
     /// <summary>
-    /// Retrieves a preview of dataset content with specified number of rows
+    /// Retrieves preview data for a specific dataset
     /// </summary>
     /// <param name="id">The unique identifier of the dataset</param>
-    /// <param name="rows">The number of rows to include in the preview (default: 10, max: 100)</param>
+    /// <param name="rows">Number of rows to return in the preview (default: 10, max: 1000)</param>
     /// <returns>
-    /// A preview of the dataset content as formatted text
+    /// Preview data containing sample rows and column information
     /// </returns>
     /// <remarks>
-    /// This endpoint provides a preview of the dataset content by returning the first
-    /// N rows in a formatted text representation. This is useful for quickly examining
-    /// dataset structure and content without loading the entire dataset.
+    /// This endpoint provides a preview of the dataset content, showing a limited number
+    /// of rows to help users understand the data structure and content. The preview
+    /// includes both the actual data rows and metadata about the columns.
     /// 
-    /// The preview includes:
-    /// - Column headers
-    /// - Sample data rows
-    /// - Formatted output for readability
+    /// Preview features:
+    /// - Configurable number of rows (1-1000)
+    /// - Column names and types
+    /// - Sample data values
+    /// - Data structure information
+    /// 
+    /// This is useful for:
+    /// - Understanding dataset structure before analysis
+    /// - Validating data quality and format
+    /// - Quick data exploration
     /// </remarks>
     /// <response code="200">Dataset preview retrieved successfully</response>
     /// <response code="401">Unauthorized - Authentication required</response>
     /// <response code="404">Dataset not found or access denied</response>
     /// <response code="500">Internal server error during preview generation</response>
     [HttpGet("{id}/preview")]
-    [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<DataSetPreviewDto>), 200)]
     [ProducesResponseType(401)]
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
-    public async Task<ActionResult<ApiResponse<string>>> GetDataSetPreview(int id, [FromQuery] int rows = 10)
+    public async Task<ActionResult<ApiResponse<DataSetPreviewDto>>> GetDataSetPreview(int id, [FromQuery] int rows = 10)
     {
         try
         {
             var userId = GetCurrentUserId();
-            var preview = await _dataProcessingService.GetDataSetPreviewAsync(id, rows, userId);
+            var preview = await _dataSetPreviewService.GetDataSetPreviewAsync(id, rows, userId);
             if (preview == null)
-                return NotFound<string>();
+                return NotFound<DataSetPreviewDto>();
 
-            return Success<string>(preview ?? string.Empty);
+            return Success(preview);
         }
         catch (Exception ex)
         {
-            return HandleException<string>(ex, $"GetDataSetPreview({id})");
+            return HandleException<DataSetPreviewDto>(ex, $"GetDataSetPreview({id})");
         }
     }
 
@@ -258,7 +316,7 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
         try
         {
             var userId = GetCurrentUserId();
-            var schema = await _dataProcessingService.GetDataSetSchemaAsync(id, userId);
+            var schema = await _dataSetPreviewService.GetDataSetSchemaAsync(id, userId);
             if (schema == null)
                 return NotFound<object>();
 
@@ -307,7 +365,7 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
             if (!result)
                 return NotFound<string?>();
 
-            return Success<string?>(null, "Dataset deleted successfully");
+            return Success<string?>("Dataset deleted successfully");
         }
         catch (Exception ex)
         {
@@ -316,27 +374,27 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
     }
 
     /// <summary>
-    /// Restores a previously soft-deleted dataset
+    /// Restores a soft-deleted dataset
     /// </summary>
     /// <param name="id">The unique identifier of the dataset to restore</param>
     /// <returns>
     /// Success message indicating the dataset was restored
     /// </returns>
     /// <remarks>
-    /// This endpoint restores a dataset that was previously soft deleted. The dataset
-    /// becomes visible again in normal queries and can be accessed normally. This
-    /// operation is only available for datasets that were soft deleted, not hard deleted.
+    /// This endpoint restores a previously soft-deleted dataset, making it available
+    /// again for normal operations. The dataset will reappear in queries and can be
+    /// accessed normally.
     /// 
     /// Restore behavior:
-    /// - Removes the deleted flag from the dataset
-    /// - Makes the dataset visible in normal queries
-    /// - Preserves all original data and metadata
-    /// - Maintains the original dataset ID
+    /// - Dataset is marked as active in the database
+    /// - All data and metadata is preserved
+    /// - Dataset becomes visible in normal queries
+    /// - Processing status and preview data are maintained
     /// </remarks>
     /// <response code="200">Dataset restored successfully</response>
     /// <response code="401">Unauthorized - Authentication required</response>
     /// <response code="404">Dataset not found or access denied</response>
-    /// <response code="500">Internal server error during restoration</response>
+    /// <response code="500">Internal server error during restore</response>
     [HttpPost("{id}/restore")]
     [ProducesResponseType(typeof(ApiResponse<string?>), 200)]
     [ProducesResponseType(401)]
@@ -347,7 +405,7 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
         try
         {
             var userId = GetCurrentUserId();
-            var result = await _dataProcessingService.RestoreDataSetAsync(id, userId);
+            var result = await _dataSetLifecycleService.RestoreDataSetAsync(id, userId);
             if (!result)
                 return NotFound<string?>();
 
@@ -360,7 +418,124 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
     }
 
     /// <summary>
-    /// Permanently deletes a dataset and all associated data
+    /// Enhanced restore operation with configurable restore type
+    /// </summary>
+    /// <param name="id">The unique identifier of the dataset to restore</param>
+    /// <param name="restoreDto">Restore configuration options</param>
+    /// <returns>
+    /// Detailed operation result with restore information
+    /// </returns>
+    /// <remarks>
+    /// This endpoint provides enhanced restore functionality with different restore types:
+    /// 
+    /// Restore Types:
+    /// - Simple: Just marks the dataset as not deleted (preserves all processing data)
+    /// - Full: Marks as not deleted and resets processing status (clears preview/schema)
+    /// 
+    /// This is useful when you want to control how thoroughly a dataset is restored
+    /// and whether to preserve or reset its processing state.
+    /// </remarks>
+    /// <response code="200">Dataset restored successfully with specified options</response>
+    /// <response code="400">Invalid restore configuration</response>
+    /// <response code="401">Unauthorized - Authentication required</response>
+    /// <response code="404">Dataset not found or access denied</response>
+    /// <response code="409">Dataset is not deleted, no restore needed</response>
+    /// <response code="500">Internal server error during restore</response>
+    [HttpPost("{id}/restore-enhanced")]
+    [ProducesResponseType(typeof(ApiResponse<string?>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(409)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<ApiResponse<string?>>> RestoreDataSetEnhanced(int id, [FromBody] DataSetRestoreDto restoreDto)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var result = await _dataSetLifecycleService.RestoreDataSetEnhancedAsync(id, restoreDto, userId);
+
+            if (!result.Success)
+            {
+                if (result.Message.Contains("not deleted"))
+                    return Conflict(result.Message);
+                return BadRequest<string?>(result.Message);
+            }
+
+            return Success<string?>(result.Message);
+        }
+        catch (Exception ex)
+        {
+            return HandleException<string?>(ex, $"RestoreDataSetEnhanced({id})");
+        }
+    }
+
+    /// <summary>
+    /// Resets a dataset to its original state
+    /// </summary>
+    /// <param name="id">The unique identifier of the dataset to reset</param>
+    /// <param name="resetDto">Reset configuration options</param>
+    /// <returns>
+    /// Detailed operation result with reset information
+    /// </returns>
+    /// <remarks>
+    /// This endpoint performs a "factory reset" on a dataset, allowing you to start
+    /// fresh with the original data. Different reset types are available:
+    /// 
+    /// Reset Types:
+    /// - FileBased: Downloads and reprocesses the original file from S3
+    /// - DatabaseOnly: Clears processing status without reprocessing the file
+    /// 
+    /// File-based reset will:
+    /// - Download the original file from S3 (if still available)
+    /// - Reprocess the file to regenerate preview and schema data
+    /// - Update the dataset with fresh processing results
+    /// 
+    /// Database-only reset will:
+    /// - Clear all processing status and preview data
+    /// - Keep the original file reference intact
+    /// - Require manual reprocessing if needed
+    /// 
+    /// If the original file is no longer available (due to retention policies),
+    /// the operation will fail gracefully with appropriate error information.
+    /// </remarks>
+    /// <response code="200">Dataset reset successfully</response>
+    /// <response code="400">Invalid reset configuration</response>
+    /// <response code="401">Unauthorized - Authentication required</response>
+    /// <response code="404">Dataset not found or access denied</response>
+    /// <response code="409">Original file no longer available</response>
+    /// <response code="500">Internal server error during reset</response>
+    [HttpPost("{id}/reset")]
+    [ProducesResponseType(typeof(ApiResponse<string?>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(409)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<ApiResponse<string?>>> ResetDataSet(int id, [FromBody] DataSetResetDto resetDto)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var result = await _dataSetLifecycleService.ResetDataSetAsync(id, resetDto, userId);
+
+            if (!result.Success)
+            {
+                if (result.Message.Contains("no longer available") || result.Message.Contains("not found"))
+                    return Conflict(result.Message);
+                return BadRequest<string?>(result.Message);
+            }
+
+            return Success<string?>(result.Message);
+        }
+        catch (Exception ex)
+        {
+            return HandleException<string?>(ex, $"ResetDataSet({id})");
+        }
+    }
+
+    /// <summary>
+    /// Permanently deletes a dataset and its associated file
     /// </summary>
     /// <param name="id">The unique identifier of the dataset to permanently delete</param>
     /// <returns>
@@ -368,19 +543,22 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
     /// </returns>
     /// <remarks>
     /// This endpoint performs a hard delete operation that permanently removes the dataset
-    /// and all associated data from both the database and storage. This operation is
-    /// irreversible and should be used with caution.
+    /// from the database and deletes the associated file from storage. This operation
+    /// cannot be undone and should be used with extreme caution.
     /// 
     /// Hard delete behavior:
-    /// - Permanently removes dataset record from database
-    /// - Deletes associated file data from storage
-    /// - Removes all related metadata and statistics
-    /// - Operation is irreversible
+    /// - Dataset is permanently removed from the database
+    /// - Associated file is deleted from storage (S3)
+    /// - All metadata and processing data is lost
+    /// - Operation cannot be reversed
+    /// 
+    /// Warning: This operation is irreversible. Consider using soft delete first
+    /// to allow for recovery in case of accidental deletion.
     /// </remarks>
     /// <response code="200">Dataset permanently deleted successfully</response>
     /// <response code="401">Unauthorized - Authentication required</response>
     /// <response code="404">Dataset not found or access denied</response>
-    /// <response code="500">Internal server error during permanent deletion</response>
+    /// <response code="500">Internal server error during deletion</response>
     [HttpDelete("{id}/permanent")]
     [ProducesResponseType(typeof(ApiResponse<string?>), 200)]
     [ProducesResponseType(401)]
@@ -391,11 +569,11 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
         try
         {
             var userId = GetCurrentUserId();
-            var result = await _dataProcessingService.HardDeleteDataSetAsync(id, userId);
+            var result = await _dataSetLifecycleService.HardDeleteDataSetAsync(id, userId);
             if (!result)
                 return NotFound<string?>();
 
-            return Success<string?>(null, "Dataset permanently deleted");
+            return Success<string?>("Dataset permanently deleted successfully");
         }
         catch (Exception ex)
         {
@@ -404,21 +582,132 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
     }
 
     /// <summary>
+    /// Updates the retention policy for a dataset
+    /// </summary>
+    /// <param name="id">The unique identifier of the dataset</param>
+    /// <param name="retentionDto">Retention policy configuration</param>
+    /// <returns>
+    /// Success message with updated retention information
+    /// </returns>
+    /// <remarks>
+    /// This endpoint allows users to set custom data retention periods for their datasets.
+    /// The retention policy determines how long the original file will be kept in S3
+    /// before automatic cleanup.
+    /// 
+    /// Retention features:
+    /// - Custom retention period in days
+    /// - Automatic expiry date calculation
+    /// - Graceful handling of expired files
+    /// - User-defined data lifecycle management
+    /// 
+    /// When a file expires:
+    /// - The original file is automatically removed from S3
+    /// - Dataset metadata and processed data remain in the database
+    /// - File-based reset operations will fail gracefully
+    /// - Database-only operations continue to work normally
+    /// </remarks>
+    /// <response code="200">Retention policy updated successfully</response>
+    /// <response code="400">Invalid retention configuration</response>
+    /// <response code="401">Unauthorized - Authentication required</response>
+    /// <response code="404">Dataset not found or access denied</response>
+    /// <response code="500">Internal server error during update</response>
+    [HttpPut("{id}/retention")]
+    [ProducesResponseType(typeof(ApiResponse<string?>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<ApiResponse<string?>>> UpdateRetentionPolicy(int id, [FromBody] DataSetRetentionDto retentionDto)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var result = await _dataSetLifecycleService.UpdateRetentionPolicyAsync(id, retentionDto, userId);
+
+            if (!result.Success)
+                return BadRequest<string?>(result.Message);
+
+            return Success<string?>(result.Message);
+        }
+        catch (Exception ex)
+        {
+            return HandleException<string?>(ex, $"UpdateRetentionPolicy({id})");
+        }
+    }
+
+    /// <summary>
+    /// Retrieves retention status for a dataset
+    /// </summary>
+    /// <param name="id">The unique identifier of the dataset</param>
+    /// <returns>
+    /// Detailed retention status information
+    /// </returns>
+    /// <remarks>
+    /// This endpoint provides comprehensive information about a dataset's retention policy
+    /// and current status. It helps users understand when their data will expire and
+    /// manage their data lifecycle effectively.
+    /// 
+    /// Status information includes:
+    /// - Current retention policy (days)
+    /// - Expiry date calculation
+    /// - Whether retention has expired
+    /// - Days remaining (if not expired)
+    /// - File availability status
+    /// 
+    /// This is useful for:
+    /// - Data lifecycle management
+    /// - Compliance monitoring
+    /// - Storage cost optimization
+    /// - Proactive data management
+    /// </remarks>
+    /// <response code="200">Retention status retrieved successfully</response>
+    /// <response code="401">Unauthorized - Authentication required</response>
+    /// <response code="404">Dataset not found or access denied</response>
+    /// <response code="500">Internal server error during status retrieval</response>
+    [HttpGet("{id}/retention-status")]
+    [ProducesResponseType(typeof(ApiResponse<DataSetRetentionStatusDto>), 200)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<ApiResponse<DataSetRetentionStatusDto>>> GetRetentionStatus(int id)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var status = await _dataSetLifecycleService.GetRetentionStatusAsync(id, userId);
+            if (status == null)
+                return NotFound<DataSetRetentionStatusDto>();
+
+            return Success(status);
+        }
+        catch (Exception ex)
+        {
+            return HandleException<DataSetRetentionStatusDto>(ex, $"GetRetentionStatus({id})");
+        }
+    }
+
+    /// <summary>
     /// Retrieves all soft-deleted datasets for the authenticated user
     /// </summary>
     /// <returns>
-    /// A list of soft-deleted datasets that can be restored
+    /// A list of soft-deleted datasets owned by the current user
     /// </returns>
     /// <remarks>
-    /// This endpoint returns all datasets that have been soft deleted by the authenticated
-    /// user. These datasets can be restored using the restore endpoint. The response
-    /// includes dataset metadata and deletion information.
+    /// This endpoint returns all datasets that have been soft-deleted by the authenticated user.
+    /// Soft-deleted datasets are marked as deleted but their data is preserved, allowing
+    /// for potential restoration.
     /// 
     /// Deleted datasets include:
-    /// - Original dataset metadata
+    /// - All metadata and file information
     /// - Deletion timestamp
-    /// - Deletion reason (if available)
-    /// - Restoration eligibility status
+    /// - Original processing status
+    /// - File availability status
+    /// 
+    /// This endpoint is useful for:
+    /// - Reviewing deleted datasets
+    /// - Restoring accidentally deleted data
+    /// - Data recovery operations
+    /// - Audit and compliance purposes
     /// </remarks>
     /// <response code="200">Deleted datasets retrieved successfully</response>
     /// <response code="401">Unauthorized - Authentication required</response>
@@ -432,7 +721,7 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
         try
         {
             var userId = GetCurrentUserId();
-            var dataSets = await _dataProcessingService.GetDeletedDataSetsAsync(userId);
+            var dataSets = await _dataSetQueryService.GetDeletedDataSetsAsync(userId);
             return Success(dataSets?.ToList() ?? []);
         }
         catch (Exception ex)
@@ -442,28 +731,34 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
     }
 
     /// <summary>
-    /// Searches datasets by name and description for the authenticated user
+    /// Searches datasets by term with pagination support
     /// </summary>
-    /// <param name="q">The search query string</param>
-    /// <param name="page">The page number for pagination (default: 1)</param>
-    /// <param name="pageSize">The number of items per page (default: 20, max: 100)</param>
+    /// <param name="q">Search term to match against dataset names, descriptions, and file names</param>
+    /// <param name="page">Page number for pagination (default: 1)</param>
+    /// <param name="pageSize">Number of items per page (default: 20, max: 100)</param>
     /// <returns>
-    /// A paginated list of datasets matching the search criteria
+    /// Paginated list of datasets matching the search criteria
     /// </returns>
     /// <remarks>
-    /// This endpoint performs a text-based search across dataset names and descriptions.
-    /// The search is case-insensitive and supports partial matching. Results are
-    /// paginated for performance with large result sets.
+    /// This endpoint provides full-text search capabilities across dataset metadata.
+    /// The search is case-insensitive and matches against multiple fields including
+    /// dataset names, descriptions, and file names.
     /// 
-    /// Search capabilities:
+    /// Search features:
     /// - Case-insensitive text matching
-    /// - Partial word matching
-    /// - Search across name and description fields
-    /// - Paginated results for performance
-    /// - Relevance-based result ordering
+    /// - Multi-field search (name, description, filename)
+    /// - Pagination support for large result sets
+    /// - User-specific dataset isolation
+    /// - Real-time search results
+    /// 
+    /// Search behavior:
+    /// - Matches partial strings in any field
+    /// - Returns datasets owned by the authenticated user only
+    /// - Excludes soft-deleted datasets from results
+    /// - Supports pagination for performance
     /// </remarks>
     /// <response code="200">Search results retrieved successfully</response>
-    /// <response code="400">Invalid search query provided</response>
+    /// <response code="400">Invalid search parameters</response>
     /// <response code="401">Unauthorized - Authentication required</response>
     /// <response code="500">Internal server error during search</response>
     [HttpGet("search")]
@@ -479,42 +774,47 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
         try
         {
             if (string.IsNullOrWhiteSpace(q))
-                return BadRequest<List<DataSetDto>>("Search query is required");
+                return BadRequest<List<DataSetDto>>("Search term is required");
 
             var userId = GetCurrentUserId();
-            var dataSets = await _dataProcessingService.SearchDataSetsAsync(q, userId, page, pageSize);
+            var dataSets = await _dataSetQueryService.SearchDataSetsAsync(q, userId, page, pageSize);
             return Success(dataSets?.ToList() ?? []);
         }
         catch (Exception ex)
         {
-            return HandleException<List<DataSetDto>>(ex, $"SearchDataSets({q})");
+            return HandleException<List<DataSetDto>>(ex, "SearchDataSets");
         }
     }
 
     /// <summary>
-    /// Retrieves datasets filtered by file type for the authenticated user
+    /// Retrieves datasets filtered by file type with pagination support
     /// </summary>
     /// <param name="fileType">The file type to filter by</param>
-    /// <param name="page">The page number for pagination (default: 1)</param>
-    /// <param name="pageSize">The number of items per page (default: 20, max: 100)</param>
+    /// <param name="page">Page number for pagination (default: 1)</param>
+    /// <param name="pageSize">Number of items per page (default: 20, max: 100)</param>
     /// <returns>
-    /// A paginated list of datasets with the specified file type
+    /// Paginated list of datasets with the specified file type
     /// </returns>
     /// <remarks>
-    /// This endpoint filters datasets by their file type (CSV, Excel, JSON, etc.).
-    /// This is useful for finding datasets of a specific format or for bulk operations
-    /// on datasets with similar characteristics.
+    /// This endpoint filters datasets by their file type, allowing users to focus on
+    /// specific data formats. Supported file types include CSV, Excel, JSON, and XML.
     /// 
-    /// Supported file types:
-    /// - CSV (Comma-separated values)
-    /// - Excel (XLSX, XLS)
-    /// - JSON (JavaScript Object Notation)
-    /// - XML (Extensible Markup Language)
-    /// - Other supported formats
+    /// File type filtering:
+    /// - CSV: Comma-separated values files
+    /// - Excel: Microsoft Excel files (.xlsx, .xls)
+    /// - JSON: JavaScript Object Notation files
+    /// - XML: Extensible Markup Language files
+    /// - Unknown: Unsupported or unrecognized file types
+    /// 
+    /// This is useful for:
+    /// - Working with specific data formats
+    /// - Data format analysis
+    /// - Format-specific processing workflows
+    /// - Data organization and management
     /// </remarks>
     /// <response code="200">Filtered datasets retrieved successfully</response>
     /// <response code="401">Unauthorized - Authentication required</response>
-    /// <response code="500">Internal server error during filtering</response>
+    /// <response code="500">Internal server error during retrieval</response>
     [HttpGet("filetype/{fileType}")]
     [ProducesResponseType(typeof(ApiResponse<List<DataSetDto>>), 200)]
     [ProducesResponseType(401)]
@@ -527,7 +827,7 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
         try
         {
             var userId = GetCurrentUserId();
-            var dataSets = await _dataProcessingService.GetDataSetsByFileTypeAsync(fileType, userId, page, pageSize);
+            var dataSets = await _dataSetQueryService.GetDataSetsByFileTypeAsync(fileType, userId, page, pageSize);
             return Success(dataSets?.ToList() ?? []);
         }
         catch (Exception ex)
@@ -537,29 +837,35 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
     }
 
     /// <summary>
-    /// Retrieves datasets created within a specified date range for the authenticated user
+    /// Retrieves datasets within a specified date range with pagination support
     /// </summary>
-    /// <param name="startDate">The start date for the range (inclusive)</param>
-    /// <param name="endDate">The end date for the range (inclusive)</param>
-    /// <param name="page">The page number for pagination (default: 1)</param>
-    /// <param name="pageSize">The number of items per page (default: 20, max: 100)</param>
+    /// <param name="startDate">Start date for the range (inclusive)</param>
+    /// <param name="endDate">End date for the range (inclusive)</param>
+    /// <param name="page">Page number for pagination (default: 1)</param>
+    /// <param name="pageSize">Number of items per page (default: 20, max: 100)</param>
     /// <returns>
-    /// A paginated list of datasets created within the specified date range
+    /// Paginated list of datasets uploaded within the specified date range
     /// </returns>
     /// <remarks>
-    /// This endpoint filters datasets by their creation date within a specified range.
-    /// This is useful for finding recently created datasets or for time-based analysis
-    /// and reporting.
+    /// This endpoint filters datasets by their upload date, allowing users to find
+    /// datasets created within a specific time period. The date range is inclusive,
+    /// meaning datasets uploaded on the start or end date are included.
     /// 
-    /// Date range filtering:
-    /// - Inclusive start and end dates
-    /// - Based on dataset creation timestamp
-    /// - Supports various date formats
-    /// - Results ordered by creation date (newest first)
+    /// Date range features:
+    /// - Inclusive date range filtering
+    /// - Based on dataset upload timestamp
+    /// - Pagination support for large result sets
+    /// - User-specific dataset isolation
+    /// 
+    /// This is useful for:
+    /// - Finding recently uploaded datasets
+    /// - Historical data analysis
+    /// - Data lifecycle management
+    /// - Audit and compliance reporting
     /// </remarks>
     /// <response code="200">Date range filtered datasets retrieved successfully</response>
     /// <response code="401">Unauthorized - Authentication required</response>
-    /// <response code="500">Internal server error during filtering</response>
+    /// <response code="500">Internal server error during retrieval</response>
     [HttpGet("date-range")]
     [ProducesResponseType(typeof(ApiResponse<List<DataSetDto>>), 200)]
     [ProducesResponseType(401)]
@@ -573,32 +879,41 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
         try
         {
             var userId = GetCurrentUserId();
-            var dataSets = await _dataProcessingService.GetDataSetsByDateRangeAsync(startDate, endDate, userId, page, pageSize);
+            var dataSets = await _dataSetQueryService.GetDataSetsByDateRangeAsync(startDate, endDate, userId, page, pageSize);
             return Success(dataSets?.ToList() ?? []);
         }
         catch (Exception ex)
         {
-            return HandleException<List<DataSetDto>>(ex, $"GetDataSetsByDateRange({startDate}, {endDate})");
+            return HandleException<List<DataSetDto>>(ex, "GetDataSetsByDateRange");
         }
     }
 
     /// <summary>
-    /// Retrieves comprehensive statistics about the user's datasets
+    /// Retrieves comprehensive statistics for the authenticated user's datasets
     /// </summary>
     /// <returns>
-    /// Dataset statistics including counts, sizes, and recent activity
+    /// Detailed statistics including counts, file sizes, and breakdowns
     /// </returns>
     /// <remarks>
-    /// This endpoint provides comprehensive statistics about all datasets owned by
-    /// the authenticated user. The statistics include counts, total sizes, and
-    /// information about recently modified datasets.
+    /// This endpoint provides comprehensive analytics and statistics about the user's
+    /// datasets, including counts, file sizes, type breakdowns, and processing status.
+    /// This information is useful for understanding data usage patterns and storage
+    /// requirements.
     /// 
     /// Statistics include:
-    /// - Total number of datasets
-    /// - Total size of all datasets
-    /// - Recently modified datasets
+    /// - Total dataset count (active and deleted)
+    /// - Total and average file sizes
     /// - File type distribution
-    /// - Storage usage metrics
+    /// - Processing status breakdown
+    /// - Recent upload activity
+    /// - Storage utilization metrics
+    /// 
+    /// This is useful for:
+    /// - Data usage analysis
+    /// - Storage planning and optimization
+    /// - Performance monitoring
+    /// - User activity insights
+    /// - Capacity planning
     /// </remarks>
     /// <response code="200">Dataset statistics retrieved successfully</response>
     /// <response code="401">Unauthorized - Authentication required</response>
@@ -612,7 +927,7 @@ public class DataSetsController(IDataProcessingService dataProcessingService, IS
         try
         {
             var userId = GetCurrentUserId();
-            var statistics = await _dataProcessingService.GetDataSetStatisticsAsync(userId);
+            var statistics = await _dataSetQueryService.GetDataSetStatisticsAsync(userId);
             return Success(statistics);
         }
         catch (Exception ex)

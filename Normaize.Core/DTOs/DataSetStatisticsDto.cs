@@ -50,4 +50,52 @@ public class DataSetStatisticsDto
     /// </remarks>
     [JsonPropertyName("recentlyModified")]
     public IEnumerable<DataSetDto> RecentlyModified { get; set; } = new List<DataSetDto>();
+
+    /// <summary>
+    /// Gets or sets the collection of recently uploaded datasets
+    /// </summary>
+    /// <remarks>
+    /// Contains a list of datasets that have been recently uploaded.
+    /// Typically limited to the most recent 5-10 uploads for performance reasons.
+    /// Used for displaying recent upload activity and providing quick access to recently
+    /// uploaded datasets in the user interface.
+    /// </remarks>
+    [JsonPropertyName("recentUploads")]
+    public IEnumerable<DataSetDto> RecentUploads { get; set; } = new List<DataSetDto>();
+
+    /// <summary>
+    /// Gets or sets the total number of datasets (including deleted ones)
+    /// </summary>
+    [JsonPropertyName("totalDataSets")]
+    public int TotalDataSets { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of deleted datasets
+    /// </summary>
+    [JsonPropertyName("deletedDataSets")]
+    public int DeletedDataSets { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total file size in bytes
+    /// </summary>
+    [JsonPropertyName("totalFileSize")]
+    public long TotalFileSize { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average file size in bytes
+    /// </summary>
+    [JsonPropertyName("averageFileSize")]
+    public long AverageFileSize { get; set; }
+
+    /// <summary>
+    /// Gets or sets the breakdown of datasets by file type
+    /// </summary>
+    [JsonPropertyName("fileTypeBreakdown")]
+    public Dictionary<string, int> FileTypeBreakdown { get; set; } = new Dictionary<string, int>();
+
+    /// <summary>
+    /// Gets or sets the breakdown of datasets by processing status
+    /// </summary>
+    [JsonPropertyName("processingStatusBreakdown")]
+    public Dictionary<string, int> ProcessingStatusBreakdown { get; set; } = new Dictionary<string, int>();
 }
