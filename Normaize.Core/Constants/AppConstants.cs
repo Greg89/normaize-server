@@ -51,6 +51,9 @@ public static class AppConstants
         public const string ANALYSIS_CREATION_FAILURE = "AnalysisCreationFailure";
         public const string DATABASE_TIMEOUT = "DatabaseTimeout";
         public const string STORAGE_FAILURE = "StorageFailure";
+        public const string RESTORE_OPERATION_DELAY = "RestoreOperationDelay";
+        public const string FILE_PROCESSING_FAILURE = "FileProcessingFailure";
+        public const string DELAY_MS_KEY = "DelayMs";
         public const string SIMULATED_PROCESSING_DELAY_MESSAGE = "Chaos engineering: Simulating processing delay. CorrelationId: {CorrelationId}";
 
         // Chaos engineering delay constants
@@ -244,6 +247,11 @@ public static class AppConstants
         public const string STATUS = "Status";
         public const string TOTAL_DATASETS = "TotalDataSets";
         public const string CHART_TYPE = "ChartType";
+        public const string CORRELATION_ID = "CorrelationId";
+        public const string RESTORE_TYPE_KEY = "RestoreType";
+        public const string RESET_TYPE_KEY = "ResetType";
+        public const string RETENTION_DAYS = "RetentionDays";
+        public const string OPERATION = "Operation";
 
     }
 
@@ -785,6 +793,9 @@ public static class AppConstants
         public const string RESTORE_DATA_SET_FULL = "RestoreDataSetFull";
         public const string RESET_DATA_SET_FILE_BASED = "ResetDataSetFileBased";
         public const string RESET_DATA_SET_DATABASE_ONLY = "ResetDataSetDatabaseOnly";
+        public const string AUDIT_ACTION_RESTORE_DATA_SET = "RestoreDataSet";
+        public const string AUDIT_ACTION_HARD_DELETE_DATA_SET = "HardDeleteDataSet";
+        public const string AUDIT_ACTION_UPDATE_RETENTION_POLICY = "UpdateRetentionPolicy";
 
         // Error messages
         public const string DATASET_NOT_FOUND = DataSetMessages.DATASET_NOT_FOUND;
@@ -793,6 +804,7 @@ public static class AppConstants
         public const string DATASET_ID_MUST_BE_POSITIVE = ValidationMessages.DATASET_ID_MUST_BE_POSITIVE;
         public const string USER_ID_CANNOT_BE_NULL_OR_EMPTY = "User ID cannot be null or empty";
         public const string RETENTION_DAYS_MUST_BE_POSITIVE = "Retention days must be positive";
+        public const string DATASET_NOT_FOUND_WITH_ID = "Dataset not found with ID {0}";
 
         // File availability messages
         public const string NO_FILE_PATH_ASSOCIATED_WITH_DATASET = "No file path associated with dataset";
