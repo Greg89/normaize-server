@@ -272,7 +272,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             throw new InvalidOperationException($"Dataset with ID {id} not found");
         }
 
-        if (dataSet.UserId != userId)
+        if (!string.Equals(dataSet.UserId, userId, StringComparison.Ordinal))
         {
             _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetLifecycle.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
             throw new UnauthorizedAccessException($"{AppConstants.DataSetLifecycle.ACCESS_DENIED_TO_DATASET} {id}");
@@ -319,6 +319,12 @@ public class DataSetLifecycleService : IDataSetLifecycleService
 
     private async Task LogAuditActionAsync(int id, string userId, string action, IOperationContext context, object? additionalData = null)
     {
+        var auditData = BuildAuditData(id, context, additionalData);
+        await _auditService.LogDataSetActionAsync(id, userId, action, auditData);
+    }
+
+    private static Dictionary<string, object> BuildAuditData(int id, IOperationContext context, object? additionalData)
+    {
         var auditData = new Dictionary<string, object>
         {
             [AppConstants.DataStructures.DATASETID] = id,
@@ -327,7 +333,11 @@ public class DataSetLifecycleService : IDataSetLifecycleService
 
         if (additionalData != null)
         {
-            var additionalDict = JsonSerializer.SerializeToNode(additionalData)?.AsObject()?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            var additionalDict = JsonSerializer
+                .SerializeToNode(additionalData)?
+                .AsObject()?
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
             if (additionalDict != null)
             {
                 foreach (var kvp in additionalDict)
@@ -337,7 +347,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             }
         }
 
-        await _auditService.LogDataSetActionAsync(id, userId, action, auditData);
+        return auditData;
     }
 
     private static string GetCorrelationId() => Activity.Current?.Id ?? Guid.NewGuid().ToString();

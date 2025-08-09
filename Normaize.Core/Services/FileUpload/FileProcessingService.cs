@@ -574,6 +574,11 @@ public class FileProcessingService : IFileProcessingService
         records.Capacity = Math.Min(maxRows, AppConstants.FileProcessing.DEFAULT_RECORDS_CAPACITY);
 
         // Assume first child is the template for data rows
+        if (children == null || children.Count == 0)
+        {
+            // No child elements to process; nothing to extract
+            return;
+        }
         var firstChild = children[0];
         var childElements = firstChild.Elements().ToList();
 
