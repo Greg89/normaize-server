@@ -27,6 +27,7 @@ public static class ManualMapper
             FileType = dataSet.FileType,
             FileSize = dataSet.FileSize,
             UploadedAt = dataSet.UploadedAt,
+            IsDeleted = dataSet.IsDeleted,
             UserId = dataSet.UserId,
             RowCount = dataSet.RowCount,
             ColumnCount = dataSet.ColumnCount,

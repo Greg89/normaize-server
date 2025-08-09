@@ -138,6 +138,16 @@ public class DataSetDto
     public DateTime UploadedAt { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the dataset is soft-deleted
+    /// </summary>
+    /// <remarks>
+    /// Soft-deleted datasets remain in storage and can be restored.
+    /// Included in responses when the caller opts to include deleted datasets.
+    /// </remarks>
+    [JsonPropertyName("isDeleted")]
+    public bool IsDeleted { get; set; }
+
+    /// <summary>
     /// Gets or sets the Auth0 user identifier who owns this dataset
     /// </summary>
     /// <remarks>
