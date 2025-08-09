@@ -2,7 +2,6 @@ using Normaize.Core.Constants;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
 using Normaize.Core.Models;
-using Normaize.Core.Mapping;
 using System.Text.Json;
 using System.Diagnostics;
 
@@ -107,8 +106,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
                     await Task.Delay(delayMs);
                 }, new Dictionary<string, object> { ["UserId"] = userId, ["DataSetId"] = id, ["RetentionDays"] = retentionDto?.RetentionDays ?? 0 });
 
-                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
-                if (dataSet == null) throw new InvalidOperationException($"Dataset with ID {id} not found");
+                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context) ?? throw new InvalidOperationException($"Dataset with ID {id} not found");
 
                 // Calculate new expiry date
                 var expiryDate = DateTime.UtcNow.AddDays(retentionDto?.RetentionDays ?? 0);
@@ -151,9 +149,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             () => ValidateDataSetIdAndUserId(id, userId),
             async (context) =>
             {
-                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
-                if (dataSet == null) throw new InvalidOperationException($"Dataset with ID {id} not found");
-
+                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context) ?? throw new InvalidOperationException($"Dataset with ID {id} not found");
                 var isExpired = dataSet!.RetentionExpiryDate.HasValue &&
                                dataSet.RetentionExpiryDate.Value < DateTime.UtcNow;
 
@@ -181,9 +177,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             () => ValidateRestoreInputs(id, userId),
             async (context) =>
             {
-                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
-                if (dataSet == null) throw new InvalidOperationException($"Dataset with ID {id} not found");
-
+                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context) ?? throw new InvalidOperationException($"Dataset with ID {id} not found");
                 if (!dataSet!.IsDeleted)
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Dataset is not deleted, no action needed");
@@ -317,8 +311,8 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     {
         await LogAuditActionAsync(id, userId, "HardDeleteDataSet", context, new
         {
-            FileName = dataSet.FileName,
-            FilePath = dataSet.FilePath
+            dataSet.FileName,
+            dataSet.FilePath
         });
         _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetLifecycle.DATASET_PERMANENTLY_DELETED);
     }
@@ -365,20 +359,20 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     private static void ValidateRestoreEnhancedInputs(int id, DataSetRestoreDto restoreDto, string userId)
     {
         ValidateDataSetIdAndUserId(id, userId);
-        if (restoreDto == null) throw new ArgumentNullException(nameof(restoreDto));
+        ArgumentNullException.ThrowIfNull(restoreDto);
     }
 
     private static void ValidateResetInputs(int id, DataSetResetDto resetDto, string userId)
     {
         ValidateDataSetIdAndUserId(id, userId);
-        if (resetDto == null) throw new ArgumentNullException(nameof(resetDto));
+        ArgumentNullException.ThrowIfNull(resetDto);
     }
 
     private static void ValidateRetentionInputs(int id, DataSetRetentionDto retentionDto, string userId)
     {
         ValidateDataSetIdAndUserId(id, userId);
-        if (retentionDto == null) throw new ArgumentNullException(nameof(retentionDto));
-        if (retentionDto.RetentionDays <= 0) throw new ArgumentException(AppConstants.DataSetLifecycle.RETENTION_DAYS_MUST_BE_POSITIVE, nameof(retentionDto.RetentionDays));
+        ArgumentNullException.ThrowIfNull(retentionDto);
+        if (retentionDto.RetentionDays <= 0) throw new ArgumentOutOfRangeException(nameof(retentionDto), AppConstants.DataSetLifecycle.RETENTION_DAYS_MUST_BE_POSITIVE);
     }
 
     #endregion
@@ -440,17 +434,12 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             };
         }
 
-        switch (restoreDto.RestoreType)
+        return restoreDto.RestoreType switch
         {
-            case RestoreType.Simple:
-                return await PerformSimpleRestoreAsync(dataSet, context);
-
-            case RestoreType.WithReset:
-                return await PerformFullRestoreAsync(dataSet, context);
-
-            default:
-                throw new ArgumentException($"Unsupported restore type: {restoreDto.RestoreType}");
-        }
+            RestoreType.Simple => await PerformSimpleRestoreAsync(dataSet, context),
+            RestoreType.WithReset => await PerformFullRestoreAsync(dataSet, context),
+            _ => throw new ArgumentException($"Unsupported restore type: {restoreDto.RestoreType}"),
+        };
     }
 
     private async Task<OperationResultDto> PerformSimpleRestoreAsync(DataSet dataSet, IOperationContext context)
@@ -493,17 +482,12 @@ public class DataSetLifecycleService : IDataSetLifecycleService
 
     private async Task<OperationResultDto> PerformResetOperationAsync(DataSet dataSet, DataSetResetDto resetDto, IOperationContext context)
     {
-        switch (resetDto.ResetType)
+        return resetDto.ResetType switch
         {
-            case ResetType.OriginalFile:
-                return await PerformFileResetAsync(dataSet, context);
-
-            case ResetType.Database:
-                return await PerformDatabaseResetAsync(dataSet, context);
-
-            default:
-                throw new ArgumentException($"Unsupported reset type: {resetDto.ResetType}");
-        }
+            ResetType.OriginalFile => await PerformFileResetAsync(dataSet, context),
+            ResetType.Database => await PerformDatabaseResetAsync(dataSet, context),
+            _ => throw new ArgumentException($"Unsupported reset type: {resetDto.ResetType}"),
+        };
     }
 
     private async Task<OperationResultDto> PerformFileResetAsync(DataSet dataSet, IOperationContext context)
@@ -521,8 +505,8 @@ public class DataSetLifecycleService : IDataSetLifecycleService
                 {
                     DataSetId = dataSet.Id,
                     FileAvailable = false,
-                    ErrorCode = fileAvailability.ErrorCode,
-                    Reason = fileAvailability.Reason
+                    fileAvailability.ErrorCode,
+                    fileAvailability.Reason
                 }
             };
         }
@@ -560,7 +544,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             await LogAuditActionAsync(dataSet.Id, dataSet.UserId, AppConstants.DataSetLifecycle.RESET_DATA_SET_FILE_BASED, context, new
             {
                 ResetType = AppConstants.DataSetLifecycle.RESET_TYPE_FILE_BASED,
-                FilePath = dataSet.FilePath
+                dataSet.FilePath
             });
 
             return new OperationResultDto
@@ -628,7 +612,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
         };
     }
 
-    private class FileAvailabilityResult
+    private sealed class FileAvailabilityResult
     {
         public bool IsAvailable { get; set; }
         public string Reason { get; set; } = string.Empty;

@@ -119,7 +119,7 @@ public class UserSettingsController(
         try
         {
             var userInfo = GetCurrentUserInfo();
-            var updatedSettings = await _userSettingsService.SaveUserSettingsAsync(userInfo.UserId, updateDto);
+            await _userSettingsService.SaveUserSettingsAsync(userInfo.UserId, updateDto);
 
             // Return the updated profile with Auth0 info
             var updatedProfile = await _userSettingsService.GetUserProfileAsync(userInfo.UserId);

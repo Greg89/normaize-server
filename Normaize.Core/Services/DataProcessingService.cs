@@ -354,15 +354,15 @@ public class DataProcessingService : IDataProcessingService
 
     private static void ValidateUploadInputs(FileUploadRequest fileRequest, CreateDataSetDto createDto)
     {
-        if (fileRequest == null) throw new ArgumentNullException(nameof(fileRequest));
-        if (createDto == null) throw new ArgumentNullException(nameof(createDto));
+        ArgumentNullException.ThrowIfNull(fileRequest);
+        ArgumentNullException.ThrowIfNull(createDto);
         if (string.IsNullOrWhiteSpace(createDto.UserId)) throw new ArgumentException(AppConstants.DataProcessing.USER_ID_CANNOT_BE_NULL_OR_EMPTY, nameof(createDto));
         if (string.IsNullOrWhiteSpace(createDto.Name)) throw new ArgumentException(AppConstants.DataProcessing.NAME_CANNOT_BE_NULL_OR_EMPTY, nameof(createDto));
         if (string.IsNullOrWhiteSpace(fileRequest.FileName)) throw new ArgumentException(AppConstants.DataProcessing.FILE_NAME_CANNOT_BE_NULL_OR_EMPTY, nameof(fileRequest));
         if (fileRequest.FileSize <= 0) throw new ArgumentException(AppConstants.DataProcessing.FILE_SIZE_MUST_BE_POSITIVE, nameof(fileRequest));
 
         // Validate file name for security (prevent path traversal attacks)
-        if (fileRequest.FileName.Contains("..") || fileRequest.FileName.Contains("/") || fileRequest.FileName.Contains("\\"))
+        if (fileRequest.FileName.Contains("..") || fileRequest.FileName.Contains('/') || fileRequest.FileName.Contains('\\'))
             throw new ArgumentException(AppConstants.DataProcessing.INVALID_FILE_NAME, nameof(fileRequest));
     }
 
@@ -371,7 +371,7 @@ public class DataProcessingService : IDataProcessingService
     private static void ValidateUpdateDataSetInputs(int id, UpdateDataSetDto updateDto, string userId)
     {
         ValidateDataSetIdAndUserId(id, userId);
-        if (updateDto == null) throw new ArgumentNullException(nameof(updateDto));
+        ArgumentNullException.ThrowIfNull(updateDto);
         if (string.IsNullOrWhiteSpace(updateDto.Name)) throw new ArgumentException(AppConstants.DataProcessing.NAME_CANNOT_BE_NULL_OR_EMPTY, nameof(updateDto));
     }
 

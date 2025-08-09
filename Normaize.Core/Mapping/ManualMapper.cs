@@ -209,33 +209,46 @@ public static class ManualMapper
     {
         if (dto == null || existingSettings == null) return existingSettings!;
 
-        // Only update non-null properties
+        UpdateStringProperties(dto, existingSettings);
+        UpdateBooleanProperties(dto, existingSettings);
+        UpdateIntegerProperties(dto, existingSettings);
+
+        existingSettings.UpdatedAt = DateTime.UtcNow;
+        return existingSettings;
+    }
+
+    private static void UpdateStringProperties(UpdateUserSettingsDto dto, UserSettings existingSettings)
+    {
         if (dto.Theme != null) existingSettings.Theme = dto.Theme;
         if (dto.Language != null) existingSettings.Language = dto.Language;
         if (dto.TimeZone != null) existingSettings.TimeZone = dto.TimeZone;
         if (dto.DateFormat != null) existingSettings.DateFormat = dto.DateFormat;
         if (dto.TimeFormat != null) existingSettings.TimeFormat = dto.TimeFormat;
+        if (dto.DefaultFileType != null) existingSettings.DefaultFileType = dto.DefaultFileType;
+        if (dto.DisplayName != null) existingSettings.DisplayName = dto.DisplayName;
+    }
+
+    private static void UpdateBooleanProperties(UpdateUserSettingsDto dto, UserSettings existingSettings)
+    {
         if (dto.EmailNotificationsEnabled.HasValue) existingSettings.EmailNotificationsEnabled = dto.EmailNotificationsEnabled.Value;
         if (dto.PushNotificationsEnabled.HasValue) existingSettings.PushNotificationsEnabled = dto.PushNotificationsEnabled.Value;
         if (dto.ProcessingCompleteNotifications.HasValue) existingSettings.ProcessingCompleteNotifications = dto.ProcessingCompleteNotifications.Value;
         if (dto.ErrorNotifications.HasValue) existingSettings.ErrorNotifications = dto.ErrorNotifications.Value;
         if (dto.WeeklyDigestEnabled.HasValue) existingSettings.WeeklyDigestEnabled = dto.WeeklyDigestEnabled.Value;
-        if (dto.DefaultPageSize.HasValue) existingSettings.DefaultPageSize = dto.DefaultPageSize.Value;
         if (dto.ShowTutorials.HasValue) existingSettings.ShowTutorials = dto.ShowTutorials.Value;
         if (dto.CompactMode.HasValue) existingSettings.CompactMode = dto.CompactMode.Value;
         if (dto.AutoProcessUploads.HasValue) existingSettings.AutoProcessUploads = dto.AutoProcessUploads.Value;
-        if (dto.MaxPreviewRows.HasValue) existingSettings.MaxPreviewRows = dto.MaxPreviewRows.Value;
-        if (dto.DefaultFileType != null) existingSettings.DefaultFileType = dto.DefaultFileType;
         if (dto.EnableDataValidation.HasValue) existingSettings.EnableDataValidation = dto.EnableDataValidation.Value;
         if (dto.EnableSchemaInference.HasValue) existingSettings.EnableSchemaInference = dto.EnableSchemaInference.Value;
         if (dto.ShareAnalytics.HasValue) existingSettings.ShareAnalytics = dto.ShareAnalytics.Value;
         if (dto.AllowDataUsageForImprovement.HasValue) existingSettings.AllowDataUsageForImprovement = dto.AllowDataUsageForImprovement.Value;
         if (dto.ShowProcessingTime.HasValue) existingSettings.ShowProcessingTime = dto.ShowProcessingTime.Value;
-        if (dto.DisplayName != null) existingSettings.DisplayName = dto.DisplayName;
+    }
 
-        existingSettings.UpdatedAt = DateTime.UtcNow;
-
-        return existingSettings;
+    private static void UpdateIntegerProperties(UpdateUserSettingsDto dto, UserSettings existingSettings)
+    {
+        if (dto.DefaultPageSize.HasValue) existingSettings.DefaultPageSize = dto.DefaultPageSize.Value;
+        if (dto.MaxPreviewRows.HasValue) existingSettings.MaxPreviewRows = dto.MaxPreviewRows.Value;
     }
 
     #endregion
