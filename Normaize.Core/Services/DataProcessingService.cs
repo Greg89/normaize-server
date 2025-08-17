@@ -108,7 +108,7 @@ public class DataProcessingService : IDataProcessingService
             var userSettings = await ExecuteWithTimeoutAsync(
                 () => _userSettingsService.GetUserSettingsAsync(createDto!.UserId),
                 _infrastructure.QuickTimeout);
-            
+
             // Set retention expiry date based on user settings
             var retentionDays = userSettings?.RetentionDays ?? 365; // Default to 1 year if no settings
             dataSet.RetentionExpiryDate = DateTime.UtcNow.AddDays(retentionDays);
