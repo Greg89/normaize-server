@@ -164,6 +164,7 @@ public class NormaizeContext : DbContext
             entity.Property(e => e.DefaultFileType).HasMaxLength(20).HasDefaultValue("CSV");
             entity.Property(e => e.EnableDataValidation).HasDefaultValue(true);
             entity.Property(e => e.EnableSchemaInference).HasDefaultValue(true);
+            entity.Property(e => e.RetentionDays).HasDefaultValue(365);
 
             // Privacy settings
             entity.Property(e => e.ShareAnalytics).HasDefaultValue(true);

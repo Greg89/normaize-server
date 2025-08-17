@@ -183,6 +183,17 @@ public class UpdateUserSettingsDto
     [JsonPropertyName("enableSchemaInference")]
     public bool? EnableSchemaInference { get; set; }
 
+    /// <summary>
+    /// Gets or sets the default retention period in days for the user's datasets
+    /// </summary>
+    /// <remarks>
+    /// Controls how long datasets will be kept before automatic deletion.
+    /// When null, this setting will not be updated.
+    /// </remarks>
+    [Range(1, 3650, ErrorMessage = "Retention days must be between 1 and 3650 (10 years)")]
+    [JsonPropertyName("retentionDays")]
+    public int? RetentionDays { get; set; }
+
     #endregion
 
     #region Privacy Settings

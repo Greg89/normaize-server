@@ -30,6 +30,7 @@ public class UserSettings
     public string DefaultFileType { get; set; } = "CSV";
     public bool EnableDataValidation { get; set; } = true;
     public bool EnableSchemaInference { get; set; } = true;
+    public int RetentionDays { get; set; } = 365; // Default 1 year retention for user's datasets
 
     // Privacy Settings
     public bool ShareAnalytics { get; set; } = true;

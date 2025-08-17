@@ -448,6 +448,8 @@ public static class AppConstants
         public const string DATASET_IS_ALREADY_DELETED = "Dataset is already deleted";
         public const string DATASET_SOFT_DELETED_SUCCESSFULLY = "Dataset soft deleted successfully";
         public const string OPERATION_TIMED_OUT = "Operation timed out";
+        public const string USER_SETTINGS_RETRIEVAL_STARTED = "User settings retrieval started";
+        public const string RETENTION_POLICY_SET = "Retention policy set based on user settings";
 
         // Validation messages
         public const string USER_ID_CANNOT_BE_NULL_OR_EMPTY = "User ID cannot be null or empty";

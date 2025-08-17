@@ -69,17 +69,15 @@ public class DataSet
     public string? LastModifiedBy { get; set; }
 
     // Data retention policy
-    public int RetentionDays { get; set; } = 365; // Default 1 year retention
-
     public DateTime? RetentionExpiryDate { get; set; }
 
     public bool IsRetentionExpired => RetentionExpiryDate.HasValue && RetentionExpiryDate.Value <= DateTime.UtcNow;
 
-    public List<Analysis> Analyses { get; set; } = new();
+    public List<Analysis> Analyses { get; set; } = [];
 
-    public List<DataSetRow> Rows { get; set; } = new();
+    public List<DataSetRow> Rows { get; set; } = [];
 
-    public List<DataSetAuditLog> AuditLogs { get; set; } = new();
+    public List<DataSetAuditLog> AuditLogs { get; set; } = [];
 }
 
 public class DataSetRow

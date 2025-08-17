@@ -16,21 +16,25 @@ public class DataProcessingService : IDataProcessingService
     private readonly IDataSetRepository _dataSetRepository;
     private readonly IFileUploadService _fileUploadService;
     private readonly IAuditService _auditService;
+    private readonly IUserSettingsService _userSettingsService;
     private readonly IDataProcessingInfrastructure _infrastructure;
 
     public DataProcessingService(
         IDataSetRepository dataSetRepository,
         IFileUploadService fileUploadService,
         IAuditService auditService,
+        IUserSettingsService userSettingsService,
         IDataProcessingInfrastructure infrastructure)
     {
         ArgumentNullException.ThrowIfNull(dataSetRepository);
         ArgumentNullException.ThrowIfNull(fileUploadService);
         ArgumentNullException.ThrowIfNull(auditService);
+        ArgumentNullException.ThrowIfNull(userSettingsService);
         ArgumentNullException.ThrowIfNull(infrastructure);
         _dataSetRepository = dataSetRepository;
         _fileUploadService = fileUploadService;
         _auditService = auditService;
+        _userSettingsService = userSettingsService;
         _infrastructure = infrastructure;
     }
 
@@ -97,6 +101,21 @@ public class DataProcessingService : IDataProcessingService
             {
                 ["RowCount"] = dataSet.RowCount,
                 ["ColumnCount"] = dataSet.ColumnCount
+            });
+
+            // Get user settings for retention policy
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.USER_SETTINGS_RETRIEVAL_STARTED);
+            var userSettings = await ExecuteWithTimeoutAsync(
+                () => _userSettingsService.GetUserSettingsAsync(createDto!.UserId),
+                _infrastructure.QuickTimeout);
+            
+            // Set retention expiry date based on user settings
+            var retentionDays = userSettings?.RetentionDays ?? 365; // Default to 1 year if no settings
+            dataSet.RetentionExpiryDate = DateTime.UtcNow.AddDays(retentionDays);
+            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.RETENTION_POLICY_SET, new Dictionary<string, object>
+            {
+                ["RetentionDays"] = retentionDays,
+                ["RetentionExpiryDate"] = dataSet.RetentionExpiryDate
             });
 
             // Set user-specific properties

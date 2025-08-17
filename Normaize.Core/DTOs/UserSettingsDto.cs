@@ -193,14 +193,26 @@ public class UserSettingsDto
     public bool EnableDataValidation { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets whether schema inference should be enabled for uploaded data.
+    /// Gets or sets whether schema inference is enabled for uploaded data files.
     /// </summary>
     /// <remarks>
-    /// When enabled, the system will automatically detect data types and structure
+    /// When enabled, the system will automatically detect and suggest data types
     /// from uploaded files, improving processing accuracy and user experience.
     /// </remarks>
     [JsonPropertyName("enableSchemaInference")]
     public bool EnableSchemaInference { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the default retention period in days for the user's datasets.
+    /// </summary>
+    /// <remarks>
+    /// This setting determines how long datasets will be kept before they are
+    /// automatically marked for deletion. The retention period is applied to
+    /// all new datasets uploaded by the user.
+    /// </remarks>
+    [JsonPropertyName("retentionDays")]
+    [Range(1, 3650, ErrorMessage = "Retention days must be between 1 and 3650 (10 years)")]
+    public int RetentionDays { get; set; } = 365;
 
     #endregion
 

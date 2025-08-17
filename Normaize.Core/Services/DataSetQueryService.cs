@@ -28,30 +28,30 @@ public class DataSetQueryService : IDataSetQueryService
     public async Task<IEnumerable<DataSetDto>> GetDataSetsByUserAsync(string userId, int page = 1, int pageSize = 20, bool includeDeleted = false)
     {
         return await ExecuteQueryOperationAsync(
-AppConstants.DataSetQuery.GET_DATA_SETS_BY_USER,
-userId,
-new Dictionary<string, object> { [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize, ["IncludeDeleted"] = includeDeleted },
-() => ValidateQueryInputs(userId, page, pageSize),
-async (context) =>
-{
-    // Chaos engineering: Simulate network latency during dataset retrieval
-    await _infrastructure.ChaosEngineering.ExecuteChaosAsync("NetworkLatency", context.CorrelationId, context.OperationName, async () =>
-    {
-        var delayMs = new Random().Next(AppConstants.ChaosEngineering.MIN_NETWORK_LATENCY_MS, AppConstants.ChaosEngineering.MAX_NETWORK_LATENCY_MS);
-        _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating network latency during dataset retrieval", new Dictionary<string, object>
+        AppConstants.DataSetQuery.GET_DATA_SETS_BY_USER,
+        userId,
+        new Dictionary<string, object> { [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize, ["IncludeDeleted"] = includeDeleted },
+        () => ValidateQueryInputs(userId, page, pageSize),
+        async (context) =>
         {
-            ["DelayMs"] = delayMs,
-            ["ChaosType"] = "NetworkLatency"
+            // Chaos engineering: Simulate network latency during dataset retrieval
+            await _infrastructure.ChaosEngineering.ExecuteChaosAsync("NetworkLatency", context.CorrelationId, context.OperationName, async () =>
+            {
+                var delayMs = new Random().Next(AppConstants.ChaosEngineering.MIN_NETWORK_LATENCY_MS, AppConstants.ChaosEngineering.MAX_NETWORK_LATENCY_MS);
+                _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating network latency during dataset retrieval", new Dictionary<string, object>
+                {
+                    ["DelayMs"] = delayMs,
+                    ["ChaosType"] = "NetworkLatency"
+                });
+                await Task.Delay(delayMs);
+            }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId, [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize });
+
+            var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
+            var filteredDataSets = includeDeleted ? dataSets : dataSets.Where(ds => !ds.IsDeleted);
+            var paginatedDataSets = ApplyPagination(filteredDataSets, page, pageSize, context);
+
+            return paginatedDataSets.Select(ds => ds.ToDto());
         });
-        await Task.Delay(delayMs);
-    }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId, [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize });
-
-    var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
-    var filteredDataSets = includeDeleted ? dataSets : dataSets.Where(ds => !ds.IsDeleted);
-    var paginatedDataSets = ApplyPagination(filteredDataSets, page, pageSize, context);
-
-    return paginatedDataSets.Select(ds => ds.ToDto());
-});
     }
 
     public async Task<IEnumerable<DataSetDto>> GetDeletedDataSetsAsync(string userId, int page = 1, int pageSize = 20)

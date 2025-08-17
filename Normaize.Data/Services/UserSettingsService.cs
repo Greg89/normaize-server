@@ -213,6 +213,7 @@ public class UserSettingsService : IUserSettingsService
             DefaultFileType = settings.DefaultFileType,
             EnableDataValidation = settings.EnableDataValidation,
             EnableSchemaInference = settings.EnableSchemaInference,
+            RetentionDays = settings.RetentionDays,
             ShareAnalytics = settings.ShareAnalytics,
             AllowDataUsageForImprovement = settings.AllowDataUsageForImprovement,
             ShowProcessingTime = settings.ShowProcessingTime,

@@ -111,8 +111,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
                 // Calculate new expiry date
                 var expiryDate = DateTime.UtcNow.AddDays(retentionDto?.RetentionDays ?? 0);
 
-                // Update retention policy
-                dataSet!.RetentionDays = retentionDto?.RetentionDays ?? 0;
+                // Update retention policy - only RetentionExpiryDate, no RetentionDays field
                 dataSet!.RetentionExpiryDate = expiryDate;
 
                 await _dataSetRepository.UpdateAsync(dataSet);
@@ -120,9 +119,9 @@ public class DataSetLifecycleService : IDataSetLifecycleService
                 // Log audit action
                 await LogAuditActionAsync(id, userId, AppConstants.DataSetLifecycle.AUDIT_ACTION_UPDATE_RETENTION_POLICY, context, new
                 {
-                    OldRetentionDays = dataSet!.RetentionDays,
-                    NewRetentionDays = retentionDto?.RetentionDays ?? 0,
-                    NewExpiryDate = expiryDate
+                    OldExpiryDate = dataSet!.RetentionExpiryDate,
+                    NewExpiryDate = expiryDate,
+                    RetentionDays = retentionDto?.RetentionDays ?? 0
                 });
 
                 return new OperationResultDto
@@ -160,7 +159,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
                 return new DataSetRetentionStatusDto
                 {
                     DataSetId = id,
-                    RetentionDays = dataSet!.RetentionDays,
+                    RetentionDays = dataSet!.RetentionExpiryDate.HasValue ? (int)(dataSet.RetentionExpiryDate.Value - dataSet.UploadedAt).TotalDays : null,
                     RetentionExpiryDate = dataSet.RetentionExpiryDate,
                     IsRetentionExpired = isExpired,
                     DaysUntilExpiry = daysRemaining
@@ -382,7 +381,6 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     {
         ValidateDataSetIdAndUserId(id, userId);
         ArgumentNullException.ThrowIfNull(retentionDto);
-        if (retentionDto.RetentionDays <= 0) throw new ArgumentException(AppConstants.DataSetLifecycle.RETENTION_DAYS_MUST_BE_POSITIVE, nameof(retentionDto));
     }
 
     #endregion

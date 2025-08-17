@@ -18,6 +18,7 @@ public class DataProcessingServiceTests
     private readonly Mock<IDataSetRepository> _mockRepository;
     private readonly Mock<IFileUploadService> _mockFileUploadService;
     private readonly Mock<IAuditService> _mockAuditService;
+    private readonly Mock<IUserSettingsService> _mockUserSettingsService;
 
     private readonly Mock<ILogger<DataProcessingService>> _mockLogger;
     private readonly IMemoryCache _cache;
@@ -31,6 +32,7 @@ public class DataProcessingServiceTests
         _mockRepository = new Mock<IDataSetRepository>();
         _mockFileUploadService = new Mock<IFileUploadService>();
         _mockAuditService = new Mock<IAuditService>();
+        _mockUserSettingsService = new Mock<IUserSettingsService>();
 
         _mockLogger = new Mock<ILogger<DataProcessingService>>();
         _cache = new MemoryCache(new MemoryCacheOptions());
@@ -50,6 +52,7 @@ public class DataProcessingServiceTests
             _mockRepository.Object,
             _mockFileUploadService.Object,
             _mockAuditService.Object,
+            _mockUserSettingsService.Object,
             _mockInfrastructure.Object);
 
         // Setup default structured logging mocks
@@ -82,6 +85,7 @@ public class DataProcessingServiceTests
                 null!,
                 _mockFileUploadService.Object,
                 _mockAuditService.Object,
+                _mockUserSettingsService.Object,
                 _mockInfrastructure.Object));
 
         exception.ParamName.Should().Be("dataSetRepository");
@@ -96,6 +100,7 @@ public class DataProcessingServiceTests
                 _mockRepository.Object,
                 null!,
                 _mockAuditService.Object,
+                _mockUserSettingsService.Object,
                 _mockInfrastructure.Object));
 
         exception.ParamName.Should().Be("fileUploadService");
@@ -110,6 +115,7 @@ public class DataProcessingServiceTests
                 _mockRepository.Object,
                 _mockFileUploadService.Object,
                 null!,
+                _mockUserSettingsService.Object,
                 _mockInfrastructure.Object));
 
         exception.ParamName.Should().Be("auditService");
@@ -126,9 +132,25 @@ public class DataProcessingServiceTests
                 _mockRepository.Object,
                 _mockFileUploadService.Object,
                 _mockAuditService.Object,
+                _mockUserSettingsService.Object,
                 null!));
 
         exception.ParamName.Should().Be("infrastructure");
+    }
+
+    [Fact]
+    public void Constructor_WithNullUserSettingsService_ShouldThrowArgumentNullException()
+    {
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            new DataProcessingService(
+                _mockRepository.Object,
+                _mockFileUploadService.Object,
+                _mockAuditService.Object,
+                null!,
+                _mockInfrastructure.Object));
+
+        exception.ParamName.Should().Be("userSettingsService");
     }
 
     [Fact]
@@ -165,6 +187,10 @@ public class DataProcessingServiceTests
         _mockRepository.Setup(r => r.AddAsync(It.IsAny<DataSet>())).ReturnsAsync(dataSet);
         _mockAuditService.Setup(a => a.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null))
             .Returns(Task.CompletedTask);
+
+        // Setup user settings mock to return default retention days
+        _mockUserSettingsService.Setup(u => u.GetUserSettingsAsync("user123"))
+            .ReturnsAsync(new UserSettingsDto { RetentionDays = 365 });
 
         // Act
         var result = await _service.UploadDataSetAsync(fileRequest, createDto);

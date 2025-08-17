@@ -39,7 +39,8 @@ public static class ManualMapper
             Schema = dataSet.Schema,
             DataHash = dataSet.DataHash,
             UseSeparateTable = dataSet.UseSeparateTable,
-            ProcessingErrors = dataSet.ProcessingErrors
+            ProcessingErrors = dataSet.ProcessingErrors,
+            RetentionExpiryDate = dataSet.RetentionExpiryDate
         };
     }
 

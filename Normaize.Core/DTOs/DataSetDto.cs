@@ -268,6 +268,16 @@ public class DataSetDto
     /// </remarks>
     [JsonPropertyName("processingErrors")]
     public string? ProcessingErrors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the retention expiry date for the dataset
+    /// </summary>
+    /// <remarks>
+    /// The date when this dataset will be automatically marked for deletion.
+    /// This is calculated based on the user's retention settings when the dataset is uploaded.
+    /// </remarks>
+    [JsonPropertyName("retentionExpiryDate")]
+    public DateTime? RetentionExpiryDate { get; set; }
 }
 
 /// <summary>
