@@ -336,8 +336,8 @@ public class CreateDataSetDto
 /// Used by the DataSetsController for dataset update operations and by the
 /// DataProcessingService for modifying existing dataset records.
 /// 
-/// Only allows updating the name and description fields to maintain data integrity
-/// and prevent accidental modification of critical dataset properties.
+/// Allows updating the name, description, and retention expiry date to maintain data integrity
+/// and provide users with control over their dataset lifecycle.
 /// </remarks>
 public class UpdateDataSetDto
 {
@@ -363,6 +363,17 @@ public class UpdateDataSetDto
     [StringLength(1000)]
     [JsonPropertyName("description")]
     public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the updated retention expiry date for the dataset
+    /// </summary>
+    /// <remarks>
+    /// Optional field that allows users to override the default retention policy
+    /// for a specific dataset. When null, the user's default retention settings will apply.
+    /// This provides flexibility for datasets that need different retention periods.
+    /// </remarks>
+    [JsonPropertyName("retentionExpiryDate")]
+    public DateTime? RetentionExpiryDate { get; set; }
 }
 
 /// <summary>

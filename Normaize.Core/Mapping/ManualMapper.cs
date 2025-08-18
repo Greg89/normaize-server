@@ -62,6 +62,29 @@ public static class ManualMapper
     }
 
     /// <summary>
+    /// Maps an UpdateDataSetDto to DataSet entity for updates
+    /// </summary>
+    public static DataSet ToEntity(this UpdateDataSetDto dto, DataSet existingDataSet)
+    {
+        if (dto == null) return existingDataSet;
+        if (existingDataSet == null) return null!;
+
+        // Update only the fields that are allowed to be modified
+        existingDataSet.Name = dto.Name;
+        existingDataSet.Description = dto.Description;
+
+        // Update retention expiry date if provided
+        if (dto.RetentionExpiryDate.HasValue)
+        {
+            existingDataSet.RetentionExpiryDate = dto.RetentionExpiryDate.Value;
+        }
+
+        existingDataSet.LastModifiedAt = DateTime.UtcNow;
+
+        return existingDataSet;
+    }
+
+    /// <summary>
     /// Maps a collection of DataSet entities to DataSetDto collection
     /// </summary>
     public static IEnumerable<DataSetDto> ToDtoCollection(this IEnumerable<DataSet> dataSets)

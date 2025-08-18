@@ -388,6 +388,8 @@ public class DataProcessingServiceTests
         _mockFileUploadService.Verify(f => f.SaveFileAsync(It.IsAny<FileUploadRequest>()), Times.Never);
     }
 
+    #region GetDataSetAsync Tests
+
     [Fact]
     public async Task GetDataSetAsync_WithExistingId_ShouldReturnDataSet()
     {
@@ -557,5 +559,276 @@ public class DataProcessingServiceTests
         exception.Message.Should().Contain("User ID cannot be null or empty");
     }
 
+    #endregion
 
+    #region UpdateDataSetAsync Tests
+
+    [Fact]
+    public async Task UpdateDataSetAsync_WithValidInputs_ShouldUpdateSuccessfully()
+    {
+        // Arrange
+        var dataSetId = 1;
+        var userId = "user123";
+        var updateDto = new UpdateDataSetDto
+        {
+            Name = "Updated Dataset Name",
+            Description = "Updated description"
+        };
+
+        var existingDataSet = new DataSet
+        {
+            Id = dataSetId,
+            Name = "Original Name",
+            Description = "Original description",
+            UserId = userId,
+            RetentionExpiryDate = DateTime.UtcNow.AddDays(30)
+        };
+
+        var updatedDataSet = new DataSet
+        {
+            Id = dataSetId,
+            Name = updateDto.Name,
+            Description = updateDto.Description,
+            UserId = userId,
+            RetentionExpiryDate = existingDataSet.RetentionExpiryDate,
+            LastModifiedAt = DateTime.UtcNow
+        };
+
+        _mockRepository.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync(existingDataSet);
+        _mockRepository.Setup(r => r.UpdateAsync(It.IsAny<DataSet>())).ReturnsAsync(updatedDataSet);
+        _mockAuditService.Setup(a => a.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.UpdateDataSetAsync(dataSetId, updateDto, userId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Name.Should().Be(updateDto.Name);
+        result.Description.Should().Be(updateDto.Description);
+        result.RetentionExpiryDate.Should().Be(existingDataSet.RetentionExpiryDate);
+
+        _mockRepository.Verify(r => r.GetByIdAsync(dataSetId), Times.Once);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<DataSet>()), Times.Once);
+        _mockAuditService.Verify(a => a.LogDataSetActionAsync(dataSetId, userId, "UpdateDataSet", It.IsAny<object>(), null, null), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateDataSetAsync_WithRetentionExpiryDate_ShouldUpdateRetentionPolicy()
+    {
+        // Arrange
+        var dataSetId = 1;
+        var userId = "user123";
+        var newRetentionDate = DateTime.UtcNow.AddDays(90);
+        var updateDto = new UpdateDataSetDto
+        {
+            Name = "Updated Dataset Name",
+            Description = "Updated description",
+            RetentionExpiryDate = newRetentionDate
+        };
+
+        var existingDataSet = new DataSet
+        {
+            Id = dataSetId,
+            Name = "Original Name",
+            Description = "Original description",
+            UserId = userId,
+            RetentionExpiryDate = DateTime.UtcNow.AddDays(30)
+        };
+
+        var updatedDataSet = new DataSet
+        {
+            Id = dataSetId,
+            Name = updateDto.Name,
+            Description = updateDto.Description,
+            UserId = userId,
+            RetentionExpiryDate = newRetentionDate,
+            LastModifiedAt = DateTime.UtcNow
+        };
+
+        _mockRepository.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync(existingDataSet);
+        _mockRepository.Setup(r => r.UpdateAsync(It.IsAny<DataSet>())).ReturnsAsync(updatedDataSet);
+        _mockAuditService.Setup(a => a.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.UpdateDataSetAsync(dataSetId, updateDto, userId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Name.Should().Be(updateDto.Name);
+        result.Description.Should().Be(updateDto.Description);
+        result.RetentionExpiryDate.Should().Be(newRetentionDate);
+
+        _mockRepository.Verify(r => r.GetByIdAsync(dataSetId), Times.Once);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<DataSet>()), Times.Once);
+        _mockAuditService.Verify(a => a.LogDataSetActionAsync(dataSetId, userId, "UpdateDataSet", It.IsAny<object>(), null, null), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateDataSetAsync_WithNullRetentionExpiryDate_ShouldPreserveExistingRetention()
+    {
+        // Arrange
+        var dataSetId = 1;
+        var userId = "user123";
+        var existingRetentionDate = DateTime.UtcNow.AddDays(30);
+        var updateDto = new UpdateDataSetDto
+        {
+            Name = "Updated Dataset Name",
+            Description = "Updated description",
+            RetentionExpiryDate = null // Explicitly set to null
+        };
+
+        var existingDataSet = new DataSet
+        {
+            Id = dataSetId,
+            Name = "Original Name",
+            Description = "Original description",
+            UserId = userId,
+            RetentionExpiryDate = existingRetentionDate
+        };
+
+        var updatedDataSet = new DataSet
+        {
+            Id = dataSetId,
+            Name = updateDto.Name,
+            Description = updateDto.Description,
+            UserId = userId,
+            RetentionExpiryDate = existingRetentionDate, // Should remain unchanged
+            LastModifiedAt = DateTime.UtcNow
+        };
+
+        _mockRepository.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync(existingDataSet);
+        _mockRepository.Setup(r => r.UpdateAsync(It.IsAny<DataSet>())).ReturnsAsync(updatedDataSet);
+        _mockAuditService.Setup(a => a.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.UpdateDataSetAsync(dataSetId, updateDto, userId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Name.Should().Be(updateDto.Name);
+        result.Description.Should().Be(updateDto.Description);
+        result.RetentionExpiryDate.Should().Be(existingRetentionDate); // Should be preserved
+
+        _mockRepository.Verify(r => r.GetByIdAsync(dataSetId), Times.Once);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<DataSet>()), Times.Once);
+        _mockAuditService.Verify(a => a.LogDataSetActionAsync(dataSetId, userId, "UpdateDataSet", It.IsAny<object>(), null, null), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateDataSetAsync_WithDatasetNotFound_ShouldReturnNull()
+    {
+        // Arrange
+        var dataSetId = 999;
+        var userId = "user123";
+        var updateDto = new UpdateDataSetDto
+        {
+            Name = "Updated Dataset Name",
+            Description = "Updated description"
+        };
+
+        _mockRepository.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync((DataSet?)null);
+
+        // Act
+        var result = await _service.UpdateDataSetAsync(dataSetId, updateDto, userId);
+
+        // Assert
+        result.Should().BeNull();
+        _mockRepository.Verify(r => r.GetByIdAsync(dataSetId), Times.Once);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<DataSet>()), Times.Never);
+        _mockAuditService.Verify(a => a.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateDataSetAsync_WithUnauthorizedUser_ShouldThrowUnauthorizedAccessException()
+    {
+        // Arrange
+        var dataSetId = 1;
+        var userId = "user123";
+        var differentUserId = "differentuser";
+        var updateDto = new UpdateDataSetDto
+        {
+            Name = "Updated Dataset Name",
+            Description = "Updated description"
+        };
+
+        var existingDataSet = new DataSet
+        {
+            Id = dataSetId,
+            Name = "Original Name",
+            Description = "Original description",
+            UserId = differentUserId // Different user owns this dataset
+        };
+
+        _mockRepository.Setup(r => r.GetByIdAsync(dataSetId)).ReturnsAsync(existingDataSet);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _service.UpdateDataSetAsync(dataSetId, updateDto, userId));
+
+        exception.Message.Should().Contain("Access denied to dataset 1");
+
+        _mockRepository.Verify(r => r.GetByIdAsync(dataSetId), Times.Once);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<DataSet>()), Times.Never);
+        _mockAuditService.Verify(a => a.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task UpdateDataSetAsync_WithInvalidId_ShouldThrowArgumentException(int id)
+    {
+        // Arrange
+        var userId = "user123";
+        var updateDto = new UpdateDataSetDto
+        {
+            Name = "Updated Dataset Name",
+            Description = "Updated description"
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.UpdateDataSetAsync(id, updateDto, userId));
+
+        exception.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public async Task UpdateDataSetAsync_WithInvalidUserId_ShouldThrowArgumentException(string? userId)
+    {
+        // Arrange
+        var updateDto = new UpdateDataSetDto
+        {
+            Name = "Updated Dataset Name",
+            Description = "Updated description"
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.UpdateDataSetAsync(1, updateDto, userId!));
+
+        exception.Message.Should().Contain("User ID cannot be null or empty");
+    }
+
+    [Fact]
+    public async Task UpdateDataSetAsync_WithNullUpdateDto_ShouldThrowArgumentNullException()
+    {
+        // Arrange
+        var dataSetId = 1;
+        var userId = "user123";
+        UpdateDataSetDto? updateDto = null;
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            _service.UpdateDataSetAsync(dataSetId, updateDto!, userId));
+
+        exception.ParamName.Should().Be("updateDto");
+    }
+
+    #endregion
 }

@@ -231,11 +231,32 @@ public class DataProcessingService : IDataProcessingService
                     throw new UnauthorizedAccessException($"{AppConstants.DataProcessing.ACCESS_DENIED_TO_DATASET} {id}");
                 }
 
-                // Update properties
-                dataSet.Name = updateDto.Name;
-                dataSet.Description = updateDto.Description;
+                // Update properties using the mapper
+                var updatedDataSet = updateDto.ToEntity(dataSet);
 
-                var updatedDataSet = await _dataSetRepository.UpdateAsync(dataSet);
+                if (updatedDataSet == null)
+                {
+                    _infrastructure.StructuredLogging.LogStep(context, "Failed to map update DTO to entity");
+                    throw new InvalidOperationException("Failed to update dataset");
+                }
+
+                // Log retention expiry date update if provided
+                if (updateDto.RetentionExpiryDate.HasValue)
+                {
+                    _infrastructure.StructuredLogging.LogStep(context, "Retention expiry date updated", new Dictionary<string, object>
+                    {
+                        ["OldExpiryDate"] = dataSet.RetentionExpiryDate?.ToString() ?? "Not set",
+                        ["NewExpiryDate"] = updateDto.RetentionExpiryDate.Value
+                    });
+                }
+
+                var result = await _dataSetRepository.UpdateAsync(updatedDataSet);
+
+                if (result == null)
+                {
+                    _infrastructure.StructuredLogging.LogStep(context, "Repository update returned null");
+                    throw new InvalidOperationException("Failed to update dataset in repository");
+                }
 
                 // Log audit action
                 await _auditService.LogDataSetActionAsync(id, userId, AppConstants.DataProcessing.AUDIT_ACTION_UPDATE_DATA_SET, new Dictionary<string, object>
@@ -243,7 +264,7 @@ public class DataProcessingService : IDataProcessingService
                     [AppConstants.DataStructures.CORRELATION_ID] = context.CorrelationId
                 });
 
-                return updatedDataSet.ToDto();
+                return result.ToDto();
             });
     }
 
