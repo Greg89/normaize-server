@@ -483,18 +483,18 @@ public class DataSetsController(
     /// fresh with the original data. Different reset types are available:
     /// 
     /// Reset Types:
-    /// - FileBased: Downloads and reprocesses the original file from S3
-    /// - DatabaseOnly: Clears processing status without reprocessing the file
+    /// - Reprocess: Downloads and reprocesses the original file from S3
+    /// - Restore: Restores deleted dataset without changing processing status
     /// 
-    /// File-based reset will:
+    /// Reprocess reset will:
     /// - Download the original file from S3 (if still available)
     /// - Reprocess the file to regenerate preview and schema data
     /// - Update the dataset with fresh processing results
     /// 
-    /// Database-only reset will:
-    /// - Clear all processing status and preview data
-    /// - Keep the original file reference intact
-    /// - Require manual reprocessing if needed
+    /// Restore reset will:
+    /// - Restore the dataset if it was deleted
+    /// - Keep all processing data and status intact
+    /// - Dataset becomes immediately usable
     /// 
     /// If the original file is no longer available (due to retention policies),
     /// the operation will fail gracefully with appropriate error information.

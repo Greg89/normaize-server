@@ -65,7 +65,11 @@ public class DataSetLifecycleService : IDataSetLifecycleService
         return await ExecuteDataSetOperationAsync(
             AppConstants.DataSetLifecycle.RESET_DATA_SET,
             userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id, [AppConstants.DataStructures.RESET_TYPE_KEY] = resetDto.ResetType.ToString() },
+            new Dictionary<string, object> { 
+                [AppConstants.DataStructures.DATASETID] = id, 
+                [AppConstants.DataStructures.RESET_TYPE_KEY] = resetDto.ResetType.ToString(),
+                ["Reason"] = resetDto.Reason ?? "No reason provided"
+            },
             () => ValidateResetInputs(id, resetDto, userId),
             async (context) =>
             {
@@ -492,8 +496,8 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     {
         return resetDto.ResetType switch
         {
-            ResetType.OriginalFile => await PerformFileResetAsync(dataSet, context),
-            ResetType.Database => await PerformDatabaseResetAsync(dataSet, context),
+            ResetType.Reprocess => await PerformFileResetAsync(dataSet, context),
+            ResetType.Restore => await RestoreDeletedDatasetAsync(dataSet, context),
             _ => throw new ArgumentException($"Unsupported reset type: {resetDto.ResetType}"),
         };
     }
@@ -552,7 +556,8 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             await LogAuditActionAsync(dataSet.Id, dataSet.UserId, AppConstants.DataSetLifecycle.RESET_DATA_SET_FILE_BASED, context, new
             {
                 ResetType = AppConstants.DataSetLifecycle.RESET_TYPE_FILE_BASED,
-                dataSet.FilePath
+                dataSet.FilePath,
+                Reason = context.Metadata?.GetValueOrDefault("Reason")?.ToString() ?? "No reason provided"
             });
 
             return new OperationResultDto
@@ -585,7 +590,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
         }
     }
 
-    private async Task<OperationResultDto> PerformDatabaseResetAsync(DataSet dataSet, IOperationContext context)
+    private async Task<OperationResultDto> RestoreDeletedDatasetAsync(DataSet dataSet, IOperationContext context)
     {
         // If dataset was deleted, restore it
         if (dataSet.IsDeleted)
@@ -594,18 +599,11 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             dataSet.DeletedAt = null;
         }
 
-        // Reset processing status
-        dataSet.IsProcessed = false;
-        dataSet.ProcessedAt = null;
-        dataSet.PreviewData = null;
-        dataSet.Schema = null;
-        dataSet.RowCount = 0;
-        dataSet.ColumnCount = 0;
-
         await _dataSetRepository.UpdateAsync(dataSet);
         await LogAuditActionAsync(dataSet.Id, dataSet.UserId, AppConstants.DataSetLifecycle.RESET_DATA_SET_DATABASE_ONLY, context, new
         {
-            ResetType = AppConstants.DataSetLifecycle.RESET_TYPE_DATABASE_ONLY
+            ResetType = AppConstants.DataSetLifecycle.RESET_TYPE_DATABASE_ONLY,
+            Reason = context.Metadata?.GetValueOrDefault("Reason")?.ToString() ?? "No reason provided"
         });
 
         return new OperationResultDto

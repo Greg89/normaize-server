@@ -794,7 +794,7 @@ public static class AppConstants
         public const string RESTORE_DATA_SET_SIMPLE = "RestoreDataSetSimple";
         public const string RESTORE_DATA_SET_FULL = "RestoreDataSetFull";
         public const string RESET_DATA_SET_FILE_BASED = "ResetDataSetFileBased";
-        public const string RESET_DATA_SET_DATABASE_ONLY = "ResetDataSetDatabaseOnly";
+        public const string RESET_DATA_SET_DATABASE_ONLY = "RestoreDeletedDataset";
         public const string AUDIT_ACTION_RESTORE_DATA_SET = "RestoreDataSet";
         public const string AUDIT_ACTION_HARD_DELETE_DATA_SET = "HardDeleteDataSet";
         public const string AUDIT_ACTION_UPDATE_RETENTION_POLICY = "UpdateRetentionPolicy";
@@ -821,7 +821,7 @@ public static class AppConstants
         public const string CANNOT_RESET_DATASET = "Cannot reset dataset";
         public const string DATASET_RESET_SUCCESSFULLY_USING_ORIGINAL_FILE = "Dataset reset successfully using original file";
         public const string FAILED_TO_RESET_DATASET = "Failed to reset dataset";
-        public const string DATASET_RESET_SUCCESSFULLY_DATABASE_ONLY = "Dataset reset successfully (database only - processing status cleared)";
+        public const string DATASET_RESET_SUCCESSFULLY_DATABASE_ONLY = "Dataset restored successfully (deletion status only)";
         public const string RETENTION_POLICY_UPDATED_SUCCESSFULLY = "Retention policy updated successfully. Data will be retained for {0} days.";
 
         // File operation messages
@@ -837,7 +837,7 @@ public static class AppConstants
 
         // Reset types
         public const string RESET_TYPE_FILE_BASED = "FileBased";
-        public const string RESET_TYPE_DATABASE_ONLY = "DatabaseOnly";
+        public const string RESET_TYPE_DATABASE_ONLY = "RestoreOnly";
 
         // Restore types
         public const string RESTORE_TYPE_SIMPLE = "Simple";

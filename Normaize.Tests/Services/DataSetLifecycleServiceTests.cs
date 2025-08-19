@@ -228,7 +228,7 @@ public class DataSetLifecycleServiceTests
         // Arrange
         var dataSetId = 1;
         var userId = "test-user";
-        var resetDto = new DataSetResetDto { ResetType = ResetType.OriginalFile };
+        var resetDto = new DataSetResetDto { ResetType = ResetType.Reprocess };
         var dataSet = new DataSet
         {
             Id = dataSetId,
@@ -285,7 +285,7 @@ public class DataSetLifecycleServiceTests
         // Arrange
         var dataSetId = 1;
         var userId = "test-user";
-        var resetDto = new DataSetResetDto { ResetType = ResetType.Database };
+        var resetDto = new DataSetResetDto { ResetType = ResetType.Restore };
         var dataSet = new DataSet
         {
             Id = dataSetId,
@@ -309,16 +309,12 @@ public class DataSetLifecycleServiceTests
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeTrue();
-        result.Message.Should().Contain("reset successfully");
+        result.Message.Should().Contain("restored successfully");
         result.Data.Should().NotBeNull();
 
         _mockRepository.Verify(x => x.UpdateAsync(It.Is<DataSet>(ds =>
-            !ds.IsProcessed &&
-            ds.ProcessedAt == null &&
-            ds.PreviewData == null &&
-            ds.Schema == null &&
-            ds.RowCount == 0 &&
-            ds.ColumnCount == 0)), Times.Once);
+            !ds.IsDeleted &&
+            ds.DeletedAt == null)), Times.Once);
         _mockAuditService.Verify(x => x.LogDataSetActionAsync(dataSetId, userId, AppConstants.DataSetLifecycle.RESET_DATA_SET_DATABASE_ONLY, It.IsAny<object>(), null, null), Times.Once);
     }
 
@@ -328,7 +324,7 @@ public class DataSetLifecycleServiceTests
         // Arrange
         var dataSetId = 1;
         var userId = "test-user";
-        var resetDto = new DataSetResetDto { ResetType = ResetType.OriginalFile };
+        var resetDto = new DataSetResetDto { ResetType = ResetType.Reprocess };
         var dataSet = new DataSet
         {
             Id = dataSetId,
@@ -356,7 +352,7 @@ public class DataSetLifecycleServiceTests
         // Arrange
         var dataSetId = 1;
         var userId = "test-user";
-        var resetDto = new DataSetResetDto { ResetType = ResetType.Database };
+        var resetDto = new DataSetResetDto { ResetType = ResetType.Restore };
         var dataSet = new DataSet
         {
             Id = dataSetId,

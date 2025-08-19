@@ -513,7 +513,7 @@ public class DataSetPreviewDto
 /// </summary>
 /// <remarks>
 /// This DTO provides options for resetting a dataset to its original state,
-/// either from the database or by re-processing the original file from storage.
+/// either by restoring deletion status or by re-processing the original file from storage.
 /// </remarks>
 public class DataSetResetDto
 {
@@ -522,12 +522,6 @@ public class DataSetResetDto
     /// </summary>
     [JsonPropertyName("resetType")]
     public ResetType ResetType { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether to also restore if the dataset is deleted
-    /// </summary>
-    [JsonPropertyName("restoreIfDeleted")]
-    public bool RestoreIfDeleted { get; set; } = true;
 
     /// <summary>
     /// Gets or sets optional reason for the reset operation
@@ -591,10 +585,10 @@ public class DataSetRetentionDto
 /// </summary>
 public enum ResetType
 {
-    /// <summary>Reset to database state (keep current data)</summary>
-    Database,
-    /// <summary>Reset to original file state (re-process from storage)</summary>
-    OriginalFile
+    /// <summary>Restore deleted dataset (keep current data)</summary>
+    Restore,
+    /// <summary>Reprocess from original file (fresh data)</summary>
+    Reprocess
 }
 
 /// <summary>
