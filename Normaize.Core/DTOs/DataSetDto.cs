@@ -530,33 +530,7 @@ public class DataSetResetDto
     public string? Reason { get; set; }
 }
 
-/// <summary>
-/// Data Transfer Object for dataset restore operation
-/// </summary>
-/// <remarks>
-/// This DTO provides options for restoring a deleted dataset with various
-/// restoration strategies.
-/// </remarks>
-public class DataSetRestoreDto
-{
-    /// <summary>
-    /// Gets or sets the type of restore operation
-    /// </summary>
-    [JsonPropertyName("restoreType")]
-    public RestoreType RestoreType { get; set; }
 
-    /// <summary>
-    /// Gets or sets whether to reset the dataset during restore
-    /// </summary>
-    [JsonPropertyName("resetDuringRestore")]
-    public bool ResetDuringRestore { get; set; } = false;
-
-    /// <summary>
-    /// Gets or sets optional reason for the restore operation
-    /// </summary>
-    [JsonPropertyName("reason")]
-    public string? Reason { get; set; }
-}
 
 /// <summary>
 /// Data Transfer Object for retention policy update
@@ -591,16 +565,7 @@ public enum ResetType
     Reprocess
 }
 
-/// <summary>
-/// Enumeration for dataset restore types
-/// </summary>
-public enum RestoreType
-{
-    /// <summary>Simple restore (just unmark as deleted)</summary>
-    Simple,
-    /// <summary>Restore and reset to original state</summary>
-    WithReset
-}
+
 
 /// <summary>
 /// Data Transfer Object for retention status information

@@ -7,10 +7,7 @@ namespace Normaize.Core.Interfaces;
 /// </summary>
 public interface IDataSetLifecycleService
 {
-    /// <summary>
-    /// Enhanced restore operation with configurable restore type.
-    /// </summary>
-    Task<OperationResultDto> RestoreDataSetEnhancedAsync(int id, DataSetRestoreDto restoreDto, string userId);
+
 
     /// <summary>
     /// Reset dataset to original state by reprocessing the original file.

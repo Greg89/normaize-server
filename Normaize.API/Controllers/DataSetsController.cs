@@ -417,58 +417,7 @@ public class DataSetsController(
         }
     }
 
-    /// <summary>
-    /// Enhanced restore operation with configurable restore type
-    /// </summary>
-    /// <param name="id">The unique identifier of the dataset to restore</param>
-    /// <param name="restoreDto">Restore configuration options</param>
-    /// <returns>
-    /// Detailed operation result with restore information
-    /// </returns>
-    /// <remarks>
-    /// This endpoint provides enhanced restore functionality with different restore types:
-    /// 
-    /// Restore Types:
-    /// - Simple: Just marks the dataset as not deleted (preserves all processing data)
-    /// - Full: Marks as not deleted and resets processing status (clears preview/schema)
-    /// 
-    /// This is useful when you want to control how thoroughly a dataset is restored
-    /// and whether to preserve or reset its processing state.
-    /// </remarks>
-    /// <response code="200">Dataset restored successfully with specified options</response>
-    /// <response code="400">Invalid restore configuration</response>
-    /// <response code="401">Unauthorized - Authentication required</response>
-    /// <response code="404">Dataset not found or access denied</response>
-    /// <response code="409">Dataset is not deleted, no restore needed</response>
-    /// <response code="500">Internal server error during restore</response>
-    [HttpPost("{id}/restore-enhanced")]
-    [ProducesResponseType(typeof(ApiResponse<string?>), 200)]
-    [ProducesResponseType(400)]
-    [ProducesResponseType(401)]
-    [ProducesResponseType(404)]
-    [ProducesResponseType(409)]
-    [ProducesResponseType(500)]
-    public async Task<ActionResult<ApiResponse<string?>>> RestoreDataSetEnhanced(int id, [FromBody] DataSetRestoreDto restoreDto)
-    {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var result = await _dataSetLifecycleService.RestoreDataSetEnhancedAsync(id, restoreDto, userId);
 
-            if (!result.Success)
-            {
-                if (result.Message.Contains("not deleted"))
-                    return Conflict(result.Message);
-                return BadRequest<string?>(result.Message);
-            }
-
-            return Success<string?>(result.Message);
-        }
-        catch (Exception ex)
-        {
-            return HandleException<string?>(ex, $"RestoreDataSetEnhanced({id})");
-        }
-    }
 
     /// <summary>
     /// Resets a dataset to its original state

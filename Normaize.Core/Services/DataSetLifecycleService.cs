@@ -33,32 +33,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
         _infrastructure = infrastructure;
     }
 
-    public async Task<OperationResultDto> RestoreDataSetEnhancedAsync(int id, DataSetRestoreDto restoreDto, string userId)
-    {
-        return await ExecuteDataSetOperationAsync(
-            AppConstants.DataSetLifecycle.RESTORE_DATA_SET_ENHANCED,
-            userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id, [AppConstants.DataStructures.RESTORE_TYPE_KEY] = restoreDto?.RestoreType.ToString() ?? "null" },
-            () => ValidateRestoreEnhancedInputs(id, restoreDto!, userId),
-            async (context) =>
-            {
-                // Chaos engineering: Simulate restore operation delay
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.RESTORE_OPERATION_DELAY, context.CorrelationId!, context.OperationName!, async () =>
-                {
-                    var delayMs = new Random().Next(AppConstants.ChaosEngineering.RESTORE_OPERATION_DELAY_MIN_MS, AppConstants.ChaosEngineering.RESTORE_OPERATION_DELAY_MAX_MS);
-                    _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating restore operation delay", new Dictionary<string, object>
-                    {
-                        [AppConstants.ChaosEngineering.DELAY_MS_KEY] = delayMs,
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.RESTORE_OPERATION_DELAY
-                    });
-                    await Task.Delay(delayMs);
-                    return Task.CompletedTask;
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId, [AppConstants.DataStructures.DATASETID] = id });
 
-                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
-                return await PerformRestoreOperationAsync(dataSet!, restoreDto!, context);
-            });
-    }
 
     public async Task<OperationResultDto> ResetDataSetAsync(int id, DataSetResetDto resetDto, string userId)
     {
@@ -369,11 +344,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
 
     private static void ValidateHardDeleteInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
 
-    private static void ValidateRestoreEnhancedInputs(int id, DataSetRestoreDto restoreDto, string userId)
-    {
-        ValidateDataSetIdAndUserId(id, userId);
-        ArgumentNullException.ThrowIfNull(restoreDto);
-    }
+
 
     private static void ValidateResetInputs(int id, DataSetResetDto resetDto, string userId)
     {
@@ -434,63 +405,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
         }
     }
 
-    private async Task<OperationResultDto> PerformRestoreOperationAsync(DataSet dataSet, DataSetRestoreDto restoreDto, IOperationContext context)
-    {
-        if (!dataSet.IsDeleted)
-        {
-            return new OperationResultDto
-            {
-                Success = true,
-                Message = AppConstants.DataSetLifecycle.DATASET_IS_NOT_DELETED_NO_RESTORE_ACTION_NEEDED,
-                Data = new { DataSetId = dataSet.Id, IsDeleted = false }
-            };
-        }
 
-        return restoreDto.RestoreType switch
-        {
-            RestoreType.Simple => await PerformSimpleRestoreAsync(dataSet, context),
-            RestoreType.WithReset => await PerformFullRestoreAsync(dataSet, context),
-            _ => throw new ArgumentException($"Unsupported restore type: {restoreDto.RestoreType}"),
-        };
-    }
-
-    private async Task<OperationResultDto> PerformSimpleRestoreAsync(DataSet dataSet, IOperationContext context)
-    {
-        dataSet.IsDeleted = false;
-        dataSet.DeletedAt = null;
-
-        await _dataSetRepository.UpdateAsync(dataSet);
-        await LogAuditActionAsync(dataSet.Id, dataSet.UserId, AppConstants.DataSetLifecycle.RESTORE_DATA_SET_SIMPLE, context);
-
-        return new OperationResultDto
-        {
-            Success = true,
-            Message = AppConstants.DataSetLifecycle.DATASET_RESTORED_SUCCESSFULLY_SIMPLE_RESTORE,
-            Data = new { DataSetId = dataSet.Id, RestoreType = AppConstants.DataSetLifecycle.RESTORE_TYPE_SIMPLE }
-        };
-    }
-
-    private async Task<OperationResultDto> PerformFullRestoreAsync(DataSet dataSet, IOperationContext context)
-    {
-        dataSet.IsDeleted = false;
-        dataSet.DeletedAt = null;
-        dataSet.IsProcessed = false;
-        dataSet.ProcessedAt = null;
-        dataSet.PreviewData = null;
-        dataSet.Schema = null;
-        dataSet.RowCount = 0;
-        dataSet.ColumnCount = 0;
-
-        await _dataSetRepository.UpdateAsync(dataSet);
-        await LogAuditActionAsync(dataSet.Id, dataSet.UserId, AppConstants.DataSetLifecycle.RESTORE_DATA_SET_FULL, context);
-
-        return new OperationResultDto
-        {
-            Success = true,
-            Message = AppConstants.DataSetLifecycle.DATASET_RESTORED_SUCCESSFULLY_FULL_RESTORE,
-            Data = new { DataSetId = dataSet.Id, RestoreType = AppConstants.DataSetLifecycle.RESTORE_TYPE_FULL }
-        };
-    }
 
     private async Task<OperationResultDto> PerformResetOperationAsync(DataSet dataSet, DataSetResetDto resetDto, IOperationContext context)
     {

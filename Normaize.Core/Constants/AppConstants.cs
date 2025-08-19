@@ -248,7 +248,7 @@ public static class AppConstants
         public const string TOTAL_DATASETS = "TotalDataSets";
         public const string CHART_TYPE = "ChartType";
         public const string CORRELATION_ID = "CorrelationId";
-        public const string RESTORE_TYPE_KEY = "RestoreType";
+
         public const string RESET_TYPE_KEY = "ResetType";
         public const string RETENTION_DAYS = "RetentionDays";
         public const string OPERATION = "Operation";
@@ -783,7 +783,6 @@ public static class AppConstants
     public static class DataSetLifecycle
     {
         // Operation names
-        public const string RESTORE_DATA_SET_ENHANCED = "RestoreDataSetEnhanced";
         public const string RESET_DATA_SET = "ResetDataSet";
         public const string UPDATE_RETENTION_POLICY = "UpdateRetentionPolicy";
         public const string GET_RETENTION_STATUS = "GetRetentionStatus";
@@ -791,8 +790,6 @@ public static class AppConstants
         public const string HARD_DELETE_DATA_SET = "HardDeleteDataSet";
 
         // Audit action names
-        public const string RESTORE_DATA_SET_SIMPLE = "RestoreDataSetSimple";
-        public const string RESTORE_DATA_SET_FULL = "RestoreDataSetFull";
         public const string RESET_DATA_SET_FILE_BASED = "ResetDataSetFileBased";
         public const string RESET_DATA_SET_DATABASE_ONLY = "RestoreDeletedDataset";
         public const string AUDIT_ACTION_RESTORE_DATA_SET = "RestoreDataSet";
@@ -816,8 +813,6 @@ public static class AppConstants
 
         // Operation result messages
         public const string DATASET_IS_NOT_DELETED_NO_RESTORE_ACTION_NEEDED = "Dataset is not deleted, no restore action needed";
-        public const string DATASET_RESTORED_SUCCESSFULLY_SIMPLE_RESTORE = "Dataset restored successfully (simple restore)";
-        public const string DATASET_RESTORED_SUCCESSFULLY_FULL_RESTORE = "Dataset restored successfully (full restore - processing status reset)";
         public const string CANNOT_RESET_DATASET = "Cannot reset dataset";
         public const string DATASET_RESET_SUCCESSFULLY_USING_ORIGINAL_FILE = "Dataset reset successfully using original file";
         public const string FAILED_TO_RESET_DATASET = "Failed to reset dataset";
@@ -839,9 +834,7 @@ public static class AppConstants
         public const string RESET_TYPE_FILE_BASED = "FileBased";
         public const string RESET_TYPE_DATABASE_ONLY = "RestoreOnly";
 
-        // Restore types
-        public const string RESTORE_TYPE_SIMPLE = "Simple";
-        public const string RESTORE_TYPE_FULL = "Full";
+
 
         // Limits
         public const int RECENT_UPLOADS_COUNT = 5;
