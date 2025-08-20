@@ -902,4 +902,22 @@ public static class AppConstants
         // Limits
         public const int MAX_PREVIEW_ROWS = 1000;
     }
+
+    /// <summary>
+    /// Startup service constants
+    /// </summary>
+    public static class StartupService
+    {
+        // Logging property names for structured logging
+        public const string CORRELATION_ID_LOG_PROPERTY = "CorrelationId";
+        public const string OPERATION_LOG_PROPERTY = "Operation";
+        public const string ATTEMPT_LOG_PROPERTY = "Attempt";
+        public const string MAX_ATTEMPTS_LOG_PROPERTY = "MaxAttempts";
+        public const string DELAY_LOG_PROPERTY = "Delay";
+        public const string TIMEOUT_LOG_PROPERTY = "Timeout";
+        public const string ENVIRONMENT_LOG_PROPERTY = "Environment";
+
+        // Logging limits
+        public const int MAX_LOG_MESSAGE_LENGTH = 1000;
+    }
 }
