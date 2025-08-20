@@ -37,5 +37,5 @@ public interface IUserSettingsService
     /// <summary>
     /// Update a specific setting value
     /// </summary>
-    Task<bool> UpdateSettingValueAsync<T>(string userId, string settingName, T value);
+    Task<bool> UpdateSettingValueAsync<T>(string userId, string settingName, T value) where T : class;
 }

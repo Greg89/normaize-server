@@ -180,6 +180,7 @@ public static class ManualMapper
             DefaultFileType = userSettings.DefaultFileType,
             EnableDataValidation = userSettings.EnableDataValidation,
             EnableSchemaInference = userSettings.EnableSchemaInference,
+            RetentionDays = userSettings.RetentionDays,
             ShareAnalytics = userSettings.ShareAnalytics,
             AllowDataUsageForImprovement = userSettings.AllowDataUsageForImprovement,
             ShowProcessingTime = userSettings.ShowProcessingTime,
@@ -218,6 +219,7 @@ public static class ManualMapper
             DefaultFileType = dto.DefaultFileType,
             EnableDataValidation = dto.EnableDataValidation,
             EnableSchemaInference = dto.EnableSchemaInference,
+            RetentionDays = dto.RetentionDays,
             ShareAnalytics = dto.ShareAnalytics,
             AllowDataUsageForImprovement = dto.AllowDataUsageForImprovement,
             ShowProcessingTime = dto.ShowProcessingTime,
@@ -274,6 +276,7 @@ public static class ManualMapper
     {
         if (dto.DefaultPageSize.HasValue) existingSettings.DefaultPageSize = dto.DefaultPageSize.Value;
         if (dto.MaxPreviewRows.HasValue) existingSettings.MaxPreviewRows = dto.MaxPreviewRows.Value;
+        if (dto.RetentionDays.HasValue) existingSettings.RetentionDays = dto.RetentionDays.Value;
     }
 
     #endregion
