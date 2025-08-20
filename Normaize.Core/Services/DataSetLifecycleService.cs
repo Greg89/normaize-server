@@ -514,6 +514,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
         {
             dataSet.IsDeleted = false;
             dataSet.DeletedAt = null;
+            dataSet.UploadedAt = DateTime.UtcNow;
         }
 
         await _dataSetRepository.UpdateAsync(dataSet);
