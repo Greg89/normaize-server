@@ -56,12 +56,12 @@ public class UserSettingsService : IUserSettingsService
         try
         {
             _loggingService.LogUserAction("Retrieving user settings", new { UserId = userId });
-            
+
             var settings = await _repository.GetByUserIdAsync(userId);
             var result = settings?.ToDto();
-            
+
             _loggingService.LogUserAction("User settings retrieved", new { UserId = userId, SettingsFound = result != null });
-            
+
             return result;
         }
         catch (Exception ex)
@@ -89,7 +89,7 @@ public class UserSettingsService : IUserSettingsService
         try
         {
             _loggingService.LogUserAction("Saving user settings", new { UserId = userId, Settings = settings });
-            
+
             var existingSettings = await _repository.GetByUserIdAsync(userId);
 
             if (existingSettings == null)
@@ -97,12 +97,12 @@ public class UserSettingsService : IUserSettingsService
                 // Create new settings with defaults
                 var newSettings = CreateDefaultUserSettings(userId);
                 ApplyUpdates(newSettings, settings);
-                
+
                 var created = await _repository.CreateAsync(newSettings);
                 var result = created.ToDto();
-                
+
                 _loggingService.LogUserAction("User settings created", new { UserId = userId, SettingsId = result.Id });
-                
+
                 return result;
             }
             else
@@ -111,9 +111,9 @@ public class UserSettingsService : IUserSettingsService
                 ApplyUpdates(existingSettings, settings);
                 var updated = await _repository.UpdateAsync(existingSettings);
                 var result = updated.ToDto();
-                
+
                 _loggingService.LogUserAction("User settings updated", new { UserId = userId, SettingsId = result.Id });
-                
+
                 return result;
             }
         }
@@ -140,7 +140,7 @@ public class UserSettingsService : IUserSettingsService
         try
         {
             _loggingService.LogUserAction("Retrieving user profile", new { UserId = userId });
-            
+
             var settings = await GetUserSettingsAsync(userId);
             if (settings == null)
             {
@@ -158,9 +158,9 @@ public class UserSettingsService : IUserSettingsService
                 Settings = settings
                 // Auth0 info would be populated here from Auth0 Management API
             };
-            
+
             _loggingService.LogUserAction("User profile retrieved", new { UserId = userId, ProfileFound = true });
-            
+
             return profile;
         }
         catch (Exception ex)
@@ -186,13 +186,13 @@ public class UserSettingsService : IUserSettingsService
         try
         {
             _loggingService.LogUserAction("Initializing user settings", new { UserId = userId });
-            
+
             var settings = CreateDefaultUserSettings(userId);
             var created = await _repository.CreateAsync(settings);
             var result = created.ToDto();
-            
+
             _loggingService.LogUserAction("User settings initialized", new { UserId = userId, SettingsId = result.Id });
-            
+
             return result;
         }
         catch (Exception ex)
@@ -218,9 +218,9 @@ public class UserSettingsService : IUserSettingsService
         try
         {
             _loggingService.LogUserAction("Deleting user settings", new { UserId = userId });
-            
+
             var result = await _repository.DeleteAsync(userId);
-            
+
             if (result)
             {
                 _loggingService.LogUserAction("User settings deleted", new { UserId = userId });
@@ -229,7 +229,7 @@ public class UserSettingsService : IUserSettingsService
             {
                 _loggingService.LogUserAction("User settings deletion failed - no settings found", new { UserId = userId });
             }
-            
+
             return result;
         }
         catch (Exception ex)
@@ -258,7 +258,7 @@ public class UserSettingsService : IUserSettingsService
         try
         {
             _loggingService.LogUserAction("Retrieving setting value", new { UserId = userId, SettingName = settingName, SettingType = typeof(T).Name });
-            
+
             var settings = await GetUserSettingsAsync(userId);
             if (settings == null)
             {
@@ -275,9 +275,9 @@ public class UserSettingsService : IUserSettingsService
 
             var value = property.GetValue(settings);
             var result = value as T;
-            
+
             _loggingService.LogUserAction("Setting value retrieved", new { UserId = userId, SettingName = settingName, ValueFound = result != null });
-            
+
             return result;
         }
         catch (Exception ex)
@@ -303,7 +303,7 @@ public class UserSettingsService : IUserSettingsService
     {
         ValidateUserId(userId);
         ValidateSettingName(settingName);
-        
+
         if (value == null)
         {
             throw new ArgumentException("Setting value cannot be null", nameof(value));
@@ -312,7 +312,7 @@ public class UserSettingsService : IUserSettingsService
         try
         {
             _loggingService.LogUserAction("Updating setting value", new { UserId = userId, SettingName = settingName, SettingType = typeof(T).Name });
-            
+
             var updateDto = new UpdateUserSettingsDto();
             var property = typeof(UpdateUserSettingsDto).GetProperty(settingName);
 
@@ -324,9 +324,9 @@ public class UserSettingsService : IUserSettingsService
 
             property.SetValue(updateDto, value);
             await SaveUserSettingsAsync(userId, updateDto);
-            
+
             _loggingService.LogUserAction("Setting value updated", new { UserId = userId, SettingName = settingName });
-            
+
             return true;
         }
         catch (Exception ex)
@@ -364,7 +364,7 @@ public class UserSettingsService : IUserSettingsService
 
         // Use the ManualMapper for consistent mapping behavior
         var updatedSettings = updateDto.ToEntity(settings);
-        
+
         // Copy the updated values back to the original settings object
         var updateType = typeof(UpdateUserSettingsDto);
         var settingsType = typeof(UserSettings);

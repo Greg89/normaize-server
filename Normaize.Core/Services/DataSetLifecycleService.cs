@@ -40,8 +40,9 @@ public class DataSetLifecycleService : IDataSetLifecycleService
         return await ExecuteDataSetOperationAsync(
             AppConstants.DataSetLifecycle.RESET_DATA_SET,
             userId,
-            new Dictionary<string, object> { 
-                [AppConstants.DataStructures.DATASETID] = id, 
+            new Dictionary<string, object>
+            {
+                [AppConstants.DataStructures.DATASETID] = id,
                 [AppConstants.DataStructures.RESET_TYPE_KEY] = resetDto.ResetType.ToString(),
                 ["Reason"] = resetDto.Reason ?? "No reason provided"
             },
@@ -242,7 +243,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
 
     private async Task<DataSet?> RetrieveDataSetWithAccessControlAsync(int id, string userId, IOperationContext context, bool includeDeleted = false)
     {
-        var dataSet = includeDeleted 
+        var dataSet = includeDeleted
             ? await _dataSetRepository.GetByIdIncludeDeletedAsync(id)
             : await _dataSetRepository.GetByIdAsync(id);
 
