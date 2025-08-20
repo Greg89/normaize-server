@@ -309,7 +309,7 @@ public class UserSettingsServiceTests
             .ThrowsAsync(exception);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(() =>
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.SaveUserSettingsAsync(userId, updateDto));
 
         _mockLoggingService.Verify(l => l.LogException(exception, It.IsAny<string>()), Times.Once);

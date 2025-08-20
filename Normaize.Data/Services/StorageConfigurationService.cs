@@ -81,7 +81,7 @@ public class StorageConfigurationService : IStorageConfigurationService
             S3AccessKey = GetConfigurationStatus(_configuration.S3AccessKey),
             S3SecretKey = GetConfigurationStatus(_configuration.S3SecretKey),
             S3ServiceUrl = GetConfigurationStatus(_configuration.S3ServiceUrl),
-            Environment = GetConfigurationStatus(environment)
+            Environment = string.IsNullOrEmpty(environment) ? AppConstants.ConfigStatus.NOT_SET : environment
         };
     }
 
