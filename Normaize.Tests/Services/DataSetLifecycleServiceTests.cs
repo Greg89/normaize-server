@@ -83,6 +83,7 @@ public class DataSetLifecycleServiceTests
         };
 
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
+        _mockRepository.Setup(x => x.GetByIdIncludeDeletedAsync(dataSetId)).ReturnsAsync(dataSet);
         _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<DataSet>())).ReturnsAsync(dataSet);
         _mockFileUploadService.Setup(x => x.FileExistsAsync(dataSet.FilePath)).ReturnsAsync(true);
         _mockFileUploadService.Setup(x => x.ProcessFileAsync(dataSet.FilePath, ".csv")).ReturnsAsync(processedDataSet);
@@ -129,6 +130,7 @@ public class DataSetLifecycleServiceTests
         };
 
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
+        _mockRepository.Setup(x => x.GetByIdIncludeDeletedAsync(dataSetId)).ReturnsAsync(dataSet);
         _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<DataSet>())).ReturnsAsync(dataSet);
         _mockAuditService.Setup(x => x.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null))
             .Returns(Task.CompletedTask);
@@ -164,6 +166,7 @@ public class DataSetLifecycleServiceTests
         };
 
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
+        _mockRepository.Setup(x => x.GetByIdIncludeDeletedAsync(dataSetId)).ReturnsAsync(dataSet);
         _mockFileUploadService.Setup(x => x.FileExistsAsync(dataSet.FilePath)).ReturnsAsync(false);
 
         // Act
@@ -192,6 +195,7 @@ public class DataSetLifecycleServiceTests
         };
 
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
+        _mockRepository.Setup(x => x.GetByIdIncludeDeletedAsync(dataSetId)).ReturnsAsync(dataSet);
         _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<DataSet>())).ReturnsAsync(dataSet);
         _mockAuditService.Setup(x => x.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null))
             .Returns(Task.CompletedTask);
@@ -220,6 +224,7 @@ public class DataSetLifecycleServiceTests
         var dataSet = new DataSet { Id = dataSetId, UserId = userId, RetentionExpiryDate = DateTime.UtcNow.AddDays(7) };
 
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
+        _mockRepository.Setup(x => x.GetByIdIncludeDeletedAsync(dataSetId)).ReturnsAsync(dataSet);
         _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<DataSet>())).ReturnsAsync(dataSet);
         _mockAuditService.Setup(x => x.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null))
             .Returns(Task.CompletedTask);
@@ -248,6 +253,7 @@ public class DataSetLifecycleServiceTests
         var dataSet = new DataSet { Id = dataSetId, UserId = userId };
 
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
+        _mockRepository.Setup(x => x.GetByIdIncludeDeletedAsync(dataSetId)).ReturnsAsync(dataSet);
         _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<DataSet>())).ReturnsAsync(dataSet);
         _mockAuditService.Setup(x => x.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null))
             .Returns(Task.CompletedTask);
@@ -354,6 +360,7 @@ public class DataSetLifecycleServiceTests
         var dataSet = new DataSet { Id = dataSetId, UserId = userId, IsDeleted = true, DeletedAt = DateTime.UtcNow };
 
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
+        _mockRepository.Setup(x => x.GetByIdIncludeDeletedAsync(dataSetId)).ReturnsAsync(dataSet);
         _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<DataSet>())).ReturnsAsync(dataSet);
         _mockAuditService.Setup(x => x.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null))
             .Returns(Task.CompletedTask);
@@ -400,6 +407,7 @@ public class DataSetLifecycleServiceTests
         var dataSet = new DataSet { Id = dataSetId, UserId = userId, FilePath = "test/path.csv" };
 
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
+        _mockRepository.Setup(x => x.GetByIdIncludeDeletedAsync(dataSetId)).ReturnsAsync(dataSet);
         _mockRepository.Setup(x => x.DeleteAsync(dataSetId)).ReturnsAsync(true);
         _mockFileUploadService.Setup(x => x.DeleteFileAsync(dataSet.FilePath)).Returns(Task.CompletedTask);
         _mockAuditService.Setup(x => x.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null))
@@ -425,6 +433,7 @@ public class DataSetLifecycleServiceTests
         var dataSet = new DataSet { Id = dataSetId, UserId = userId, FilePath = "test/path.csv" };
 
         _mockRepository.Setup(x => x.GetByIdAsync(dataSetId)).ReturnsAsync(dataSet);
+        _mockRepository.Setup(x => x.GetByIdIncludeDeletedAsync(dataSetId)).ReturnsAsync(dataSet);
         _mockRepository.Setup(x => x.DeleteAsync(dataSetId)).ReturnsAsync(true);
         _mockFileUploadService.Setup(x => x.DeleteFileAsync(dataSet.FilePath)).ThrowsAsync(new Exception("File deletion failed"));
         _mockAuditService.Setup(x => x.LogDataSetActionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), null, null))

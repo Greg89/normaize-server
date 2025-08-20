@@ -6,6 +6,7 @@ namespace Normaize.Core.Interfaces;
 public interface IDataSetRepository
 {
     Task<DataSet?> GetByIdAsync(int id);
+    Task<DataSet?> GetByIdIncludeDeletedAsync(int id);
     Task<IEnumerable<DataSet>> GetAllAsync();
     Task<IEnumerable<DataSet>> GetByUserIdAsync(string userId);
     Task<IEnumerable<DataSet>> GetByUserIdAsync(string userId, bool includeDeleted);

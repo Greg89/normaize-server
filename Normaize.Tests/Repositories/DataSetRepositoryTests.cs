@@ -112,6 +112,32 @@ public class DataSetRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetByIdIncludeDeletedAsync_WithDeletedDataSet_ShouldReturnDataSet()
+    {
+        // Act
+        var result = await _repository.GetByIdIncludeDeletedAsync(3);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Id.Should().Be(3);
+        result.IsDeleted.Should().BeTrue();
+        result.DeletedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetByIdIncludeDeletedAsync_WithNonDeletedDataSet_ShouldReturnDataSet()
+    {
+        // Act
+        var result = await _repository.GetByIdIncludeDeletedAsync(1);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Id.Should().Be(1);
+        result.IsDeleted.Should().BeFalse();
+        result.DeletedAt.Should().BeNull();
+    }
+
+    [Fact]
     public async Task GetAllAsync_ShouldReturnNonDeletedDataSets()
     {
         // Act

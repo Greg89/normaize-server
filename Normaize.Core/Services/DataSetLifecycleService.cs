@@ -59,7 +59,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
                     throw new InvalidOperationException("Simulated file processing failure during dataset reset");
                 }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId, [AppConstants.DataStructures.DATASETID] = id, [AppConstants.DataStructures.RESET_TYPE_KEY] = resetDto.ResetType.ToString() });
 
-                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
+                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context, includeDeleted: true);
                 return await PerformResetOperationAsync(dataSet!, resetDto, context);
             });
     }
@@ -240,9 +240,11 @@ public class DataSetLifecycleService : IDataSetLifecycleService
         }
     }
 
-    private async Task<DataSet?> RetrieveDataSetWithAccessControlAsync(int id, string userId, IOperationContext context)
+    private async Task<DataSet?> RetrieveDataSetWithAccessControlAsync(int id, string userId, IOperationContext context, bool includeDeleted = false)
     {
-        var dataSet = await _dataSetRepository.GetByIdAsync(id);
+        var dataSet = includeDeleted 
+            ? await _dataSetRepository.GetByIdIncludeDeletedAsync(id)
+            : await _dataSetRepository.GetByIdAsync(id);
 
         if (dataSet == null)
         {

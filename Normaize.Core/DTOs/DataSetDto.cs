@@ -481,13 +481,13 @@ public class DataSetPreviewDto
     /// Gets or sets the column headers/schema
     /// </summary>
     [JsonPropertyName("columns")]
-    public List<string> Columns { get; set; } = new();
+    public List<string> Columns { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the preview rows as a list of dictionaries
     /// </summary>
     [JsonPropertyName("rows")]
-    public List<Dictionary<string, object>> Rows { get; set; } = new();
+    public List<Dictionary<string, object>> Rows { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the total number of rows in the dataset

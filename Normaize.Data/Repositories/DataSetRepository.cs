@@ -18,6 +18,14 @@ public class DataSetRepository(NormaizeContext context) : IDataSetRepository
             .FirstOrDefaultAsync(d => d.Id == id && !d.IsDeleted);
     }
 
+    public async Task<DataSet?> GetByIdIncludeDeletedAsync(int id)
+    {
+        return await _context.DataSets
+            .Include(d => d.Analyses.Where(a => !a.IsDeleted))
+            .Include(d => d.Rows.Take(100)) // Load first 100 rows for preview
+            .FirstOrDefaultAsync(d => d.Id == id); // No IsDeleted filter
+    }
+
     public async Task<IEnumerable<DataSet>> GetAllAsync()
     {
         return await _context.DataSets
