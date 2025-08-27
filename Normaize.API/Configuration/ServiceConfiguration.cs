@@ -532,6 +532,16 @@ public static class ServiceConfiguration
         builder.Services.AddScoped<IUserSettingsService, UserSettingsService>();
         builder.Services.AddHttpContextAccessor();
 
+        // Register job queue service and configuration
+        builder.Services.Configure<JobQueueOptions>(
+            builder.Configuration.GetSection("JobQueue"));
+        builder.Services.AddScoped<IJobQueueService, JobQueueService>();
+
+        // Register background services
+        builder.Services.AddHostedService<DataNormalizationBackgroundService>();
+        builder.Services.Configure<DataNormalizationBackgroundServiceOptions>(
+            builder.Configuration.GetSection("DataNormalizationBackgroundService"));
+
         logger.LogInformation("Application services configured successfully. CorrelationId: {CorrelationId}", correlationId);
     }
 

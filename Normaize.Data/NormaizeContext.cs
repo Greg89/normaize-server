@@ -15,6 +15,8 @@ public class NormaizeContext : DbContext
     public DbSet<DataSetRow> DataSetRows { get; set; }
     public DbSet<DataSetAuditLog> DataSetAuditLogs { get; set; }
     public DbSet<UserSettings> UserSettings { get; set; }
+    public DbSet<DataNormalizationJob> DataNormalizationJobs { get; set; }
+    public DbSet<DataNormalizationAuditLog> DataNormalizationAuditLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -189,6 +191,72 @@ public class NormaizeContext : DbContext
             entity.HasIndex(e => e.UserId).IsUnique();
             entity.HasIndex(e => e.IsDeleted);
             entity.HasIndex(e => e.UpdatedAt);
+        });
+
+        // DataNormalizationJob configuration
+        modelBuilder.Entity<DataNormalizationJob>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(255);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.OperationType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.OperationParameters).HasColumnType("JSON");
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(50);
+            entity.Property(e => e.Priority).HasDefaultValue(1);
+            entity.Property(e => e.SubmittedAt);
+            entity.Property(e => e.StartedAt);
+            entity.Property(e => e.CompletedAt);
+            entity.Property(e => e.ProgressPercentage).HasDefaultValue(0);
+            entity.Property(e => e.ErrorMessage).HasMaxLength(2000);
+            entity.Property(e => e.Results).HasColumnType("JSON");
+            entity.Property(e => e.RetryCount).HasDefaultValue(0);
+            entity.Property(e => e.MaxRetries).HasDefaultValue(3);
+            entity.Property(e => e.NextRetryAt);
+            entity.Property(e => e.CorrelationId).HasMaxLength(255);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.DeletedAt);
+            entity.Property(e => e.DeletedBy).HasMaxLength(255);
+            entity.Property(e => e.LastModifiedAt);
+            entity.Property(e => e.LastModifiedBy).HasMaxLength(255);
+
+            entity.HasOne(e => e.DataSet)
+                  .WithMany()
+                  .HasForeignKey(e => e.DataSetId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            // Indexes for performance
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.Priority);
+            entity.HasIndex(e => e.SubmittedAt);
+            entity.HasIndex(e => e.NextRetryAt);
+            entity.HasIndex(e => new { e.Status, e.Priority }).HasDatabaseName("idx_jobs_status_priority");
+            entity.HasIndex(e => new { e.IsDeleted, e.DeletedAt }).HasDatabaseName("idx_jobs_soft_delete");
+        });
+
+        // DataNormalizationAuditLog configuration
+        modelBuilder.Entity<DataNormalizationAuditLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.NormalizationJobId).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Action).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Changes).HasColumnType("JSON");
+            entity.Property(e => e.Timestamp);
+            entity.Property(e => e.IpAddress).HasMaxLength(45);
+            entity.Property(e => e.UserAgent).HasColumnType("TEXT");
+
+            entity.HasOne(e => e.NormalizationJob)
+                  .WithMany(j => j.AuditLogs)
+                  .HasForeignKey(e => e.NormalizationJobId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            // Indexes for audit trail queries
+            entity.HasIndex(e => e.NormalizationJobId);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.Action);
+            entity.HasIndex(e => e.Timestamp);
+            entity.HasIndex(e => new { e.NormalizationJobId, e.Timestamp }).HasDatabaseName("idx_audit_job_timestamp");
         });
     }
 }
