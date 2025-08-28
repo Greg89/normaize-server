@@ -20,10 +20,10 @@ public class VisualizationValidationService : IVisualizationValidationService
     public void ValidateGenerateChartInputs(int dataSetId, ChartType chartType, ChartConfigurationDto? configuration, string? userId)
     {
         if (dataSetId <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId));
+            throw new ArgumentException(SharedConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId));
 
         if (string.IsNullOrWhiteSpace(userId))
-            throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
+            throw new ArgumentException(DataVisualizationConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
 
         _chartGenerationService.ValidateChartConfiguration(chartType, configuration);
     }
@@ -31,16 +31,16 @@ public class VisualizationValidationService : IVisualizationValidationService
     public void ValidateComparisonChartInputs(int dataSetId1, int dataSetId2, ChartType chartType, ChartConfigurationDto? configuration, string? userId)
     {
         if (dataSetId1 <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId1));
+            throw new ArgumentException(SharedConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId1));
 
         if (dataSetId2 <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId2));
+            throw new ArgumentException(SharedConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId2));
 
         if (dataSetId1 == dataSetId2)
             throw new ArgumentException("Dataset IDs must be different for comparison", nameof(dataSetId2));
 
         if (string.IsNullOrWhiteSpace(userId))
-            throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
+            throw new ArgumentException(DataVisualizationConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
 
         _chartGenerationService.ValidateChartConfiguration(chartType, configuration);
     }
@@ -48,10 +48,10 @@ public class VisualizationValidationService : IVisualizationValidationService
     public void ValidateDataSummaryInputs(int dataSetId, string? userId)
     {
         if (dataSetId <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId));
+            throw new ArgumentException(SharedConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId));
 
         if (string.IsNullOrWhiteSpace(userId))
-            throw new ArgumentException(AppConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
+            throw new ArgumentException(DataVisualizationConstants.VisualizationMessages.INVALID_USER_ID, nameof(userId));
     }
 
     public void ValidateStatisticalSummaryInputs(int dataSetId, string? userId)

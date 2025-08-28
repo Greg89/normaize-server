@@ -42,14 +42,14 @@ public class DataVisualizationService : IDataVisualizationService
             validation: () => _visualizationServices.Validation.ValidateGenerateChartInputs(dataSetId, chartType, configuration, userId),
             operation: async (context) =>
             {
-                await ExecuteChaosEngineeringAsync(context, AppConstants.ChaosEngineering.PROCESSING_DELAY, userId);
+                await ExecuteChaosEngineeringAsync(context, ChaosEngineeringConstants.ChaosEngineering.PROCESSING_DELAY, userId);
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.CHART_GENERATION_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.VisualizationMessages.CHART_GENERATION_STARTED);
                 var result = await ExecuteWithTimeoutAsync(
                     () => GenerateChartInternalAsync(dataSetId, chartType, configuration, userId, context),
                     _options.ChartGenerationTimeout,
                     context);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.CHART_GENERATION_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.VisualizationMessages.CHART_GENERATION_COMPLETED);
 
                 return result;
             });
@@ -63,14 +63,14 @@ public class DataVisualizationService : IDataVisualizationService
             validation: () => _visualizationServices.Validation.ValidateComparisonChartInputs(dataSetId1, dataSetId2, chartType, configuration, userId),
             operation: async (context) =>
             {
-                await ExecuteChaosEngineeringAsync(context, AppConstants.ChaosEngineering.NETWORK_LATENCY, userId);
+                await ExecuteChaosEngineeringAsync(context, ChaosEngineeringConstants.ChaosEngineering.NETWORK_LATENCY, userId);
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.COMPARISON_CHART_GENERATION_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.VisualizationMessages.COMPARISON_CHART_GENERATION_STARTED);
                 var result = await ExecuteWithTimeoutAsync(
                     () => GenerateComparisonChartInternalAsync(dataSetId1, dataSetId2, chartType, configuration, userId, context),
                     _options.ComparisonChartTimeout,
                     context);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.COMPARISON_CHART_GENERATION_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.VisualizationMessages.COMPARISON_CHART_GENERATION_COMPLETED);
 
                 return result;
             });
@@ -84,14 +84,14 @@ public class DataVisualizationService : IDataVisualizationService
             validation: () => _visualizationServices.Validation.ValidateDataSummaryInputs(dataSetId, userId),
             operation: async (context) =>
             {
-                await ExecuteChaosEngineeringAsync(context, AppConstants.ChaosEngineering.CACHE_FAILURE, userId);
+                await ExecuteChaosEngineeringAsync(context, ChaosEngineeringConstants.ChaosEngineering.CACHE_FAILURE, userId);
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.DATA_SUMMARY_GENERATION_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.VisualizationMessages.DATA_SUMMARY_GENERATION_STARTED);
                 var result = await ExecuteWithTimeoutAsync(
                     () => GetDataSummaryInternalAsync(dataSetId, userId, context),
                     _options.SummaryGenerationTimeout,
                     context);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.DATA_SUMMARY_GENERATION_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.VisualizationMessages.DATA_SUMMARY_GENERATION_COMPLETED);
 
                 return result;
             });
@@ -105,14 +105,14 @@ public class DataVisualizationService : IDataVisualizationService
             validation: () => _visualizationServices.Validation.ValidateStatisticalSummaryInputs(dataSetId, userId),
             operation: async (context) =>
             {
-                await ExecuteChaosEngineeringAsync(context, AppConstants.ChaosEngineering.MEMORY_PRESSURE, userId);
+                await ExecuteChaosEngineeringAsync(context, ChaosEngineeringConstants.ChaosEngineering.MEMORY_PRESSURE, userId);
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.STATISTICAL_SUMMARY_GENERATION_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.VisualizationMessages.STATISTICAL_SUMMARY_GENERATION_STARTED);
                 var result = await ExecuteWithTimeoutAsync(
                     () => GetStatisticalSummaryInternalAsync(dataSetId, userId, context),
                     _options.StatisticalSummaryTimeout,
                     context);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.VisualizationMessages.STATISTICAL_SUMMARY_GENERATION_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.VisualizationMessages.STATISTICAL_SUMMARY_GENERATION_COMPLETED);
 
                 return result;
             });
@@ -137,13 +137,13 @@ public class DataVisualizationService : IDataVisualizationService
         Func<IOperationContext, Task<T>> operation)
     {
         var correlationId = GetCorrelationId();
-        var context = _infrastructure.StructuredLogging.CreateContext(operationName, correlationId, AppConstants.Auth.AnonymousUser, additionalMetadata);
+        var context = _infrastructure.StructuredLogging.CreateContext(operationName, correlationId, AuthConstants.Auth.AnonymousUser, additionalMetadata);
 
         try
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
+            _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.INPUT_VALIDATION_STARTED);
             validation();
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
+            _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             var result = await operation(context);
             _infrastructure.StructuredLogging.LogSummary(context, true);
@@ -165,37 +165,37 @@ public class DataVisualizationService : IDataVisualizationService
             context.OperationName,
             async () =>
             {
-                _infrastructure.StructuredLogging.LogStep(context, string.Format(AppConstants.DataVisualization.CHAOS_ENGINEERING_SIMULATING, chaosType), new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, string.Format(DataVisualizationConstants.DataVisualization.CHAOS_ENGINEERING_SIMULATING, chaosType), new Dictionary<string, object>
                 {
-                    [AppConstants.ChaosEngineering.CHAOS_TYPE] = chaosType
+                    [ChaosEngineeringConstants.ChaosEngineering.CHAOS_TYPE] = chaosType
                 });
 
                 await SimulateChaosEffectAsync(chaosType);
             },
-            new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId });
+            new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = userId });
     }
 
     private async Task SimulateChaosEffectAsync(string chaosType)
     {
         switch (chaosType)
         {
-            case AppConstants.ChaosEngineering.PROCESSING_DELAY:
-                await Task.Delay(_random.Next(AppConstants.ChaosEngineering.MIN_PROCESSING_DELAY_MS, AppConstants.ChaosEngineering.MAX_PROCESSING_DELAY_MS));
+            case ChaosEngineeringConstants.ChaosEngineering.PROCESSING_DELAY:
+                await Task.Delay(_random.Next(ChaosEngineeringConstants.ChaosEngineering.MIN_PROCESSING_DELAY_MS, ChaosEngineeringConstants.ChaosEngineering.MAX_PROCESSING_DELAY_MS));
                 break;
 
-            case AppConstants.ChaosEngineering.NETWORK_LATENCY:
-                await Task.Delay(_random.Next(AppConstants.ChaosEngineering.MIN_NETWORK_LATENCY_MS, AppConstants.ChaosEngineering.MAX_NETWORK_LATENCY_MS));
+            case ChaosEngineeringConstants.ChaosEngineering.NETWORK_LATENCY:
+                await Task.Delay(_random.Next(ChaosEngineeringConstants.ChaosEngineering.MIN_NETWORK_LATENCY_MS, ChaosEngineeringConstants.ChaosEngineering.MAX_NETWORK_LATENCY_MS));
                 break;
 
-            case AppConstants.ChaosEngineering.CACHE_FAILURE:
-                throw new InvalidOperationException(AppConstants.DataVisualization.SIMULATED_CACHE_FAILURE_MESSAGE);
+            case ChaosEngineeringConstants.ChaosEngineering.CACHE_FAILURE:
+                throw new InvalidOperationException(ChaosEngineeringConstants.ChaosMessages.SIMULATED_CACHE_FAILURE);
 
-            case AppConstants.ChaosEngineering.MEMORY_PRESSURE:
+            case ChaosEngineeringConstants.ChaosEngineering.MEMORY_PRESSURE:
                 await SimulateMemoryPressureAsync();
                 break;
 
             default:
-                await Task.Delay(_random.Next(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS, AppConstants.ChaosEngineering.MAX_CHAOS_DELAY_MS));
+                await Task.Delay(_random.Next(ChaosEngineeringConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS, ChaosEngineeringConstants.ChaosEngineering.MAX_CHAOS_DELAY_MS));
                 break;
         }
     }
@@ -203,11 +203,11 @@ public class DataVisualizationService : IDataVisualizationService
     private static async Task SimulateMemoryPressureAsync()
     {
         var tempObjects = new List<byte[]>();
-        for (int i = 0; i < AppConstants.ChaosEngineering.MEMORY_PRESSURE_OBJECT_COUNT; i++)
+        for (int i = 0; i < ChaosEngineeringConstants.ChaosEngineering.MEMORY_PRESSURE_OBJECT_COUNT; i++)
         {
-            tempObjects.Add(new byte[AppConstants.ChaosEngineering.MEMORY_PRESSURE_OBJECT_SIZE_BYTES]);
+            tempObjects.Add(new byte[ChaosEngineeringConstants.ChaosEngineering.MEMORY_PRESSURE_OBJECT_SIZE_BYTES]);
         }
-        await Task.Delay(AppConstants.ChaosEngineering.MEMORY_PRESSURE_DELAY_MS);
+        await Task.Delay(ChaosEngineeringConstants.ChaosEngineering.MEMORY_PRESSURE_DELAY_MS);
         tempObjects.Clear();
     }
 
@@ -215,9 +215,9 @@ public class DataVisualizationService : IDataVisualizationService
     {
         return new Dictionary<string, object>
         {
-            [AppConstants.DataStructures.DATASETID] = dataSetId,
-            [AppConstants.DataStructures.CHART_TYPE] = chartType.ToString(),
-            [AppConstants.DataProcessing.CONFIGURATION_KEY] = configuration?.ToString() ?? AppConstants.DataProcessing.DATA_TYPE_NULL
+            [SharedConstants.DataStructures.DATASETID] = dataSetId,
+            [SharedConstants.DataStructures.CHART_TYPE] = chartType.ToString(),
+            [DataVisualizationConstants.DataProcessing.CONFIGURATION_KEY] = configuration?.ToString() ?? DataVisualizationConstants.DataProcessing.DATA_TYPE_NULL
         };
     }
 
@@ -225,10 +225,10 @@ public class DataVisualizationService : IDataVisualizationService
     {
         return new Dictionary<string, object>
         {
-            [AppConstants.DataVisualization.DATASET_ID_1] = dataSetId1,
-            [AppConstants.DataVisualization.DATASET_ID_2] = dataSetId2,
-            [AppConstants.DataStructures.CHART_TYPE] = chartType.ToString(),
-            [AppConstants.DataProcessing.CONFIGURATION_KEY] = configuration?.ToString() ?? AppConstants.DataProcessing.DATA_TYPE_NULL
+            [DataVisualizationConstants.DataVisualization.DATASET_ID_1] = dataSetId1,
+            [DataVisualizationConstants.DataVisualization.DATASET_ID_2] = dataSetId2,
+            [SharedConstants.DataStructures.CHART_TYPE] = chartType.ToString(),
+            [DataVisualizationConstants.DataProcessing.CONFIGURATION_KEY] = configuration?.ToString() ?? DataVisualizationConstants.DataProcessing.DATA_TYPE_NULL
         };
     }
 
@@ -236,13 +236,13 @@ public class DataVisualizationService : IDataVisualizationService
     {
         return new Dictionary<string, object>
         {
-            [AppConstants.DataStructures.DATASETID] = dataSetId
+            [SharedConstants.DataStructures.DATASETID] = dataSetId
         };
     }
 
     private static string CreateDetailedErrorMessage(string operationName, Dictionary<string, object>? metadata)
     {
-        if (metadata == null) return string.Format(AppConstants.DataVisualization.FAILED_TO_COMPLETE_OPERATION, operationName);
+        if (metadata == null) return string.Format(DataVisualizationConstants.DataVisualization.FAILED_TO_COMPLETE_OPERATION, operationName);
 
         return operationName switch
         {
@@ -250,40 +250,40 @@ public class DataVisualizationService : IDataVisualizationService
             nameof(GenerateComparisonChartAsync) => CreateComparisonChartErrorMessage(metadata),
             nameof(GetDataSummaryAsync) => CreateDataSummaryErrorMessage(metadata),
             nameof(GetStatisticalSummaryAsync) => CreateStatisticalSummaryErrorMessage(metadata),
-            _ => string.Format(AppConstants.DataVisualization.FAILED_TO_COMPLETE_OPERATION, operationName)
+            _ => string.Format(DataVisualizationConstants.DataVisualization.FAILED_TO_COMPLETE_OPERATION, operationName)
         };
     }
 
     private static string CreateChartErrorMessage(Dictionary<string, object> metadata)
     {
-        var dataSetId = GetMetadataValue(metadata, AppConstants.DataStructures.DATASETID);
-        var chartType = GetMetadataValue(metadata, AppConstants.DataStructures.CHART_TYPE);
-        return string.Format(AppConstants.DataVisualization.FAILED_TO_COMPLETE_GENERATE_CHART, dataSetId, chartType);
+        var dataSetId = GetMetadataValue(metadata, SharedConstants.DataStructures.DATASETID);
+        var chartType = GetMetadataValue(metadata, SharedConstants.DataStructures.CHART_TYPE);
+        return string.Format(DataVisualizationConstants.DataVisualization.FAILED_TO_COMPLETE_GENERATE_CHART, dataSetId, chartType);
     }
 
     private static string CreateComparisonChartErrorMessage(Dictionary<string, object> metadata)
     {
-        var dataSetId1 = GetMetadataValue(metadata, AppConstants.DataVisualization.DATASET_ID_1);
-        var dataSetId2 = GetMetadataValue(metadata, AppConstants.DataVisualization.DATASET_ID_2);
-        var chartType = GetMetadataValue(metadata, AppConstants.DataStructures.CHART_TYPE);
-        return string.Format(AppConstants.DataVisualization.FAILED_TO_COMPLETE_GENERATE_COMPARISON_CHART, dataSetId1, dataSetId2, chartType);
+        var dataSetId1 = GetMetadataValue(metadata, DataVisualizationConstants.DataVisualization.DATASET_ID_1);
+        var dataSetId2 = GetMetadataValue(metadata, DataVisualizationConstants.DataVisualization.DATASET_ID_2);
+        var chartType = GetMetadataValue(metadata, SharedConstants.DataStructures.CHART_TYPE);
+        return string.Format(DataVisualizationConstants.DataVisualization.FAILED_TO_COMPLETE_GENERATE_COMPARISON_CHART, dataSetId1, dataSetId2, chartType);
     }
 
     private static string CreateDataSummaryErrorMessage(Dictionary<string, object> metadata)
     {
-        var dataSetId = GetMetadataValue(metadata, AppConstants.DataStructures.DATASETID);
-        return string.Format(AppConstants.DataVisualization.FAILED_TO_COMPLETE_GET_DATA_SUMMARY, dataSetId);
+        var dataSetId = GetMetadataValue(metadata, SharedConstants.DataStructures.DATASETID);
+        return string.Format(DataVisualizationConstants.DataVisualization.FAILED_TO_COMPLETE_GET_DATA_SUMMARY, dataSetId);
     }
 
     private static string CreateStatisticalSummaryErrorMessage(Dictionary<string, object> metadata)
     {
-        var dataSetId = GetMetadataValue(metadata, AppConstants.DataStructures.DATASETID);
-        return string.Format(AppConstants.DataVisualization.FAILED_TO_COMPLETE_GET_STATISTICAL_SUMMARY, dataSetId);
+        var dataSetId = GetMetadataValue(metadata, SharedConstants.DataStructures.DATASETID);
+        return string.Format(DataVisualizationConstants.DataVisualization.FAILED_TO_COMPLETE_GET_STATISTICAL_SUMMARY, dataSetId);
     }
 
     private static string GetMetadataValue(Dictionary<string, object> metadata, string key)
     {
-        return metadata.TryGetValue(key, out var value) ? value?.ToString() ?? AppConstants.Messages.UNKNOWN : AppConstants.Messages.UNKNOWN;
+        return metadata.TryGetValue(key, out var value) ? value?.ToString() ?? SharedConstants.Messages.UNKNOWN : SharedConstants.Messages.UNKNOWN;
     }
 
     private static string GetCorrelationId() => Activity.Current?.Id ?? Guid.NewGuid().ToString();
@@ -302,11 +302,11 @@ public class DataVisualizationService : IDataVisualizationService
 
         if (_visualizationServices.CacheManagement.TryGetValue(cacheKey, out ChartDataDto? cachedChart))
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.RETRIEVED_CHART_FROM_CACHE);
+            _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.RETRIEVED_CHART_FROM_CACHE);
             return cachedChart!;
         }
 
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.CACHE_MISS_GENERATING_NEW_CHART);
+        _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.CACHE_MISS_GENERATING_NEW_CHART);
 
         var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, context);
         var data = ExtractDataSetData(dataSet, context);
@@ -316,9 +316,9 @@ public class DataVisualizationService : IDataVisualizationService
 
         _visualizationServices.CacheManagement.Set(cacheKey, chartData, _options.CacheExpiration);
 
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.GENERATED_CHART_SUCCESSFULLY, new Dictionary<string, object>
+        _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.GENERATED_CHART_SUCCESSFULLY, new Dictionary<string, object>
         {
-            [AppConstants.DataVisualization.PROCESSING_TIME_MS] = stopwatch.ElapsedMilliseconds
+            [DataVisualizationConstants.DataVisualization.PROCESSING_TIME_MS] = stopwatch.ElapsedMilliseconds
         });
 
         return chartData;
@@ -332,11 +332,11 @@ public class DataVisualizationService : IDataVisualizationService
 
         if (_visualizationServices.CacheManagement.TryGetValue(cacheKey, out ComparisonChartDto? cachedChart))
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.RETRIEVED_COMPARISON_CHART_FROM_CACHE);
+            _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.RETRIEVED_COMPARISON_CHART_FROM_CACHE);
             return cachedChart!;
         }
 
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.CACHE_MISS_GENERATING_NEW_COMPARISON_CHART);
+        _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.CACHE_MISS_GENERATING_NEW_COMPARISON_CHART);
 
         var dataSet1 = await GetAndValidateDataSetAsync(dataSetId1, userId, context);
         var dataSet2 = await GetAndValidateDataSetAsync(dataSetId2, userId, context);
@@ -349,9 +349,9 @@ public class DataVisualizationService : IDataVisualizationService
 
         _visualizationServices.CacheManagement.Set(cacheKey, comparisonChart, _options.CacheExpiration);
 
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.GENERATED_COMPARISON_CHART_SUCCESSFULLY, new Dictionary<string, object>
+        _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.GENERATED_COMPARISON_CHART_SUCCESSFULLY, new Dictionary<string, object>
         {
-            [AppConstants.DataVisualization.PROCESSING_TIME_MS] = stopwatch.ElapsedMilliseconds
+            [DataVisualizationConstants.DataVisualization.PROCESSING_TIME_MS] = stopwatch.ElapsedMilliseconds
         });
 
         return comparisonChart;
@@ -365,11 +365,11 @@ public class DataVisualizationService : IDataVisualizationService
 
         if (_visualizationServices.CacheManagement.TryGetValue(cacheKey, out DataSummaryDto? cachedSummary))
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.RETRIEVED_DATA_SUMMARY_FROM_CACHE);
+            _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.RETRIEVED_DATA_SUMMARY_FROM_CACHE);
             return cachedSummary!;
         }
 
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.CACHE_MISS_GENERATING_NEW_DATA_SUMMARY);
+        _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.CACHE_MISS_GENERATING_NEW_DATA_SUMMARY);
 
         var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, context);
         var data = ExtractDataSetData(dataSet, context);
@@ -379,9 +379,9 @@ public class DataVisualizationService : IDataVisualizationService
 
         _visualizationServices.CacheManagement.Set(cacheKey, summary, _options.CacheExpiration);
 
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.GENERATED_DATA_SUMMARY_SUCCESSFULLY, new Dictionary<string, object>
+        _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.GENERATED_DATA_SUMMARY_SUCCESSFULLY, new Dictionary<string, object>
         {
-            [AppConstants.DataVisualization.PROCESSING_TIME_MS] = stopwatch.ElapsedMilliseconds
+            [DataVisualizationConstants.DataVisualization.PROCESSING_TIME_MS] = stopwatch.ElapsedMilliseconds
         });
 
         return summary;
@@ -395,11 +395,11 @@ public class DataVisualizationService : IDataVisualizationService
 
         if (_visualizationServices.CacheManagement.TryGetValue(cacheKey, out StatisticalSummaryDto? cachedStats))
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.RETRIEVED_STATISTICAL_SUMMARY_FROM_CACHE);
+            _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.RETRIEVED_STATISTICAL_SUMMARY_FROM_CACHE);
             return cachedStats!;
         }
 
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.CACHE_MISS_GENERATING_NEW_STATISTICAL_SUMMARY);
+        _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.CACHE_MISS_GENERATING_NEW_STATISTICAL_SUMMARY);
 
         var dataSet = await GetAndValidateDataSetAsync(dataSetId, userId, context);
         var data = ExtractDataSetData(dataSet, context);
@@ -409,9 +409,9 @@ public class DataVisualizationService : IDataVisualizationService
 
         _visualizationServices.CacheManagement.Set(cacheKey, stats, _options.CacheExpiration);
 
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.GENERATED_STATISTICAL_SUMMARY_SUCCESSFULLY, new Dictionary<string, object>
+        _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.GENERATED_STATISTICAL_SUMMARY_SUCCESSFULLY, new Dictionary<string, object>
         {
-            [AppConstants.DataVisualization.PROCESSING_TIME_MS] = stopwatch.ElapsedMilliseconds
+            [DataVisualizationConstants.DataVisualization.PROCESSING_TIME_MS] = stopwatch.ElapsedMilliseconds
         });
 
         return stats;
@@ -431,13 +431,13 @@ public class DataVisualizationService : IDataVisualizationService
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.OPERATION_TIMED_OUT, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.OPERATION_TIMED_OUT, new Dictionary<string, object>
             {
-                [AppConstants.DataVisualization.TIMEOUT] = timeout.ToString(),
-                [AppConstants.DataVisualization.OPERATION_NAME] = context.OperationName,
-                [AppConstants.DataVisualization.ERROR_MESSAGE] = ex.Message
+                [DataVisualizationConstants.DataVisualization.TIMEOUT] = timeout.ToString(),
+                [DataVisualizationConstants.DataVisualization.OPERATION_NAME] = context.OperationName,
+                [DataVisualizationConstants.DataVisualization.ERROR_MESSAGE] = ex.Message
             });
-            throw new TimeoutException(string.Format(AppConstants.DataVisualization.OPERATION_TIMED_OUT_AFTER, context.OperationName, timeout));
+            throw new TimeoutException(string.Format(DataVisualizationConstants.DataVisualization.OPERATION_TIMED_OUT_AFTER, context.OperationName, timeout));
         }
     }
 
@@ -447,33 +447,33 @@ public class DataVisualizationService : IDataVisualizationService
 
         if (dataSet == null)
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.DATASET_NOT_FOUND_LOG, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.DATASET_NOT_FOUND_LOG, new Dictionary<string, object>
             {
-                [AppConstants.DataStructures.DATASETID] = dataSetId,
-                [AppConstants.DataStructures.USER_ID] = userId
+                [SharedConstants.DataStructures.DATASETID] = dataSetId,
+                [SharedConstants.DataStructures.USER_ID] = userId
             });
-            throw new ArgumentException(string.Format(AppConstants.DataVisualization.DATASET_NOT_FOUND_WITH_ID, dataSetId), nameof(dataSetId));
+            throw new ArgumentException(string.Format(DataVisualizationConstants.DataVisualization.DATASET_NOT_FOUND_WITH_ID, dataSetId), nameof(dataSetId));
         }
 
         if (dataSet.UserId != userId)
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.UNAUTHORIZED_ACCESS_ATTEMPT, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.UNAUTHORIZED_ACCESS_ATTEMPT, new Dictionary<string, object>
             {
-                [AppConstants.DataStructures.DATASETID] = dataSetId,
-                [AppConstants.DataStructures.USER_ID] = userId,
-                [AppConstants.DataStructures.ACTUAL_USER_ID] = dataSet.UserId
+                [SharedConstants.DataStructures.DATASETID] = dataSetId,
+                [SharedConstants.DataStructures.USER_ID] = userId,
+                [SharedConstants.DataStructures.ACTUAL_USER_ID] = dataSet.UserId
             });
-            throw new UnauthorizedAccessException(string.Format(AppConstants.DataVisualization.DATASET_ACCESS_DENIED_USER_NOT_AUTHORIZED, userId, dataSetId));
+            throw new UnauthorizedAccessException(string.Format(DataVisualizationConstants.DataVisualization.DATASET_ACCESS_DENIED_USER_NOT_AUTHORIZED, userId, dataSetId));
         }
 
         if (dataSet.IsDeleted)
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.ATTEMPTED_TO_ACCESS_DELETED_DATASET, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.ATTEMPTED_TO_ACCESS_DELETED_DATASET, new Dictionary<string, object>
             {
-                [AppConstants.DataStructures.DATASETID] = dataSetId,
-                [AppConstants.DataStructures.USER_ID] = userId
+                [SharedConstants.DataStructures.DATASETID] = dataSetId,
+                [SharedConstants.DataStructures.USER_ID] = userId
             });
-            throw new ArgumentException(string.Format(AppConstants.DataVisualization.DATASET_HAS_BEEN_DELETED, dataSetId), nameof(dataSetId));
+            throw new ArgumentException(string.Format(DataVisualizationConstants.DataVisualization.DATASET_HAS_BEEN_DELETED, dataSetId), nameof(dataSetId));
         }
 
         return dataSet;
@@ -485,9 +485,9 @@ public class DataVisualizationService : IDataVisualizationService
         {
             if (string.IsNullOrWhiteSpace(dataSet.ProcessedData))
             {
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.DATASET_HAS_NO_PROCESSED_DATA, new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.DATASET_HAS_NO_PROCESSED_DATA, new Dictionary<string, object>
                 {
-                    [AppConstants.DataStructures.DATASETID] = dataSet.Id
+                    [SharedConstants.DataStructures.DATASETID] = dataSet.Id
                 });
                 return [];
             }
@@ -496,29 +496,29 @@ public class DataVisualizationService : IDataVisualizationService
 
             if (data == null)
             {
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.FAILED_TO_DESERIALIZE_DATASET_JSON_DATA, new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.FAILED_TO_DESERIALIZE_DATASET_JSON_DATA, new Dictionary<string, object>
                 {
-                    [AppConstants.DataStructures.DATASETID] = dataSet.Id
+                    [SharedConstants.DataStructures.DATASETID] = dataSet.Id
                 });
                 return [];
             }
 
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.EXTRACTED_ROWS_FROM_DATASET, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.EXTRACTED_ROWS_FROM_DATASET, new Dictionary<string, object>
             {
-                [AppConstants.DataStructures.DATASETID] = dataSet.Id,
-                [AppConstants.DataVisualization.ROW_COUNT] = data.Count
+                [SharedConstants.DataStructures.DATASETID] = dataSet.Id,
+                [DataVisualizationConstants.DataVisualization.ROW_COUNT] = data.Count
             });
 
             return data;
         }
         catch (JsonException ex)
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataVisualization.FAILED_TO_PARSE_DATASET_JSON_DATA, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, DataVisualizationConstants.DataVisualization.FAILED_TO_PARSE_DATASET_JSON_DATA, new Dictionary<string, object>
             {
-                [AppConstants.DataStructures.DATASETID] = dataSet.Id,
-                [AppConstants.DataVisualization.ERROR_MESSAGE] = ex.Message
+                [SharedConstants.DataStructures.DATASETID] = dataSet.Id,
+                [DataVisualizationConstants.DataVisualization.ERROR_MESSAGE] = ex.Message
             });
-            throw new InvalidOperationException(string.Format(AppConstants.DataVisualization.FAILED_TO_PARSE_DATASET_DATA, dataSet.Id, ex.Message), ex);
+            throw new InvalidOperationException(string.Format(DataVisualizationConstants.DataVisualization.FAILED_TO_PARSE_DATASET_DATA, dataSet.Id, ex.Message), ex);
         }
     }
 
@@ -527,11 +527,11 @@ public class DataVisualizationService : IDataVisualizationService
 
 public class DataVisualizationOptions
 {
-    public TimeSpan CacheExpiration { get; set; } = TimeSpan.FromMinutes(AppConstants.DataProcessing.DEFAULT_CACHE_EXPIRATION_MINUTES);
-    public int MaxDataPoints { get; set; } = AppConstants.DataProcessing.DEFAULT_MAX_DATA_POINTS;
-    public TimeSpan ChartGenerationTimeout { get; set; } = TimeSpan.FromMinutes(AppConstants.DataProcessing.DEFAULT_CHART_GENERATION_TIMEOUT_MINUTES);
-    public TimeSpan ComparisonChartTimeout { get; set; } = TimeSpan.FromMinutes(AppConstants.DataProcessing.DEFAULT_COMPARISON_CHART_TIMEOUT_MINUTES);
-    public TimeSpan SummaryGenerationTimeout { get; set; } = TimeSpan.FromMinutes(AppConstants.DataProcessing.DEFAULT_SUMMARY_GENERATION_TIMEOUT_MINUTES);
-    public TimeSpan StatisticalSummaryTimeout { get; set; } = TimeSpan.FromMinutes(AppConstants.DataProcessing.DEFAULT_STATISTICAL_SUMMARY_TIMEOUT_MINUTES);
-    public double ChaosProcessingDelayProbability { get; set; } = AppConstants.DataProcessing.DEFAULT_CHAOS_PROCESSING_DELAY_PROBABILITY;
+    public TimeSpan CacheExpiration { get; set; } = TimeSpan.FromMinutes(DataVisualizationConstants.DataProcessing.DEFAULT_CACHE_EXPIRATION_MINUTES);
+    public int MaxDataPoints { get; set; } = DataVisualizationConstants.DataProcessing.DEFAULT_MAX_DATA_POINTS;
+    public TimeSpan ChartGenerationTimeout { get; set; } = TimeSpan.FromMinutes(DataVisualizationConstants.DataProcessing.DEFAULT_CHART_GENERATION_TIMEOUT_MINUTES);
+    public TimeSpan ComparisonChartTimeout { get; set; } = TimeSpan.FromMinutes(DataVisualizationConstants.DataProcessing.DEFAULT_COMPARISON_CHART_TIMEOUT_MINUTES);
+    public TimeSpan SummaryGenerationTimeout { get; set; } = TimeSpan.FromMinutes(DataVisualizationConstants.DataProcessing.DEFAULT_SUMMARY_GENERATION_TIMEOUT_MINUTES);
+    public TimeSpan StatisticalSummaryTimeout { get; set; } = TimeSpan.FromMinutes(DataVisualizationConstants.DataProcessing.DEFAULT_STATISTICAL_SUMMARY_TIMEOUT_MINUTES);
+    public double ChaosProcessingDelayProbability { get; set; } = DataVisualizationConstants.DataProcessing.DEFAULT_CHAOS_PROCESSING_DELAY_PROBABILITY;
 }

@@ -48,12 +48,12 @@ public class DataNormalizationService : IDataNormalizationService
             var dataSet = await _dataSetRepository.GetByIdAsync(dataSetId);
             if (dataSet == null)
             {
-                throw new InvalidOperationException(AppConstants.DataNormalization.DATASET_NOT_FOUND);
+                throw new InvalidOperationException(DataNormalizationConstants.DataNormalization.DATASET_NOT_FOUND);
             }
 
             if (dataSet.UserId != userId)
             {
-                throw new UnauthorizedAccessException(AppConstants.DataNormalization.ACCESS_DENIED);
+                throw new UnauthorizedAccessException(DataNormalizationConstants.DataNormalization.ACCESS_DENIED);
             }
 
             // Validate the request
@@ -69,7 +69,7 @@ public class DataNormalizationService : IDataNormalizationService
                 Id = Guid.NewGuid().ToString(),
                 DataSetId = dataSetId,
                 UserId = userId,
-                OperationType = AppConstants.DataNormalization.REMOVE_DUPLICATE_ROWS,
+                OperationType = DataNormalizationConstants.DataNormalization.REMOVE_DUPLICATE_ROWS,
                 OperationParameters = JsonSerializer.Serialize(request),
                 Status = NormalizationJobStatus.Queued,
                 Priority = 1,
@@ -94,7 +94,7 @@ public class DataNormalizationService : IDataNormalizationService
             {
                 JobId = job.Id,
                 Status = NormalizationJobStatus.Queued,
-                Message = AppConstants.DataNormalization.JOB_QUEUED,
+                Message = DataNormalizationConstants.DataNormalization.JOB_QUEUED,
                 SubmittedAt = job.SubmittedAt,
                 EstimatedCompletionAt = DateTime.UtcNow.AddMilliseconds(estimatedTime),
                 ProgressPercentage = 0,
@@ -154,7 +154,7 @@ public class DataNormalizationService : IDataNormalizationService
             // Verify user has access to this job
             if (job.UserId != userId)
             {
-                throw new UnauthorizedAccessException(AppConstants.DataNormalization.ACCESS_DENIED);
+                throw new UnauthorizedAccessException(DataNormalizationConstants.DataNormalization.ACCESS_DENIED);
             }
 
             var response = new NormalizationJobStatusResponse
@@ -214,7 +214,7 @@ public class DataNormalizationService : IDataNormalizationService
             // Verify user has access to this job
             if (job.UserId != userId)
             {
-                throw new UnauthorizedAccessException(AppConstants.DataNormalization.ACCESS_DENIED);
+                throw new UnauthorizedAccessException(DataNormalizationConstants.DataNormalization.ACCESS_DENIED);
             }
 
             // Only allow cancellation of queued or processing jobs
@@ -304,12 +304,12 @@ public class DataNormalizationService : IDataNormalizationService
             var dataSet = await _dataSetRepository.GetByIdAsync(dataSetId);
             if (dataSet == null)
             {
-                throw new InvalidOperationException(AppConstants.DataNormalization.DATASET_NOT_FOUND);
+                throw new InvalidOperationException(DataNormalizationConstants.DataNormalization.DATASET_NOT_FOUND);
             }
 
             if (dataSet.UserId != userId)
             {
-                throw new UnauthorizedAccessException(AppConstants.DataNormalization.ACCESS_DENIED);
+                throw new UnauthorizedAccessException(DataNormalizationConstants.DataNormalization.ACCESS_DENIED);
             }
 
             var allJobs = new List<DataNormalizationJob>();
@@ -355,11 +355,11 @@ public class DataNormalizationService : IDataNormalizationService
     {
         return status switch
         {
-            NormalizationJobStatus.Queued => AppConstants.DataNormalization.JOB_QUEUED,
-            NormalizationJobStatus.Processing => AppConstants.DataNormalization.JOB_STARTED_PROCESSING,
-            NormalizationJobStatus.Completed => AppConstants.DataNormalization.JOB_COMPLETED_SUCCESSFULLY,
-            NormalizationJobStatus.Failed => AppConstants.DataNormalization.JOB_FAILED,
-            NormalizationJobStatus.Cancelled => AppConstants.DataNormalization.JOB_CANCELLED,
+            NormalizationJobStatus.Queued => DataNormalizationConstants.DataNormalization.JOB_QUEUED,
+            NormalizationJobStatus.Processing => DataNormalizationConstants.DataNormalization.JOB_STARTED_PROCESSING,
+            NormalizationJobStatus.Completed => DataNormalizationConstants.DataNormalization.JOB_COMPLETED_SUCCESSFULLY,
+            NormalizationJobStatus.Failed => DataNormalizationConstants.DataNormalization.JOB_FAILED,
+            NormalizationJobStatus.Cancelled => DataNormalizationConstants.DataNormalization.JOB_CANCELLED,
             _ => "Unknown status"
         };
     }

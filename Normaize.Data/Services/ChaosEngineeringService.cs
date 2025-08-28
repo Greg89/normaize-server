@@ -80,7 +80,7 @@ public class ChaosEngineeringService : IChaosEngineeringService
 
     private bool ShouldTriggerForUser(IDictionary<string, object>? context, ChaosEngineeringOptions currentOptions, string scenarioName)
     {
-        if (context?.TryGetValue(AppConstants.DataStructures.USER_ID, out var userId) != true || !currentOptions.UserBasedTriggers.Enabled)
+        if (context?.TryGetValue(SharedConstants.DataStructures.USER_ID, out var userId) != true || !currentOptions.UserBasedTriggers.Enabled)
             return false;
 
         var userIdStr = userId?.ToString();
@@ -128,7 +128,7 @@ public class ChaosEngineeringService : IChaosEngineeringService
 
     public async Task<bool> ExecuteChaosAsync(string scenarioName, Func<Task> action, IDictionary<string, object>? context = null)
     {
-        return await ExecuteChaosAsync(scenarioName, AppConstants.Messages.UNKNOWN, AppConstants.Messages.UNKNOWN, action, context);
+        return await ExecuteChaosAsync(scenarioName, SharedConstants.Messages.UNKNOWN, SharedConstants.Messages.UNKNOWN, action, context);
     }
 
     public async Task<bool> ExecuteChaosAsync(string scenarioName, string correlationId, string operationName, Func<Task> action, IDictionary<string, object>? context = null)
@@ -169,7 +169,7 @@ public class ChaosEngineeringService : IChaosEngineeringService
 
     public async Task<T?> ExecuteChaosAsync<T>(string scenarioName, Func<Task<T>> action, IDictionary<string, object>? context = null)
     {
-        return await ExecuteChaosAsync(scenarioName, AppConstants.Messages.UNKNOWN, AppConstants.Messages.UNKNOWN, action, context);
+        return await ExecuteChaosAsync(scenarioName, SharedConstants.Messages.UNKNOWN, SharedConstants.Messages.UNKNOWN, action, context);
     }
 
     public async Task<T?> ExecuteChaosAsync<T>(string scenarioName, string correlationId, string operationName, Func<Task<T>> action, IDictionary<string, object>? context = null)

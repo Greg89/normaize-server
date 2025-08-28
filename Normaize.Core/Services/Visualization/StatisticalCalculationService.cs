@@ -47,7 +47,7 @@ public class StatisticalCalculationService : IStatisticalCalculationService
                 NonNullCount = columnData.Count - nullCount,
                 NullCount = nullCount,
                 UniqueCount = columnData.Where(v => v != null).Distinct().Count(),
-                SampleValues = columnData.Take(AppConstants.DataProcessing.SAMPLE_VALUES_COUNT).Select(x => x?.ToString() ?? AppConstants.DataProcessing.DATA_TYPE_NULL).Cast<object>().ToList()
+                SampleValues = columnData.Take(DataVisualizationConstants.DataProcessing.SAMPLE_VALUES_COUNT).Select(x => x?.ToString() ?? DataVisualizationConstants.DataProcessing.DATA_TYPE_NULL).Cast<object>().ToList()
             });
         }
 
@@ -98,9 +98,9 @@ public class StatisticalCalculationService : IStatisticalCalculationService
                         StandardDeviation = CalculateStandardDeviation(numericData),
                         Min = numericData.Min(),
                         Max = numericData.Max(),
-                        Q1 = CalculateQuartile(numericData, AppConstants.DataProcessing.Q1_PERCENTILE),
-                        Q2 = CalculateQuartile(numericData, AppConstants.DataProcessing.Q2_PERCENTILE),
-                        Q3 = CalculateQuartile(numericData, AppConstants.DataProcessing.Q3_PERCENTILE),
+                        Q1 = CalculateQuartile(numericData, DataVisualizationConstants.DataProcessing.Q1_PERCENTILE),
+                        Q2 = CalculateQuartile(numericData, DataVisualizationConstants.DataProcessing.Q2_PERCENTILE),
+                        Q3 = CalculateQuartile(numericData, DataVisualizationConstants.DataProcessing.Q3_PERCENTILE),
                         Skewness = CalculateSkewness(numericData),
                         Kurtosis = CalculateKurtosis(numericData)
                     };
@@ -170,18 +170,18 @@ public class StatisticalCalculationService : IStatisticalCalculationService
         if (Math.Abs(stdDev) < double.Epsilon) return 0;
 
         var kurtosis = data.Select(x => Math.Pow((x - mean) / stdDev, 4)).Average();
-        return (kurtosis - AppConstants.DataProcessing.KURTOSIS_ADJUSTMENT) * Math.Sqrt(data.Count * (data.Count - 1)) / ((data.Count - 2) * (data.Count - 3));
+        return (kurtosis - DataVisualizationConstants.DataProcessing.KURTOSIS_ADJUSTMENT) * Math.Sqrt(data.Count * (data.Count - 1)) / ((data.Count - 2) * (data.Count - 3));
     }
 
     public string DetermineDataType(List<object?> data)
     {
         var nonNullData = data.Where(v => v != null).ToList();
-        if (nonNullData.Count == 0) return AppConstants.Messages.UNKNOWN;
+        if (nonNullData.Count == 0) return SharedConstants.Messages.UNKNOWN;
 
-        if (nonNullData.All(IsNumeric)) return AppConstants.DataProcessing.DATA_TYPE_NUMERIC;
-        if (nonNullData.All(IsDateTime)) return AppConstants.DataProcessing.DATA_TYPE_DATETIME;
-        if (nonNullData.All(IsBoolean)) return AppConstants.DataProcessing.DATA_TYPE_BOOLEAN;
-        return AppConstants.DataProcessing.DATA_TYPE_STRING;
+        if (nonNullData.All(IsNumeric)) return DataVisualizationConstants.DataProcessing.DATA_TYPE_NUMERIC;
+        if (nonNullData.All(IsDateTime)) return DataVisualizationConstants.DataProcessing.DATA_TYPE_DATETIME;
+        if (nonNullData.All(IsBoolean)) return DataVisualizationConstants.DataProcessing.DATA_TYPE_BOOLEAN;
+        return DataVisualizationConstants.DataProcessing.DATA_TYPE_STRING;
     }
 
     public bool IsNumeric(object? value)

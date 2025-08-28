@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Encodings.Web;
-using static Normaize.Core.Constants.AppConstants;
+using static Normaize.Core.Constants.SharedConstants;
 using System.Text.Json.Serialization;
 
 namespace Normaize.Core.Configuration;

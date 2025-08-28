@@ -37,17 +37,17 @@ public class FileValidationService : IFileValidationService
             operationName: nameof(ValidateFileAsync),
             additionalMetadata: new Dictionary<string, object>
             {
-                [AppConstants.FileProcessing.FILE_NAME_KEY] = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN,
+                [FileProcessingConstants.FileProcessing.FILE_NAME_KEY] = fileRequest?.FileName ?? SharedConstants.Messages.UNKNOWN,
                 ["FileSize"] = fileRequest?.FileSize ?? 0
             },
             validation: () => ValidateFileUploadRequest(fileRequest!),
             operation: (context) =>
             {
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_VALIDATION_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUploadMessages.FILE_VALIDATION_STARTED);
 
                 if (!IsFileSizeValid(fileRequest!.FileSize, context))
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_SIZE_VALIDATION_FAILED);
+                    _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUploadMessages.FILE_SIZE_VALIDATION_FAILED);
                     return Task.FromResult(false);
                 }
 
@@ -55,11 +55,11 @@ public class FileValidationService : IFileValidationService
 
                 if (!IsFileExtensionValid(fileExtension, context))
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_EXTENSION_VALIDATION_FAILED);
+                    _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUploadMessages.FILE_EXTENSION_VALIDATION_FAILED);
                     return Task.FromResult(false);
                 }
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_VALIDATION_PASSED);
+                _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUploadMessages.FILE_VALIDATION_PASSED);
 
                 return Task.FromResult(true);
             });
@@ -69,7 +69,7 @@ public class FileValidationService : IFileValidationService
     {
         if (fileSize <= _fileUploadConfig.MaxFileSize) return true;
 
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.FILE_SIZE_EXCEEDS_LIMIT_WARNING, new Dictionary<string, object>
+        _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUpload.FILE_SIZE_EXCEEDS_LIMIT_WARNING, new Dictionary<string, object>
         {
             ["FileSize"] = fileSize,
             ["MaxSize"] = _fileUploadConfig.MaxFileSize
@@ -82,7 +82,7 @@ public class FileValidationService : IFileValidationService
         // Check if extension is blocked
         if (_fileUploadConfig.BlockedExtensions.Contains(fileExtension))
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.FILE_EXTENSION_BLOCKED_WARNING, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUpload.FILE_EXTENSION_BLOCKED_WARNING, new Dictionary<string, object>
             {
                 ["Extension"] = fileExtension
             });
@@ -92,7 +92,7 @@ public class FileValidationService : IFileValidationService
         // Check if extension is allowed
         if (!_fileUploadConfig.AllowedExtensions.Contains(fileExtension))
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.FILE_EXTENSION_NOT_ALLOWED_WARNING, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUpload.FILE_EXTENSION_NOT_ALLOWED_WARNING, new Dictionary<string, object>
             {
                 ["Extension"] = fileExtension,
                 ["AllowedExtensions"] = string.Join(", ", _fileUploadConfig.AllowedExtensions)
@@ -108,10 +108,10 @@ public class FileValidationService : IFileValidationService
         ArgumentNullException.ThrowIfNull(fileRequest);
 
         if (string.IsNullOrWhiteSpace(fileRequest.FileName))
-            throw new ArgumentException(AppConstants.FileUpload.FILE_NAME_REQUIRED, nameof(fileRequest));
+            throw new ArgumentException(FileProcessingConstants.FileUpload.FILE_NAME_REQUIRED);
 
         if (fileRequest.FileSize <= 0)
-            throw new ArgumentException(AppConstants.FileUpload.FILE_SIZE_MUST_BE_POSITIVE, nameof(fileRequest));
+            throw new ArgumentException(FileProcessingConstants.FileUpload.FILE_SIZE_MUST_BE_POSITIVE);
 
         // Validate file name for security (prevent path traversal attacks)
         if (fileRequest.FileName.Contains("..") || fileRequest.FileName.Contains('/') || fileRequest.FileName.Contains('\\'))
@@ -121,16 +121,16 @@ public class FileValidationService : IFileValidationService
     public void ValidateFileProcessingInputs(string filePath, string fileType)
     {
         if (string.IsNullOrWhiteSpace(filePath))
-            throw new ArgumentException(AppConstants.FileUpload.FILE_PATH_REQUIRED, nameof(filePath));
+            throw new ArgumentException(FileProcessingConstants.FileUpload.FILE_PATH_REQUIRED);
 
         if (string.IsNullOrWhiteSpace(fileType))
-            throw new ArgumentException(AppConstants.FileUpload.FILE_TYPE_REQUIRED, nameof(fileType));
+            throw new ArgumentException(FileProcessingConstants.FileUpload.FILE_TYPE_REQUIRED);
     }
 
     public void ValidateFilePath(string filePath)
     {
         if (string.IsNullOrWhiteSpace(filePath))
-            throw new ArgumentException(AppConstants.FileUpload.FILE_PATH_REQUIRED, nameof(filePath));
+            throw new ArgumentException(FileProcessingConstants.FileUpload.FILE_PATH_REQUIRED);
     }
 
     public async Task ValidateFileExistsAsync(string filePath, IOperationContext context)
@@ -138,10 +138,10 @@ public class FileValidationService : IFileValidationService
         var fileExists = await _storageService.FileExistsAsync(filePath);
         if (!fileExists)
         {
-            var error = string.Format(AppConstants.FileUpload.FILE_NOT_FOUND_ERROR, filePath);
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.FILE_NOT_FOUND_PROCESSING_WARNING, new Dictionary<string, object>
+            var error = string.Format(FileProcessingConstants.FileUpload.FILE_NOT_FOUND_ERROR, filePath);
+            _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUpload.FILE_NOT_FOUND_PROCESSING_WARNING, new Dictionary<string, object>
             {
-                [AppConstants.FileProcessing.FILE_PATH_KEY] = filePath
+                [FileProcessingConstants.FileProcessing.FILE_PATH_KEY] = filePath
             });
             throw new FileNotFoundException(error);
         }
@@ -159,13 +159,13 @@ public class FileValidationService : IFileValidationService
         Func<IOperationContext, Task<T>> operation)
     {
         var correlationId = GetCorrelationId();
-        var context = _infrastructure.StructuredLogging.CreateContext(operationName, correlationId, AppConstants.Auth.AnonymousUser, additionalMetadata);
+        var context = _infrastructure.StructuredLogging.CreateContext(operationName, correlationId, AuthConstants.Auth.AnonymousUser, additionalMetadata);
 
         try
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
+            _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.INPUT_VALIDATION_STARTED);
             validation();
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
+            _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             var result = await operation(context);
             _infrastructure.StructuredLogging.LogSummary(context, true);
@@ -195,7 +195,7 @@ public class FileValidationService : IFileValidationService
         switch (operationName)
         {
             case nameof(ValidateFileAsync):
-                var fileName = metadata.TryGetValue(AppConstants.FileProcessing.FILE_NAME_KEY, out var name) ? name?.ToString() : AppConstants.Messages.UNKNOWN;
+                var fileName = metadata.TryGetValue(FileProcessingConstants.FileProcessing.FILE_NAME_KEY, out var name) ? name?.ToString() : SharedConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{fileName}'";
 
             default:

@@ -124,7 +124,7 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
         var estimatedTime = (long)(dataSet.RowCount * baseTimePerRow * complexityMultiplier);
 
         // Add overhead for large datasets
-        if (dataSet.RowCount > AppConstants.DataNormalization.MAX_ROWS_FOR_SYNC_PROCESSING)
+        if (dataSet.RowCount > DataNormalizationConstants.DataNormalization.MAX_ROWS_FOR_SYNC_PROCESSING)
         {
             estimatedTime += 5000; // 5 seconds overhead for large datasets
         }
@@ -142,7 +142,7 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
         // Add buffer for processing overhead
         estimatedMB *= 1.5;
 
-        return Task.FromResult(Math.Min(estimatedMB, AppConstants.DataNormalization.MAX_MEMORY_USAGE_MB));
+        return Task.FromResult(Math.Min(estimatedMB, DataNormalizationConstants.DataNormalization.MAX_MEMORY_USAGE_MB));
     }
 
     public async Task<NormalizationValidationResult> ValidateRequestAsync(DataSet dataSet, RemoveDuplicateRowsRequest request)
@@ -152,18 +152,18 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
         // Validate column names
         if (request.ColumnNames == null || request.ColumnNames.Length == 0)
         {
-            return NormalizationValidationResult.Failure(AppConstants.DataNormalization.AT_LEAST_ONE_COLUMN_REQUIRED);
+            return NormalizationValidationResult.Failure(DataNormalizationConstants.DataNormalization.AT_LEAST_ONE_COLUMN_REQUIRED);
         }
 
-        if (request.ColumnNames.Length > AppConstants.DataNormalization.MAX_COLUMNS_FOR_DUPLICATE_DETECTION)
+        if (request.ColumnNames.Length > DataNormalizationConstants.DataNormalization.MAX_COLUMNS_FOR_DUPLICATE_DETECTION)
         {
-            return NormalizationValidationResult.Failure($"Maximum {AppConstants.DataNormalization.MAX_COLUMNS_FOR_DUPLICATE_DETECTION} columns allowed for duplicate detection");
+            return NormalizationValidationResult.Failure($"Maximum {DataNormalizationConstants.DataNormalization.MAX_COLUMNS_FOR_DUPLICATE_DETECTION} columns allowed for duplicate detection");
         }
 
         // Validate dataset state
         if (!dataSet.IsProcessed)
         {
-            return NormalizationValidationResult.Failure(AppConstants.DataNormalization.DATASET_MUST_BE_PROCESSED);
+            return NormalizationValidationResult.Failure(DataNormalizationConstants.DataNormalization.DATASET_MUST_BE_PROCESSED);
         }
 
         // Check if dataset has data
@@ -195,14 +195,14 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
 
         // Check memory requirements
         var estimatedMemory = await EstimateMemoryUsageAsync(dataSet, request);
-        if (estimatedMemory > AppConstants.DataNormalization.WARNING_MEMORY_USAGE_MB)
+        if (estimatedMemory > DataNormalizationConstants.DataNormalization.WARNING_MEMORY_USAGE_MB)
         {
             warnings.Add($"Estimated memory usage ({estimatedMemory:F2}MB) exceeds warning threshold");
         }
 
         // Check processing time
         var estimatedTime = await EstimateProcessingTimeAsync(dataSet, request);
-        if (estimatedTime > AppConstants.DataNormalization.DEFAULT_PROCESSING_TIMEOUT_MS)
+        if (estimatedTime > DataNormalizationConstants.DataNormalization.DEFAULT_PROCESSING_TIMEOUT_MS)
         {
             warnings.Add($"Estimated processing time ({estimatedTime}ms) exceeds default timeout");
         }

@@ -39,7 +39,7 @@ public class VisualizationValidationServiceTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => _service.ValidateGenerateChartInputs(dataSetId, chartType, config, userId));
         exception.ParamName.Should().Be("dataSetId");
-        exception.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
+        exception.Message.Should().Contain(SharedConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class VisualizationValidationServiceTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => _service.ValidateGenerateChartInputs(dataSetId, chartType, config, userId));
         exception.ParamName.Should().Be("dataSetId");
-        exception.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
+        exception.Message.Should().Contain(SharedConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
     }
 
     [Theory]
@@ -71,7 +71,7 @@ public class VisualizationValidationServiceTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => _service.ValidateGenerateChartInputs(dataSetId, chartType, config, userId));
         exception.ParamName.Should().Be("userId");
-        exception.Message.Should().Contain(AppConstants.VisualizationMessages.INVALID_USER_ID);
+        exception.Message.Should().Contain(DataVisualizationConstants.VisualizationMessages.INVALID_USER_ID);
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class VisualizationValidationServiceTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => _service.ValidateComparisonChartInputs(dataSetId1, dataSetId2, chartType, config, userId));
         exception.ParamName.Should().Be("dataSetId1");
-        exception.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
+        exception.Message.Should().Contain(SharedConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public class VisualizationValidationServiceTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => _service.ValidateComparisonChartInputs(dataSetId1, dataSetId2, chartType, config, userId));
         exception.ParamName.Should().Be("dataSetId2");
-        exception.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
+        exception.Message.Should().Contain(SharedConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
     }
 
     [Fact]
@@ -171,7 +171,7 @@ public class VisualizationValidationServiceTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => _service.ValidateComparisonChartInputs(dataSetId1, dataSetId2, chartType, config, userId));
         exception.ParamName.Should().Be("userId");
-        exception.Message.Should().Contain(AppConstants.VisualizationMessages.INVALID_USER_ID);
+        exception.Message.Should().Contain(DataVisualizationConstants.VisualizationMessages.INVALID_USER_ID);
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public class VisualizationValidationServiceTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => _service.ValidateDataSummaryInputs(dataSetId, userId));
         exception.ParamName.Should().Be("dataSetId");
-        exception.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
+        exception.Message.Should().Contain(SharedConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
     }
 
     [Fact]
@@ -216,7 +216,7 @@ public class VisualizationValidationServiceTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => _service.ValidateDataSummaryInputs(dataSetId, userId));
         exception.ParamName.Should().Be("dataSetId");
-        exception.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
+        exception.Message.Should().Contain(SharedConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
     }
 
     [Theory]
@@ -231,7 +231,7 @@ public class VisualizationValidationServiceTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => _service.ValidateDataSummaryInputs(dataSetId, userId));
         exception.ParamName.Should().Be("userId");
-        exception.Message.Should().Contain(AppConstants.VisualizationMessages.INVALID_USER_ID);
+        exception.Message.Should().Contain(DataVisualizationConstants.VisualizationMessages.INVALID_USER_ID);
     }
 
     [Fact]
@@ -256,7 +256,7 @@ public class VisualizationValidationServiceTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => _service.ValidateStatisticalSummaryInputs(dataSetId, userId));
         exception.ParamName.Should().Be("dataSetId");
-        exception.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
+        exception.Message.Should().Contain(SharedConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
     }
 
     [Theory]
@@ -271,7 +271,7 @@ public class VisualizationValidationServiceTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => _service.ValidateStatisticalSummaryInputs(dataSetId, userId));
         exception.ParamName.Should().Be("userId");
-        exception.Message.Should().Contain(AppConstants.VisualizationMessages.INVALID_USER_ID);
+        exception.Message.Should().Contain(DataVisualizationConstants.VisualizationMessages.INVALID_USER_ID);
     }
 
     [Fact]

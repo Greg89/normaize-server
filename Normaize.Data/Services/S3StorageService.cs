@@ -39,9 +39,9 @@ public class S3StorageService : IStorageService, IDisposable
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        var accessKey = configuration[AppConstants.EnvironmentVariables.AWS_ACCESS_KEY_ID]
+        var accessKey = configuration[SharedConstants.EnvironmentVariables.AWS_ACCESS_KEY_ID]
             ?? throw new ArgumentException("AWS_ACCESS_KEY_ID configuration is required");
-        var secretKey = configuration[AppConstants.EnvironmentVariables.AWS_SECRET_ACCESS_KEY]
+        var secretKey = configuration[SharedConstants.EnvironmentVariables.AWS_SECRET_ACCESS_KEY]
             ?? throw new ArgumentException("AWS_SECRET_ACCESS_KEY configuration is required");
         var region = configuration["AWS_REGION"] ?? "us-east-1";
         var serviceUrl = configuration["AWS_SERVICE_URL"]; // For MinIO or other S3-compatible services
@@ -94,7 +94,7 @@ public class S3StorageService : IStorageService, IDisposable
         var datePath = DateTime.UtcNow.ToString("yyyy/MM/dd");
 
         // Get environment for folder structure
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.ToLowerInvariant() ?? AppConstants.Environment.DEVELOPMENT;
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.ToLowerInvariant() ?? SharedConstants.Environment.DEVELOPMENT;
 
         // Map environment names to folder names
         var environmentFolder = GetEnvironmentFolder(environment);

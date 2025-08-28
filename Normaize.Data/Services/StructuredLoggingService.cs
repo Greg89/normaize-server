@@ -77,7 +77,7 @@ public class StructuredLoggingService : IStructuredLoggingService
         {
             OperationName = operationName,
             CorrelationId = correlationId,
-            UserId = userId ?? AppConstants.Messages.UNKNOWN,
+            UserId = userId ?? SharedConstants.Messages.UNKNOWN,
             Metadata = additionalContext ?? []
         };
     }
@@ -137,7 +137,7 @@ public class StructuredLoggingService : IStructuredLoggingService
         {
             ["OperationName"] = context.OperationName,
             ["CorrelationId"] = context.CorrelationId,
-            ["UserId"] = context.UserId ?? AppConstants.Messages.UNKNOWN,
+            ["UserId"] = context.UserId ?? SharedConstants.Messages.UNKNOWN,
             ["Steps"] = context.Steps,
             ["Duration"] = context.Stopwatch.Elapsed.TotalMilliseconds,
             ["Success"] = isSuccess
@@ -155,7 +155,7 @@ public class StructuredLoggingService : IStructuredLoggingService
         }
         else
         {
-            logData["ErrorMessage"] = errorMessage ?? AppConstants.Messages.UNKNOWN;
+            logData["ErrorMessage"] = errorMessage ?? SharedConstants.Messages.UNKNOWN;
             _logger.LogError("Operation failed. {@OperationData}", logData);
         }
     }
@@ -186,7 +186,7 @@ public class StructuredLoggingService : IStructuredLoggingService
         {
             ["OperationName"] = context.OperationName,
             ["CorrelationId"] = context.CorrelationId,
-            ["UserId"] = context.UserId ?? AppConstants.Messages.UNKNOWN,
+            ["UserId"] = context.UserId ?? SharedConstants.Messages.UNKNOWN,
             ["Step"] = step,
             ["Duration"] = context.Stopwatch.Elapsed.TotalMilliseconds
         };
@@ -247,7 +247,7 @@ public class StructuredLoggingService : IStructuredLoggingService
         var logData = new
         {
             Action = action,
-            UserId = userId ?? AppConstants.Auth.AnonymousUser,
+            UserId = userId ?? AuthConstants.Auth.AnonymousUser,
             UserEmail = userEmail ?? "unknown",
             RequestPath = requestContext.Path,
             RequestMethod = requestContext.Method,
@@ -303,8 +303,8 @@ public class StructuredLoggingService : IStructuredLoggingService
         var exceptionData = new
         {
             Context = context,
-            UserId = userId ?? AppConstants.Auth.AnonymousUser,
-            UserEmail = userEmail ?? AppConstants.Messages.UNKNOWN,
+            UserId = userId ?? AuthConstants.Auth.AnonymousUser,
+            UserEmail = userEmail ?? SharedConstants.Messages.UNKNOWN,
             RequestPath = requestContext.Path,
             RequestMethod = requestContext.Method,
             ExceptionType = exception.GetType().Name,
@@ -352,7 +352,7 @@ public class StructuredLoggingService : IStructuredLoggingService
         ValidateInput(method, nameof(method));
         ValidateInput(path, nameof(path));
 
-        var actualUserId = userId ?? GetCurrentUserId() ?? AppConstants.Auth.AnonymousUser;
+        var actualUserId = userId ?? GetCurrentUserId() ?? AuthConstants.Auth.AnonymousUser;
 
         _logger.Log(level, "Request Started: {Method} {Path} by User: {UserId}",
             method, path, actualUserId);
@@ -400,7 +400,7 @@ public class StructuredLoggingService : IStructuredLoggingService
         ValidateStatusCode(statusCode);
         ValidateDuration(durationMs);
 
-        var actualUserId = userId ?? GetCurrentUserId() ?? AppConstants.Auth.AnonymousUser;
+        var actualUserId = userId ?? GetCurrentUserId() ?? AuthConstants.Auth.AnonymousUser;
 
         // Determine log level based on status code
         var finalLevel = statusCode >= 400 ? LogLevel.Warning : level;
@@ -452,8 +452,8 @@ public class StructuredLoggingService : IStructuredLoggingService
         {
             Operation = operation,
             DurationMs = durationMs,
-            UserId = userId ?? AppConstants.Auth.AnonymousUser,
-            UserEmail = userEmail ?? AppConstants.Messages.UNKNOWN,
+            UserId = userId ?? AuthConstants.Auth.AnonymousUser,
+            UserEmail = userEmail ?? SharedConstants.Messages.UNKNOWN,
             Timestamp = DateTime.UtcNow
         };
 
@@ -526,8 +526,8 @@ public class StructuredLoggingService : IStructuredLoggingService
         var errorData = new
         {
             Message = message,
-            UserId = userId ?? AppConstants.Auth.AnonymousUser,
-            UserEmail = userEmail ?? AppConstants.Messages.UNKNOWN,
+            UserId = userId ?? AuthConstants.Auth.AnonymousUser,
+            UserEmail = userEmail ?? SharedConstants.Messages.UNKNOWN,
             RequestPath = requestContext.Path,
             RequestMethod = requestContext.Method,
             Timestamp = DateTime.UtcNow
@@ -582,8 +582,8 @@ public class StructuredLoggingService : IStructuredLoggingService
         var warningData = new
         {
             Message = message,
-            UserId = userId ?? AppConstants.Auth.AnonymousUser,
-            UserEmail = userEmail ?? AppConstants.Messages.UNKNOWN,
+            UserId = userId ?? AuthConstants.Auth.AnonymousUser,
+            UserEmail = userEmail ?? SharedConstants.Messages.UNKNOWN,
             RequestPath = requestContext.Path,
             RequestMethod = requestContext.Method,
             Timestamp = DateTime.UtcNow
@@ -616,7 +616,7 @@ public class StructuredLoggingService : IStructuredLoggingService
         if (httpContext?.User == null)
             return null;
 
-        return httpContext.User.GetUserIdWithFallback() ?? AppConstants.Auth.AnonymousUser;
+        return httpContext.User.GetUserIdWithFallback() ?? AuthConstants.Auth.AnonymousUser;
     }
 
     /// <summary>
@@ -648,7 +648,7 @@ public class StructuredLoggingService : IStructuredLoggingService
     {
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext == null)
-            return (AppConstants.Messages.UNKNOWN, AppConstants.Messages.UNKNOWN);
+            return (SharedConstants.Messages.UNKNOWN, SharedConstants.Messages.UNKNOWN);
 
         return (httpContext.Request.Method, httpContext.Request.Path.ToString());
     }

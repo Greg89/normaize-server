@@ -28,23 +28,23 @@ public class DataSetQueryService : IDataSetQueryService
     public async Task<IEnumerable<DataSetDto>> GetDataSetsByUserAsync(string userId, int page = 1, int pageSize = 20, bool includeDeleted = false)
     {
         return await ExecuteQueryOperationAsync(
-        AppConstants.DataSetQuery.GET_DATA_SETS_BY_USER,
+        DataSetOperationConstants.DataSetQuery.GET_DATA_SETS_BY_USER,
         userId,
-        new Dictionary<string, object> { [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize, ["IncludeDeleted"] = includeDeleted },
+        new Dictionary<string, object> { [SharedConstants.DataStructures.PAGE] = page, [SharedConstants.DataStructures.PAGE_SIZE] = pageSize, ["IncludeDeleted"] = includeDeleted },
         () => ValidateQueryInputs(userId, page, pageSize),
         async (context) =>
         {
             // Chaos engineering: Simulate network latency during dataset retrieval
             await _infrastructure.ChaosEngineering.ExecuteChaosAsync("NetworkLatency", context.CorrelationId, context.OperationName, async () =>
             {
-                var delayMs = new Random().Next(AppConstants.ChaosEngineering.MIN_NETWORK_LATENCY_MS, AppConstants.ChaosEngineering.MAX_NETWORK_LATENCY_MS);
+                var delayMs = new Random().Next(ChaosEngineeringConstants.ChaosEngineering.MIN_NETWORK_LATENCY_MS, ChaosEngineeringConstants.ChaosEngineering.MAX_NETWORK_LATENCY_MS);
                 _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating network latency during dataset retrieval", new Dictionary<string, object>
                 {
                     ["DelayMs"] = delayMs,
                     ["ChaosType"] = "NetworkLatency"
                 });
                 await Task.Delay(delayMs);
-            }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId, [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize });
+            }, new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = userId, [SharedConstants.DataStructures.PAGE] = page, [SharedConstants.DataStructures.PAGE_SIZE] = pageSize });
 
             var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
             var filteredDataSets = includeDeleted ? dataSets : dataSets.Where(ds => !ds.IsDeleted);
@@ -57,9 +57,9 @@ public class DataSetQueryService : IDataSetQueryService
     public async Task<IEnumerable<DataSetDto>> GetDeletedDataSetsAsync(string userId, int page = 1, int pageSize = 20)
     {
         return await ExecuteQueryOperationAsync(
-            AppConstants.DataSetQuery.GET_DELETED_DATA_SETS,
+            DataSetOperationConstants.DataSetQuery.GET_DELETED_DATA_SETS,
             userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize },
+            new Dictionary<string, object> { [SharedConstants.DataStructures.PAGE] = page, [SharedConstants.DataStructures.PAGE_SIZE] = pageSize },
             () => ValidateQueryInputs(userId, page, pageSize),
             async (context) =>
             {
@@ -74,9 +74,9 @@ public class DataSetQueryService : IDataSetQueryService
     public async Task<IEnumerable<DataSetDto>> SearchDataSetsAsync(string searchTerm, string userId, int page = 1, int pageSize = 20)
     {
         return await ExecuteQueryOperationAsync(
-            AppConstants.DataSetQuery.SEARCH_DATA_SETS,
+            DataSetOperationConstants.DataSetQuery.SEARCH_DATA_SETS,
             userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.SEARCH_TERM] = searchTerm, [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize },
+            new Dictionary<string, object> { [SharedConstants.DataStructures.SEARCH_TERM] = searchTerm, [SharedConstants.DataStructures.PAGE] = page, [SharedConstants.DataStructures.PAGE_SIZE] = pageSize },
             () => ValidateSearchInputs(searchTerm, userId, page, pageSize),
             async (context) =>
             {
@@ -97,9 +97,9 @@ public class DataSetQueryService : IDataSetQueryService
     public async Task<IEnumerable<DataSetDto>> GetDataSetsByFileTypeAsync(FileType fileType, string userId, int page = 1, int pageSize = 20)
     {
         return await ExecuteQueryOperationAsync(
-            AppConstants.DataSetQuery.GET_DATA_SETS_BY_FILE_TYPE,
+            DataSetOperationConstants.DataSetQuery.GET_DATA_SETS_BY_FILE_TYPE,
             userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.FILE_TYPE] = fileType.ToString(), [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize },
+            new Dictionary<string, object> { [SharedConstants.DataStructures.FILE_TYPE] = fileType.ToString(), [SharedConstants.DataStructures.PAGE] = page, [SharedConstants.DataStructures.PAGE_SIZE] = pageSize },
             () => ValidateQueryInputs(userId, page, pageSize),
             async (context) =>
             {
@@ -114,9 +114,9 @@ public class DataSetQueryService : IDataSetQueryService
     public async Task<IEnumerable<DataSetDto>> GetDataSetsByDateRangeAsync(DateTime startDate, DateTime endDate, string userId, int page = 1, int pageSize = 20)
     {
         return await ExecuteQueryOperationAsync(
-            AppConstants.DataSetQuery.GET_DATA_SETS_BY_DATE_RANGE,
+            DataSetOperationConstants.DataSetQuery.GET_DATA_SETS_BY_DATE_RANGE,
             userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.START_DATE] = startDate, [AppConstants.DataStructures.END_DATE] = endDate, [AppConstants.DataStructures.PAGE] = page, [AppConstants.DataStructures.PAGE_SIZE] = pageSize },
+            new Dictionary<string, object> { [SharedConstants.DataStructures.START_DATE] = startDate, [SharedConstants.DataStructures.END_DATE] = endDate, [SharedConstants.DataStructures.PAGE] = page, [SharedConstants.DataStructures.PAGE_SIZE] = pageSize },
             () => ValidateDateRangeInputs(startDate, endDate, userId, page, pageSize),
             async (context) =>
             {
@@ -135,7 +135,7 @@ public class DataSetQueryService : IDataSetQueryService
     public async Task<DataSetStatisticsDto> GetDataSetStatisticsAsync(string userId)
     {
         return await ExecuteQueryOperationAsync(
-            AppConstants.DataSetQuery.GET_DATA_SET_STATISTICS,
+            DataSetOperationConstants.DataSetQuery.GET_DATA_SET_STATISTICS,
             userId,
             null,
             () => ValidateUserId(userId),
@@ -146,11 +146,11 @@ public class DataSetQueryService : IDataSetQueryService
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating cache failure during statistics calculation", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.CACHE_FAILURE,
-                        [AppConstants.DataStructures.OPERATION] = "StatisticsCalculation"
+                        [ChaosEngineeringConstants.ChaosEngineering.CHAOS_TYPE] = ChaosEngineeringConstants.ChaosEngineering.CACHE_FAILURE,
+                        [SharedConstants.DataStructures.OPERATION] = "StatisticsCalculation"
                     });
                     return Task.FromException(new InvalidOperationException("Simulated cache failure during statistics calculation"));
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId });
+                }, new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = userId });
 
                 var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
                 var activeDataSets = dataSets.Where(ds => !ds.IsDeleted);
@@ -167,14 +167,14 @@ public class DataSetQueryService : IDataSetQueryService
                 var processingStatusBreakdown = activeDataSets.Any()
                     ? new Dictionary<string, int>
                     {
-                        [AppConstants.DataSetQuery.PROCESSED] = activeDataSets.Count(ds => ds.IsProcessed),
+                        [DataSetOperationConstants.DataSetQuery.PROCESSED] = activeDataSets.Count(ds => ds.IsProcessed),
                         ["Pending"] = activeDataSets.Count(ds => !ds.IsProcessed)
                     }
                     : [];
 
                 var recentUploads = activeDataSets
                     .OrderByDescending(ds => ds.UploadedAt)
-                    .Take(AppConstants.DataSetQuery.RECENT_UPLOADS_COUNT)
+                    .Take(DataSetOperationConstants.DataSetQuery.RECENT_UPLOADS_COUNT)
                     .Select(ds => ds.ToDto());
 
                 return new DataSetStatisticsDto
@@ -227,15 +227,15 @@ public class DataSetQueryService : IDataSetQueryService
     private List<DataSet> ApplyPagination(IEnumerable<DataSet> dataSets, int page, int pageSize, IOperationContext context)
     {
         // Cap page size at maximum
-        var actualPageSize = Math.Min(pageSize, AppConstants.DataSetQuery.MAX_PAGE_SIZE);
+        var actualPageSize = Math.Min(pageSize, DataSetOperationConstants.DataSetQuery.MAX_PAGE_SIZE);
         var totalCount = dataSets.Count();
         var totalPages = (int)Math.Ceiling((double)totalCount / actualPageSize);
 
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetQuery.PAGINATION_APPLIED, new Dictionary<string, object>
+        _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetQuery.PAGINATION_APPLIED, new Dictionary<string, object>
         {
             ["TotalCount"] = totalCount,
-            [AppConstants.DataStructures.PAGE] = page,
-            [AppConstants.DataStructures.PAGE_SIZE] = actualPageSize,
+            [SharedConstants.DataStructures.PAGE] = page,
+            [SharedConstants.DataStructures.PAGE_SIZE] = actualPageSize,
             ["TotalPages"] = totalPages
         });
 
@@ -260,7 +260,7 @@ public class DataSetQueryService : IDataSetQueryService
     private static void ValidateSearchInputs(string searchTerm, string userId, int page, int pageSize)
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
-            throw new ArgumentException(AppConstants.DataSetQuery.SEARCH_TERM_CANNOT_BE_NULL_OR_EMPTY, nameof(searchTerm));
+            throw new ArgumentException(DataSetOperationConstants.DataSetQuery.SEARCH_TERM_CANNOT_BE_NULL_OR_EMPTY);
 
         if (searchTerm.Length < 3)
             throw new ArgumentException("Search term must be at least 3 characters long", nameof(searchTerm));
@@ -271,7 +271,7 @@ public class DataSetQueryService : IDataSetQueryService
     private static void ValidateDateRangeInputs(DateTime startDate, DateTime endDate, string userId, int page, int pageSize)
     {
         if (startDate > endDate)
-            throw new ArgumentException(AppConstants.DataSetQuery.START_DATE_CANNOT_BE_AFTER_END_DATE, nameof(startDate));
+            throw new ArgumentException(DataSetOperationConstants.DataSetQuery.START_DATE_CANNOT_BE_AFTER_END_DATE);
 
         if (startDate > DateTime.UtcNow)
             throw new ArgumentException("Start date cannot be in the future", nameof(startDate));
@@ -281,14 +281,14 @@ public class DataSetQueryService : IDataSetQueryService
 
     private static void ValidatePaginationInputs(int page, int pageSize)
     {
-        if (page <= 0) throw new ArgumentException(AppConstants.DataSetQuery.PAGE_MUST_BE_POSITIVE, nameof(page));
-        if (pageSize <= 0) throw new ArgumentException(AppConstants.DataSetQuery.PAGE_SIZE_MUST_BE_POSITIVE, nameof(pageSize));
+        if (page <= 0) throw new ArgumentException(DataSetOperationConstants.DataSetQuery.PAGE_MUST_BE_POSITIVE);
+        if (pageSize <= 0) throw new ArgumentException(DataSetOperationConstants.DataSetQuery.PAGE_SIZE_MUST_BE_POSITIVE);
     }
 
     private static void ValidateUserId(string userId)
     {
         if (string.IsNullOrWhiteSpace(userId))
-            throw new ArgumentException(AppConstants.DataSetQuery.USER_ID_CANNOT_BE_NULL_OR_EMPTY, nameof(userId));
+            throw new ArgumentException(DataSetOperationConstants.DataSetQuery.USER_ID_CANNOT_BE_NULL_OR_EMPTY);
     }
 
     #endregion

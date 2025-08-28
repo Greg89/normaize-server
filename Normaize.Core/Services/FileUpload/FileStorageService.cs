@@ -28,34 +28,34 @@ public class FileStorageService : IFileStorageService
             operationName: nameof(SaveFileAsync),
             additionalMetadata: new Dictionary<string, object>
             {
-                [AppConstants.FileProcessing.FILE_NAME_KEY] = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN,
+                [FileProcessingConstants.FileProcessing.FILE_NAME_KEY] = fileRequest?.FileName ?? SharedConstants.Messages.UNKNOWN,
                 ["FileSize"] = fileRequest?.FileSize ?? 0
             },
             validation: () => { }, // Validation handled by validation service
             operation: async (context) =>
             {
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_UPLOAD_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUploadMessages.FILE_UPLOAD_STARTED);
 
                 // Apply chaos engineering for file upload
                 await _infrastructure.ChaosEngineering.ExecuteChaosAsync(
-                    AppConstants.FileProcessing.STORAGE_FAILURE_SCENARIO,
+                    FileProcessingConstants.FileProcessing.STORAGE_FAILURE_SCENARIO,
                     GetCorrelationId(),
                     context.OperationName,
-                    async () => await Task.Delay(AppConstants.FileUpload.FILE_UPLOAD_CHAOS_DELAY_MS),
-                    new Dictionary<string, object> { [AppConstants.FileProcessing.FILE_NAME_KEY] = fileRequest!.FileName });
+                    async () => await Task.Delay(FileProcessingConstants.FileUpload.FILE_UPLOAD_CHAOS_DELAY_MS),
+                    new Dictionary<string, object> { [FileProcessingConstants.FileProcessing.FILE_NAME_KEY] = fileRequest!.FileName });
 
                 try
                 {
                     var filePath = await _storageService.SaveFileAsync(fileRequest!);
 
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_UPLOAD_SUCCESS);
+                    _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUploadMessages.FILE_UPLOAD_SUCCESS);
 
                     return filePath;
                 }
                 catch (Exception ex)
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_UPLOAD_FAILED);
-                    throw new FileUploadException(string.Format(AppConstants.FileUpload.FAILED_SAVE_FILE_ERROR, fileRequest!.FileName), ex);
+                    _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUploadMessages.FILE_UPLOAD_FAILED);
+                    throw new FileUploadException(string.Format(FileProcessingConstants.FileUpload.FAILED_SAVE_FILE_ERROR, fileRequest!.FileName), ex);
                 }
             });
     }
@@ -66,29 +66,29 @@ public class FileStorageService : IFileStorageService
         var context = _infrastructure.StructuredLogging.CreateContext(
             nameof(DeleteFileAsync),
             correlationId,
-            AppConstants.Auth.AnonymousUser,
-            new Dictionary<string, object> { [AppConstants.FileProcessing.FILE_PATH_KEY] = filePath });
+            AuthConstants.Auth.AnonymousUser,
+            new Dictionary<string, object> { [FileProcessingConstants.FileProcessing.FILE_PATH_KEY] = filePath });
 
         try
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_DELETION_STARTED);
+            _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUploadMessages.FILE_DELETION_STARTED);
 
             // Apply chaos engineering for file deletion
             await _infrastructure.ChaosEngineering.ExecuteChaosAsync(
-                AppConstants.FileProcessing.STORAGE_FAILURE_SCENARIO,
+                FileProcessingConstants.FileProcessing.STORAGE_FAILURE_SCENARIO,
                 correlationId,
                 context.OperationName,
-                async () => await Task.Delay(AppConstants.FileUpload.FILE_DELETION_CHAOS_DELAY_MS),
-                new Dictionary<string, object> { [AppConstants.FileProcessing.FILE_PATH_KEY] = filePath });
+                async () => await Task.Delay(FileProcessingConstants.FileUpload.FILE_DELETION_CHAOS_DELAY_MS),
+                new Dictionary<string, object> { [FileProcessingConstants.FileProcessing.FILE_PATH_KEY] = filePath });
 
             try
             {
                 await _storageService.DeleteFileAsync(filePath);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_DELETED_SUCCESS);
+                _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUploadMessages.FILE_DELETED_SUCCESS);
             }
             catch (Exception)
             {
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_DELETION_FAILED);
+                _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUploadMessages.FILE_DELETION_FAILED);
                 // Don't re-throw - log and continue (as per original behavior)
             }
 
@@ -129,13 +129,13 @@ public class FileStorageService : IFileStorageService
         Func<IOperationContext, Task<T>> operation)
     {
         var correlationId = GetCorrelationId();
-        var context = _infrastructure.StructuredLogging.CreateContext(operationName, correlationId, AppConstants.Auth.AnonymousUser, additionalMetadata);
+        var context = _infrastructure.StructuredLogging.CreateContext(operationName, correlationId, AuthConstants.Auth.AnonymousUser, additionalMetadata);
 
         try
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
+            _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.INPUT_VALIDATION_STARTED);
             validation();
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
+            _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             var result = await operation(context);
             _infrastructure.StructuredLogging.LogSummary(context, true);
@@ -165,11 +165,11 @@ public class FileStorageService : IFileStorageService
         switch (operationName)
         {
             case nameof(SaveFileAsync):
-                var fileName = metadata.TryGetValue(AppConstants.FileProcessing.FILE_NAME_KEY, out var name) ? name?.ToString() : AppConstants.Messages.UNKNOWN;
+                var fileName = metadata.TryGetValue(FileProcessingConstants.FileProcessing.FILE_NAME_KEY, out var name) ? name?.ToString() : SharedConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{fileName}'";
 
             case nameof(DeleteFileAsync):
-                var filePath = metadata.TryGetValue(AppConstants.FileProcessing.FILE_PATH_KEY, out var path) ? path?.ToString() : AppConstants.Messages.UNKNOWN;
+                var filePath = metadata.TryGetValue(FileProcessingConstants.FileProcessing.FILE_PATH_KEY, out var path) ? path?.ToString() : SharedConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for file '{filePath}'";
 
             default:

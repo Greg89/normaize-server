@@ -60,7 +60,7 @@ public class AppConfigurationService : IAppConfigurationService
     }
 
     public string GetEnvironment() =>
-        Environment.GetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT) ?? AppConstants.Environment.DEVELOPMENT;
+        Environment.GetEnvironmentVariable(SharedConstants.Environment.ASPNETCORE_ENVIRONMENT) ?? SharedConstants.Environment.DEVELOPMENT;
 
     public string? GetSeqUrl() =>
         Environment.GetEnvironmentVariable("SEQ_URL");

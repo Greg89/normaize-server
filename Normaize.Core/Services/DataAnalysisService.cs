@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using Normaize.Core.Constants;
 using Normaize.Core.DTOs;
 using Normaize.Core.Interfaces;
@@ -35,26 +34,26 @@ public class DataAnalysisService : IDataAnalysisService
             operationName: nameof(CreateAnalysisAsync),
             additionalMetadata: new Dictionary<string, object>
             {
-                ["AnalysisName"] = createDto?.Name ?? AppConstants.Messages.UNKNOWN,
-                ["AnalysisType"] = createDto?.Type.ToString() ?? AppConstants.Messages.UNKNOWN,
+                ["AnalysisName"] = createDto?.Name ?? SharedConstants.Messages.UNKNOWN,
+                ["AnalysisType"] = createDto?.Type.ToString() ?? SharedConstants.Messages.UNKNOWN,
                 ["DataSetId"] = createDto?.DataSetId ?? 0
             },
             validation: () => ValidateCreateAnalysisDto(createDto!),
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate analysis creation failure
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.ANALYSIS_CREATION_FAILURE, GetCorrelationId(), context.OperationName, () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(ChaosEngineeringConstants.ChaosEngineering.ANALYSIS_CREATION_FAILURE, GetCorrelationId(), context.OperationName, () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating analysis creation failure", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.ANALYSIS_CREATION_FAILURE
+                        [ChaosEngineeringConstants.ChaosEngineering.CHAOS_TYPE] = ChaosEngineeringConstants.ChaosEngineering.ANALYSIS_CREATION_FAILURE
                     });
-                    throw new InvalidOperationException(AppConstants.Messages.SIMULATED_ANALYSIS_CREATION_FAILURE);
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
+                    throw new InvalidOperationException(ChaosEngineeringConstants.ChaosMessages.SIMULATED_ANALYSIS_CREATION_FAILURE);
+                }, new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = AuthConstants.Auth.AnonymousUser });
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DTO_MAPPING_STARTED);
                 var analysis = createDto!.ToEntity();
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DTO_MAPPING_COMPLETED);
 
                 _infrastructure.StructuredLogging.LogStep(context, "Database save started");
                 var savedAnalysis = await ExecuteWithTimeoutAsync(
@@ -63,12 +62,12 @@ public class DataAnalysisService : IDataAnalysisService
                     context);
                 _infrastructure.StructuredLogging.LogStep(context, "Database save completed", new Dictionary<string, object>
                 {
-                    [AppConstants.DataStructures.ANALYSIS_ID] = savedAnalysis.Id
+                    [SharedConstants.DataStructures.ANALYSIS_ID] = savedAnalysis.Id
                 });
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DTO_MAPPING_STARTED);
                 var result = savedAnalysis.ToDto();
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DTO_MAPPING_COMPLETED);
 
                 return result;
             });
@@ -78,39 +77,39 @@ public class DataAnalysisService : IDataAnalysisService
     {
         return await ExecuteAnalysisOperationAsync(
             operationName: nameof(GetAnalysisAsync),
-            additionalMetadata: new Dictionary<string, object> { [AppConstants.DataStructures.DATASET_ID] = id },
+            additionalMetadata: new Dictionary<string, object> { [SharedConstants.DataStructures.DATASET_ID] = id },
             validation: () => ValidateAnalysisId(id),
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate database timeout
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.DATABASE_TIMEOUT, GetCorrelationId(), context.OperationName, async () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(ChaosEngineeringConstants.ChaosEngineering.DATABASE_TIMEOUT, GetCorrelationId(), context.OperationName, async () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating database timeout", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.DATABASE_TIMEOUT
+                        [ChaosEngineeringConstants.ChaosEngineering.CHAOS_TYPE] = ChaosEngineeringConstants.ChaosEngineering.DATABASE_TIMEOUT
                     });
-                    await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
+                    await Task.Delay(ChaosEngineeringConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
+                }, new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = AuthConstants.Auth.AnonymousUser });
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
                 var analysis = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.GetByIdAsync(id),
                     _infrastructure.QuickTimeout,
                     context);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED);
 
                 if (analysis == null)
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND, new Dictionary<string, object>
+                    _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.ANALYSIS_NOT_FOUND, new Dictionary<string, object>
                     {
-                        [AppConstants.DataStructures.ANALYSIS_ID] = id
+                        [SharedConstants.DataStructures.ANALYSIS_ID] = id
                     });
                     return null;
                 }
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DTO_MAPPING_STARTED);
                 var result = analysis.ToDto();
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DTO_MAPPING_COMPLETED);
 
                 return result;
             });
@@ -125,28 +124,28 @@ public class DataAnalysisService : IDataAnalysisService
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate network latency
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.NETWORK_LATENCY, GetCorrelationId(), context.OperationName, async () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(ChaosEngineeringConstants.ChaosEngineering.NETWORK_LATENCY, GetCorrelationId(), context.OperationName, async () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating network latency", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.NETWORK_LATENCY
+                        [ChaosEngineeringConstants.ChaosEngineering.CHAOS_TYPE] = ChaosEngineeringConstants.ChaosEngineering.NETWORK_LATENCY
                     });
-                    await Task.Delay(_random.Next(AppConstants.ChaosEngineering.MIN_CHAOS_DELAY_MS, AppConstants.ChaosEngineering.MAX_CHAOS_DELAY_MS));
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
+                    await Task.Delay(_random.Next(ChaosEngineeringConstants.ChaosEngineering.MIN_CHAOS_DELAY_MS, ChaosEngineeringConstants.ChaosEngineering.MAX_CHAOS_DELAY_MS));
+                }, new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = AuthConstants.Auth.AnonymousUser });
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
                 var analyses = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.GetByDataSetIdAsync(dataSetId),
                     _infrastructure.QuickTimeout,
                     context);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
                 {
                     ["AnalysisCount"] = analyses.Count()
                 });
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DTO_MAPPING_STARTED);
                 var result = analyses.ToDtoCollection();
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DTO_MAPPING_COMPLETED);
 
                 return result;
             });
@@ -156,33 +155,33 @@ public class DataAnalysisService : IDataAnalysisService
     {
         return await ExecuteAnalysisOperationAsync(
             operationName: nameof(GetAnalysesByStatusAsync),
-            additionalMetadata: new Dictionary<string, object> { [AppConstants.DataStructures.STATUS] = status.ToString() },
+            additionalMetadata: new Dictionary<string, object> { [SharedConstants.DataStructures.STATUS] = status.ToString() },
             validation: () => ValidateAnalysisStatus(status),
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate cache failure
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.CACHE_FAILURE, GetCorrelationId(), context.OperationName, () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(ChaosEngineeringConstants.ChaosEngineering.CACHE_FAILURE, GetCorrelationId(), context.OperationName, () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating cache failure", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.CACHE_FAILURE
+                        [ChaosEngineeringConstants.ChaosEngineering.CHAOS_TYPE] = ChaosEngineeringConstants.ChaosEngineering.CACHE_FAILURE
                     });
-                    throw new InvalidOperationException(AppConstants.Messages.SIMULATED_CACHE_FAILURE);
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
+                    throw new InvalidOperationException(ChaosEngineeringConstants.ChaosMessages.SIMULATED_CACHE_FAILURE);
+                }, new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = AuthConstants.Auth.AnonymousUser });
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
                 var analyses = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.GetByStatusAsync(status),
                     _infrastructure.QuickTimeout,
                     context);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
                 {
                     ["AnalysisCount"] = analyses.Count()
                 });
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DTO_MAPPING_STARTED);
                 var result = analyses.ToDtoCollection();
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DTO_MAPPING_COMPLETED);
 
                 return result;
             });
@@ -197,28 +196,28 @@ public class DataAnalysisService : IDataAnalysisService
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate storage failure
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.STORAGE_FAILURE, GetCorrelationId(), context.OperationName, () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(ChaosEngineeringConstants.ChaosEngineering.STORAGE_FAILURE, GetCorrelationId(), context.OperationName, () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating storage failure", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.STORAGE_FAILURE
+                        [ChaosEngineeringConstants.ChaosEngineering.CHAOS_TYPE] = ChaosEngineeringConstants.ChaosEngineering.STORAGE_FAILURE
                     });
-                    throw new InvalidOperationException(AppConstants.Messages.SIMULATED_STORAGE_FAILURE);
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
+                    throw new InvalidOperationException(ChaosEngineeringConstants.ChaosMessages.SIMULATED_STORAGE_FAILURE);
+                }, new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = AuthConstants.Auth.AnonymousUser });
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
                 var analyses = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.GetByTypeAsync(type),
                     _infrastructure.QuickTimeout,
                     context);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED, new Dictionary<string, object>
                 {
                     ["AnalysisCount"] = analyses.Count()
                 });
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DTO_MAPPING_STARTED);
                 var result = analyses.ToDtoCollection();
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DTO_MAPPING_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DTO_MAPPING_COMPLETED);
 
                 return result;
             });
@@ -228,16 +227,16 @@ public class DataAnalysisService : IDataAnalysisService
     {
         return await ExecuteAnalysisOperationAsync(
             operationName: nameof(GetAnalysisResultAsync),
-            additionalMetadata: new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysisId },
+            additionalMetadata: new Dictionary<string, object> { [SharedConstants.DataStructures.ANALYSIS_ID] = analysisId },
             validation: () => ValidateAnalysisId(analysisId),
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate memory pressure
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.MEMORY_PRESSURE, GetCorrelationId(), context.OperationName, async () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(ChaosEngineeringConstants.ChaosEngineering.MEMORY_PRESSURE, GetCorrelationId(), context.OperationName, async () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating memory pressure", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.MEMORY_PRESSURE
+                        [ChaosEngineeringConstants.ChaosEngineering.CHAOS_TYPE] = ChaosEngineeringConstants.ChaosEngineering.MEMORY_PRESSURE
                     });
                     // Simulate memory pressure by allocating temporary objects
                     var tempObjects = new List<byte[]>();
@@ -245,30 +244,30 @@ public class DataAnalysisService : IDataAnalysisService
                     {
                         tempObjects.Add(new byte[1024 * 1024]); // 1MB each
                     }
-                    await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
+                    await Task.Delay(ChaosEngineeringConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
                     tempObjects.Clear();
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
+                }, new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = AuthConstants.Auth.AnonymousUser });
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
                 var analysis = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.GetByIdAsync(analysisId),
                     _infrastructure.QuickTimeout,
                     context);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED);
 
                 if (analysis == null)
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND, new Dictionary<string, object>
+                    _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.ANALYSIS_NOT_FOUND, new Dictionary<string, object>
                     {
-                        [AppConstants.DataStructures.ANALYSIS_ID] = analysisId
+                        [SharedConstants.DataStructures.ANALYSIS_ID] = analysisId
                     });
-                    _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
-                    throw new ArgumentException(AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
+                    _infrastructure.StructuredLogging.LogSummary(context, false, AnalysisConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
+                    throw new ArgumentException(AnalysisConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
                 }
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.RESULTS_DESERIALIZATION_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.RESULTS_DESERIALIZATION_STARTED);
                 var deserializedResults = await DeserializeResultsSafelyAsync(analysis.Results, analysisId, context);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.RESULTS_DESERIALIZATION_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.RESULTS_DESERIALIZATION_COMPLETED);
 
                 var result = new AnalysisResultDto
                 {
@@ -286,26 +285,26 @@ public class DataAnalysisService : IDataAnalysisService
     {
         return await ExecuteAnalysisOperationAsync(
             operationName: nameof(DeleteAnalysisAsync),
-            additionalMetadata: new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = id },
+            additionalMetadata: new Dictionary<string, object> { [SharedConstants.DataStructures.ANALYSIS_ID] = id },
             validation: () => ValidateAnalysisId(id),
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate processing delay
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.PROCESSING_DELAY, GetCorrelationId(), context.OperationName, async () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(ChaosEngineeringConstants.ChaosEngineering.PROCESSING_DELAY, GetCorrelationId(), context.OperationName, async () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating processing delay", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.PROCESSING_DELAY
+                        [ChaosEngineeringConstants.ChaosEngineering.CHAOS_TYPE] = ChaosEngineeringConstants.ChaosEngineering.PROCESSING_DELAY
                     });
-                    await Task.Delay(_random.Next(AppConstants.ChaosEngineering.MIN_CHAOS_DELAY_MS, AppConstants.ChaosEngineering.MAX_CHAOS_DELAY_MS));
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
+                    await Task.Delay(_random.Next(ChaosEngineeringConstants.ChaosEngineering.MIN_CHAOS_DELAY_MS, ChaosEngineeringConstants.ChaosEngineering.MAX_CHAOS_DELAY_MS));
+                }, new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = AuthConstants.Auth.AnonymousUser });
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.DATABASE_DELETION_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.DATABASE_DELETION_STARTED);
                 var result = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.DeleteAsync(id),
                     _infrastructure.QuickTimeout,
                     context);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.DATABASE_DELETION_COMPLETED, new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.DATABASE_DELETION_COMPLETED, new Dictionary<string, object>
                 {
                     ["DeletionResult"] = result
                 });
@@ -316,7 +315,7 @@ public class DataAnalysisService : IDataAnalysisService
                 }
                 else
                 {
-                    _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND_OR_DELETED);
+                    _infrastructure.StructuredLogging.LogSummary(context, false, AnalysisConstants.AnalysisMessages.ANALYSIS_NOT_FOUND_OR_DELETED);
                 }
 
                 return result;
@@ -327,61 +326,61 @@ public class DataAnalysisService : IDataAnalysisService
     {
         return await ExecuteAnalysisOperationAsync(
             operationName: nameof(RunAnalysisAsync),
-            additionalMetadata: new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysisId },
+            additionalMetadata: new Dictionary<string, object> { [SharedConstants.DataStructures.ANALYSIS_ID] = analysisId },
             validation: () => ValidateAnalysisId(analysisId),
             operation: async (context) =>
             {
                 // Chaos engineering: Simulate processing delay
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.PROCESSING_DELAY, GetCorrelationId(), context.OperationName, async () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(ChaosEngineeringConstants.ChaosEngineering.PROCESSING_DELAY, GetCorrelationId(), context.OperationName, async () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating processing delay", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.PROCESSING_DELAY
+                        [ChaosEngineeringConstants.ChaosEngineering.CHAOS_TYPE] = ChaosEngineeringConstants.ChaosEngineering.PROCESSING_DELAY
                     });
-                    await Task.Delay(_random.Next(AppConstants.ChaosEngineering.MIN_CHAOS_DELAY_MS, AppConstants.ChaosEngineering.MAX_CHAOS_DELAY_MS));
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = AppConstants.Auth.AnonymousUser });
+                    await Task.Delay(_random.Next(ChaosEngineeringConstants.ChaosEngineering.MIN_CHAOS_DELAY_MS, ChaosEngineeringConstants.ChaosEngineering.MAX_CHAOS_DELAY_MS));
+                }, new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = AuthConstants.Auth.AnonymousUser });
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DATABASE_RETRIEVAL_STARTED);
                 var analysis = await ExecuteWithTimeoutAsync(
                     () => _analysisRepository.GetByIdAsync(analysisId),
                     _infrastructure.QuickTimeout,
                     context);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.DATABASE_RETRIEVAL_COMPLETED);
 
                 if (analysis == null)
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND, new Dictionary<string, object>
+                    _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.ANALYSIS_NOT_FOUND, new Dictionary<string, object>
                     {
-                        [AppConstants.DataStructures.ANALYSIS_ID] = analysisId
+                        [SharedConstants.DataStructures.ANALYSIS_ID] = analysisId
                     });
-                    _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
-                    throw new ArgumentException(AppConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
+                    _infrastructure.StructuredLogging.LogSummary(context, false, AnalysisConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
+                    throw new ArgumentException(AnalysisConstants.AnalysisMessages.ANALYSIS_NOT_FOUND);
                 }
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_STATE_VALIDATION_STARTED);
+                _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.ANALYSIS_STATE_VALIDATION_STARTED);
                 ValidateAnalysisState(analysis, analysisId, GetCorrelationId());
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_STATE_VALIDATION_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.ANALYSIS_STATE_VALIDATION_COMPLETED);
 
                 // If already completed, return existing result
                 if (analysis.Status == AnalysisStatus.Completed)
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_ALREADY_COMPLETED, new Dictionary<string, object>
+                    _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.ANALYSIS_ALREADY_COMPLETED, new Dictionary<string, object>
                     {
-                        [AppConstants.DataStructures.ANALYSIS_ID] = analysisId,
-                        [AppConstants.DataStructures.STATUS] = analysis.Status.ToString()
+                        [SharedConstants.DataStructures.ANALYSIS_ID] = analysisId,
+                        [SharedConstants.DataStructures.STATUS] = analysis.Status.ToString()
                     });
-                    _infrastructure.StructuredLogging.LogSummary(context, true, AppConstants.AnalysisMessages.ANALYSIS_ALREADY_COMPLETED);
+                    _infrastructure.StructuredLogging.LogSummary(context, true, AnalysisConstants.AnalysisMessages.ANALYSIS_ALREADY_COMPLETED);
                     return analysis.ToDto();
                 }
 
                 // Execute analysis with state management
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_EXECUTION_STARTED, new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.ANALYSIS_EXECUTION_STARTED, new Dictionary<string, object>
                 {
                     ["AnalysisType"] = analysis.Type.ToString(),
-                    [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id
+                    [SharedConstants.DataStructures.ANALYSIS_ID] = analysis.Id
                 });
                 var result = await ExecuteAnalysisWithStateManagementAsync(analysis, context);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_EXECUTION_COMPLETED);
+                _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.ANALYSIS_EXECUTION_COMPLETED);
 
                 return result;
             });
@@ -396,13 +395,13 @@ public class DataAnalysisService : IDataAnalysisService
         Func<IOperationContext, Task<T>> operation)
     {
         var correlationId = GetCorrelationId();
-        var context = _infrastructure.StructuredLogging.CreateContext(operationName, correlationId, AppConstants.Auth.AnonymousUser, additionalMetadata);
+        var context = _infrastructure.StructuredLogging.CreateContext(operationName, correlationId, AuthConstants.Auth.AnonymousUser, additionalMetadata);
 
         try
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_STARTED);
+            _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.INPUT_VALIDATION_STARTED);
             validation();
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
+            _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.INPUT_VALIDATION_COMPLETED);
 
             var result = await operation(context);
             _infrastructure.StructuredLogging.LogSummary(context, true);
@@ -434,26 +433,26 @@ public class DataAnalysisService : IDataAnalysisService
             case nameof(RunAnalysisAsync):
             case nameof(GetAnalysisResultAsync):
                 string analysisId;
-                if (metadata.TryGetValue(AppConstants.DataStructures.ANALYSIS_ID, out var id))
+                if (metadata.TryGetValue(SharedConstants.DataStructures.ANALYSIS_ID, out var id))
                 {
-                    analysisId = id?.ToString() ?? AppConstants.Messages.UNKNOWN;
+                    analysisId = id?.ToString() ?? SharedConstants.Messages.UNKNOWN;
                 }
-                else if (metadata.TryGetValue(AppConstants.DataStructures.DATASET_ID, out var datasetId))
+                else if (metadata.TryGetValue(SharedConstants.DataStructures.DATASET_ID, out var datasetId))
                 {
-                    analysisId = datasetId?.ToString() ?? AppConstants.Messages.UNKNOWN;
+                    analysisId = datasetId?.ToString() ?? SharedConstants.Messages.UNKNOWN;
                 }
                 else
                 {
-                    analysisId = AppConstants.Messages.UNKNOWN;
+                    analysisId = SharedConstants.Messages.UNKNOWN;
                 }
                 return $"Failed to complete {operationName} for analysis ID {analysisId}";
 
             case nameof(GetAnalysesByDataSetAsync):
-                var dataSetId = metadata.TryGetValue("DataSetId", out var dsId) ? dsId?.ToString() : AppConstants.Messages.UNKNOWN;
+                var dataSetId = metadata.TryGetValue("DataSetId", out var dsId) ? dsId?.ToString() : SharedConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for dataset ID {dataSetId}";
 
             case nameof(GetAnalysesByStatusAsync):
-                var status = metadata.TryGetValue(AppConstants.DataStructures.STATUS, out var statusValue) ? statusValue?.ToString() : AppConstants.Messages.UNKNOWN;
+                var status = metadata.TryGetValue(SharedConstants.DataStructures.STATUS, out var statusValue) ? statusValue?.ToString() : SharedConstants.Messages.UNKNOWN;
                 return $"Failed to complete {operationName} for status {status}";
 
             case nameof(GetAnalysesByTypeAsync):
@@ -469,7 +468,7 @@ public class DataAnalysisService : IDataAnalysisService
     {
         // Set processing state
         analysis.Status = AnalysisStatus.Processing;
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.SETTING_ANALYSIS_STATUS_TO_PROCESSING);
+        _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.SETTING_ANALYSIS_STATUS_TO_PROCESSING);
         await ExecuteWithTimeoutAsync(
             () => _analysisRepository.UpdateAsync(analysis),
             _infrastructure.QuickTimeout,
@@ -477,10 +476,10 @@ public class DataAnalysisService : IDataAnalysisService
 
         try
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_EXECUTION_STARTED, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.ANALYSIS_EXECUTION_STARTED, new Dictionary<string, object>
             {
                 ["AnalysisType"] = analysis.Type.ToString(),
-                [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id
+                [SharedConstants.DataStructures.ANALYSIS_ID] = analysis.Id
             });
 
             // Execute analysis with timeout
@@ -495,10 +494,10 @@ public class DataAnalysisService : IDataAnalysisService
             analysis.Results = JsonSerializer.Serialize(results);
             analysis.ErrorMessage = null;
 
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_COMPLETED_SUCCESSFULLY, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.ANALYSIS_COMPLETED_SUCCESSFULLY, new Dictionary<string, object>
             {
-                [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id,
-                [AppConstants.DataStructures.STATUS] = analysis.Status.ToString()
+                [SharedConstants.DataStructures.ANALYSIS_ID] = analysis.Id,
+                [SharedConstants.DataStructures.STATUS] = analysis.Status.ToString()
             });
 
             var updatedAnalysis = await ExecuteWithTimeoutAsync(
@@ -514,9 +513,9 @@ public class DataAnalysisService : IDataAnalysisService
             analysis.Status = AnalysisStatus.Failed;
             analysis.ErrorMessage = ex.Message;
 
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.AnalysisMessages.ANALYSIS_FAILED, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, AnalysisConstants.AnalysisMessages.ANALYSIS_FAILED, new Dictionary<string, object>
             {
-                [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id,
+                [SharedConstants.DataStructures.ANALYSIS_ID] = analysis.Id,
                 ["ErrorMessage"] = ex.Message
             });
 
@@ -539,7 +538,7 @@ public class DataAnalysisService : IDataAnalysisService
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.LogMessages.OPERATION_TIMED_OUT, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, LoggingConstants.LogMessages.OPERATION_TIMED_OUT, new Dictionary<string, object>
             {
                 ["Timeout"] = timeout.ToString(),
                 ["OperationName"] = context.OperationName,
@@ -562,7 +561,7 @@ public class DataAnalysisService : IDataAnalysisService
         {
             _infrastructure.StructuredLogging.LogStep(context, "Failed to deserialize results", new Dictionary<string, object>
             {
-                [AppConstants.DataStructures.ANALYSIS_ID] = analysisId,
+                [SharedConstants.DataStructures.ANALYSIS_ID] = analysisId,
                 ["ErrorMessage"] = jsonEx.Message
             });
             return null;
@@ -596,16 +595,16 @@ public class DataAnalysisService : IDataAnalysisService
         ArgumentNullException.ThrowIfNull(createDto);
 
         if (string.IsNullOrWhiteSpace(createDto.Name))
-            throw new ArgumentException(AppConstants.Messages.ANALYSIS_NAME_REQUIRED, nameof(createDto));
+            throw new ArgumentException(AnalysisConstants.AnalysisMessages.ANALYSIS_NAME_REQUIRED);
 
         if (createDto.Name.Length > 255)
-            throw new ArgumentException(AppConstants.Messages.ANALYSIS_NAME_TOO_LONG, nameof(createDto));
+            throw new ArgumentException(AnalysisConstants.AnalysisMessages.ANALYSIS_NAME_TOO_LONG);
 
         if (createDto.Description?.Length > 1000)
-            throw new ArgumentException(AppConstants.Messages.ANALYSIS_DESCRIPTION_TOO_LONG, nameof(createDto));
+            throw new ArgumentException(AnalysisConstants.AnalysisMessages.ANALYSIS_DESCRIPTION_TOO_LONG);
 
         if (createDto.DataSetId <= 0)
-            throw new ArgumentException(AppConstants.Messages.DATASET_ID_REQUIRED, nameof(createDto));
+            throw new ArgumentException(AnalysisConstants.AnalysisMessages.DATASET_ID_REQUIRED);
     }
 
     private static void ValidateAnalysisState(Analysis analysis, int analysisId, string correlationId)
@@ -619,25 +618,25 @@ public class DataAnalysisService : IDataAnalysisService
     private static void ValidateAnalysisId(int id)
     {
         if (id <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.ANALYSIS_ID_MUST_BE_POSITIVE, nameof(id));
+            throw new ArgumentException(SharedConstants.ValidationMessages.ANALYSIS_ID_MUST_BE_POSITIVE);
     }
 
     private static void ValidateDataSetId(int dataSetId)
     {
         if (dataSetId <= 0)
-            throw new ArgumentException(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE, nameof(dataSetId));
+            throw new ArgumentException(SharedConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
     }
 
     private static void ValidateAnalysisStatus(AnalysisStatus status)
     {
         if (!Enum.IsDefined(status))
-            throw new ArgumentException(string.Format(AppConstants.ValidationMessages.INVALID_ANALYSIS_STATUS, status), nameof(status));
+            throw new ArgumentException(string.Format(SharedConstants.ValidationMessages.INVALID_ANALYSIS_STATUS, status));
     }
 
     private static void ValidateAnalysisType(AnalysisType type)
     {
         if (!Enum.IsDefined(type))
-            throw new ArgumentException(string.Format(AppConstants.ValidationMessages.INVALID_ANALYSIS_TYPE, type), nameof(type));
+            throw new ArgumentException(string.Format(SharedConstants.ValidationMessages.INVALID_ANALYSIS_TYPE, type));
     }
 
     #endregion
@@ -646,13 +645,13 @@ public class DataAnalysisService : IDataAnalysisService
 
     private async Task<object> ExecuteNormalizationAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.StructuredLogging.LogStep(context, "Executing normalization analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
-        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
+        _infrastructure.StructuredLogging.LogStep(context, "Executing normalization analysis", new Dictionary<string, object> { [SharedConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(ChaosEngineeringConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "Normalization",
             Message = "Data normalization completed",
-            NormalizedColumns = new[] { AppConstants.DataStructures.CUSTOMER_ID, AppConstants.DataStructures.ORDER_AMOUNT },
+            NormalizedColumns = new[] { SharedConstants.DataStructures.CUSTOMER_ID, SharedConstants.DataStructures.ORDER_AMOUNT },
             MinValues = new { customer_id = 0.0, order_amount = 0.0 },
             MaxValues = new { customer_id = 1.0, order_amount = 1.0 }
         };
@@ -660,22 +659,22 @@ public class DataAnalysisService : IDataAnalysisService
 
     private async Task<object> ExecuteComparisonAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.StructuredLogging.LogStep(context, "Executing comparison analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
-        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
+        _infrastructure.StructuredLogging.LogStep(context, "Executing comparison analysis", new Dictionary<string, object> { [SharedConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(ChaosEngineeringConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "Comparison",
             Message = "Dataset comparison completed",
             SimilarityScore = 0.85,
-            Differences = new[] { AppConstants.DataStructures.CUSTOMER_ID, "product_code" },
-            CommonColumns = new[] { AppConstants.DataStructures.ORDER_AMOUNT, "sales_region" }
+            Differences = new[] { SharedConstants.DataStructures.CUSTOMER_ID, "product_code" },
+            CommonColumns = new[] { SharedConstants.DataStructures.ORDER_AMOUNT, "sales_region" }
         };
     }
 
     private async Task<object> ExecuteStatisticalAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.StructuredLogging.LogStep(context, "Executing statistical analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
-        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
+        _infrastructure.StructuredLogging.LogStep(context, "Executing statistical analysis", new Dictionary<string, object> { [SharedConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(ChaosEngineeringConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "Statistical",
@@ -688,8 +687,8 @@ public class DataAnalysisService : IDataAnalysisService
 
     private async Task<object> ExecuteDataCleaningAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.StructuredLogging.LogStep(context, "Executing data cleaning analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
-        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
+        _infrastructure.StructuredLogging.LogStep(context, "Executing data cleaning analysis", new Dictionary<string, object> { [SharedConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(ChaosEngineeringConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "DataCleaning",
@@ -697,28 +696,28 @@ public class DataAnalysisService : IDataAnalysisService
             RemovedRows = 15,
             FixedNullValues = 8,
             RemovedDuplicates = 3,
-            CleanedColumns = new[] { AppConstants.DataStructures.CUSTOMER_ID, AppConstants.DataStructures.ORDER_AMOUNT, "product_code" }
+            CleanedColumns = new[] { SharedConstants.DataStructures.CUSTOMER_ID, SharedConstants.DataStructures.ORDER_AMOUNT, "product_code" }
         };
     }
 
     private async Task<object> ExecuteOutlierDetectionAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.StructuredLogging.LogStep(context, "Executing outlier detection analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
-        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
+        _infrastructure.StructuredLogging.LogStep(context, "Executing outlier detection analysis", new Dictionary<string, object> { [SharedConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(ChaosEngineeringConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "OutlierDetection",
             Message = "Outlier detection completed",
             DetectedOutliers = 7,
-            OutlierColumns = new[] { AppConstants.DataStructures.CUSTOMER_ID, AppConstants.DataStructures.ORDER_AMOUNT },
+            OutlierColumns = new[] { SharedConstants.DataStructures.CUSTOMER_ID, SharedConstants.DataStructures.ORDER_AMOUNT },
             OutlierIndices = new[] { 15, 23, 45, 67, 89, 123, 156 }
         };
     }
 
     private async Task<object> ExecuteCorrelationAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.StructuredLogging.LogStep(context, "Executing correlation analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
-        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
+        _infrastructure.StructuredLogging.LogStep(context, "Executing correlation analysis", new Dictionary<string, object> { [SharedConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(ChaosEngineeringConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "CorrelationAnalysis",
@@ -736,8 +735,8 @@ public class DataAnalysisService : IDataAnalysisService
 
     private async Task<object> ExecuteTrendAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.StructuredLogging.LogStep(context, "Executing trend analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
-        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
+        _infrastructure.StructuredLogging.LogStep(context, "Executing trend analysis", new Dictionary<string, object> { [SharedConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(ChaosEngineeringConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "TrendAnalysis",
@@ -751,8 +750,8 @@ public class DataAnalysisService : IDataAnalysisService
 
     private async Task<object> ExecuteCustomAnalysisAsync(Analysis analysis, IOperationContext context)
     {
-        _infrastructure.StructuredLogging.LogStep(context, "Executing custom analysis", new Dictionary<string, object> { [AppConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
-        await Task.Delay(AppConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
+        _infrastructure.StructuredLogging.LogStep(context, "Executing custom analysis", new Dictionary<string, object> { [SharedConstants.DataStructures.ANALYSIS_ID] = analysis.Id });
+        await Task.Delay(ChaosEngineeringConstants.ChaosEngineering.DEFAULT_CHAOS_DELAY_MS); // Use constant for delay
         return new
         {
             Type = "Custom",

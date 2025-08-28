@@ -47,7 +47,7 @@ public class DataProcessingService : IDataProcessingService
             createDto?.UserId,
             new Dictionary<string, object>
             {
-                [AppConstants.FileProcessing.FILE_NAME_KEY] = fileRequest?.FileName ?? AppConstants.Messages.UNKNOWN
+                [FileProcessingConstants.FileProcessing.FILE_NAME_KEY] = fileRequest?.FileName ?? SharedConstants.Messages.UNKNOWN
             });
 
         // Validate inputs first (before try-catch so exceptions are thrown)
@@ -56,55 +56,55 @@ public class DataProcessingService : IDataProcessingService
         try
         {
             // Chaos engineering: Simulate processing delay
-            await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.PROCESSING_DELAY, correlationId, context.OperationName, async () =>
+            await _infrastructure.ChaosEngineering.ExecuteChaosAsync(ChaosEngineeringConstants.ChaosEngineering.PROCESSING_DELAY, correlationId, context.OperationName, async () =>
             {
-                var delayMs = new Random().Next(AppConstants.ChaosEngineering.MIN_PROCESSING_DELAY_MS, AppConstants.ChaosEngineering.MAX_PROCESSING_DELAY_MS);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.CHAOS_ENGINEERING_DELAY, new Dictionary<string, object>
+                var delayMs = new Random().Next(ChaosEngineeringConstants.ChaosEngineering.MIN_PROCESSING_DELAY_MS, ChaosEngineeringConstants.ChaosEngineering.MAX_PROCESSING_DELAY_MS);
+                _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Processing delay", new Dictionary<string, object>
                 {
                     ["DelayMs"] = delayMs
                 });
                 await Task.Delay(delayMs);
-            }, new Dictionary<string, object> { ["UserId"] = createDto?.UserId ?? AppConstants.Messages.UNKNOWN });
+            }, new Dictionary<string, object> { ["UserId"] = createDto?.UserId ?? SharedConstants.Messages.UNKNOWN });
 
             // Validate file
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_VALIDATION_STARTED);
+            _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUploadMessages.FILE_VALIDATION_STARTED);
             if (!await ExecuteWithTimeoutAsync(
                 () => _fileUploadService.ValidateFileAsync(fileRequest!),
                 _infrastructure.QuickTimeout))
             {
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_VALIDATION_FAILED);
-                _infrastructure.StructuredLogging.LogSummary(context, false, AppConstants.DataProcessing.INVALID_FILE_FORMAT_OR_SIZE);
+                _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUploadMessages.FILE_VALIDATION_FAILED);
+                _infrastructure.StructuredLogging.LogSummary(context, false, FileProcessingConstants.FileUploadMessages.FILE_VALIDATION_FAILED);
                 return new DataSetUploadResponse
                 {
                     Success = false,
-                    Message = AppConstants.DataProcessing.INVALID_FILE_FORMAT_OR_SIZE
+                    Message = FileProcessingConstants.FileUploadMessages.FILE_VALIDATION_FAILED
                 };
             }
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUploadMessages.FILE_VALIDATION_PASSED);
+            _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUploadMessages.FILE_VALIDATION_PASSED);
 
             // Save file
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.FILE_SAVE_STARTED);
+            _infrastructure.StructuredLogging.LogStep(context, "File save started");
             var filePath = await ExecuteWithTimeoutAsync(
                 () => _fileUploadService.SaveFileAsync(fileRequest!),
                 _infrastructure.DefaultTimeout);
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.FILE_SAVED, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, "File saved", new Dictionary<string, object>
             {
-                [AppConstants.FileProcessing.FILE_PATH_KEY] = filePath
+                [FileProcessingConstants.FileProcessing.FILE_PATH_KEY] = filePath
             });
 
             // Process file and create dataset
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.FILE_PROCESSING_STARTED);
+            _infrastructure.StructuredLogging.LogStep(context, "File processing started");
             var dataSet = await ExecuteWithTimeoutAsync(
                 () => _fileUploadService.ProcessFileAsync(filePath, Path.GetExtension(fileRequest!.FileName)),
                 _infrastructure.DefaultTimeout);
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.FILE_PROCESSED, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, "File processed", new Dictionary<string, object>
             {
                 ["RowCount"] = dataSet.RowCount,
                 ["ColumnCount"] = dataSet.ColumnCount
             });
 
             // Get user settings for retention policy
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.USER_SETTINGS_RETRIEVAL_STARTED);
+            _infrastructure.StructuredLogging.LogStep(context, "User settings retrieval started");
             var userSettings = await ExecuteWithTimeoutAsync(
                 () => _userSettingsService.GetUserSettingsAsync(createDto!.UserId),
                 _infrastructure.QuickTimeout);
@@ -112,7 +112,7 @@ public class DataProcessingService : IDataProcessingService
             // Set retention expiry date based on user settings
             var retentionDays = userSettings?.RetentionDays ?? 365; // Default to 1 year if no settings
             dataSet.RetentionExpiryDate = DateTime.UtcNow.AddDays(retentionDays);
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.RETENTION_POLICY_SET, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, "Retention policy set", new Dictionary<string, object>
             {
                 ["RetentionDays"] = retentionDays,
                 ["RetentionExpiryDate"] = dataSet.RetentionExpiryDate
@@ -127,10 +127,10 @@ public class DataProcessingService : IDataProcessingService
             dataSet.FileSize = fileRequest.FileSize;
             dataSet.FileType = Path.GetExtension(fileRequest.FileName).ToLowerInvariant() switch
             {
-                AppConstants.DataProcessing.CSV_EXTENSION => FileType.CSV,
-                AppConstants.DataProcessing.JSON_EXTENSION => FileType.JSON,
-                AppConstants.DataProcessing.XML_EXTENSION => FileType.XML,
-                AppConstants.DataProcessing.XLSX_EXTENSION => FileType.EXCEL,
+                ".csv" => FileType.CSV,
+                ".json" => FileType.JSON,
+                ".xml" => FileType.XML,
+                ".xlsx" => FileType.EXCEL,
                 _ => FileType.UNKNOWN
             };
             dataSet.StorageProvider = StorageProvider.S3;
@@ -139,38 +139,38 @@ public class DataProcessingService : IDataProcessingService
             dataSet.ProcessedAt = DateTime.UtcNow;
 
             // Save to database
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATABASE_SAVE_STARTED);
+            _infrastructure.StructuredLogging.LogStep(context, "Database save started");
             var savedDataSet = await ExecuteWithTimeoutAsync(
                 () => _dataSetRepository.AddAsync(dataSet),
                 _infrastructure.DefaultTimeout);
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATABASE_SAVED, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, "Database saved", new Dictionary<string, object>
             {
-                [AppConstants.DataStructures.DATASETID] = savedDataSet.Id
+                [SharedConstants.DataStructures.DATASETID] = savedDataSet.Id
             });
 
             // Log audit action
-            await _auditService.LogDataSetActionAsync(savedDataSet.Id, createDto.UserId, AppConstants.DataProcessing.AUDIT_ACTION_UPLOAD_DATA_SET, new Dictionary<string, object>
+            await _auditService.LogDataSetActionAsync(savedDataSet.Id, createDto.UserId, "UploadDataSet", new Dictionary<string, object>
             {
                 ["FileName"] = fileRequest.FileName,
                 ["FileSize"] = fileRequest.FileSize,
-                [AppConstants.DataStructures.CORRELATION_ID] = correlationId
+                [SharedConstants.DataStructures.CORRELATION_ID] = correlationId
             });
 
-            _infrastructure.StructuredLogging.LogSummary(context, true, AppConstants.DataProcessing.UPLOAD_SUCCESSFUL);
+            _infrastructure.StructuredLogging.LogSummary(context, true, "Upload successful");
             return new DataSetUploadResponse
             {
                 Success = true,
-                Message = AppConstants.DataProcessing.UPLOAD_SUCCESSFUL,
+                Message = "Upload successful",
                 DataSetId = savedDataSet.Id
             };
         }
         catch (Exception ex)
         {
-            _infrastructure.StructuredLogging.LogException(ex, AppConstants.DataProcessing.UPLOAD_FAILED);
+            _infrastructure.StructuredLogging.LogException(ex, "Upload failed");
             return new DataSetUploadResponse
             {
                 Success = false,
-                Message = $"{AppConstants.DataProcessing.UPLOAD_FAILED}: {ex.Message}"
+                Message = $"Upload failed: {ex.Message}"
             };
         }
     }
@@ -178,9 +178,9 @@ public class DataProcessingService : IDataProcessingService
     public async Task<DataSetDto?> GetDataSetAsync(int id, string userId)
     {
         return await ExecuteDataSetOperationAsync(
-            AppConstants.DataProcessing.GET_DATA_SET,
+            "GetDataSet",
             userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id },
+            new Dictionary<string, object> { [SharedConstants.DataStructures.DATASETID] = id },
             () => ValidateGetDataSetInputs(id, userId),
             async (context) =>
             {
@@ -188,20 +188,20 @@ public class DataProcessingService : IDataProcessingService
 
                 if (dataSet == null)
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_NOT_FOUND);
+                    _infrastructure.StructuredLogging.LogStep(context, "Dataset not found");
                     return null;
                 }
 
                 if (dataSet.UserId != userId)
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
-                    throw new UnauthorizedAccessException($"{AppConstants.DataProcessing.ACCESS_DENIED_TO_DATASET} {id}");
+                    _infrastructure.StructuredLogging.LogStep(context, "Access denied - dataset belongs to different user");
+                    throw new UnauthorizedAccessException($"{"Access denied to dataset"} {id}");
                 }
 
                 // Log audit action
-                await _auditService.LogDataSetActionAsync(id, userId, AppConstants.DataProcessing.AUDIT_ACTION_VIEWED, new Dictionary<string, object>
+                await _auditService.LogDataSetActionAsync(id, userId, "Viewed", new Dictionary<string, object>
                 {
-                    [AppConstants.DataStructures.CORRELATION_ID] = context.CorrelationId
+                    [SharedConstants.DataStructures.CORRELATION_ID] = context.CorrelationId
                 });
 
                 return dataSet.ToDto();
@@ -211,9 +211,9 @@ public class DataProcessingService : IDataProcessingService
     public async Task<DataSetDto?> UpdateDataSetAsync(int id, UpdateDataSetDto updateDto, string userId)
     {
         return await ExecuteDataSetOperationAsync(
-            AppConstants.DataProcessing.UPDATE_DATA_SET,
+            "UpdateDataSet",
             userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id },
+            new Dictionary<string, object> { [SharedConstants.DataStructures.DATASETID] = id },
             () => ValidateUpdateDataSetInputs(id, updateDto, userId),
             async (context) =>
             {
@@ -221,14 +221,14 @@ public class DataProcessingService : IDataProcessingService
 
                 if (dataSet == null)
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_NOT_FOUND);
+                    _infrastructure.StructuredLogging.LogStep(context, "Dataset not found");
                     return null;
                 }
 
                 if (dataSet.UserId != userId)
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
-                    throw new UnauthorizedAccessException($"{AppConstants.DataProcessing.ACCESS_DENIED_TO_DATASET} {id}");
+                    _infrastructure.StructuredLogging.LogStep(context, "Access denied - dataset belongs to different user");
+                    throw new UnauthorizedAccessException($"{"Access denied to dataset"} {id}");
                 }
 
                 // Update properties using the mapper
@@ -259,9 +259,9 @@ public class DataProcessingService : IDataProcessingService
                 }
 
                 // Log audit action
-                await _auditService.LogDataSetActionAsync(id, userId, AppConstants.DataProcessing.AUDIT_ACTION_UPDATE_DATA_SET, new Dictionary<string, object>
+                await _auditService.LogDataSetActionAsync(id, userId, "UpdateDataSet", new Dictionary<string, object>
                 {
-                    [AppConstants.DataStructures.CORRELATION_ID] = context.CorrelationId
+                    [SharedConstants.DataStructures.CORRELATION_ID] = context.CorrelationId
                 });
 
                 return result.ToDto();
@@ -271,9 +271,9 @@ public class DataProcessingService : IDataProcessingService
     public async Task<bool> DeleteDataSetAsync(int id, string userId)
     {
         return await ExecuteDataSetOperationAsync(
-            AppConstants.DataProcessing.DELETE_DATA_SET,
+            "DeleteDataSet",
             userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id },
+            new Dictionary<string, object> { [SharedConstants.DataStructures.DATASETID] = id },
             () => ValidateDeleteInputs(id, userId),
             async (context) =>
             {
@@ -281,19 +281,19 @@ public class DataProcessingService : IDataProcessingService
 
                 if (dataSet == null)
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_NOT_FOUND);
+                    _infrastructure.StructuredLogging.LogStep(context, "Dataset not found");
                     return false;
                 }
 
                 if (dataSet.UserId != userId)
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
-                    throw new UnauthorizedAccessException($"{AppConstants.DataProcessing.ACCESS_DENIED_TO_DATASET} {id}");
+                    _infrastructure.StructuredLogging.LogStep(context, "Access denied - dataset belongs to different user");
+                    throw new UnauthorizedAccessException($"{"Access denied to dataset"} {id}");
                 }
 
                 if (dataSet.IsDeleted)
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_IS_ALREADY_DELETED);
+                    _infrastructure.StructuredLogging.LogStep(context, "Dataset is already deleted");
                     return true;
                 }
 
@@ -304,12 +304,12 @@ public class DataProcessingService : IDataProcessingService
                 await _dataSetRepository.UpdateAsync(dataSet);
 
                 // Log audit action
-                await _auditService.LogDataSetActionAsync(id, userId, AppConstants.DataProcessing.AUDIT_ACTION_DELETE_DATA_SET, new Dictionary<string, object>
+                await _auditService.LogDataSetActionAsync(id, userId, "DeleteDataSet", new Dictionary<string, object>
                 {
-                    [AppConstants.DataStructures.CORRELATION_ID] = context.CorrelationId
+                    [SharedConstants.DataStructures.CORRELATION_ID] = context.CorrelationId
                 });
 
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataProcessing.DATASET_SOFT_DELETED_SUCCESSFULLY);
+                _infrastructure.StructuredLogging.LogStep(context, "Dataset soft deleted successfully");
                 return true;
             });
     }
@@ -357,11 +357,11 @@ public class DataProcessingService : IDataProcessingService
         }
         catch (OperationCanceledException)
         {
-            _infrastructure.StructuredLogging.LogWarning(AppConstants.DataProcessing.OPERATION_TIMED_OUT, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogWarning("Operation timed out", new Dictionary<string, object>
             {
                 ["TimeoutMs"] = timeout.TotalMilliseconds
             });
-            throw new TimeoutException($"{AppConstants.DataProcessing.OPERATION_TIMED_OUT} after {timeout.TotalMilliseconds}ms");
+            throw new TimeoutException($"{"Operation timed out"} after {timeout.TotalMilliseconds}ms");
         }
     }
 
@@ -375,14 +375,14 @@ public class DataProcessingService : IDataProcessingService
     {
         ArgumentNullException.ThrowIfNull(fileRequest);
         ArgumentNullException.ThrowIfNull(createDto);
-        if (string.IsNullOrWhiteSpace(createDto.UserId)) throw new ArgumentException(AppConstants.DataProcessing.USER_ID_CANNOT_BE_NULL_OR_EMPTY, nameof(createDto));
-        if (string.IsNullOrWhiteSpace(createDto.Name)) throw new ArgumentException(AppConstants.DataProcessing.NAME_CANNOT_BE_NULL_OR_EMPTY, nameof(createDto));
-        if (string.IsNullOrWhiteSpace(fileRequest.FileName)) throw new ArgumentException(AppConstants.DataProcessing.FILE_NAME_CANNOT_BE_NULL_OR_EMPTY, nameof(fileRequest));
-        if (fileRequest.FileSize <= 0) throw new ArgumentException(AppConstants.DataProcessing.FILE_SIZE_MUST_BE_POSITIVE, nameof(fileRequest));
+        if (string.IsNullOrWhiteSpace(createDto.UserId)) throw new ArgumentException("User ID cannot be null or empty");
+        if (string.IsNullOrWhiteSpace(createDto.Name)) throw new ArgumentException("Name cannot be null or empty");
+        if (string.IsNullOrWhiteSpace(fileRequest.FileName)) throw new ArgumentException("File name cannot be null or empty");
+        if (fileRequest.FileSize <= 0) throw new ArgumentException("File size must be positive");
 
         // Validate file name for security (prevent path traversal attacks)
         if (fileRequest.FileName.Contains("..") || fileRequest.FileName.Contains('/') || fileRequest.FileName.Contains('\\'))
-            throw new ArgumentException(AppConstants.DataProcessing.INVALID_FILE_NAME, nameof(fileRequest));
+            throw new ArgumentException("Invalid file name");
     }
 
     private static void ValidateGetDataSetInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
@@ -391,15 +391,15 @@ public class DataProcessingService : IDataProcessingService
     {
         ValidateDataSetIdAndUserId(id, userId);
         ArgumentNullException.ThrowIfNull(updateDto);
-        if (string.IsNullOrWhiteSpace(updateDto.Name)) throw new ArgumentException(AppConstants.DataProcessing.NAME_CANNOT_BE_NULL_OR_EMPTY, nameof(updateDto));
+        if (string.IsNullOrWhiteSpace(updateDto.Name)) throw new ArgumentException("Name cannot be null or empty");
     }
 
     private static void ValidateDeleteInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
 
     private static void ValidateDataSetIdAndUserId(int id, string userId)
     {
-        if (id <= 0) throw new ArgumentException(AppConstants.DataProcessing.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
-        if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentException(AppConstants.DataProcessing.USER_ID_CANNOT_BE_NULL_OR_EMPTY, nameof(userId));
+        if (id <= 0) throw new ArgumentException("Dataset ID must be positive");
+        if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentException("User ID cannot be null or empty");
     }
 
     #endregion

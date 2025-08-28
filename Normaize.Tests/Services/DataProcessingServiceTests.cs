@@ -543,7 +543,7 @@ public class DataProcessingServiceTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.GetDataSetAsync(id, "user123"));
 
-        exception.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
+        exception.Message.Should().Contain(SharedConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
     }
 
     [Theory]
@@ -792,7 +792,7 @@ public class DataProcessingServiceTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.UpdateDataSetAsync(id, updateDto, userId));
 
-        exception.Message.Should().Contain(AppConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
+        exception.Message.Should().Contain(SharedConstants.ValidationMessages.DATASET_ID_MUST_BE_POSITIVE);
     }
 
     [Theory]

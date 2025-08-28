@@ -38,27 +38,27 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     public async Task<OperationResultDto> ResetDataSetAsync(int id, DataSetResetDto resetDto, string userId)
     {
         return await ExecuteDataSetOperationAsync(
-            AppConstants.DataSetLifecycle.RESET_DATA_SET,
+            DataSetOperationConstants.DataSetLifecycle.RESET_DATA_SET,
             userId,
             new Dictionary<string, object>
             {
-                [AppConstants.DataStructures.DATASETID] = id,
-                [AppConstants.DataStructures.RESET_TYPE_KEY] = resetDto.ResetType.ToString(),
+                [SharedConstants.DataStructures.DATASETID] = id,
+                [SharedConstants.DataStructures.RESET_TYPE_KEY] = resetDto.ResetType.ToString(),
                 ["Reason"] = resetDto.Reason ?? "No reason provided"
             },
             () => ValidateResetInputs(id, resetDto, userId),
             async (context) =>
             {
                 // Chaos engineering: Simulate file processing failure during reset
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.FILE_PROCESSING_FAILURE, context.CorrelationId!, context.OperationName!, () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(ChaosEngineeringConstants.ChaosEngineering.FILE_PROCESSING_FAILURE, context.CorrelationId!, context.OperationName!, () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating file processing failure during reset", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.FILE_PROCESSING_FAILURE,
-                        [AppConstants.DataStructures.RESET_TYPE_KEY] = resetDto.ResetType.ToString()
+                        [ChaosEngineeringConstants.ChaosEngineering.CHAOS_TYPE] = ChaosEngineeringConstants.ChaosEngineering.FILE_PROCESSING_FAILURE,
+                        [SharedConstants.DataStructures.RESET_TYPE_KEY] = resetDto.ResetType.ToString()
                     });
                     throw new InvalidOperationException("Simulated file processing failure during dataset reset");
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId, [AppConstants.DataStructures.DATASETID] = id, [AppConstants.DataStructures.RESET_TYPE_KEY] = resetDto.ResetType.ToString() });
+                }, new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = userId, [SharedConstants.DataStructures.DATASETID] = id, [SharedConstants.DataStructures.RESET_TYPE_KEY] = resetDto.ResetType.ToString() });
 
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context, includeDeleted: true);
                 return await PerformResetOperationAsync(dataSet!, resetDto, context);
@@ -68,25 +68,25 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     public async Task<OperationResultDto> UpdateRetentionPolicyAsync(int id, DataSetRetentionDto retentionDto, string userId)
     {
         return await ExecuteDataSetOperationAsync(
-            AppConstants.DataSetLifecycle.UPDATE_RETENTION_POLICY,
+            DataSetOperationConstants.DataSetLifecycle.UPDATE_RETENTION_POLICY,
             userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id, [AppConstants.DataStructures.RETENTION_DAYS] = retentionDto?.RetentionDays ?? 0 },
+            new Dictionary<string, object> { [SharedConstants.DataStructures.DATASETID] = id, [SharedConstants.DataStructures.RETENTION_DAYS] = retentionDto?.RetentionDays ?? 0 },
             () => ValidateRetentionInputs(id, retentionDto!, userId),
             async (context) =>
             {
                 // Chaos engineering: Simulate database timeout during retention policy update
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.DATABASE_TIMEOUT, context.CorrelationId!, context.OperationName!, async () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(ChaosEngineeringConstants.ChaosEngineering.DATABASE_TIMEOUT, context.CorrelationId!, context.OperationName!, async () =>
                 {
-                    var delayMs = new Random().Next(AppConstants.ChaosEngineering.RETENTION_POLICY_TIMEOUT_MIN_MS, AppConstants.ChaosEngineering.RETENTION_POLICY_TIMEOUT_MAX_MS);
+                    var delayMs = new Random().Next(ChaosEngineeringConstants.ChaosEngineering.RETENTION_POLICY_TIMEOUT_MIN_MS, ChaosEngineeringConstants.ChaosEngineering.RETENTION_POLICY_TIMEOUT_MAX_MS);
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating database timeout during retention policy update", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.DELAY_MS_KEY] = delayMs,
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.DATABASE_TIMEOUT
+                        [ChaosEngineeringConstants.ChaosEngineering.DELAY_MS_KEY] = delayMs,
+                        [ChaosEngineeringConstants.ChaosEngineering.CHAOS_TYPE] = ChaosEngineeringConstants.ChaosEngineering.DATABASE_TIMEOUT
                     });
                     await Task.Delay(delayMs);
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId, [AppConstants.DataStructures.DATASETID] = id, [AppConstants.DataStructures.RETENTION_DAYS] = retentionDto?.RetentionDays ?? 0 });
+                }, new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = userId, [SharedConstants.DataStructures.DATASETID] = id, [SharedConstants.DataStructures.RETENTION_DAYS] = retentionDto?.RetentionDays ?? 0 });
 
-                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context) ?? throw new InvalidOperationException(string.Format(AppConstants.DataSetLifecycle.DATASET_NOT_FOUND_WITH_ID, id));
+                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context) ?? throw new InvalidOperationException(string.Format(DataSetOperationConstants.DataSetLifecycle.DATASET_NOT_FOUND_WITH_ID, id));
 
                 // Calculate new expiry date
                 var expiryDate = DateTime.UtcNow.AddDays(retentionDto?.RetentionDays ?? 0);
@@ -97,7 +97,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
                 await _dataSetRepository.UpdateAsync(dataSet);
 
                 // Log audit action
-                await LogAuditActionAsync(id, userId, AppConstants.DataSetLifecycle.AUDIT_ACTION_UPDATE_RETENTION_POLICY, context, new
+                await LogAuditActionAsync(id, userId, DataSetOperationConstants.DataSetLifecycle.AUDIT_ACTION_UPDATE_RETENTION_POLICY, context, new
                 {
                     OldExpiryDate = dataSet!.RetentionExpiryDate,
                     NewExpiryDate = expiryDate,
@@ -107,7 +107,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
                 return new OperationResultDto
                 {
                     Success = true,
-                    Message = string.Format(AppConstants.DataSetLifecycle.RETENTION_POLICY_UPDATED_SUCCESSFULLY, retentionDto?.RetentionDays ?? 0),
+                    Message = string.Format(DataSetOperationConstants.DataSetLifecycle.RETENTION_POLICY_UPDATED_SUCCESSFULLY, retentionDto?.RetentionDays ?? 0),
                     Data = new
                     {
                         DataSetId = id,
@@ -122,13 +122,13 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     public async Task<DataSetRetentionStatusDto?> GetRetentionStatusAsync(int id, string userId)
     {
         return await ExecuteDataSetOperationAsync(
-            AppConstants.DataSetLifecycle.GET_RETENTION_STATUS,
+            DataSetOperationConstants.DataSetLifecycle.GET_RETENTION_STATUS,
             userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id },
+            new Dictionary<string, object> { [SharedConstants.DataStructures.DATASETID] = id },
             () => ValidateDataSetIdAndUserId(id, userId),
             async (context) =>
             {
-                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context) ?? throw new InvalidOperationException(string.Format(AppConstants.DataSetLifecycle.DATASET_NOT_FOUND_WITH_ID, id));
+                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context) ?? throw new InvalidOperationException(string.Format(DataSetOperationConstants.DataSetLifecycle.DATASET_NOT_FOUND_WITH_ID, id));
                 var isExpired = dataSet!.RetentionExpiryDate.HasValue &&
                                dataSet.RetentionExpiryDate.Value < DateTime.UtcNow;
 
@@ -150,16 +150,16 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     public async Task<bool> RestoreDataSetAsync(int id, string userId)
     {
         return await ExecuteDataSetOperationAsync(
-            AppConstants.DataSetLifecycle.RESTORE_DATA_SET,
+            DataSetOperationConstants.DataSetLifecycle.RESTORE_DATA_SET,
             userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id },
+            new Dictionary<string, object> { [SharedConstants.DataStructures.DATASETID] = id },
             () => ValidateRestoreInputs(id, userId),
             async (context) =>
             {
-                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context) ?? throw new InvalidOperationException(string.Format(AppConstants.DataSetLifecycle.DATASET_NOT_FOUND_WITH_ID, id));
+                var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context) ?? throw new InvalidOperationException(string.Format(DataSetOperationConstants.DataSetLifecycle.DATASET_NOT_FOUND_WITH_ID, id));
                 if (!dataSet!.IsDeleted)
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetLifecycle.DATASET_IS_NOT_DELETED_NO_RESTORE_ACTION_NEEDED);
+                    _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetLifecycle.DATASET_IS_NOT_DELETED_NO_RESTORE_ACTION_NEEDED);
                     return true;
                 }
 
@@ -176,22 +176,22 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     public async Task<bool> HardDeleteDataSetAsync(int id, string userId)
     {
         return await ExecuteDataSetOperationAsync(
-            AppConstants.DataSetLifecycle.HARD_DELETE_DATA_SET,
+            DataSetOperationConstants.DataSetLifecycle.HARD_DELETE_DATA_SET,
             userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id },
+            new Dictionary<string, object> { [SharedConstants.DataStructures.DATASETID] = id },
             () => ValidateHardDeleteInputs(id, userId),
             async (context) =>
             {
                 // Chaos engineering: Simulate storage service failure during hard delete
-                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(AppConstants.ChaosEngineering.STORAGE_FAILURE, context.CorrelationId!, context.OperationName!, () =>
+                await _infrastructure.ChaosEngineering.ExecuteChaosAsync(ChaosEngineeringConstants.ChaosEngineering.STORAGE_FAILURE, context.CorrelationId!, context.OperationName!, () =>
                 {
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating storage service failure during hard delete", new Dictionary<string, object>
                     {
-                        [AppConstants.ChaosEngineering.CHAOS_TYPE] = AppConstants.ChaosEngineering.STORAGE_FAILURE,
+                        [ChaosEngineeringConstants.ChaosEngineering.CHAOS_TYPE] = ChaosEngineeringConstants.ChaosEngineering.STORAGE_FAILURE,
                         ["Operation"] = "HardDelete"
                     });
                     throw new InvalidOperationException("Simulated storage service failure during hard delete");
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId, [AppConstants.DataStructures.DATASETID] = id });
+                }, new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = userId, [SharedConstants.DataStructures.DATASETID] = id });
 
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
 
@@ -249,14 +249,14 @@ public class DataSetLifecycleService : IDataSetLifecycleService
 
         if (dataSet == null)
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetLifecycle.DATASET_NOT_FOUND);
+            _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetLifecycle.DATASET_NOT_FOUND);
             throw new InvalidOperationException($"Dataset with ID {id} not found");
         }
 
         if (!string.Equals(dataSet.UserId, userId, StringComparison.Ordinal))
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetLifecycle.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
-            throw new UnauthorizedAccessException($"{AppConstants.DataSetLifecycle.ACCESS_DENIED_TO_DATASET} {id}");
+            _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetLifecycle.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
+            throw new UnauthorizedAccessException($"{DataSetOperationConstants.DataSetLifecycle.ACCESS_DENIED_TO_DATASET} {id}");
         }
 
         return dataSet;
@@ -269,14 +269,14 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             try
             {
                 await _fileUploadService.DeleteFileAsync(dataSet.FilePath);
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetLifecycle.FILE_DELETED_FROM_STORAGE, new Dictionary<string, object>
+                _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetLifecycle.FILE_DELETED_FROM_STORAGE, new Dictionary<string, object>
                 {
-                    [AppConstants.FileProcessing.FILE_PATH_KEY] = dataSet.FilePath
+                    [FileProcessingConstants.FileProcessing.FILE_PATH_KEY] = dataSet.FilePath
                 });
             }
             catch (Exception ex)
             {
-                _infrastructure.StructuredLogging.LogException(ex, AppConstants.DataSetLifecycle.FAILED_TO_DELETE_FILE_FROM_STORAGE);
+                _infrastructure.StructuredLogging.LogException(ex, DataSetOperationConstants.DataSetLifecycle.FAILED_TO_DELETE_FILE_FROM_STORAGE);
                 // Continue with database deletion even if file deletion fails
             }
         }
@@ -284,18 +284,18 @@ public class DataSetLifecycleService : IDataSetLifecycleService
 
     private async Task HandleSuccessfulRestoreAsync(int id, string userId, IOperationContext context)
     {
-        await LogAuditActionAsync(id, userId, AppConstants.DataSetLifecycle.AUDIT_ACTION_RESTORE_DATA_SET, context);
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetLifecycle.DATASET_RESTORED_SUCCESSFULLY);
+        await LogAuditActionAsync(id, userId, DataSetOperationConstants.DataSetLifecycle.AUDIT_ACTION_RESTORE_DATA_SET, context);
+        _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetLifecycle.DATASET_RESTORED_SUCCESSFULLY);
     }
 
     private async Task HandleSuccessfulHardDeleteAsync(int id, string userId, DataSet dataSet, IOperationContext context)
     {
-        await LogAuditActionAsync(id, userId, AppConstants.DataSetLifecycle.AUDIT_ACTION_HARD_DELETE_DATA_SET, context, new
+        await LogAuditActionAsync(id, userId, DataSetOperationConstants.DataSetLifecycle.AUDIT_ACTION_HARD_DELETE_DATA_SET, context, new
         {
             dataSet.FileName,
             dataSet.FilePath
         });
-        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetLifecycle.DATASET_PERMANENTLY_DELETED);
+        _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetLifecycle.DATASET_PERMANENTLY_DELETED);
     }
 
     private async Task LogAuditActionAsync(int id, string userId, string action, IOperationContext context, object? additionalData = null)
@@ -308,8 +308,8 @@ public class DataSetLifecycleService : IDataSetLifecycleService
     {
         var auditData = new Dictionary<string, object>
         {
-            [AppConstants.DataStructures.DATASETID] = id,
-            [AppConstants.DataStructures.CORRELATION_ID] = context.CorrelationId
+            [SharedConstants.DataStructures.DATASETID] = id,
+            [SharedConstants.DataStructures.CORRELATION_ID] = context.CorrelationId
         };
 
         if (additionalData != null)
@@ -339,8 +339,8 @@ public class DataSetLifecycleService : IDataSetLifecycleService
 
     private static void ValidateDataSetIdAndUserId(int id, string userId)
     {
-        if (id <= 0) throw new ArgumentException(AppConstants.DataSetLifecycle.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
-        if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentException(AppConstants.DataSetLifecycle.USER_ID_CANNOT_BE_NULL_OR_EMPTY, nameof(userId));
+        if (id <= 0) throw new ArgumentException(DataSetOperationConstants.DataSetLifecycle.DATASET_ID_MUST_BE_POSITIVE);
+        if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentException(DataSetOperationConstants.DataSetLifecycle.USER_ID_CANNOT_BE_NULL_OR_EMPTY);
     }
 
     private static void ValidateRestoreInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
@@ -372,8 +372,8 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             return new FileAvailabilityResult
             {
                 IsAvailable = false,
-                Reason = AppConstants.DataSetLifecycle.NO_FILE_PATH_ASSOCIATED_WITH_DATASET,
-                ErrorCode = AppConstants.DataSetLifecycle.NO_FILE_PATH
+                Reason = DataSetOperationConstants.DataSetLifecycle.NO_FILE_PATH_ASSOCIATED_WITH_DATASET,
+                ErrorCode = DataSetOperationConstants.DataSetLifecycle.NO_FILE_PATH
             };
         }
 
@@ -386,15 +386,15 @@ public class DataSetLifecycleService : IDataSetLifecycleService
                 return new FileAvailabilityResult
                 {
                     IsAvailable = false,
-                    Reason = AppConstants.DataSetLifecycle.ORIGINAL_FILE_NO_LONGER_EXISTS_IN_STORAGE,
-                    ErrorCode = AppConstants.DataSetLifecycle.FILE_NOT_FOUND
+                    Reason = DataSetOperationConstants.DataSetLifecycle.ORIGINAL_FILE_NO_LONGER_EXISTS_IN_STORAGE,
+                    ErrorCode = DataSetOperationConstants.DataSetLifecycle.FILE_NOT_FOUND
                 };
             }
 
             return new FileAvailabilityResult
             {
                 IsAvailable = true,
-                Reason = AppConstants.DataSetLifecycle.FILE_IS_AVAILABLE_FOR_PROCESSING
+                Reason = DataSetOperationConstants.DataSetLifecycle.FILE_IS_AVAILABLE_FOR_PROCESSING
             };
         }
         catch (Exception ex)
@@ -402,8 +402,8 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             return new FileAvailabilityResult
             {
                 IsAvailable = false,
-                Reason = $"{AppConstants.DataSetLifecycle.ERROR_CHECKING_FILE_AVAILABILITY}: {ex.Message}",
-                ErrorCode = AppConstants.DataSetLifecycle.CHECK_ERROR
+                Reason = $"{DataSetOperationConstants.DataSetLifecycle.ERROR_CHECKING_FILE_AVAILABILITY}: {ex.Message}",
+                ErrorCode = DataSetOperationConstants.DataSetLifecycle.CHECK_ERROR
             };
         }
     }
@@ -430,7 +430,7 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             return new OperationResultDto
             {
                 Success = false,
-                Message = $"{AppConstants.DataSetLifecycle.CANNOT_RESET_DATASET}: {fileAvailability.Reason}",
+                Message = $"{DataSetOperationConstants.DataSetLifecycle.CANNOT_RESET_DATASET}: {fileAvailability.Reason}",
                 Data = new
                 {
                     DataSetId = dataSet.Id,
@@ -471,9 +471,9 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             dataSet.DataHash = processedDataSet.DataHash;
 
             await _dataSetRepository.UpdateAsync(dataSet);
-            await LogAuditActionAsync(dataSet.Id, dataSet.UserId, AppConstants.DataSetLifecycle.RESET_DATA_SET_FILE_BASED, context, new
+            await LogAuditActionAsync(dataSet.Id, dataSet.UserId, DataSetOperationConstants.DataSetLifecycle.RESET_DATA_SET_FILE_BASED, context, new
             {
-                ResetType = AppConstants.DataSetLifecycle.RESET_TYPE_FILE_BASED,
+                ResetType = DataSetOperationConstants.DataSetLifecycle.RESET_TYPE_FILE_BASED,
                 dataSet.FilePath,
                 Reason = context.Metadata?.GetValueOrDefault("Reason")?.ToString() ?? "No reason provided"
             });
@@ -481,11 +481,11 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             return new OperationResultDto
             {
                 Success = true,
-                Message = AppConstants.DataSetLifecycle.DATASET_RESET_SUCCESSFULLY_USING_ORIGINAL_FILE,
+                Message = DataSetOperationConstants.DataSetLifecycle.DATASET_RESET_SUCCESSFULLY_USING_ORIGINAL_FILE,
                 Data = new
                 {
                     DataSetId = dataSet.Id,
-                    ResetType = AppConstants.DataSetLifecycle.RESET_TYPE_FILE_BASED,
+                    ResetType = DataSetOperationConstants.DataSetLifecycle.RESET_TYPE_FILE_BASED,
                     FileAvailable = true,
                     Reprocessed = true
                 }
@@ -496,11 +496,11 @@ public class DataSetLifecycleService : IDataSetLifecycleService
             return new OperationResultDto
             {
                 Success = false,
-                Message = $"{AppConstants.DataSetLifecycle.FAILED_TO_RESET_DATASET}: {ex.Message}",
+                Message = $"{DataSetOperationConstants.DataSetLifecycle.FAILED_TO_RESET_DATASET}: {ex.Message}",
                 Data = new
                 {
                     DataSetId = dataSet.Id,
-                    ResetType = AppConstants.DataSetLifecycle.RESET_TYPE_FILE_BASED,
+                    ResetType = DataSetOperationConstants.DataSetLifecycle.RESET_TYPE_FILE_BASED,
                     FileAvailable = true,
                     Error = ex.Message
                 }
@@ -519,20 +519,20 @@ public class DataSetLifecycleService : IDataSetLifecycleService
         }
 
         await _dataSetRepository.UpdateAsync(dataSet);
-        await LogAuditActionAsync(dataSet.Id, dataSet.UserId, AppConstants.DataSetLifecycle.RESET_DATA_SET_DATABASE_ONLY, context, new
+        await LogAuditActionAsync(dataSet.Id, dataSet.UserId, DataSetOperationConstants.DataSetLifecycle.RESET_DATA_SET_DATABASE_ONLY, context, new
         {
-            ResetType = AppConstants.DataSetLifecycle.RESET_TYPE_DATABASE_ONLY,
+            ResetType = DataSetOperationConstants.DataSetLifecycle.RESET_TYPE_DATABASE_ONLY,
             Reason = context.Metadata?.GetValueOrDefault("Reason")?.ToString() ?? "No reason provided"
         });
 
         return new OperationResultDto
         {
             Success = true,
-            Message = AppConstants.DataSetLifecycle.DATASET_RESET_SUCCESSFULLY_DATABASE_ONLY,
+            Message = DataSetOperationConstants.DataSetLifecycle.DATASET_RESET_SUCCESSFULLY_DATABASE_ONLY,
             Data = new
             {
                 DataSetId = dataSet.Id,
-                ResetType = AppConstants.DataSetLifecycle.RESET_TYPE_DATABASE_ONLY
+                ResetType = DataSetOperationConstants.DataSetLifecycle.RESET_TYPE_DATABASE_ONLY
             }
         };
     }

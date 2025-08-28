@@ -44,7 +44,7 @@ public class CacheManagementService(IMemoryCache cache, IOptions<DataVisualizati
 
         var configHash = JsonSerializer.Serialize(configuration);
         var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(configHash));
-        return $"{baseKey}_{Convert.ToBase64String(hash)[..AppConstants.DataProcessing.CACHE_KEY_HASH_LENGTH]}";
+        return $"{baseKey}_{Convert.ToBase64String(hash)[..DataVisualizationConstants.DataProcessing.CACHE_KEY_HASH_LENGTH]}";
     }
 
     public string GenerateChartCacheKey(int dataSetId, ChartType chartType, ChartConfigurationDto? configuration)

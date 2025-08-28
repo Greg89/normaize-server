@@ -170,7 +170,7 @@ public class DataSetPreviewServiceTests
 
         // Assert
         result.Should().NotBeNull();
-        result!.PreviewRowCount.Should().Be(AppConstants.DataSetPreview.MAX_PREVIEW_ROWS);
+        result!.PreviewRowCount.Should().Be(DataSetOperationConstants.DataSetPreview.MAX_PREVIEW_ROWS);
     }
 
     [Fact]

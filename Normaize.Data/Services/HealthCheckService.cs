@@ -28,7 +28,7 @@ public class HealthCheckService(
         {
             var components = await CheckAllComponentsAsync(correlationId, cancellationToken);
 
-            var result = CreateHealthResult(components, AppConstants.Messages.HEALTHY, "unhealthy", correlationId);
+            var result = CreateHealthResult(components, SharedConstants.Messages.HEALTHY, "unhealthy", correlationId);
             result.Duration = stopwatch.Elapsed;
 
             LogHealthCheckResult(result, correlationId);
@@ -182,7 +182,7 @@ public class HealthCheckService(
             var health = new ComponentHealth
             {
                 IsHealthy = canConnect,
-                Status = canConnect ? AppConstants.Messages.HEALTHY : "unhealthy",
+                Status = canConnect ? SharedConstants.Messages.HEALTHY : "unhealthy",
                 ErrorMessage = canConnect ? null : "Cannot connect to database",
                 Details = new Dictionary<string, object>
                 {
@@ -248,7 +248,7 @@ public class HealthCheckService(
                 var health = new ComponentHealth
                 {
                     IsHealthy = true,
-                    Status = AppConstants.Messages.HEALTHY,
+                    Status = SharedConstants.Messages.HEALTHY,
                     ErrorMessage = null,
                     Details = new Dictionary<string, object>
                     {
@@ -291,7 +291,7 @@ public class HealthCheckService(
             var appHealth = new ComponentHealth
             {
                 IsHealthy = isHealthy,
-                Status = isHealthy ? AppConstants.Messages.HEALTHY : "unhealthy",
+                Status = isHealthy ? SharedConstants.Messages.HEALTHY : "unhealthy",
                 ErrorMessage = errorMessage,
                 Details = new Dictionary<string, object>
                 {

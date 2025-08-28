@@ -51,10 +51,10 @@ public class FileUtilityService : IFileUtilityService
             var context = _infrastructure.StructuredLogging.CreateContext(
                 "GenerateDataHashAsync",
                 correlationId,
-                AppConstants.Auth.AnonymousUser,
+                AuthConstants.Auth.AnonymousUser,
                 new Dictionary<string, object> { ["FilePath"] = filePath });
 
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.FileUpload.FAILED_GENERATE_DATA_HASH_WARNING, new Dictionary<string, object>
+            _infrastructure.StructuredLogging.LogStep(context, FileProcessingConstants.FileUpload.FAILED_GENERATE_DATA_HASH_WARNING, new Dictionary<string, object>
             {
                 ["FilePath"] = filePath,
                 ["ErrorMessage"] = ex.Message

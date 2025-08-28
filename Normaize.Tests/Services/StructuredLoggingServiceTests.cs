@@ -75,7 +75,7 @@ public class StructuredLoggingServiceTests
         var context = _service.CreateContext(operationName, correlationId);
 
         // Assert
-        context.UserId.Should().Be(AppConstants.Messages.UNKNOWN);
+        context.UserId.Should().Be(SharedConstants.Messages.UNKNOWN);
     }
 
     [Fact]

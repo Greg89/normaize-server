@@ -11,20 +11,20 @@ public class AppConfigurationTests
     public void GetEnvironment_WhenNotSet_ShouldReturnDevelopment()
     {
         // Arrange
-        Environment.SetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT, null);
+        Environment.SetEnvironmentVariable(SharedConstants.EnvironmentVariables.ASPNETCORE_ENVIRONMENT, null);
 
         // Act
         var result = AppConfiguration.GetEnvironment();
 
         // Assert
-        result.Should().Be(AppConstants.Environment.DEVELOPMENT);
+        result.Should().Be(SharedConstants.Environment.DEVELOPMENT);
     }
 
     [Fact]
     public void GetEnvironment_WhenSet_ShouldReturnSetValue()
     {
         // Arrange
-        Environment.SetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT, "Production");
+        Environment.SetEnvironmentVariable(SharedConstants.EnvironmentVariables.ASPNETCORE_ENVIRONMENT, "Production");
 
         // Act
         var result = AppConfiguration.GetEnvironment();
@@ -33,7 +33,7 @@ public class AppConfigurationTests
         result.Should().Be("Production");
 
         // Cleanup
-        Environment.SetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT, null);
+        Environment.SetEnvironmentVariable(SharedConstants.EnvironmentVariables.ASPNETCORE_ENVIRONMENT, null);
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class AppConfigurationTests
     public void IsProductionLike_ShouldReturnCorrectValue(string environment, bool expected)
     {
         // Arrange
-        Environment.SetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT, environment);
+        Environment.SetEnvironmentVariable(SharedConstants.EnvironmentVariables.ASPNETCORE_ENVIRONMENT, environment);
 
         // Act
         var result = AppConfiguration.IsProductionLike();
@@ -143,7 +143,7 @@ public class AppConfigurationTests
         result.Should().Be(expected);
 
         // Cleanup
-        Environment.SetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT, null);
+        Environment.SetEnvironmentVariable(SharedConstants.EnvironmentVariables.ASPNETCORE_ENVIRONMENT, null);
     }
 
     [Fact]

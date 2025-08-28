@@ -107,7 +107,7 @@ public class DataSetLifecycleServiceTests
             ds.RowCount == 20 &&
             ds.ColumnCount == 8 &&
             ds.DataHash == "new-hash")), Times.Once);
-        _mockAuditService.Verify(x => x.LogDataSetActionAsync(dataSetId, userId, AppConstants.DataSetLifecycle.RESET_DATA_SET_FILE_BASED, It.IsAny<object>(), null, null), Times.Once);
+        _mockAuditService.Verify(x => x.LogDataSetActionAsync(dataSetId, userId, DataSetOperationConstants.DataSetLifecycle.RESET_DATA_SET_FILE_BASED, It.IsAny<object>(), null, null), Times.Once);
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public class DataSetLifecycleServiceTests
         _mockRepository.Verify(x => x.UpdateAsync(It.Is<DataSet>(ds =>
             !ds.IsDeleted &&
             ds.DeletedAt == null)), Times.Once);
-        _mockAuditService.Verify(x => x.LogDataSetActionAsync(dataSetId, userId, AppConstants.DataSetLifecycle.RESET_DATA_SET_DATABASE_ONLY, It.IsAny<object>(), null, null), Times.Once);
+        _mockAuditService.Verify(x => x.LogDataSetActionAsync(dataSetId, userId, DataSetOperationConstants.DataSetLifecycle.RESET_DATA_SET_DATABASE_ONLY, It.IsAny<object>(), null, null), Times.Once);
     }
 
     [Fact]

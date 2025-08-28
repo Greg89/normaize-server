@@ -36,8 +36,8 @@ public class ChartGenerationService : IChartGenerationService
         {
             _infrastructure.StructuredLogging.LogStep(context, "No data available for chart generation", new Dictionary<string, object>
             {
-                [AppConstants.DataStructures.DATASETID] = dataSet.Id,
-                [AppConstants.DataStructures.CHART_TYPE] = chartType.ToString()
+                [SharedConstants.DataStructures.DATASETID] = dataSet.Id,
+                [SharedConstants.DataStructures.CHART_TYPE] = chartType.ToString()
             });
             return new ChartDataDto
             {
@@ -76,8 +76,8 @@ public class ChartGenerationService : IChartGenerationService
             default:
                 _infrastructure.StructuredLogging.LogStep(context, "Unsupported chart type", new Dictionary<string, object>
                 {
-                    [AppConstants.DataStructures.DATASETID] = dataSet.Id,
-                    [AppConstants.DataStructures.CHART_TYPE] = chartType.ToString()
+                    [SharedConstants.DataStructures.DATASETID] = dataSet.Id,
+                    [SharedConstants.DataStructures.CHART_TYPE] = chartType.ToString()
                 });
                 break;
         }
@@ -130,7 +130,7 @@ public class ChartGenerationService : IChartGenerationService
             labels.AddRange(data.Select((_, index) => $"Row {index + 1}"));
             series.Add(new ChartSeriesDto
             {
-                Name = AppConstants.DataProcessing.FALLBACK_SERIES_NAME,
+                Name = DataVisualizationConstants.DataProcessing.FALLBACK_SERIES_NAME,
                 Data = data.Select((_, index) => (object)(index + 1)).ToList()
             });
             return;
@@ -138,7 +138,7 @@ public class ChartGenerationService : IChartGenerationService
 
         // Use first column as labels (if it's not numeric)
         var labelColumn = columns.FirstOrDefault(col => !numericColumns.Contains(col)) ?? columns[0];
-        labels.AddRange(data.Select(row => row.GetValueOrDefault(labelColumn)?.ToString() ?? AppConstants.Messages.UNKNOWN));
+        labels.AddRange(data.Select(row => row.GetValueOrDefault(labelColumn)?.ToString() ?? SharedConstants.Messages.UNKNOWN));
 
         // Create series for each numeric column
         foreach (var column in numericColumns)
@@ -166,7 +166,7 @@ public class ChartGenerationService : IChartGenerationService
             labels.AddRange(data.Select((_, index) => $"Row {index + 1}"));
             series.Add(new ChartSeriesDto
             {
-                Name = AppConstants.DataProcessing.FALLBACK_SERIES_NAME,
+                Name = DataVisualizationConstants.DataProcessing.FALLBACK_SERIES_NAME,
                 Data = data.Select((_, index) => (object)(index + 1)).ToList()
             });
             return;
@@ -174,7 +174,7 @@ public class ChartGenerationService : IChartGenerationService
 
         // Use first column as labels
         var labelColumn = columns[0];
-        labels.AddRange(data.Select(row => row.GetValueOrDefault(labelColumn)?.ToString() ?? AppConstants.Messages.UNKNOWN));
+        labels.AddRange(data.Select(row => row.GetValueOrDefault(labelColumn)?.ToString() ?? SharedConstants.Messages.UNKNOWN));
 
         // Use first numeric column as data
         var dataColumn = numericColumns[0];
@@ -200,7 +200,7 @@ public class ChartGenerationService : IChartGenerationService
             labels.AddRange(data.Select((_, index) => $"Row {index + 1}"));
             series.Add(new ChartSeriesDto
             {
-                Name = AppConstants.DataProcessing.FALLBACK_SERIES_NAME,
+                Name = DataVisualizationConstants.DataProcessing.FALLBACK_SERIES_NAME,
                 Data = data.Select((_, index) => (object)(index + 1)).ToList()
             });
             return;
@@ -208,7 +208,7 @@ public class ChartGenerationService : IChartGenerationService
 
         // Use first column as labels
         var labelColumn = columns[0];
-        labels.AddRange(data.Select(row => row.GetValueOrDefault(labelColumn)?.ToString() ?? AppConstants.Messages.UNKNOWN));
+        labels.AddRange(data.Select(row => row.GetValueOrDefault(labelColumn)?.ToString() ?? SharedConstants.Messages.UNKNOWN));
 
         // Use first two numeric columns as X and Y
         var xColumn = numericColumns[0];

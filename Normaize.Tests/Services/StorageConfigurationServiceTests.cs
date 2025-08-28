@@ -52,10 +52,10 @@ public class StorageConfigurationServiceTests
         result.Should().NotBeNull();
         result.StorageProvider.Should().Be(StorageProvider.S3);
         result.S3Configured.Should().BeTrue();
-        result.S3Bucket.Should().Be(AppConstants.ConfigStatus.SET);
-        result.S3AccessKey.Should().Be(AppConstants.ConfigStatus.SET);
-        result.S3SecretKey.Should().Be(AppConstants.ConfigStatus.SET);
-        result.S3ServiceUrl.Should().Be(AppConstants.ConfigStatus.SET);
+        result.S3Bucket.Should().Be(SharedConstants.ConfigStatus.SET);
+        result.S3AccessKey.Should().Be(SharedConstants.ConfigStatus.SET);
+        result.S3SecretKey.Should().Be(SharedConstants.ConfigStatus.SET);
+        result.S3ServiceUrl.Should().Be(SharedConstants.ConfigStatus.SET);
         result.Environment.Should().Be("Production");
     }
 
@@ -77,10 +77,10 @@ public class StorageConfigurationServiceTests
         result.Should().NotBeNull();
         result.StorageProvider.Should().Be(StorageProvider.S3);
         result.S3Configured.Should().BeFalse();
-        result.S3Bucket.Should().Be(AppConstants.ConfigStatus.NOT_SET);
-        result.S3AccessKey.Should().Be(AppConstants.ConfigStatus.NOT_SET);
-        result.S3SecretKey.Should().Be(AppConstants.ConfigStatus.NOT_SET);
-        result.S3ServiceUrl.Should().Be(AppConstants.ConfigStatus.NOT_SET);
+        result.S3Bucket.Should().Be(SharedConstants.ConfigStatus.NOT_SET);
+        result.S3AccessKey.Should().Be(SharedConstants.ConfigStatus.NOT_SET);
+        result.S3SecretKey.Should().Be(SharedConstants.ConfigStatus.NOT_SET);
+        result.S3ServiceUrl.Should().Be(SharedConstants.ConfigStatus.NOT_SET);
         result.Environment.Should().Be("Development");
     }
 
@@ -97,7 +97,7 @@ public class StorageConfigurationServiceTests
         // Assert
         result.Should().NotBeNull();
         result.StorageProvider.Should().Be(StorageProvider.Local);
-        result.Environment.Should().Be(AppConstants.ConfigStatus.NOT_SET);
+        result.Environment.Should().Be(SharedConstants.ConfigStatus.NOT_SET);
     }
 
     [Theory]

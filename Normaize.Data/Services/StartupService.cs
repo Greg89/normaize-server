@@ -101,31 +101,31 @@ public class StartupService : IStartupService
     {
         var correlationId = GenerateCorrelationId();
         _logger.LogInformation("Starting startup configuration. {CorrelationIdLogProperty}: {CorrelationId}",
-            AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+            LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
 
         try
         {
             if (!ShouldRunStartupChecks())
             {
                 _logger.LogInformation("Startup checks disabled for current environment. {CorrelationIdLogProperty}: {CorrelationId}",
-    AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+    LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
                 return;
             }
 
             await RunStartupChecksAsync(correlationId, cancellationToken);
             _logger.LogInformation("Startup configuration completed successfully. {CorrelationIdLogProperty}: {CorrelationId}",
-                AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
         }
         catch (OperationCanceledException ex)
         {
             _logger.LogWarning(ex, "Startup configuration was cancelled. {CorrelationIdLogProperty}: {CorrelationId}",
-                AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
-            throw new InvalidOperationException($"Startup configuration was cancelled. {AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY}: {correlationId}", ex);
+                LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+            throw new InvalidOperationException($"Startup configuration was cancelled. {LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY}: {correlationId}", ex);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during startup configuration. {CorrelationIdLogProperty}: {CorrelationId}",
-                AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
             HandleStartupError(ex, correlationId);
         }
     }
@@ -153,7 +153,7 @@ public class StartupService : IStartupService
                        _startupConfig.Environment.EnableStartupChecksInDevelopment && IsDevelopmentEnvironment(environment);
 
         _logger.LogDebug("Startup checks decision: {EnvironmentLogProperty}={Environment}, HasDatabase={HasDatabase}, IsContainerized={IsContainerized}, ShouldRun={ShouldRun}",
-            AppConstants.StartupService.ENVIRONMENT_LOG_PROPERTY, environment, hasDatabaseConnection, isContainerized, shouldRun);
+            LoggingConstants.StartupService.ENVIRONMENT_LOG_PROPERTY, environment, hasDatabaseConnection, isContainerized, shouldRun);
 
         return shouldRun;
     }
@@ -180,7 +180,7 @@ public class StartupService : IStartupService
     {
         var correlationId = GenerateCorrelationId();
         _logger.LogInformation("Starting database migrations. {CorrelationIdLogProperty}: {CorrelationId}",
-            AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+            LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
 
         var timeout = TimeSpan.FromSeconds(_startupConfig.Database.MigrationTimeoutSeconds);
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -205,18 +205,18 @@ public class StartupService : IStartupService
                 cts.Token);
 
             _logger.LogInformation("Database migrations applied successfully. {CorrelationIdLogProperty}: {CorrelationId}",
-                AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
             _logger.LogError(ex, "Database migration timed out after {TimeoutLogProperty} seconds. {CorrelationIdLogProperty}: {CorrelationId}",
-                _startupConfig.Database.MigrationTimeoutSeconds, AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                _startupConfig.Database.MigrationTimeoutSeconds, LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
             throw new TimeoutException($"Database migration timed out after {_startupConfig.Database.MigrationTimeoutSeconds} seconds");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Database migration failed. {CorrelationIdLogProperty}: {CorrelationId}",
-                AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
             HandleMigrationFailure(ex, correlationId);
         }
     }
@@ -243,7 +243,7 @@ public class StartupService : IStartupService
     {
         var correlationId = GenerateCorrelationId();
         _logger.LogInformation("Starting health checks. {CorrelationIdLogProperty}: {CorrelationId}",
-            AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+            LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
 
         var timeout = TimeSpan.FromSeconds(_startupConfig.HealthCheck.HealthCheckTimeoutSeconds);
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -269,18 +269,18 @@ public class StartupService : IStartupService
                 cts.Token);
 
             _logger.LogInformation("Health checks passed successfully. {CorrelationIdLogProperty}: {CorrelationId}",
-                AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
         }
         catch (OperationCanceledException ex) when (cts.Token.IsCancellationRequested)
         {
             _logger.LogError(ex, "Health check timed out after {TimeoutLogProperty} seconds. {CorrelationIdLogProperty}: {CorrelationId}",
-                _startupConfig.HealthCheck.HealthCheckTimeoutSeconds, AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                _startupConfig.HealthCheck.HealthCheckTimeoutSeconds, LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
             throw new TimeoutException($"Health check timed out after {_startupConfig.HealthCheck.HealthCheckTimeoutSeconds} seconds");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Health check failed. {CorrelationIdLogProperty}: {CorrelationId}",
-                AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
             HandleHealthCheckFailure(ex, correlationId);
         }
     }
@@ -303,7 +303,7 @@ public class StartupService : IStartupService
     private async Task RunStartupChecksAsync(string correlationId, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Running startup checks. {CorrelationIdLogProperty}: {CorrelationId}",
-            AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+            LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
 
         if (_startupConfig.HealthCheck.RunHealthChecksInParallel)
         {
@@ -372,13 +372,13 @@ public class StartupService : IStartupService
                 if (attempt > maxRetries)
                 {
                     _logger.LogError(ex, "{OperationLogProperty} failed after {AttemptLogProperty} attempts. {CorrelationIdLogProperty}: {CorrelationId}",
-                        operationName, attempt, AppConstants.StartupService.ATTEMPT_LOG_PROPERTY, correlationId);
+                        operationName, attempt, LoggingConstants.StartupService.ATTEMPT_LOG_PROPERTY, correlationId);
                     break;
                 }
 
                 var delay = CalculateDelay(attempt, baseDelay);
                 _logger.LogWarning(ex, "{OperationLogProperty} failed (attempt {AttemptLogProperty}/{MaxAttemptsLogProperty}). Retrying in {DelayLogProperty}ms. {CorrelationIdLogProperty}: {CorrelationId}",
-                    operationName, attempt, maxRetries + 1, delay.TotalMilliseconds, AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                    operationName, attempt, maxRetries + 1, delay.TotalMilliseconds, LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
 
                 await Task.Delay(delay, cancellationToken);
             }
@@ -472,13 +472,13 @@ public class StartupService : IStartupService
         if (IsProductionEnvironment(environment) && _startupConfig.Database.FailOnMigrationError)
         {
             _logger.LogCritical(ex, "Database migration failed in production environment. Application will not start. {CorrelationIdLogProperty}: {CorrelationId}",
-                AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
             throw new InvalidOperationException("Database migration failed in production environment", ex);
         }
         else
         {
             _logger.LogWarning(ex, "Database migration failed but continuing in non-production mode. {CorrelationIdLogProperty}: {CorrelationId}",
-                AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
         }
     }
 
@@ -503,13 +503,13 @@ public class StartupService : IStartupService
         if (IsProductionEnvironment(environment) && _startupConfig.HealthCheck.FailOnHealthCheckError)
         {
             _logger.LogCritical(ex, "Health check failed in production environment. Application will not start. {CorrelationIdLogProperty}: {CorrelationId}",
-                AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
             throw new InvalidOperationException("Health check failed in production environment", ex);
         }
         else
         {
             _logger.LogWarning(ex, "Health check failed but continuing in non-production mode. {CorrelationIdLogProperty}: {CorrelationId}",
-                AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
         }
     }
 
@@ -534,13 +534,13 @@ public class StartupService : IStartupService
         if (IsProductionEnvironment(environment))
         {
             _logger.LogCritical(ex, "Startup configuration failed in production environment. Application will not start. {CorrelationIdLogProperty}: {CorrelationId}",
-                AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
             throw new InvalidOperationException("Startup configuration failed in production environment", ex);
         }
         else
         {
             _logger.LogWarning(ex, "Startup configuration failed but continuing in non-production mode. {CorrelationIdLogProperty}: {CorrelationId}",
-                AppConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
+                LoggingConstants.StartupService.CORRELATION_ID_LOG_PROPERTY, correlationId);
         }
     }
 

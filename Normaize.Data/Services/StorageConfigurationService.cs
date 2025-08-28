@@ -81,7 +81,7 @@ public class StorageConfigurationService : IStorageConfigurationService
             S3AccessKey = GetConfigurationStatus(_configuration.S3AccessKey),
             S3SecretKey = GetConfigurationStatus(_configuration.S3SecretKey),
             S3ServiceUrl = GetConfigurationStatus(_configuration.S3ServiceUrl),
-            Environment = string.IsNullOrEmpty(environment) ? AppConstants.ConfigStatus.NOT_SET : environment
+            Environment = string.IsNullOrEmpty(environment) ? SharedConstants.ConfigStatus.NOT_SET : environment
         };
     }
 
@@ -160,7 +160,7 @@ public class StorageConfigurationService : IStorageConfigurationService
     /// </remarks>
     private static string GetConfigurationStatus(string? value)
     {
-        return !string.IsNullOrEmpty(value) ? AppConstants.ConfigStatus.SET : AppConstants.ConfigStatus.NOT_SET;
+        return !string.IsNullOrEmpty(value) ? SharedConstants.ConfigStatus.SET : SharedConstants.ConfigStatus.NOT_SET;
     }
 
     #endregion

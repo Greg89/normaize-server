@@ -29,9 +29,9 @@ public class DataSetPreviewService : IDataSetPreviewService
     public async Task<DataSetPreviewDto?> GetDataSetPreviewAsync(int id, int rows, string userId)
     {
         return await ExecutePreviewOperationAsync(
-            AppConstants.DataSetPreview.GET_DATA_SET_PREVIEW,
+            DataSetOperationConstants.DataSetPreview.GET_DATA_SET_PREVIEW,
             userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id, ["Rows"] = rows },
+            new Dictionary<string, object> { [SharedConstants.DataStructures.DATASETID] = id, ["Rows"] = rows },
             () => ValidatePreviewInputs(id, rows, userId),
             async (context) =>
             {
@@ -41,25 +41,25 @@ public class DataSetPreviewService : IDataSetPreviewService
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating memory pressure during preview data processing", new Dictionary<string, object>
                     {
                         ["ChaosType"] = "MemoryPressure",
-                        [AppConstants.DataStructures.DATASETID] = id,
+                        [SharedConstants.DataStructures.DATASETID] = id,
                         ["RequestedRows"] = rows
                     });
 
                     // Simulate memory pressure by allocating temporary objects
                     var tempObjects = new List<byte[]>();
-                    for (int i = 0; i < AppConstants.ChaosEngineering.MEMORY_PRESSURE_OBJECT_COUNT; i++)
+                    for (int i = 0; i < ChaosEngineeringConstants.ChaosEngineering.MEMORY_PRESSURE_OBJECT_COUNT; i++)
                     {
-                        tempObjects.Add(new byte[AppConstants.ChaosEngineering.MEMORY_PRESSURE_OBJECT_SIZE_BYTES]); // 1MB each
+                        tempObjects.Add(new byte[ChaosEngineeringConstants.ChaosEngineering.MEMORY_PRESSURE_OBJECT_SIZE_BYTES]); // 1MB each
                     }
-                    await Task.Delay(AppConstants.ChaosEngineering.MEMORY_PRESSURE_DELAY_MS);
+                    await Task.Delay(ChaosEngineeringConstants.ChaosEngineering.MEMORY_PRESSURE_DELAY_MS);
                     tempObjects.Clear();
-                }, new Dictionary<string, object> { [AppConstants.DataStructures.USER_ID] = userId, [AppConstants.DataStructures.DATASETID] = id, ["Rows"] = rows });
+                }, new Dictionary<string, object> { [SharedConstants.DataStructures.USER_ID] = userId, [SharedConstants.DataStructures.DATASETID] = id, ["Rows"] = rows });
 
                 var dataSet = await RetrieveDataSetWithAccessControlAsync(id, userId, context);
 
                 if (dataSet == null || string.IsNullOrEmpty(dataSet.PreviewData))
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.NO_PREVIEW_DATA_AVAILABLE);
+                    _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetPreview.NO_PREVIEW_DATA_AVAILABLE);
                     return null;
                 }
 
@@ -70,7 +70,7 @@ public class DataSetPreviewService : IDataSetPreviewService
 
                     if (previewData == null || previewData.Rows == null)
                     {
-                        _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.NO_PREVIEW_DATA_AVAILABLE);
+                        _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetPreview.NO_PREVIEW_DATA_AVAILABLE);
                         return null;
                     }
 
@@ -79,7 +79,7 @@ public class DataSetPreviewService : IDataSetPreviewService
                     previewData.Rows = limitedRows;
                     previewData.PreviewRowCount = rows;
 
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.PREVIEW_DATA_RETRIEVED_SUCCESSFULLY, new Dictionary<string, object>
+                    _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetPreview.PREVIEW_DATA_RETRIEVED_SUCCESSFULLY, new Dictionary<string, object>
                     {
                         ["RequestedRows"] = rows,
                         ["ActualRows"] = limitedRows.Count,
@@ -90,7 +90,7 @@ public class DataSetPreviewService : IDataSetPreviewService
                 }
                 catch (JsonException ex)
                 {
-                    _infrastructure.StructuredLogging.LogException(ex, AppConstants.DataSetPreview.FAILED_TO_DESERIALIZE_PREVIEW_DATA);
+                    _infrastructure.StructuredLogging.LogException(ex, DataSetOperationConstants.DataSetPreview.FAILED_TO_DESERIALIZE_PREVIEW_DATA);
                     return null;
                 }
             });
@@ -99,16 +99,16 @@ public class DataSetPreviewService : IDataSetPreviewService
     public async Task<object?> GetDataSetSchemaAsync(int id, string userId)
     {
         return await ExecutePreviewOperationAsync(
-            AppConstants.DataSetPreview.GET_DATA_SET_SCHEMA,
+            DataSetOperationConstants.DataSetPreview.GET_DATA_SET_SCHEMA,
             userId,
-            new Dictionary<string, object> { [AppConstants.DataStructures.DATASETID] = id },
+            new Dictionary<string, object> { [SharedConstants.DataStructures.DATASETID] = id },
             () => ValidateSchemaInputs(id, userId),
             async (context) =>
             {
                 // Chaos engineering: Simulate processing delay during schema retrieval
                 await _infrastructure.ChaosEngineering.ExecuteChaosAsync("ProcessingDelay", context.CorrelationId, context.OperationName, async () =>
                 {
-                    var delayMs = new Random().Next(AppConstants.ChaosEngineering.MIN_PROCESSING_DELAY_MS, AppConstants.ChaosEngineering.MAX_PROCESSING_DELAY_MS);
+                    var delayMs = new Random().Next(ChaosEngineeringConstants.ChaosEngineering.MIN_PROCESSING_DELAY_MS, ChaosEngineeringConstants.ChaosEngineering.MAX_PROCESSING_DELAY_MS);
                     _infrastructure.StructuredLogging.LogStep(context, "Chaos engineering: Simulating processing delay during schema retrieval", new Dictionary<string, object>
                     {
                         ["DelayMs"] = delayMs,
@@ -121,7 +121,7 @@ public class DataSetPreviewService : IDataSetPreviewService
 
                 if (dataSet == null || string.IsNullOrEmpty(dataSet.Schema))
                 {
-                    _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.NO_SCHEMA_DATA_AVAILABLE);
+                    _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetPreview.NO_SCHEMA_DATA_AVAILABLE);
                     return null;
                 }
 
@@ -169,14 +169,14 @@ public class DataSetPreviewService : IDataSetPreviewService
 
         if (dataSet == null)
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.DATASET_NOT_FOUND);
+            _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetPreview.DATASET_NOT_FOUND);
             throw new InvalidOperationException($"Dataset with ID {id} not found");
         }
 
         if (dataSet.UserId != userId)
         {
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
-            throw new UnauthorizedAccessException($"{AppConstants.DataSetPreview.ACCESS_DENIED_TO_DATASET} {id}");
+            _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetPreview.ACCESS_DENIED_DATASET_BELONGS_TO_DIFFERENT_USER);
+            throw new UnauthorizedAccessException($"{DataSetOperationConstants.DataSetPreview.ACCESS_DENIED_TO_DATASET} {id}");
         }
 
         return dataSet;
@@ -190,18 +190,18 @@ public class DataSetPreviewService : IDataSetPreviewService
             var schemaList = await Task.Run(() => JsonSerializer.Deserialize<List<string>>(schema, JsonConfiguration.DefaultOptions));
             if (schemaList != null)
             {
-                _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.SCHEMA_DESERIALIZED_SUCCESSFULLY);
+                _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetPreview.SCHEMA_DESERIALIZED_SUCCESSFULLY);
                 return schemaList;
             }
 
             // Fallback to generic object deserialization
             var schemaObject = await Task.Run(() => JsonSerializer.Deserialize<object>(schema, JsonConfiguration.DefaultOptions));
-            _infrastructure.StructuredLogging.LogStep(context, AppConstants.DataSetPreview.SCHEMA_DESERIALIZED_SUCCESSFULLY);
+            _infrastructure.StructuredLogging.LogStep(context, DataSetOperationConstants.DataSetPreview.SCHEMA_DESERIALIZED_SUCCESSFULLY);
             return schemaObject;
         }
         catch (JsonException ex)
         {
-            _infrastructure.StructuredLogging.LogException(ex, AppConstants.DataSetPreview.FAILED_TO_DESERIALIZE_SCHEMA);
+            _infrastructure.StructuredLogging.LogException(ex, DataSetOperationConstants.DataSetPreview.FAILED_TO_DESERIALIZE_SCHEMA);
             return null;
         }
     }
@@ -215,16 +215,16 @@ public class DataSetPreviewService : IDataSetPreviewService
     private static void ValidatePreviewInputs(int id, int rows, string userId)
     {
         ValidateDataSetIdAndUserId(id, userId);
-        if (rows <= 0) throw new ArgumentException(AppConstants.DataSetPreview.ROWS_MUST_BE_POSITIVE, nameof(rows));
-        if (rows > AppConstants.DataSetPreview.MAX_PREVIEW_ROWS) throw new ArgumentException(AppConstants.DataSetPreview.ROWS_CANNOT_EXCEED_1000, nameof(rows));
+        if (rows <= 0) throw new ArgumentException(DataSetOperationConstants.DataSetPreview.ROWS_MUST_BE_POSITIVE);
+        if (rows > DataSetOperationConstants.DataSetPreview.MAX_PREVIEW_ROWS) throw new ArgumentException(DataSetOperationConstants.DataSetPreview.ROWS_CANNOT_EXCEED_1000);
     }
 
     private static void ValidateSchemaInputs(int id, string userId) => ValidateDataSetIdAndUserId(id, userId);
 
     private static void ValidateDataSetIdAndUserId(int id, string userId)
     {
-        if (id <= 0) throw new ArgumentException(AppConstants.DataSetPreview.DATASET_ID_MUST_BE_POSITIVE, nameof(id));
-        if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentException(AppConstants.DataSetPreview.USER_ID_CANNOT_BE_NULL_OR_EMPTY, nameof(userId));
+        if (id <= 0) throw new ArgumentException(DataSetOperationConstants.DataSetPreview.DATASET_ID_MUST_BE_POSITIVE);
+        if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentException(DataSetOperationConstants.DataSetPreview.USER_ID_CANNOT_BE_NULL_OR_EMPTY);
     }
 
     #endregion

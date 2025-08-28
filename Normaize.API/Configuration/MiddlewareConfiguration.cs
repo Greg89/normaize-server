@@ -67,7 +67,7 @@ public static class MiddlewareConfiguration
     private static void ConfigureHttpsRedirection(WebApplication app, IStructuredLoggingService? loggingService)
     {
         var isProduction = app.Environment.IsProduction();
-        var isBeta = app.Environment.IsEnvironment(AppConstants.Environment.BETA);
+        var isBeta = app.Environment.IsEnvironment(SharedConstants.Environment.BETA);
 
         if (isProduction || isBeta)
         {
@@ -108,11 +108,11 @@ public static class MiddlewareConfiguration
     {
         // Get the environment to determine which CORS policy to use
         var appConfigService = app.Services.GetService<IAppConfigurationService>();
-        string environment = AppConstants.Environment.DEVELOPMENT; // Default fallback
+        string environment = SharedConstants.Environment.DEVELOPMENT; // Default fallback
 
         try
         {
-            environment = appConfigService?.GetEnvironment() ?? AppConstants.Environment.DEVELOPMENT;
+            environment = appConfigService?.GetEnvironment() ?? SharedConstants.Environment.DEVELOPMENT;
         }
         catch (Exception ex)
         {
@@ -120,15 +120,15 @@ public static class MiddlewareConfiguration
             // Continue with default environment
         }
 
-        if (environment.Equals(AppConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
+        if (environment.Equals(SharedConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
         {
-            app.UseCors(AppConstants.Environment.DEVELOPMENT);
-            loggingService?.LogUserAction("CORS configured with Development policy", new { Environment = environment, Policy = AppConstants.Environment.DEVELOPMENT });
+            app.UseCors("DevelopmentPolicy");
+            loggingService?.LogUserAction("CORS configured with Development policy", new { Environment = environment, Policy = "DevelopmentPolicy" });
         }
-        else if (environment.Equals(AppConstants.Environment.BETA, StringComparison.OrdinalIgnoreCase))
+        else if (environment.Equals(SharedConstants.Environment.BETA, StringComparison.OrdinalIgnoreCase))
         {
-            app.UseCors(AppConstants.Environment.BETA);
-            loggingService?.LogUserAction("CORS configured with Beta policy", new { Environment = environment, Policy = AppConstants.Environment.BETA });
+            app.UseCors("BetaPolicy");
+            loggingService?.LogUserAction("CORS configured with Beta policy", new { Environment = environment, Policy = "BetaPolicy" });
         }
         else
         {
@@ -152,7 +152,7 @@ public static class MiddlewareConfiguration
     private static void ConfigureRequestLogging(WebApplication app, IStructuredLoggingService? loggingService)
     {
         // Add request logging middleware (skip in test environment)
-        if (!app.Environment.EnvironmentName.Equals(AppConstants.Environment.TEST, StringComparison.OrdinalIgnoreCase))
+        if (!app.Environment.EnvironmentName.Equals(SharedConstants.Environment.TEST, StringComparison.OrdinalIgnoreCase))
         {
             app.UseMiddleware<RequestLoggingMiddleware>();
             loggingService?.LogUserAction("Request logging middleware configured", new { Environment = app.Environment.EnvironmentName });
@@ -178,7 +178,7 @@ public static class MiddlewareConfiguration
     private static void ConfigureExceptionHandling(WebApplication app, IStructuredLoggingService? loggingService)
     {
         // Global exception handler (skip in test environment)
-        if (!app.Environment.EnvironmentName.Equals(AppConstants.Environment.TEST, StringComparison.OrdinalIgnoreCase))
+        if (!app.Environment.EnvironmentName.Equals(SharedConstants.Environment.TEST, StringComparison.OrdinalIgnoreCase))
         {
             app.UseMiddleware<ExceptionHandlingMiddleware>();
             loggingService?.LogUserAction("Global exception handling configured", new { Environment = app.Environment.EnvironmentName });

@@ -86,7 +86,7 @@ public class AppConfigurationServiceTests
 
         // Assert
         environment.Should().NotBeNullOrEmpty();
-        environment.Should().BeOneOf(AppConstants.Environment.DEVELOPMENT, AppConstants.Environment.STAGING, AppConstants.Environment.PRODUCTION, AppConstants.Environment.TEST);
+        environment.Should().BeOneOf(SharedConstants.Environment.DEVELOPMENT, SharedConstants.Environment.STAGING, SharedConstants.Environment.PRODUCTION, SharedConstants.Environment.TEST);
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public class AppConfigurationServiceTests
         config.Should().NotBeNull();
         // These can be null if not configured in the environment
         // config.Host, config.Database, config.User, config.Password can be null
-        config.Port.Should().Be(AppConstants.Database.DEFAULT_PORT); // Default value
+        config.Port.Should().Be(DatabaseConstants.Database.DEFAULT_PORT); // Default value
     }
 
 
@@ -132,7 +132,7 @@ public class AppConfigurationServiceTests
 
         // Assert
         port.Should().NotBeNullOrEmpty();
-        port.Should().MatchRegex(AppConstants.Validation.NUMERIC_ONLY_PATTERN); // Should be numeric
+        port.Should().MatchRegex(@"^\d+$"); // Should be numeric
     }
 
     [Fact]
@@ -151,19 +151,19 @@ public class AppConfigurationServiceTests
         // Arrange
         var config = new DatabaseConfig
         {
-            Host = AppConstants.Database.DEFAULT_HOST,
-            Database = AppConstants.Database.DEFAULT_DATABASE,
-            User = AppConstants.Database.DEFAULT_USER,
-            Password = AppConstants.Database.DEFAULT_PASSWORD,
-            Port = AppConstants.Database.DEFAULT_PORT
+            Host = DatabaseConstants.Database.DEFAULT_HOST,
+            Database = DatabaseConstants.Database.DEFAULT_DATABASE,
+            User = DatabaseConstants.Database.DEFAULT_USER,
+            Password = DatabaseConstants.Database.DEFAULT_PASSWORD,
+            Port = DatabaseConstants.Database.DEFAULT_PORT
         };
 
         // Assert
-        config.Host.Should().Be(AppConstants.Database.DEFAULT_HOST);
-        config.Database.Should().Be(AppConstants.Database.DEFAULT_DATABASE);
-        config.User.Should().Be(AppConstants.Database.DEFAULT_USER);
-        config.Password.Should().Be(AppConstants.Database.DEFAULT_PASSWORD);
-        config.Port.Should().Be(AppConstants.Database.DEFAULT_PORT);
+        config.Host.Should().Be(DatabaseConstants.Database.DEFAULT_HOST);
+        config.Database.Should().Be(DatabaseConstants.Database.DEFAULT_DATABASE);
+        config.User.Should().Be(DatabaseConstants.Database.DEFAULT_USER);
+        config.Password.Should().Be(DatabaseConstants.Database.DEFAULT_PASSWORD);
+        config.Port.Should().Be(DatabaseConstants.Database.DEFAULT_PORT);
     }
 
     [Fact]
@@ -172,11 +172,11 @@ public class AppConfigurationServiceTests
         // Arrange
         var config = new DatabaseConfig
         {
-            Host = AppConstants.Database.DEFAULT_HOST,
-            Database = AppConstants.Database.DEFAULT_DATABASE,
-            User = AppConstants.Database.DEFAULT_USER,
-            Password = AppConstants.Database.DEFAULT_PASSWORD,
-            Port = AppConstants.Database.DEFAULT_PORT
+            Host = DatabaseConstants.Database.DEFAULT_HOST,
+            Database = DatabaseConstants.Database.DEFAULT_DATABASE,
+            User = DatabaseConstants.Database.DEFAULT_USER,
+            Password = DatabaseConstants.Database.DEFAULT_PASSWORD,
+            Port = DatabaseConstants.Database.DEFAULT_PORT
         };
 
         // Act
@@ -184,12 +184,12 @@ public class AppConfigurationServiceTests
 
         // Assert
         connectionString.Should().NotBeNullOrEmpty();
-        connectionString.Should().Contain($"{AppConstants.Database.SERVER_PREFIX}{AppConstants.Database.DEFAULT_HOST}");
-        connectionString.Should().Contain($"{AppConstants.Database.DATABASE_PREFIX}{AppConstants.Database.DEFAULT_DATABASE}");
-        connectionString.Should().Contain($"{AppConstants.Database.USER_PREFIX}{AppConstants.Database.DEFAULT_USER}");
-        connectionString.Should().Contain($"{AppConstants.Database.PASSWORD_PREFIX}{AppConstants.Database.DEFAULT_PASSWORD}");
-        connectionString.Should().Contain($"{AppConstants.Database.PORT_PREFIX}{AppConstants.Database.DEFAULT_PORT}");
-        connectionString.Should().Contain($"{AppConstants.Database.CHARSET_PREFIX}{AppConstants.Database.DEFAULT_CHARSET}");
+        connectionString.Should().Contain($"{DatabaseConstants.Database.SERVER_PREFIX}{DatabaseConstants.Database.DEFAULT_HOST}");
+        connectionString.Should().Contain($"{DatabaseConstants.Database.DATABASE_PREFIX}{DatabaseConstants.Database.DEFAULT_DATABASE}");
+        connectionString.Should().Contain($"{DatabaseConstants.Database.USER_PREFIX}{DatabaseConstants.Database.DEFAULT_USER}");
+        connectionString.Should().Contain($"{DatabaseConstants.Database.PASSWORD_PREFIX}{DatabaseConstants.Database.DEFAULT_PASSWORD}");
+        connectionString.Should().Contain($"{DatabaseConstants.Database.PORT_PREFIX}{DatabaseConstants.Database.DEFAULT_PORT}");
+        connectionString.Should().Contain($"{DatabaseConstants.Database.CHARSET_PREFIX}{DatabaseConstants.Database.DEFAULT_CHARSET}");
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class AppConfigurationServiceTests
             Database = null,
             User = null,
             Password = null,
-            Port = AppConstants.Database.DEFAULT_PORT
+            Port = DatabaseConstants.Database.DEFAULT_PORT
         };
 
         // Act
@@ -210,10 +210,10 @@ public class AppConfigurationServiceTests
 
         // Assert
         connectionString.Should().NotBeNullOrEmpty();
-        connectionString.Should().Contain(AppConstants.Database.SERVER_PREFIX);
-        connectionString.Should().Contain(AppConstants.Database.DATABASE_PREFIX);
-        connectionString.Should().Contain(AppConstants.Database.USER_PREFIX);
-        connectionString.Should().Contain(AppConstants.Database.PASSWORD_PREFIX);
-        connectionString.Should().Contain($"{AppConstants.Database.PORT_PREFIX}{AppConstants.Database.DEFAULT_PORT}");
+        connectionString.Should().Contain(DatabaseConstants.Database.SERVER_PREFIX);
+        connectionString.Should().Contain(DatabaseConstants.Database.DATABASE_PREFIX);
+        connectionString.Should().Contain(DatabaseConstants.Database.USER_PREFIX);
+        connectionString.Should().Contain(DatabaseConstants.Database.PASSWORD_PREFIX);
+        connectionString.Should().Contain($"{DatabaseConstants.Database.PORT_PREFIX}{DatabaseConstants.Database.DEFAULT_PORT}");
     }
 }

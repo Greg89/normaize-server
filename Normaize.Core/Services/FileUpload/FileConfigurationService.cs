@@ -39,7 +39,7 @@ public class FileConfigurationService : IFileConfigurationService
         if (!Validator.TryValidateObject(_fileUploadConfig, validationContext, validationResults, true))
         {
             var errors = string.Join(", ", validationResults.Select(r => r.ErrorMessage));
-            throw new InvalidOperationException($"{AppConstants.FileUploadMessages.CONFIGURATION_VALIDATION_FAILED}: {errors}");
+            throw new InvalidOperationException($"{FileProcessingConstants.FileUploadMessages.CONFIGURATION_VALIDATION_FAILED}: {errors}");
         }
 
         validationResults.Clear();
@@ -48,7 +48,7 @@ public class FileConfigurationService : IFileConfigurationService
         if (!Validator.TryValidateObject(_dataProcessingConfig, validationContext, validationResults, true))
         {
             var errors = string.Join(", ", validationResults.Select(r => r.ErrorMessage));
-            throw new InvalidOperationException($"{AppConstants.FileUploadMessages.CONFIGURATION_VALIDATION_FAILED}: {errors}");
+            throw new InvalidOperationException($"{FileProcessingConstants.FileUploadMessages.CONFIGURATION_VALIDATION_FAILED}: {errors}");
         }
 
         // Additional cross-validation
@@ -61,10 +61,10 @@ public class FileConfigurationService : IFileConfigurationService
         var context = _infrastructure.StructuredLogging.CreateContext(
             "LogConfiguration",
             correlationId,
-            AppConstants.Auth.AnonymousUser,
+            AuthConstants.Auth.AnonymousUser,
             new Dictionary<string, object>
             {
-                ["MaxFileSizeMB"] = _fileUploadConfig.MaxFileSize / AppConstants.FileProcessing.BYTES_PER_MEGABYTE,
+                ["MaxFileSizeMB"] = _fileUploadConfig.MaxFileSize / FileProcessingConstants.FileProcessing.BYTES_PER_MEGABYTE,
                 ["MaxRowsPerDataset"] = _dataProcessingConfig.MaxRowsPerDataset,
                 ["AllowedExtensions"] = string.Join(", ", _fileUploadConfig.AllowedExtensions),
                 ["BlockedExtensions"] = string.Join(", ", _fileUploadConfig.BlockedExtensions)
@@ -78,7 +78,7 @@ public class FileConfigurationService : IFileConfigurationService
     {
         if (_fileUploadConfig.AllowedExtensions.Any(ext => _fileUploadConfig.BlockedExtensions.Contains(ext)))
         {
-            throw new InvalidOperationException(AppConstants.FileUploadMessages.ALLOWED_EXTENSIONS_CONFLICT);
+            throw new InvalidOperationException(FileProcessingConstants.FileUploadMessages.ALLOWED_EXTENSIONS_CONFLICT);
         }
     }
 

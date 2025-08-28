@@ -103,7 +103,7 @@ public class DataNormalizationBackgroundService : BackgroundService
             // Process based on operation type
             switch (job.OperationType)
             {
-                case AppConstants.DataNormalization.REMOVE_DUPLICATE_ROWS:
+                case DataNormalizationConstants.DataNormalization.REMOVE_DUPLICATE_ROWS:
                     await ProcessDuplicateRowRemovalAsync(job, progress, cancellationToken);
                     break;
 
@@ -169,11 +169,11 @@ public class DataNormalizationBackgroundService : BackgroundService
     {
         return percentage switch
         {
-            < 25 => AppConstants.DataNormalization.ANALYZING_DATASET,
-            < 50 => AppConstants.DataNormalization.PROCESSING_ROWS,
-            < 75 => AppConstants.DataNormalization.REMOVING_DUPLICATES,
-            < 95 => AppConstants.DataNormalization.UPDATING_DATASET,
-            < 100 => AppConstants.DataNormalization.VALIDATING_RESULTS,
+            < 25 => DataNormalizationConstants.DataNormalization.ANALYZING_DATASET,
+            < 50 => DataNormalizationConstants.DataNormalization.PROCESSING_ROWS,
+            < 75 => DataNormalizationConstants.DataNormalization.REMOVING_DUPLICATES,
+            < 95 => DataNormalizationConstants.DataNormalization.UPDATING_DATASET,
+            < 100 => DataNormalizationConstants.DataNormalization.VALIDATING_RESULTS,
             100 => "Processing completed",
             _ => "Processing in progress"
         };

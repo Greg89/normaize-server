@@ -27,7 +27,7 @@ public static class AppConfiguration
     }
 
     public static string GetEnvironment() =>
-        Environment.GetEnvironmentVariable(AppConstants.Environment.ASPNETCORE_ENVIRONMENT) ?? AppConstants.Environment.DEVELOPMENT;
+        Environment.GetEnvironmentVariable(SharedConstants.Environment.ASPNETCORE_ENVIRONMENT) ?? SharedConstants.Environment.DEVELOPMENT;
 
     public static string? GetSeqUrl() =>
         Environment.GetEnvironmentVariable("SEQ_URL");

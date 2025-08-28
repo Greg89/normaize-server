@@ -122,7 +122,7 @@ public class CacheManagementServiceTests
 
         // Assert
         result.Should().StartWith(baseKey + "_");
-        result.Should().HaveLength(baseKey.Length + 1 + AppConstants.DataProcessing.CACHE_KEY_HASH_LENGTH);
+        result.Should().HaveLength(baseKey.Length + 1 + DataVisualizationConstants.DataProcessing.CACHE_KEY_HASH_LENGTH);
     }
 
     [Fact]
@@ -311,7 +311,7 @@ public class CacheManagementServiceTests
         var result = _service.GenerateCacheKey(baseKey, configuration);
 
         // Assert
-        var expectedLength = baseKey.Length + 1 + AppConstants.DataProcessing.CACHE_KEY_HASH_LENGTH;
+        var expectedLength = baseKey.Length + 1 + DataVisualizationConstants.DataProcessing.CACHE_KEY_HASH_LENGTH;
         result.Should().HaveLength(expectedLength);
     }
 
