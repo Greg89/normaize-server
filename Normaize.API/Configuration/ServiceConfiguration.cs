@@ -606,9 +606,15 @@ public static class ServiceConfiguration
 
     private static ILogger CreateLogger(WebApplicationBuilder builder)
     {
-        // Create a temporary service provider to get logger
-        var serviceProvider = builder.Services.BuildServiceProvider();
-        return serviceProvider.GetRequiredService<ILogger<object>>();
+        // Create a logger factory directly instead of building service provider
+        // This avoids potential issues with service provider lifecycle during configuration
+        var loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.AddConsole();
+            builder.SetMinimumLevel(LogLevel.Information);
+        });
+
+        return loggerFactory.CreateLogger<object>();
     }
 
     private static string GenerateCorrelationId() => Activity.Current?.Id ?? Guid.NewGuid().ToString();

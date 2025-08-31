@@ -117,34 +117,7 @@ public class DataNormalizationService : IDataNormalizationService
     {
         try
         {
-            // Get job from queue service
-            var jobs = await _jobQueueService.GetJobsByPriorityAsync(NormalizationJobStatus.Queued, int.MaxValue, 1000);
-            var job = jobs.FirstOrDefault(j => j.Id == jobId);
-
-            if (job == null)
-            {
-                // Check other statuses
-                var allJobs = await _jobQueueService.GetJobsByPriorityAsync(NormalizationJobStatus.Processing, int.MaxValue, 1000);
-                job = allJobs.FirstOrDefault(j => j.Id == jobId);
-
-                if (job == null)
-                {
-                    var completedJobs = await _jobQueueService.GetJobsByPriorityAsync(NormalizationJobStatus.Completed, int.MaxValue, 1000);
-                    job = completedJobs.FirstOrDefault(j => j.Id == jobId);
-
-                    if (job == null)
-                    {
-                        var failedJobs = await _jobQueueService.GetJobsByPriorityAsync(NormalizationJobStatus.Failed, int.MaxValue, 1000);
-                        job = failedJobs.FirstOrDefault(j => j.Id == jobId);
-
-                        if (job == null)
-                        {
-                            var cancelledJobs = await _jobQueueService.GetJobsByPriorityAsync(NormalizationJobStatus.Cancelled, int.MaxValue, 1000);
-                            job = cancelledJobs.FirstOrDefault(j => j.Id == jobId);
-                        }
-                    }
-                }
-            }
+            var job = await FindJobByIdAsync(jobId);
 
             if (job == null)
             {
@@ -190,6 +163,30 @@ public class DataNormalizationService : IDataNormalizationService
             _logger.LogError(ex, "Failed to get status for job {JobId}", jobId);
             throw;
         }
+    }
+
+    private async Task<DataNormalizationJob?> FindJobByIdAsync(string jobId)
+    {
+        var statuses = new[]
+        {
+            NormalizationJobStatus.Queued,
+            NormalizationJobStatus.Processing,
+            NormalizationJobStatus.Completed,
+            NormalizationJobStatus.Failed,
+            NormalizationJobStatus.Cancelled
+        };
+
+        foreach (var status in statuses)
+        {
+            var jobs = await _jobQueueService.GetJobsByPriorityAsync(status, int.MaxValue, 1000);
+            var job = jobs.FirstOrDefault(j => j.Id == jobId);
+            if (job != null)
+            {
+                return job;
+            }
+        }
+
+        return null;
     }
 
     public async Task<bool> CancelJobAsync(string jobId, string userId)

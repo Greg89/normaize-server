@@ -150,48 +150,28 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
         var warnings = new List<string>();
 
         // Validate column names
-        if (request.ColumnNames == null || request.ColumnNames.Length == 0)
+        var columnValidationResult = ValidateColumnNames(request);
+        if (!columnValidationResult.IsValid)
         {
-            return NormalizationValidationResult.Failure(DataNormalizationConstants.DataNormalization.AT_LEAST_ONE_COLUMN_REQUIRED);
-        }
-
-        if (request.ColumnNames.Length > DataNormalizationConstants.DataNormalization.MAX_COLUMNS_FOR_DUPLICATE_DETECTION)
-        {
-            return NormalizationValidationResult.Failure($"Maximum {DataNormalizationConstants.DataNormalization.MAX_COLUMNS_FOR_DUPLICATE_DETECTION} columns allowed for duplicate detection");
+            return columnValidationResult;
         }
 
         // Validate dataset state
-        if (!dataSet.IsProcessed)
+        var datasetValidationResult = ValidateDatasetState(dataSet);
+        if (!datasetValidationResult.IsValid)
         {
-            return NormalizationValidationResult.Failure(DataNormalizationConstants.DataNormalization.DATASET_MUST_BE_PROCESSED);
+            return datasetValidationResult;
         }
 
-        // Check if dataset has data
-        if (dataSet.RowCount == 0)
+        // Validate column existence
+        var columnExistenceResult = ValidateColumnExistence(dataSet, request);
+        if (!columnExistenceResult.IsValid)
         {
-            return NormalizationValidationResult.Failure("Dataset has no rows to process");
+            return columnExistenceResult;
         }
 
-        // Validate column existence (basic check)
-        if (!string.IsNullOrEmpty(dataSet.Schema))
-        {
-            try
-            {
-                var schema = JsonSerializer.Deserialize<Dictionary<string, object>>(dataSet.Schema);
-                if (schema != null)
-                {
-                    var missingColumns = request.ColumnNames.Where(col => !schema.ContainsKey(col)).ToList();
-                    if (missingColumns.Any())
-                    {
-                        return NormalizationValidationResult.Failure($"Columns not found in dataset: {string.Join(", ", missingColumns)}");
-                    }
-                }
-            }
-            catch (JsonException)
-            {
-                warnings.Add("Unable to validate column existence - proceeding with caution");
-            }
-        }
+        // Add warnings from column existence validation
+        warnings.AddRange(columnExistenceResult.Warnings);
 
         // Check memory requirements
         var estimatedMemory = await EstimateMemoryUsageAsync(dataSet, request);
@@ -208,7 +188,68 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
         }
 
         return warnings.Any()
-                        ? NormalizationValidationResult.SuccessWithWarnings(warnings)
+            ? NormalizationValidationResult.SuccessWithWarnings(warnings)
+            : NormalizationValidationResult.Success();
+    }
+
+    private NormalizationValidationResult ValidateColumnNames(RemoveDuplicateRowsRequest request)
+    {
+        if (request.ColumnNames == null || request.ColumnNames.Length == 0)
+        {
+            return NormalizationValidationResult.Failure(DataNormalizationConstants.DataNormalization.AT_LEAST_ONE_COLUMN_REQUIRED);
+        }
+
+        if (request.ColumnNames.Length > DataNormalizationConstants.DataNormalization.MAX_COLUMNS_FOR_DUPLICATE_DETECTION)
+        {
+            return NormalizationValidationResult.Failure($"Maximum {DataNormalizationConstants.DataNormalization.MAX_COLUMNS_FOR_DUPLICATE_DETECTION} columns allowed for duplicate detection");
+        }
+
+        return NormalizationValidationResult.Success();
+    }
+
+    private NormalizationValidationResult ValidateDatasetState(DataSet dataSet)
+    {
+        if (!dataSet.IsProcessed)
+        {
+            return NormalizationValidationResult.Failure(DataNormalizationConstants.DataNormalization.DATASET_MUST_BE_PROCESSED);
+        }
+
+        if (dataSet.RowCount == 0)
+        {
+            return NormalizationValidationResult.Failure("Dataset has no rows to process");
+        }
+
+        return NormalizationValidationResult.Success();
+    }
+
+    private NormalizationValidationResult ValidateColumnExistence(DataSet dataSet, RemoveDuplicateRowsRequest request)
+    {
+        var warnings = new List<string>();
+
+        if (string.IsNullOrEmpty(dataSet.Schema))
+        {
+            return NormalizationValidationResult.Success();
+        }
+
+        try
+        {
+            var schema = JsonSerializer.Deserialize<Dictionary<string, object>>(dataSet.Schema);
+            if (schema != null)
+            {
+                var missingColumns = request.ColumnNames.Where(col => !schema.ContainsKey(col)).ToList();
+                if (missingColumns.Any())
+                {
+                    return NormalizationValidationResult.Failure($"Columns not found in dataset: {string.Join(", ", missingColumns)}");
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            warnings.Add("Unable to validate column existence - proceeding with caution");
+        }
+
+        return warnings.Any()
+            ? NormalizationValidationResult.SuccessWithWarnings(warnings)
             : NormalizationValidationResult.Success();
     }
 

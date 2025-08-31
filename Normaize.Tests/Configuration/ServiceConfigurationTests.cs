@@ -58,6 +58,7 @@ public class ServiceConfigurationTests : IDisposable
         {
             Environment.SetEnvironmentVariable(kvp.Key, kvp.Value);
         }
+
         GC.SuppressFinalize(this);
     }
 

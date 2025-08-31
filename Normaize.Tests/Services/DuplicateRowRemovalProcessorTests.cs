@@ -233,6 +233,309 @@ public class DuplicateRowRemovalProcessorTests
         result.ErrorMessage.Should().Contain("no rows to process");
     }
 
+    #region Validation Method Tests
+
+    [Fact]
+    public void ValidateColumnNames_WithValidColumns_ShouldReturnSuccess()
+    {
+        // Arrange
+        var request = new RemoveDuplicateRowsRequest
+        {
+            ColumnNames = ["Name", "Age"],
+            KeepFirstOccurrence = true,
+            CaseSensitive = false
+        };
+
+        // Act
+        var method = typeof(DuplicateRowRemovalProcessor).GetMethod("ValidateColumnNames",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = (NormalizationValidationResult)method!.Invoke(_processor, [request])!;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsValid.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
+        result.Warnings.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ValidateColumnNames_WithNullColumns_ShouldReturnFailure()
+    {
+        // Arrange
+        var request = new RemoveDuplicateRowsRequest
+        {
+            ColumnNames = null!,
+            KeepFirstOccurrence = true,
+            CaseSensitive = false
+        };
+
+        // Act
+        var method = typeof(DuplicateRowRemovalProcessor).GetMethod("ValidateColumnNames",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = (NormalizationValidationResult)method!.Invoke(_processor, [request])!;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsValid.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNullOrEmpty();
+        result.ErrorMessage.Should().Contain("At least one column must be specified");
+    }
+
+    [Fact]
+    public void ValidateColumnNames_WithEmptyColumns_ShouldReturnFailure()
+    {
+        // Arrange
+        var request = new RemoveDuplicateRowsRequest
+        {
+            ColumnNames = [],
+            KeepFirstOccurrence = true,
+            CaseSensitive = false
+        };
+
+        // Act
+        var method = typeof(DuplicateRowRemovalProcessor).GetMethod("ValidateColumnNames",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = (NormalizationValidationResult)method!.Invoke(_processor, [request])!;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsValid.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNullOrEmpty();
+        result.ErrorMessage.Should().Contain("At least one column must be specified");
+    }
+
+    [Fact]
+    public void ValidateColumnNames_WithTooManyColumns_ShouldReturnFailure()
+    {
+        // Arrange
+        var request = new RemoveDuplicateRowsRequest
+        {
+            ColumnNames = Enumerable.Range(1, 15).Select(i => $"Column{i}").ToArray(),
+            KeepFirstOccurrence = true,
+            CaseSensitive = false
+        };
+
+        // Act
+        var method = typeof(DuplicateRowRemovalProcessor).GetMethod("ValidateColumnNames",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = (NormalizationValidationResult)method!.Invoke(_processor, [request])!;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsValid.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNullOrEmpty();
+        result.ErrorMessage.Should().Contain("Maximum");
+        result.ErrorMessage.Should().Contain("10");
+    }
+
+    [Fact]
+    public void ValidateDatasetState_WithValidProcessedDataset_ShouldReturnSuccess()
+    {
+        // Arrange
+        var dataSet = TestDataBuilder.CreateDataSet(processed: true, rowCount: 10);
+
+        // Act
+        var method = typeof(DuplicateRowRemovalProcessor).GetMethod("ValidateDatasetState",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = (NormalizationValidationResult)method!.Invoke(_processor, [dataSet])!;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsValid.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
+        result.Warnings.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ValidateDatasetState_WithUnprocessedDataset_ShouldReturnFailure()
+    {
+        // Arrange
+        var dataSet = TestDataBuilder.CreateDataSet(processed: false, rowCount: 10);
+
+        // Act
+        var method = typeof(DuplicateRowRemovalProcessor).GetMethod("ValidateDatasetState",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = (NormalizationValidationResult)method!.Invoke(_processor, [dataSet])!;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsValid.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNullOrEmpty();
+        result.ErrorMessage.Should().Contain("must be processed");
+    }
+
+    [Fact]
+    public void ValidateDatasetState_WithEmptyDataset_ShouldReturnFailure()
+    {
+        // Arrange
+        var dataSet = TestDataBuilder.CreateDataSet(processed: true, rowCount: 0);
+
+        // Act
+        var method = typeof(DuplicateRowRemovalProcessor).GetMethod("ValidateDatasetState",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = (NormalizationValidationResult)method!.Invoke(_processor, [dataSet])!;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsValid.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNullOrEmpty();
+        result.ErrorMessage.Should().Contain("no rows to process");
+    }
+
+    [Fact]
+    public void ValidateColumnExistence_WithValidSchemaAndColumns_ShouldReturnSuccess()
+    {
+        // Arrange
+        var dataSet = TestDataBuilder.CreateDataSet(processed: true, rowCount: 10);
+        dataSet.Schema = "{\"Name\": \"string\", \"Age\": \"int\", \"City\": \"string\"}";
+        var request = new RemoveDuplicateRowsRequest
+        {
+            ColumnNames = ["Name", "Age"],
+            KeepFirstOccurrence = true,
+            CaseSensitive = false
+        };
+
+        // Act
+        var method = typeof(DuplicateRowRemovalProcessor).GetMethod("ValidateColumnExistence",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = (NormalizationValidationResult)method!.Invoke(_processor, [dataSet, request])!;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsValid.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
+        result.Warnings.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ValidateColumnExistence_WithMissingColumns_ShouldReturnFailure()
+    {
+        // Arrange
+        var dataSet = TestDataBuilder.CreateDataSet(processed: true, rowCount: 10);
+        dataSet.Schema = "{\"Name\": \"string\", \"Age\": \"int\"}";
+        var request = new RemoveDuplicateRowsRequest
+        {
+            ColumnNames = ["Name", "Age", "NonExistentColumn"],
+            KeepFirstOccurrence = true,
+            CaseSensitive = false
+        };
+
+        // Act
+        var method = typeof(DuplicateRowRemovalProcessor).GetMethod("ValidateColumnExistence",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = (NormalizationValidationResult)method!.Invoke(_processor, [dataSet, request])!;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsValid.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNullOrEmpty();
+        result.ErrorMessage.Should().Contain("Columns not found in dataset");
+        result.ErrorMessage.Should().Contain("NonExistentColumn");
+    }
+
+    [Fact]
+    public void ValidateColumnExistence_WithEmptySchema_ShouldReturnSuccess()
+    {
+        // Arrange
+        var dataSet = TestDataBuilder.CreateDataSet(processed: true, rowCount: 10);
+        dataSet.Schema = null;
+        var request = new RemoveDuplicateRowsRequest
+        {
+            ColumnNames = ["Name", "Age"],
+            KeepFirstOccurrence = true,
+            CaseSensitive = false
+        };
+
+        // Act
+        var method = typeof(DuplicateRowRemovalProcessor).GetMethod("ValidateColumnExistence",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = (NormalizationValidationResult)method!.Invoke(_processor, [dataSet, request])!;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsValid.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
+        result.Warnings.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ValidateColumnExistence_WithInvalidJsonSchema_ShouldReturnSuccessWithWarning()
+    {
+        // Arrange
+        var dataSet = TestDataBuilder.CreateDataSet(processed: true, rowCount: 10);
+        dataSet.Schema = "invalid json schema";
+        var request = new RemoveDuplicateRowsRequest
+        {
+            ColumnNames = ["Name", "Age"],
+            KeepFirstOccurrence = true,
+            CaseSensitive = false
+        };
+
+        // Act
+        var method = typeof(DuplicateRowRemovalProcessor).GetMethod("ValidateColumnExistence",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = (NormalizationValidationResult)method!.Invoke(_processor, [dataSet, request])!;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsValid.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
+        result.Warnings.Should().HaveCount(1);
+        result.Warnings.First().Should().Contain("Unable to validate column existence");
+    }
+
+    [Fact]
+    public void ValidateColumnExistence_WithNullSchema_ShouldReturnSuccess()
+    {
+        // Arrange
+        var dataSet = TestDataBuilder.CreateDataSet(processed: true, rowCount: 10);
+        dataSet.Schema = "";
+        var request = new RemoveDuplicateRowsRequest
+        {
+            ColumnNames = ["Name", "Age"],
+            KeepFirstOccurrence = true,
+            CaseSensitive = false
+        };
+
+        // Act
+        var method = typeof(DuplicateRowRemovalProcessor).GetMethod("ValidateColumnExistence",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = (NormalizationValidationResult)method!.Invoke(_processor, [dataSet, request])!;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsValid.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
+        result.Warnings.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ValidateColumnExistence_WithEmptySchemaObject_ShouldReturnSuccess()
+    {
+        // Arrange
+        var dataSet = TestDataBuilder.CreateDataSet(processed: true, rowCount: 10);
+        dataSet.Schema = "{}";
+        var request = new RemoveDuplicateRowsRequest
+        {
+            ColumnNames = ["Name", "Age"],
+            KeepFirstOccurrence = true,
+            CaseSensitive = false
+        };
+
+        // Act
+        var method = typeof(DuplicateRowRemovalProcessor).GetMethod("ValidateColumnExistence",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = (NormalizationValidationResult)method!.Invoke(_processor, [dataSet, request])!;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsValid.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNullOrEmpty();
+        result.ErrorMessage.Should().Contain("Columns not found in dataset");
+    }
+
+    #endregion
+
     [Fact]
     public async Task EstimateProcessingTimeAsync_ShouldReturnReasonableEstimate()
     {
