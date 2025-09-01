@@ -275,7 +275,7 @@ public class DataSetRepository(NormaizeContext context) : IDataSetRepository
         var validData = data.Where(d => d != null).ToList();
         if (validData.Count == 0) return [];
 
-        var columns = validData.First()!.Keys.ToList();
+        var columns = validData[0]!.Keys.ToList();
         var analysis = new Dictionary<string, object>();
 
         foreach (var column in columns)

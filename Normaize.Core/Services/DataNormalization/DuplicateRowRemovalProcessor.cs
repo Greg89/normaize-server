@@ -192,7 +192,7 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
             : NormalizationValidationResult.Success();
     }
 
-    private NormalizationValidationResult ValidateColumnNames(RemoveDuplicateRowsRequest request)
+    private static NormalizationValidationResult ValidateColumnNames(RemoveDuplicateRowsRequest request)
     {
         if (request.ColumnNames == null || request.ColumnNames.Length == 0)
         {
@@ -207,7 +207,7 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
         return NormalizationValidationResult.Success();
     }
 
-    private NormalizationValidationResult ValidateDatasetState(DataSet dataSet)
+    private static NormalizationValidationResult ValidateDatasetState(DataSet dataSet)
     {
         if (!dataSet.IsProcessed)
         {
@@ -222,7 +222,7 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
         return NormalizationValidationResult.Success();
     }
 
-    private NormalizationValidationResult ValidateColumnExistence(DataSet dataSet, RemoveDuplicateRowsRequest request)
+    private static NormalizationValidationResult ValidateColumnExistence(DataSet dataSet, RemoveDuplicateRowsRequest request)
     {
         var warnings = new List<string>();
 
@@ -237,7 +237,7 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
             if (schema != null)
             {
                 var missingColumns = request.ColumnNames.Where(col => !schema.ContainsKey(col)).ToList();
-                if (missingColumns.Any())
+                if (missingColumns.Count > 0)
                 {
                     return NormalizationValidationResult.Failure($"Columns not found in dataset: {string.Join(", ", missingColumns)}");
                 }
