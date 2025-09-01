@@ -222,10 +222,8 @@ public class DataNormalizationController : BaseApiController
         return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     }
 
-    private string? GetCorrelationId()
+    private string? GetCorrelationId([FromHeader(Name = "X-Correlation-ID")] string? correlationId = null)
     {
-        return HttpContext.Request.Headers.TryGetValue("X-Correlation-ID", out var correlationId)
-            ? correlationId.ToString()
-            : HttpContext.TraceIdentifier;
+        return correlationId ?? HttpContext.TraceIdentifier;
     }
 }

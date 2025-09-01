@@ -111,8 +111,11 @@ public class DataNormalizationServiceTests
             .ReturnsAsync(dataSet);
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.SubmitDuplicateRowRemovalJobAsync(dataSetId, request, unauthorizedUserId));
+
+        exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
+        exception.Message.Should().Contain("Failed to submit duplicate row removal job for dataset 1");
     }
 
     [Fact]
@@ -214,8 +217,11 @@ public class DataNormalizationServiceTests
             .ReturnsAsync(new[] { job });
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.GetJobStatusAsync(jobId, unauthorizedUserId));
+
+        exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
+        exception.Message.Should().Contain("Failed to get status for job job123");
     }
 
     [Fact]
@@ -357,8 +363,11 @@ public class DataNormalizationServiceTests
             .ReturnsAsync(dataSet);
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _service.GetDataSetJobsAsync(dataSetId, unauthorizedUserId));
+
+        exception.InnerException.Should().BeOfType<UnauthorizedAccessException>();
+        exception.Message.Should().Contain("Failed to get jobs for dataset 1");
     }
 
     [Fact]

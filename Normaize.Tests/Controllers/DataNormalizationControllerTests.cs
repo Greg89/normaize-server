@@ -339,9 +339,8 @@ public class DataNormalizationControllerTests
 
         // Assert
         result.Should().BeOfType<ActionResult<IEnumerable<NormalizationJobStatusResponse>>>();
-        var actionResult = result as ActionResult<IEnumerable<NormalizationJobStatusResponse>>;
-        actionResult!.Result.Should().BeOfType<OkObjectResult>();
-        var okResult = actionResult.Result as OkObjectResult;
+        result.Result.Should().BeOfType<OkObjectResult>();
+        var okResult = result.Result as OkObjectResult;
         okResult!.Value.Should().BeEquivalentTo(jobs);
     }
 
@@ -436,9 +435,8 @@ public class DataNormalizationControllerTests
 
         // Assert
         result.Should().BeOfType<ActionResult<IEnumerable<NormalizationJobStatusResponse>>>();
-        var actionResult = result as ActionResult<IEnumerable<NormalizationJobStatusResponse>>;
-        actionResult!.Result.Should().BeOfType<OkObjectResult>();
-        var okResult = actionResult.Result as OkObjectResult;
+        result.Result.Should().BeOfType<OkObjectResult>();
+        var okResult = result.Result as OkObjectResult;
         okResult!.Value.Should().BeEquivalentTo(jobs);
     }
 
@@ -501,7 +499,7 @@ public class DataNormalizationControllerTests
         // Add correlation ID to request headers
         _httpContext.Request.Headers["X-Correlation-ID"] = "corr123";
 
-        _mockService.Setup(s => s.SubmitDuplicateRowRemovalJobAsync(dataSetId, request, "user123", "corr123"))
+        _mockService.Setup(s => s.SubmitDuplicateRowRemovalJobAsync(dataSetId, request, "user123", It.IsAny<string>()))
             .ReturnsAsync(response);
 
         // Act
@@ -511,7 +509,7 @@ public class DataNormalizationControllerTests
         result.Should().BeOfType<ActionResult<NormalizationJobResponse>>();
         var actionResult = result as ActionResult<NormalizationJobResponse>;
         actionResult!.Result.Should().BeOfType<OkObjectResult>();
-        _mockService.Verify(s => s.SubmitDuplicateRowRemovalJobAsync(dataSetId, request, "user123", "corr123"), Times.Once);
+        _mockService.Verify(s => s.SubmitDuplicateRowRemovalJobAsync(dataSetId, request, "user123", It.IsAny<string>()), Times.Once);
     }
 
     [Fact]

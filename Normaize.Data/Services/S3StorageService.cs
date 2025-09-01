@@ -34,10 +34,10 @@ public class S3StorageService : IStorageService, IDisposable
     /// <exception cref="ArgumentException">Thrown when required AWS configuration is missing.</exception>
     public S3StorageService(IConfiguration configuration, ILogger<S3StorageService> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger;
+        ArgumentNullException.ThrowIfNull(_logger);
 
-        if (configuration == null)
-            throw new ArgumentNullException(nameof(configuration));
+        ArgumentNullException.ThrowIfNull(configuration);
 
         var accessKey = configuration[SharedConstants.EnvironmentVariables.AWS_ACCESS_KEY_ID]
             ?? throw new ArgumentException("AWS_ACCESS_KEY_ID configuration is required");
@@ -341,8 +341,7 @@ public class S3StorageService : IStorageService, IDisposable
     /// <exception cref="ArgumentException">Thrown when required properties are missing or invalid.</exception>
     private static void ValidateFileUploadRequest(FileUploadRequest fileRequest)
     {
-        if (fileRequest == null)
-            throw new ArgumentNullException(nameof(fileRequest));
+        ArgumentNullException.ThrowIfNull(fileRequest);
 
         if (string.IsNullOrWhiteSpace(fileRequest.FileName))
             throw new ArgumentException("FileName is required", nameof(fileRequest));
@@ -359,8 +358,7 @@ public class S3StorageService : IStorageService, IDisposable
     /// <exception cref="ArgumentException">Thrown when <paramref name="filePath"/> is empty or whitespace.</exception>
     private static void ValidateFilePath(string filePath)
     {
-        if (filePath == null)
-            throw new ArgumentNullException(nameof(filePath));
+        ArgumentNullException.ThrowIfNull(filePath);
 
         if (string.IsNullOrWhiteSpace(filePath))
             throw new ArgumentException("File path cannot be null or empty", nameof(filePath));

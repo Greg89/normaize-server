@@ -100,9 +100,9 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
 
             return results;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogWarning("Duplicate row removal cancelled for dataset {DataSetId}", dataSet.Id);
+            _logger.LogWarning(ex, "Duplicate row removal cancelled for dataset {DataSetId}", dataSet.Id);
             throw;
         }
         catch (Exception ex)
@@ -187,7 +187,7 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
             warnings.Add($"Estimated processing time ({estimatedTime}ms) exceeds default timeout");
         }
 
-        return warnings.Any()
+        return warnings.Count > 0
             ? NormalizationValidationResult.SuccessWithWarnings(warnings)
             : NormalizationValidationResult.Success();
     }
@@ -248,7 +248,7 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
             warnings.Add("Unable to validate column existence - proceeding with caution");
         }
 
-        return warnings.Any()
+        return warnings.Count > 0
             ? NormalizationValidationResult.SuccessWithWarnings(warnings)
             : NormalizationValidationResult.Success();
     }
@@ -257,10 +257,13 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
     {
         _logger.LogDebug("Loading rows for dataset {DataSetId}", dataSet.Id);
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (dataSet.UseSeparateTable)
         {
             // Load from separate table for large datasets
             var rows = await _dataSetRowRepository.GetByDataSetIdAsync(dataSet.Id);
+            cancellationToken.ThrowIfCancellationRequested();
             return rows.ToList();
         }
         else
@@ -274,7 +277,8 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
             try
             {
                 var rows = JsonSerializer.Deserialize<List<DataSetRow>>(dataSet.ProcessedData);
-                return rows ?? new List<DataSetRow>();
+                cancellationToken.ThrowIfCancellationRequested();
+                return rows ?? [];
             }
             catch (JsonException ex)
             {
@@ -283,7 +287,7 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
         }
     }
 
-    private Dictionary<string, int> AnalyzeDatasetStructure(DataSet dataSet, string[] columnNames)
+    private static Dictionary<string, int> AnalyzeDatasetStructure(DataSet dataSet, string[] columnNames)
     {
         if (string.IsNullOrEmpty(dataSet.Schema))
         {
@@ -372,14 +376,13 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
             {
                 _logger.LogWarning(ex, "Failed to parse row data for row {RowId}", row.Id);
                 // Skip malformed rows
-                continue;
             }
         }
 
         return Task.FromResult((uniqueRows, duplicateCount));
     }
 
-    private string CreateDuplicateKey(List<object> rowData, Dictionary<string, int> columnIndices, bool caseSensitive)
+    private static string CreateDuplicateKey(List<object> rowData, Dictionary<string, int> columnIndices, bool caseSensitive)
     {
         var keyParts = new List<string>();
 
@@ -404,6 +407,8 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
     {
         _logger.LogDebug("Updating dataset {DataSetId} with {UniqueRowCount} unique rows", dataSet.Id, uniqueRows.Count);
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         // Update row count
         dataSet.RowCount = uniqueRows.Count;
         dataSet.LastModifiedAt = DateTime.UtcNow;
@@ -413,12 +418,15 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
             // For separate table, we need to delete old rows and add new ones
             // This is a simplified approach - in production, you might want to use transactions
             await _dataSetRowRepository.DeleteByDataSetIdAsync(dataSet.Id);
+            cancellationToken.ThrowIfCancellationRequested();
             await _dataSetRowRepository.AddRangeAsync(uniqueRows);
+            cancellationToken.ThrowIfCancellationRequested();
         }
         else
         {
             // Update embedded data
             dataSet.ProcessedData = JsonSerializer.Serialize(uniqueRows);
+            cancellationToken.ThrowIfCancellationRequested();
         }
 
         // Update preview data if it exists
@@ -427,10 +435,12 @@ public class DuplicateRowRemovalProcessor : IDuplicateRowRemovalProcessor
             try
             {
                 var previewRows = JsonSerializer.Deserialize<List<object>>(dataSet.PreviewData);
+                cancellationToken.ThrowIfCancellationRequested();
                 if (previewRows != null)
                 {
                     var updatedPreview = uniqueRows.Take(100).Select(r => r.Data).ToList();
                     dataSet.PreviewData = JsonSerializer.Serialize(updatedPreview);
+                    cancellationToken.ThrowIfCancellationRequested();
                 }
             }
             catch (JsonException ex)

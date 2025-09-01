@@ -60,11 +60,11 @@ public class StartupService : IStartupService
         IOptions<StartupConfigurationOptions> startupConfig,
         IAppConfigurationService appConfigService)
     {
-        ArgumentNullException.ThrowIfNull(logger, nameof(logger));
-        ArgumentNullException.ThrowIfNull(healthCheckService, nameof(healthCheckService));
-        ArgumentNullException.ThrowIfNull(migrationService, nameof(migrationService));
-        ArgumentNullException.ThrowIfNull(startupConfig, nameof(startupConfig));
-        ArgumentNullException.ThrowIfNull(appConfigService, nameof(appConfigService));
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(healthCheckService);
+        ArgumentNullException.ThrowIfNull(migrationService);
+        ArgumentNullException.ThrowIfNull(startupConfig);
+        ArgumentNullException.ThrowIfNull(appConfigService);
 
         _logger = logger;
         _healthCheckService = healthCheckService;

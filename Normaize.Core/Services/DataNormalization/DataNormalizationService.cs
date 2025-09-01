@@ -109,7 +109,7 @@ public class DataNormalizationService : IDataNormalizationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to submit duplicate row removal job for dataset {DataSetId}", dataSetId);
-            throw;
+            throw new InvalidOperationException($"Failed to submit duplicate row removal job for dataset {dataSetId}", ex);
         }
     }
 
@@ -161,7 +161,7 @@ public class DataNormalizationService : IDataNormalizationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get status for job {JobId}", jobId);
-            throw;
+            throw new InvalidOperationException($"Failed to get status for job {jobId}", ex);
         }
     }
 
@@ -231,7 +231,7 @@ public class DataNormalizationService : IDataNormalizationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to cancel job {JobId}", jobId);
-            throw;
+            throw new InvalidOperationException($"Failed to cancel job {jobId}", ex);
         }
     }
 
@@ -289,7 +289,7 @@ public class DataNormalizationService : IDataNormalizationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get jobs for user {UserId}", userId);
-            throw;
+            throw new InvalidOperationException($"Failed to get jobs for user {userId}", ex);
         }
     }
 
@@ -344,7 +344,7 @@ public class DataNormalizationService : IDataNormalizationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get jobs for dataset {DataSetId}", dataSetId);
-            throw;
+            throw new InvalidOperationException($"Failed to get jobs for dataset {dataSetId}", ex);
         }
     }
 
