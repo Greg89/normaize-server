@@ -9,6 +9,7 @@ using Normaize.Data.Services;
 using Normaize.Core.Services;
 using Normaize.Core.Services.Visualization;
 using Normaize.Core.Services.FileUpload;
+using Normaize.Core.Services.DataNormalization;
 using System.Diagnostics;
 
 namespace Normaize.API.Configuration;
@@ -318,7 +319,37 @@ public static class ServiceConfiguration
 
             var connectionString = $"{DatabaseConstants.Database.SERVER_PREFIX}{mysqlHost};{DatabaseConstants.Database.DATABASE_PREFIX}{mysqlDatabase};{DatabaseConstants.Database.USER_PREFIX}{mysqlUser};{DatabaseConstants.Database.PASSWORD_PREFIX}{mysqlPassword};{DatabaseConstants.Database.PORT_PREFIX}{mysqlPort};{DatabaseConstants.Database.CHARSET_PREFIX}{DatabaseConstants.Database.DEFAULT_CHARSET};{DatabaseConstants.Database.ALLOW_LOAD_LOCAL_INFILE};{DatabaseConstants.Database.CONVERT_ZERO_DATETIME};{DatabaseConstants.Database.ALLOW_ZERO_DATETIME};";
 
+            // Configure DbContext options
+            var dbContextOptions = new DbContextOptionsBuilder<NormaizeContext>()
+                .UseMySql(connectionString, new MySqlServerVersion(new Version(DatabaseConstants.Database.MYSQL_VERSION)))
+                .Options;
+
+            // Configure based on environment
+            if (environment.Equals(SharedConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
+            {
+                dbContextOptions = new DbContextOptionsBuilder<NormaizeContext>()
+                    .UseMySql(connectionString, new MySqlServerVersion(new Version(DatabaseConstants.Database.MYSQL_VERSION)))
+                    .EnableSensitiveDataLogging()
+                    .EnableDetailedErrors()
+                    .Options;
+            }
+
+            // Register DbContext and DbContextFactory with singleton options
+            builder.Services.AddSingleton(dbContextOptions);
             builder.Services.AddDbContext<NormaizeContext>(options =>
+            {
+                options.UseMySql(connectionString, new MySqlServerVersion(new Version(DatabaseConstants.Database.MYSQL_VERSION)));
+
+                // Configure based on environment
+                if (environment.Equals(SharedConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
+                {
+                    options.EnableSensitiveDataLogging();
+                    options.EnableDetailedErrors();
+                }
+            });
+
+            // Add DbContextFactory for singleton services that need DbContext
+            builder.Services.AddDbContextFactory<NormaizeContext>(options =>
             {
                 options.UseMySql(connectionString, new MySqlServerVersion(new Version(DatabaseConstants.Database.MYSQL_VERSION)));
 
@@ -334,6 +365,10 @@ public static class ServiceConfiguration
         {
             logger.LogInformation("No database connection detected, using in-memory database. CorrelationId: {CorrelationId}", correlationId);
             builder.Services.AddDbContext<NormaizeContext>(options =>
+                options.UseInMemoryDatabase(DatabaseConstants.Database.TEST_DATABASE_NAME));
+
+            // Add DbContextFactory for singleton services that need DbContext
+            builder.Services.AddDbContextFactory<NormaizeContext>(options =>
                 options.UseInMemoryDatabase(DatabaseConstants.Database.TEST_DATABASE_NAME));
         }
     }
@@ -536,6 +571,10 @@ public static class ServiceConfiguration
         builder.Services.Configure<JobQueueOptions>(
             builder.Configuration.GetSection("JobQueue"));
         builder.Services.AddScoped<IJobQueueService, JobQueueService>();
+
+        // Register data normalization services
+        builder.Services.AddScoped<IDataNormalizationService, DataNormalizationService>();
+        builder.Services.AddScoped<IDuplicateRowRemovalProcessor, DuplicateRowRemovalProcessor>();
 
         // Register background services
         builder.Services.AddHostedService<DataNormalizationBackgroundService>();

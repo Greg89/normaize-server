@@ -19,23 +19,19 @@ public class DataNormalizationBackgroundService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DataNormalizationBackgroundService> _logger;
     private readonly DataNormalizationBackgroundServiceOptions _options;
-    private readonly IJobQueueService _jobQueueService;
 
     public DataNormalizationBackgroundService(
         IServiceProvider serviceProvider,
         ILogger<DataNormalizationBackgroundService> logger,
-        IOptions<DataNormalizationBackgroundServiceOptions> options,
-        IJobQueueService jobQueueService)
+        IOptions<DataNormalizationBackgroundServiceOptions> options)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(jobQueueService);
 
         _serviceProvider = serviceProvider;
         _logger = logger;
         _options = options.Value;
-        _jobQueueService = jobQueueService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -46,8 +42,11 @@ public class DataNormalizationBackgroundService : BackgroundService
         {
             try
             {
+                using var scope = _serviceProvider.CreateScope();
+                var jobQueueService = scope.ServiceProvider.GetRequiredService<IJobQueueService>();
+
                 // Dequeue next job
-                var job = await _jobQueueService.DequeueJobAsync(stoppingToken);
+                var job = await jobQueueService.DequeueJobAsync(stoppingToken);
 
                 if (job != null)
                 {
@@ -55,7 +54,7 @@ public class DataNormalizationBackgroundService : BackgroundService
                         job.Id, job.DataSetId);
 
                     // Process the job
-                    await ProcessJobAsync(job, stoppingToken);
+                    await ProcessJobAsync(job, jobQueueService, stoppingToken);
                 }
                 else
                 {
@@ -80,19 +79,19 @@ public class DataNormalizationBackgroundService : BackgroundService
         _logger.LogInformation("Data normalization background service stopped");
     }
 
-    private async Task ProcessJobAsync(DataNormalizationJob job, CancellationToken cancellationToken)
+    private async Task ProcessJobAsync(DataNormalizationJob job, IJobQueueService jobQueueService, CancellationToken cancellationToken)
     {
         try
         {
             // Mark job as started
-            await _jobQueueService.MarkJobAsStartedAsync(job.Id);
+            await jobQueueService.MarkJobAsStartedAsync(job.Id);
 
             // Create progress callback
             var progress = new Progress<int>(async (percentage) =>
             {
                 try
                 {
-                    await _jobQueueService.UpdateJobProgressAsync(job.Id, percentage, GetProgressMessage(percentage));
+                    await jobQueueService.UpdateJobProgressAsync(job.Id, percentage, GetProgressMessage(percentage));
                 }
                 catch (Exception ex)
                 {
@@ -104,7 +103,7 @@ public class DataNormalizationBackgroundService : BackgroundService
             switch (job.OperationType)
             {
                 case DataNormalizationConstants.DataNormalization.REMOVE_DUPLICATE_ROWS:
-                    await ProcessDuplicateRowRemovalAsync(job, progress, cancellationToken);
+                    await ProcessDuplicateRowRemovalAsync(job, progress, jobQueueService, cancellationToken);
                     break;
 
                 default:
@@ -116,13 +115,13 @@ public class DataNormalizationBackgroundService : BackgroundService
             _logger.LogError(ex, "Failed to process job {JobId}", job.Id);
 
             // Mark job as failed
-            await _jobQueueService.MarkJobAsFailedAsync(job.Id, ex.Message);
+            await jobQueueService.MarkJobAsFailedAsync(job.Id, ex.Message);
 
             // Schedule retry if appropriate
             if (job.RetryCount < job.MaxRetries)
             {
                 var nextRetryAt = DateTime.UtcNow.AddMinutes(CalculateRetryDelay(job.RetryCount));
-                await _jobQueueService.RetryJobAsync(job.Id, nextRetryAt);
+                await jobQueueService.RetryJobAsync(job.Id, nextRetryAt);
             }
         }
     }
@@ -130,6 +129,7 @@ public class DataNormalizationBackgroundService : BackgroundService
     private async Task ProcessDuplicateRowRemovalAsync(
         DataNormalizationJob job,
         IProgress<int> progress,
+        IJobQueueService jobQueueService,
         CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
@@ -159,7 +159,7 @@ public class DataNormalizationBackgroundService : BackgroundService
 
         // Mark job as completed
         var resultsJson = JsonSerializer.Serialize(results);
-        await _jobQueueService.MarkJobAsCompletedAsync(job.Id, resultsJson);
+        await jobQueueService.MarkJobAsCompletedAsync(job.Id, resultsJson);
 
         _logger.LogInformation("Successfully completed duplicate row removal job {JobId}. Removed {DuplicateCount} duplicates, {RemainingCount} rows remaining",
             job.Id, results.DuplicateRowsRemoved, results.RowsRemaining);
