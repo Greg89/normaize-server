@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Normaize.DataNormalization.Domain.Events;
 
 namespace Normaize.DataNormalization.Domain.Aggregates;
 

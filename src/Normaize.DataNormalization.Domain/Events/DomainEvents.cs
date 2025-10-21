@@ -1,4 +1,5 @@
 using System;
+using Normaize.DataNormalization.Domain.Aggregates;
 
 namespace Normaize.DataNormalization.Domain.Events;
 
