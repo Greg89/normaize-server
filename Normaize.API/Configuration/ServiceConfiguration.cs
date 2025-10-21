@@ -10,6 +10,8 @@ using Normaize.Core.Services;
 using Normaize.Core.Services.Visualization;
 using Normaize.Core.Services.FileUpload;
 using Normaize.Core.Services.DataNormalization;
+using Normaize.DataNormalization.Infrastructure;
+using Normaize.DataNormalization.Infrastructure.Data;
 using System.Diagnostics;
 
 namespace Normaize.API.Configuration;
@@ -288,6 +290,7 @@ public static class ServiceConfiguration
         logger.LogInformation("Configuring infrastructure services. CorrelationId: {CorrelationId}", correlationId);
 
         ConfigureDatabase(builder, logger, correlationId);
+        ConfigureDataNormalizationDatabase(builder, logger, correlationId);
         ConfigureCors(builder, logger, correlationId);
         ConfigureStorageService(builder, logger, correlationId);
         ConfigureRepositories(builder, logger, correlationId);
@@ -371,6 +374,71 @@ public static class ServiceConfiguration
             builder.Services.AddDbContextFactory<NormaizeContext>(options =>
                 options.UseInMemoryDatabase(DatabaseConstants.Database.TEST_DATABASE_NAME));
         }
+    }
+
+    private static void ConfigureDataNormalizationDatabase(WebApplicationBuilder builder, ILogger logger, string correlationId)
+    {
+        logger.LogDebug("Configuring Data Normalization database. CorrelationId: {CorrelationId}", correlationId);
+
+        // Get environment directly
+        var environment = Environment.GetEnvironmentVariable(SharedConstants.EnvironmentVariables.ASPNETCORE_ENVIRONMENT) ?? SharedConstants.Environment.DEVELOPMENT;
+
+        // Check for PostgreSQL connection
+        var postgresHost = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "localhost";
+        var postgresDatabase = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "normaize";
+        var postgresUser = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "normaize_user";
+        var postgresPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "normaize_password";
+        var postgresPort = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
+
+        var connectionString = $"Host={postgresHost};Port={postgresPort};Database={postgresDatabase};Username={postgresUser};Password={postgresPassword}";
+
+        logger.LogInformation("Configuring PostgreSQL database for Data Normalization. Environment: {Environment}, CorrelationId: {CorrelationId}",
+            environment, correlationId);
+
+        // Configure DataNormalizationDbContext
+        builder.Services.AddDbContext<DataNormalizationDbContext>(options =>
+        {
+            options.UseNpgsql(connectionString, npgsqlOptions =>
+            {
+                npgsqlOptions.MigrationsAssembly(typeof(DataNormalizationDbContext).Assembly.FullName);
+                npgsqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 3,
+                    maxRetryDelay: TimeSpan.FromSeconds(30),
+                    errorCodesToAdd: null);
+            });
+
+            // Configure based on environment
+            if (environment.Equals(SharedConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
+            {
+                options.EnableSensitiveDataLogging();
+                options.EnableDetailedErrors();
+            }
+        });
+
+        // Add DbContextFactory for singleton services
+        builder.Services.AddDbContextFactory<DataNormalizationDbContext>(options =>
+        {
+            options.UseNpgsql(connectionString, npgsqlOptions =>
+            {
+                npgsqlOptions.MigrationsAssembly(typeof(DataNormalizationDbContext).Assembly.FullName);
+                npgsqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 3,
+                    maxRetryDelay: TimeSpan.FromSeconds(30),
+                    errorCodesToAdd: null);
+            });
+
+            // Configure based on environment
+            if (environment.Equals(SharedConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
+            {
+                options.EnableSensitiveDataLogging();
+                options.EnableDetailedErrors();
+            }
+        });
+
+        // Add Data Normalization Infrastructure services
+        builder.Services.AddDataNormalizationInfrastructure(builder.Configuration);
+
+        logger.LogInformation("Data Normalization database configured successfully. CorrelationId: {CorrelationId}", correlationId);
     }
 
     private static void ConfigureCors(WebApplicationBuilder builder, ILogger logger, string correlationId)

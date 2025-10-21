@@ -239,13 +239,216 @@ src/
       WorkerHostedService.cs
 ```
 
-### Next Steps (Combined Approach)
-1. Create `Normaize.DataNormalization.Domain` project with `NormalizationJob` aggregate and domain events
-2. Create `Normaize.DataNormalization.Application` project with command/query handlers and background processing interfaces
-3. Implement `Normaize.DataNormalization.Infrastructure` with EF mappings, repositories, and concrete handlers
-4. Create new background worker that uses Application layer interfaces
-5. Add feature flag to switch between implementations
-6. Update API controllers to use Application layer
-7. Remove old background service and direct repository access
+### Detailed Migration Strategy (Infrastructure-First Approach)
+
+The migration follows a **strangler fig pattern** - building new functionality alongside existing code and gradually replacing it. This minimizes risk and allows for incremental validation.
+
+#### Phase 1: Infrastructure Foundation (Week 1-2)
+**Goal**: Establish the new DDD infrastructure without touching existing functionality
+
+1. **Complete Domain Layer**
+   - ✅ Create `NormalizationJob` aggregate (DONE)
+   - ✅ Define domain events (DONE)
+   - ✅ Create repository interfaces (DONE)
+   - Add value objects for job parameters (`DuplicateRemovalOptions`, `RetentionStrategy`)
+
+2. **Complete Application Layer**
+   - ✅ Create command/query contracts (DONE)
+   - ✅ Create background processing interfaces (DONE)
+   - Implement concrete command/query handlers
+   - Add application service interfaces
+
+3. **Complete Infrastructure Layer**
+   - ✅ Create basic service implementations (DONE)
+   - Implement EF Core repository (`NormalizationJobRepository`)
+   - Create EF Core configurations and mappings
+   - Implement concrete handlers (`RemoveDuplicatesHandler`)
+   - Add database migrations for new tables
+
+4. **Testing Infrastructure**
+   - ✅ Set up test projects (DONE)
+   - Add integration test database setup
+   - Create test data builders
+   - Add contract tests for repository interfaces
+
+#### Phase 2: Background Processing Migration (Week 3)
+**Goal**: Replace the existing background service with DDD-based implementation
+
+1. **Implement New Background Worker**
+   - Create `IBackgroundWorker` implementation
+   - Create `WorkerHostedService` wrapper
+   - Implement job router with operation-specific handlers
+   - Add heartbeat and visibility timeout logic
+
+2. **Feature Flag Implementation**
+   - Add configuration for `UseNewBackgroundWorker`
+   - Create service registration that switches between old/new workers
+   - Add monitoring and metrics for both implementations
+
+3. **Parallel Operation**
+   - Run both workers simultaneously during transition
+   - Compare job processing results
+   - Monitor performance and error rates
+   - Gradually increase traffic to new worker
+
+4. **Validation & Rollback**
+   - Add comprehensive logging for comparison
+   - Create rollback procedures
+   - Monitor job completion rates and error patterns
+
+#### Phase 3: API Endpoint Migration (Week 4-6)
+**Goal**: Migrate API endpoints one by one to use Application layer
+
+**Migration Order** (Low Risk → High Risk):
+1. **Get Job Status** (`GET /api/normalization/jobs/{id}`)
+   - Low risk: Read-only operation
+   - Simple query handler implementation
+   - Easy to validate results
+
+2. **List Jobs** (`GET /api/normalization/jobs`)
+   - Read-only operation
+   - Add pagination and filtering
+   - Validate against existing endpoint
+
+3. **Submit Job** (`POST /api/normalization/jobs`)
+   - Higher risk: Creates new jobs
+   - Command handler implementation
+   - Validate job creation and queuing
+
+4. **Retry Job** (`POST /api/normalization/jobs/{id}/retry`)
+   - Complex business logic
+   - State transition validation
+   - Error handling verification
+
+5. **Cancel Job** (`DELETE /api/normalization/jobs/{id}`)
+   - State management complexity
+   - Background worker coordination
+   - Final validation step
+
+**Per-Endpoint Migration Process**:
+```csharp
+// 1. Create Application layer handler
+public class GetJobStatusQueryHandler : IQueryHandler<GetJobStatusQuery, JobStatusDto?>
+{
+    // Implementation using new DDD structure
+}
+
+// 2. Add feature flag to controller
+[HttpGet("{id}")]
+public async Task<IActionResult> GetJobStatus(Guid id)
+{
+    if (_featureFlags.UseNewDataNormalization)
+    {
+        var query = new GetJobStatusQuery(id);
+        var result = await _queryHandler.HandleAsync(query);
+        return Ok(result);
+    }
+    
+    // Existing implementation
+    return await _legacyService.GetJobStatusAsync(id);
+}
+
+// 3. Test both paths
+// 4. Monitor and validate
+// 5. Remove feature flag and legacy code
+```
+
+#### Phase 4: Data Migration & Cleanup (Week 7-8)
+**Goal**: Migrate existing data and remove legacy code
+
+1. **Data Migration**
+   - Create migration scripts for existing `DataNormalizationJob` records
+   - Map to new `NormalizationJob` aggregate structure
+   - Validate data integrity
+   - Handle edge cases and corrupted data
+
+2. **Legacy Code Removal**
+   - Remove old background service
+   - Remove legacy repository implementations
+   - Remove unused interfaces and DTOs
+   - Clean up old test files
+
+3. **Final Validation**
+   - Run comprehensive integration tests
+   - Performance testing
+   - Load testing with production-like data
+   - Security review
+
+#### Phase 5: Documentation & Training (Week 9)
+**Goal**: Document new patterns and train team
+
+1. **Update Documentation**
+   - API documentation
+   - Architecture diagrams
+   - Development guidelines
+   - Troubleshooting guides
+
+2. **Team Training**
+   - DDD patterns and practices
+   - New testing strategies
+   - Debugging techniques
+   - Performance monitoring
+
+### Risk Mitigation Strategies
+
+#### Technical Risks
+- **Data Loss**: Parallel operation with validation
+- **Performance Regression**: Load testing and monitoring
+- **Integration Issues**: Comprehensive integration tests
+- **Rollback Complexity**: Feature flags and staged rollouts
+
+#### Operational Risks
+- **Team Knowledge Gap**: Pair programming and documentation
+- **Timeline Pressure**: Phased approach with clear milestones
+- **Scope Creep**: Strict adherence to migration phases
+
+### Success Metrics
+
+#### Technical Metrics
+- Test coverage > 90% for new code
+- Performance within 10% of baseline
+- Zero data loss during migration
+- Error rates < 0.1%
+
+#### Process Metrics
+- Migration completed within 9 weeks
+- Team confidence score > 8/10
+- Documentation completeness > 95%
+- Rollback time < 30 minutes
+
+### Rollback Procedures
+
+#### Immediate Rollback (< 30 minutes)
+1. Disable feature flags
+2. Stop new background worker
+3. Restart old background worker
+4. Verify system stability
+
+#### Full Rollback (< 4 hours)
+1. Revert code changes
+2. Restore database from backup
+3. Redeploy previous version
+4. Validate all functionality
+
+### Monitoring & Alerting
+
+#### Key Metrics to Monitor
+- Job processing rates
+- Error rates by endpoint
+- Response times
+- Memory usage
+- Database performance
+
+#### Alert Thresholds
+- Error rate > 1%
+- Response time > 2x baseline
+- Memory usage > 80%
+- Job queue depth > 1000
+
+This migration strategy prioritizes infrastructure first because it:
+1. **Reduces Risk**: Infrastructure changes don't affect user-facing APIs
+2. **Enables Validation**: Can test new patterns without breaking existing functionality
+3. **Provides Foundation**: Creates the base for API migrations
+4. **Allows Rollback**: Easy to revert infrastructure changes if issues arise
 
 

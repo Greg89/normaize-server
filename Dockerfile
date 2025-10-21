@@ -10,6 +10,11 @@ COPY ["Normaize.API/Normaize.API.csproj", "Normaize.API/"]
 COPY ["Normaize.Core/Normaize.Core.csproj", "Normaize.Core/"]
 COPY ["Normaize.Data/Normaize.Data.csproj", "Normaize.Data/"]
 
+# Copy new DDD project files
+COPY ["src/Normaize.DataNormalization.Domain/Normaize.DataNormalization.Domain.csproj", "src/Normaize.DataNormalization.Domain/"]
+COPY ["src/Normaize.DataNormalization.Application/Normaize.DataNormalization.Application.csproj", "src/Normaize.DataNormalization.Application/"]
+COPY ["src/Normaize.DataNormalization.Infrastructure/Normaize.DataNormalization.Infrastructure.csproj", "src/Normaize.DataNormalization.Infrastructure/"]
+
 # Restore dependencies
 RUN dotnet restore "Normaize.API/Normaize.API.csproj"
 
