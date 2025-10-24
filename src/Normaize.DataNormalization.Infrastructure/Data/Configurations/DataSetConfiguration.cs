@@ -34,67 +34,9 @@ public class DataSetConfiguration : IEntityTypeConfiguration<DataSet>
             .HasMaxLength(255)
             .IsRequired();
 
-        // Configure FileMetadata value object as owned entity
-        builder.OwnsOne(e => e.FileInfo, fileInfo =>
-        {
-            fileInfo.Property(f => f.FileName)
-                .HasColumnName("file_name")
-                .HasMaxLength(255)
-                .IsRequired();
-            
-            fileInfo.Property(f => f.FilePath)
-                .HasColumnName("file_path")
-                .HasMaxLength(500)
-                .IsRequired();
-            
-            fileInfo.Property(f => f.FileSize)
-                .HasColumnName("file_size");
-            
-            fileInfo.Property(f => f.DataHash)
-                .HasColumnName("data_hash")
-                .HasMaxLength(255);
-
-            // Configure FileType value object
-            fileInfo.Property(f => f.FileType.Value)
-                .HasColumnName("file_type")
-                .HasMaxLength(50)
-                .HasConversion(
-                    v => v,
-                    v => FileType.FromString(v))
-                .IsRequired();
-
-            // Configure StorageProvider value object
-            fileInfo.Property(f => f.StorageProvider.Value)
-                .HasColumnName("storage_provider")
-                .HasMaxLength(50)
-                .HasConversion(
-                    v => v,
-                    v => StorageProvider.FromString(v))
-                .IsRequired();
-        });
-
-        // Configure DatasetStatistics value object as owned entity
-        builder.OwnsOne(e => e.Statistics, stats =>
-        {
-            stats.Property(s => s.RowCount)
-                .HasColumnName("row_count")
-                .HasDefaultValue(0);
-            
-            stats.Property(s => s.ColumnCount)
-                .HasColumnName("column_count")
-                .HasDefaultValue(0);
-            
-            stats.Property(s => s.IsProcessed)
-                .HasColumnName("is_processed")
-                .HasDefaultValue(false);
-            
-            stats.Property(s => s.UseSeparateTable)
-                .HasColumnName("use_separate_table")
-                .HasDefaultValue(false);
-            
-            stats.Property(s => s.ProcessedAt)
-                .HasColumnName("processed_at");
-        });
+        // Temporarily ignore complex value objects for migration
+        builder.Ignore(e => e.FileInfo);
+        builder.Ignore(e => e.Statistics);
 
         builder.Property(e => e.UploadedAt)
             .HasColumnName("uploaded_at")
