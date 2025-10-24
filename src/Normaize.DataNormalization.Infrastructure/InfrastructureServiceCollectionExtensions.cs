@@ -1,11 +1,17 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Normaize.DataNormalization.Application.Interfaces;
+using Normaize.DataNormalization.Application.Commands;
+using Normaize.DataNormalization.Application.Queries;
+using Normaize.DataNormalization.Application.DTOs;
 using Normaize.DataNormalization.Domain.Repositories;
 using Normaize.DataNormalization.Infrastructure.Data;
 using Normaize.DataNormalization.Infrastructure.Repositories;
 using Normaize.DataNormalization.Infrastructure.Services;
+using Normaize.DataNormalization.Infrastructure.Handlers;
+using Normaize.DataNormalization.Infrastructure.Workers;
 
 namespace Normaize.DataNormalization.Infrastructure;
 
@@ -42,9 +48,26 @@ public static class InfrastructureServiceCollectionExtensions
         // Repositories
         services.AddScoped<INormalizationJobRepository, NormalizationJobRepository>();
 
-        // Services
+        // Application Services
         services.AddScoped<IJobQueue, EfCoreJobQueue>();
         services.AddScoped<IJobProgress, EfCoreJobProgress>();
+        services.AddScoped<INormalizationJobRouter, NormalizationJobRouter>();
+
+        // Command Handlers
+        services.AddScoped<ICommandHandler<SubmitJobCommand, Guid>, SubmitJobCommandHandler>();
+        services.AddScoped<ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid>, SubmitDuplicateRemovalJobCommandHandler>();
+        services.AddScoped<ICommandHandler<RetryJobCommand>, RetryJobCommandHandler>();
+        services.AddScoped<ICommandHandler<CancelJobCommand>, CancelJobCommandHandler>();
+
+        // Query Handlers
+        services.AddScoped<IQueryHandler<GetJobStatusQuery, JobStatusDto?>, GetJobStatusQueryHandler>();
+
+        // Operation Handlers
+        services.AddScoped<IRemoveDuplicatesHandler, RemoveDuplicatesHandler>();
+
+        // Background Workers
+        services.AddScoped<IBackgroundWorker, NormalizationWorker>();
+        services.AddHostedService<WorkerHostedService>();
 
         return services;
     }

@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Normaize.DataNormalization.Domain.Aggregates;
 using Normaize.DataNormalization.Domain.Events;
+using Normaize.DataNormalization.Domain.ValueObjects;
 using Xunit;
 
 namespace Normaize.DataNormalization.Domain.Tests.Aggregates;
@@ -241,6 +242,28 @@ public class NormalizationJobTests
 
         // Assert
         job.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void CreateDuplicateRemovalJob_WithValidOptions_ShouldCreateJobWithSerializedOptions()
+    {
+        // Arrange
+        var dataSetId = Guid.NewGuid();
+        var options = DuplicateRemovalOptions.KeepFirst(new[] { "name", "email" }, CaseSensitivity.Insensitive);
+
+        // Act
+        var job = NormalizationJob.CreateDuplicateRemovalJob(dataSetId, options);
+
+        // Assert
+        job.Should().NotBeNull();
+        job.DataSetId.Should().Be(dataSetId);
+        job.OperationType.Should().Be("RemoveDuplicates");
+        job.OperationParameters.Should().NotBeNullOrEmpty();
+        job.Status.Should().Be(JobStatus.Queued);
+        
+        // Verify the options can be deserialized back
+        var deserializedOptions = DuplicateRemovalOptions.Deserialize(job.OperationParameters);
+        deserializedOptions.Should().BeEquivalentTo(options);
     }
 
     private static NormalizationJob CreateValidJob()

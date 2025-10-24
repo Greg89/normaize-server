@@ -1,20 +1,40 @@
 using System;
+using Normaize.DataNormalization.Domain.Aggregates;
 
 namespace Normaize.DataNormalization.Application.DTOs;
 
-public class JobStatusDto
+public record JobStatusDto(
+    Guid Id,
+    Guid DataSetId,
+    string OperationType,
+    string OperationParameters,
+    string Status,
+    int RetryCount,
+    int MaxRetries,
+    DateTime CreatedAt,
+    DateTime? StartedAt,
+    DateTime? CompletedAt,
+    string? ErrorMessage,
+    string? Result,
+    int ProgressPercentage,
+    string? ProgressMessage)
 {
-    public Guid Id { get; set; }
-    public Guid DataSetId { get; set; }
-    public string OperationType { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
-    public int ProgressPercentage { get; set; }
-    public string? ProgressMessage { get; set; }
-    public string? ErrorMessage { get; set; }
-    public string? Result { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime? StartedAt { get; set; }
-    public DateTime? CompletedAt { get; set; }
-    public int RetryCount { get; set; }
-    public int MaxRetries { get; set; }
+    public static JobStatusDto FromDomain(NormalizationJob job)
+    {
+        return new JobStatusDto(
+            job.Id,
+            job.DataSetId,
+            job.OperationType,
+            job.OperationParameters,
+            job.Status.ToString(),
+            job.RetryCount,
+            job.MaxRetries,
+            job.CreatedAt,
+            job.StartedAt,
+            job.CompletedAt,
+            job.ErrorMessage,
+            job.Result,
+            job.ProgressPercentage,
+            job.ProgressMessage);
+    }
 }

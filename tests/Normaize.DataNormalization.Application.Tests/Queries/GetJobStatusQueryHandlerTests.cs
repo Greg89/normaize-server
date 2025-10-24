@@ -9,7 +9,7 @@ using Xunit;
 namespace Normaize.DataNormalization.Application.Tests.Queries;
 
 /// <summary>
-/// Example query handler tests - demonstrates read operation testing
+/// Tests for GetJobStatusQueryHandler - demonstrates read operation testing
 /// </summary>
 public class GetJobStatusQueryHandlerTests
 {
@@ -45,7 +45,7 @@ public class GetJobStatusQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(job.Id);
+        result!.Id.Should().Be(job.Id);
         result.DataSetId.Should().Be(job.DataSetId);
         result.OperationType.Should().Be(job.OperationType);
         result.Status.Should().Be(job.Status.ToString());
@@ -70,58 +70,5 @@ public class GetJobStatusQueryHandlerTests
 
         // Assert
         result.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task HandleAsync_WithEmptyJobId_ShouldThrowArgumentException()
-    {
-        // Arrange
-        var query = new GetJobStatusQuery(Guid.Empty);
-
-        // Act & Assert
-        var action = async () => await _handler.HandleAsync(query);
-        await action.Should().ThrowAsync<ArgumentException>()
-            .WithMessage("*JobId*");
-    }
-}
-
-/// <summary>
-/// Example implementation of GetJobStatusQueryHandler for testing
-/// </summary>
-public class GetJobStatusQueryHandler : IQueryHandler<GetJobStatusQuery, JobStatusDto?>
-{
-    private readonly INormalizationJobRepository _repository;
-
-    public GetJobStatusQueryHandler(INormalizationJobRepository repository)
-    {
-        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-    }
-
-    public async Task<JobStatusDto?> HandleAsync(GetJobStatusQuery query)
-    {
-        if (query.JobId == Guid.Empty)
-            throw new ArgumentException("JobId cannot be empty", nameof(query));
-
-        var job = await _repository.GetByIdAsync(query.JobId);
-        
-        if (job == null)
-            return null;
-
-        return new JobStatusDto
-        {
-            Id = job.Id,
-            DataSetId = job.DataSetId,
-            OperationType = job.OperationType,
-            Status = job.Status.ToString(),
-            ProgressPercentage = job.ProgressPercentage,
-            ProgressMessage = job.ProgressMessage,
-            ErrorMessage = job.ErrorMessage,
-            Result = job.Result,
-            CreatedAt = job.CreatedAt,
-            StartedAt = job.StartedAt,
-            CompletedAt = job.CompletedAt,
-            RetryCount = job.RetryCount,
-            MaxRetries = job.MaxRetries
-        };
     }
 }

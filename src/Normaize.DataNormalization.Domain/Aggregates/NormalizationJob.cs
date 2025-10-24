@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Normaize.DataNormalization.Domain.Events;
+using Normaize.DataNormalization.Domain.ValueObjects;
 
 namespace Normaize.DataNormalization.Domain.Aggregates;
 
@@ -11,8 +12,8 @@ public class NormalizationJob
 {
     public Guid Id { get; private set; }
     public Guid DataSetId { get; private set; }
-    public string OperationType { get; private set; }
-    public string OperationParameters { get; private set; }
+    public string OperationType { get; private set; } = string.Empty;
+    public string OperationParameters { get; private set; } = string.Empty;
     public JobStatus Status { get; private set; }
     public int RetryCount { get; private set; }
     public int MaxRetries { get; private set; }
@@ -46,6 +47,14 @@ public class NormalizationJob
 
         job._domainEvents.Add(new JobCreated(job.Id, job.DataSetId, job.OperationType));
         return job;
+    }
+
+    /// <summary>
+    /// Creates a duplicate removal job with strongly-typed options
+    /// </summary>
+    public static NormalizationJob CreateDuplicateRemovalJob(Guid dataSetId, DuplicateRemovalOptions options, int maxRetries = 5)
+    {
+        return Create(dataSetId, "RemoveDuplicates", options.Serialize(), maxRetries);
     }
 
     public void Start()
