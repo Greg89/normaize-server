@@ -50,10 +50,11 @@ public static class InfrastructureServiceCollectionExtensions
 
         // Domain Event Publishing
         services.AddScoped<IDomainEventPublisher, MediatRDomainEventPublisher>();
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(InfrastructureServiceCollectionExtensions).Assembly));
 
         // Application Services
-        services.AddScoped<IJobQueue, EfCoreJobQueue>();
-        services.AddScoped<IJobProgress, EfCoreJobProgress>();
+        services.AddScoped<IJobQueue, JobQueueService>();
+        services.AddScoped<IJobProgress, JobProgressService>();
         services.AddScoped<INormalizationJobRouter, NormalizationJobRouter>();
 
         // Command Handlers

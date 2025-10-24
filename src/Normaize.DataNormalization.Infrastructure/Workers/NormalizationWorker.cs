@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Normaize.DataNormalization.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Normaize.DataNormalization.Infrastructure.Workers;
 
@@ -16,66 +17,107 @@ public interface IBackgroundWorker
 }
 
 /// <summary>
-/// Background worker that processes normalization jobs from the queue
+/// Background worker that processes normalization jobs from the queue with improved error handling and service scoping
 /// </summary>
 public class NormalizationWorker : IBackgroundWorker
 {
-    private readonly IJobQueue _jobQueue;
-    private readonly INormalizationJobRouter _jobRouter;
-    private readonly IJobProgress _jobProgress;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<NormalizationWorker> _logger;
+    private readonly TimeSpan _pollingInterval;
+    private readonly TimeSpan _errorDelay;
 
     public NormalizationWorker(
-        IJobQueue jobQueue,
-        INormalizationJobRouter jobRouter,
-        IJobProgress jobProgress,
+        IServiceProvider serviceProvider,
         ILogger<NormalizationWorker> logger)
     {
-        _jobQueue = jobQueue ?? throw new ArgumentNullException(nameof(jobQueue));
-        _jobRouter = jobRouter ?? throw new ArgumentNullException(nameof(jobRouter));
-        _jobProgress = jobProgress ?? throw new ArgumentNullException(nameof(jobProgress));
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _pollingInterval = TimeSpan.FromSeconds(5); // Poll every 5 seconds
+        _errorDelay = TimeSpan.FromSeconds(30); // Wait 30 seconds after errors
     }
 
     public async Task ProcessJobsAsync(CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Normalization worker started");
+
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                var job = await _jobQueue.DequeueAsync();
-                if (job == null)
-                {
-                    // No jobs available, wait before checking again
-                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
-                    continue;
-                }
-
-                _logger.LogInformation("Processing job {JobId} of type {OperationType}", job.Id, job.OperationType);
-
-                try
-                {
-                    // Process the job using the router
-                    await _jobRouter.HandleAsync(job, _jobProgress);
-                    
-                    // Acknowledge successful processing
-                    await _jobQueue.AckAsync(job.Id);
-                    
-                    _logger.LogInformation("Successfully processed job {JobId}", job.Id);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to process job {JobId}", job.Id);
-                    
-                    // Negative acknowledge - will retry or move to dead letter
-                    await _jobQueue.NackAsync(job.Id, ex.Message, TimeSpan.FromMinutes(5));
-                }
+                await ProcessSingleJobAsync(cancellationToken);
+                
+                // Wait before polling for the next job
+                await Task.Delay(_pollingInterval, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Normalization worker shutdown requested");
+                break;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in background worker main loop");
-                // Continue processing after a delay to avoid tight error loops
-                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+                _logger.LogError(ex, "Unexpected error in normalization worker. Will retry after delay.");
+                
+                try
+                {
+                    await Task.Delay(_errorDelay, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+            }
+        }
+
+        _logger.LogInformation("Normalization worker stopped");
+    }
+
+    private async Task ProcessSingleJobAsync(CancellationToken cancellationToken)
+    {
+        // Use a new scope for each job to ensure proper resource disposal
+        using var scope = _serviceProvider.CreateScope();
+        var services = scope.ServiceProvider;
+
+        var jobQueue = services.GetRequiredService<IJobQueue>();
+        var jobProgress = services.GetRequiredService<IJobProgress>();
+        var jobRouter = services.GetRequiredService<INormalizationJobRouter>();
+
+        // Try to dequeue a job
+        var job = await jobQueue.DequeueAsync();
+        if (job == null)
+        {
+            _logger.LogTrace("No jobs available in queue");
+            return;
+        }
+
+        _logger.LogInformation("Processing job {JobId} of type {OperationType} for dataset {DataSetId}", 
+            job.Id, job.OperationType, job.DataSetId);
+
+        try
+        {
+            // Report that we've started processing
+            await jobProgress.StartedAsync(job.Id);
+
+            // Route the job to the appropriate handler
+            await jobRouter.HandleAsync(job, jobProgress);
+
+            // Acknowledge successful completion
+            await jobQueue.AckAsync(job.Id);
+
+            _logger.LogInformation("Successfully processed job {JobId}", job.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing job {JobId}: {Error}", job.Id, ex.Message);
+
+            try
+            {
+                // Negative acknowledge with the error
+                await jobQueue.NackAsync(job.Id, ex.Message);
+            }
+            catch (Exception nackEx)
+            {
+                _logger.LogError(nackEx, "Error negative acknowledging job {JobId}", job.Id);
             }
         }
     }

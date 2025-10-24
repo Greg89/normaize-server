@@ -1,9 +1,10 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using Normaize.DataNormalization.Infrastructure.Workers;
+using Normaize.DataNormalization.Application.Interfaces;
 
 namespace Normaize.DataNormalization.Infrastructure.Workers;
 
@@ -34,9 +35,24 @@ public class WorkerHostedService : BackgroundService
         {
             await worker.ProcessJobsAsync(stoppingToken);
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Data Normalization Worker cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogCritical(ex, "Data Normalization Worker failed with unhandled exception");
+            throw; // Re-throw to crash the service and trigger restart
+        }
         finally
         {
             _logger.LogInformation("Data Normalization Worker stopped");
         }
+    }
+
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Data Normalization Worker stop requested");
+        await base.StopAsync(cancellationToken);
     }
 }
