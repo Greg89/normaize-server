@@ -451,315 +451,354 @@ This migration strategy prioritizes infrastructure first because it:
 3. **Provides Foundation**: Creates the base for API migrations
 4. **Allows Rollback**: Easy to revert infrastructure changes if issues arise
 
-## 🚀 **NEXT STEPS: Database Schema Migration & Entity Mapping**
+## ✅ **COMPLETED PHASE 1: DDD Foundation & Database Schema (October 2025)**
 
-### **Phase 1a: Complete Database Foundation (Week 2-3)**
+### **Achievements Summary**
 
-Before proceeding to service migration, we need to establish complete database schema compatibility between the existing system and our new DDD bounded context. Currently, we have a mismatch:
+**✅ Domain Layer Complete**
+- `NormalizationJob` aggregate with proper state machine (Queued → InProgress → Completed/Failed/DeadLettered)
+- Domain events: `JobCreated`, `JobStarted`, `JobProgressUpdated`, `JobCompleted`, `JobFailed`, `JobMovedToDeadLetter`
+- Value objects: `DuplicateRemovalOptions`, `ColumnName`, `FileType`, `StorageProvider`, `FileMetadata`, `DatasetStatistics`
+- Repository interfaces: `INormalizationJobRepository`
+- **59 passing domain tests** with comprehensive coverage
 
-**Current Status:**
-- ✅ New DDD `NormalizationJob` aggregate designed
-- ✅ New `DataNormalizationDbContext` with basic schema
-- ❌ Missing entities: `DataSet`, `UserSettings`, `Analysis`, `AuditLogs`
-- ❌ No data migration strategy from existing `DataNormalizationJob` → new `NormalizationJob`
+**✅ Application Layer Complete**
+- Command handlers: `SubmitJobCommandHandler`
+- Query handlers: `GetJobStatusQueryHandler` 
+- DTOs with proper domain mapping: `JobStatusDto`
+- Background processing interfaces: `IJobQueue`, `IJobProgress`, `IBackgroundWorker`
+- **3 passing application tests**
 
-### **Critical Database Mapping Issues to Resolve**
+**✅ Infrastructure Layer Foundation**
+- Entity Framework configurations extracted to separate classes
+- `DataNormalizationDbContext` with clean configuration pattern
+- Database migration created and applied successfully
+- Service registrations in `InfrastructureServiceCollectionExtensions`
 
-#### 1. **Entity Mismatch Analysis**
+**✅ Database Schema Modernization**
+- **Migrated from int to Guid IDs** for all entities (DataSet, NormalizationJob, NormalizationAuditLog)
+- Proper PostgreSQL schema with `uuid_generate_v4()` defaults
+- Foreign key relationships established
+- Performance indexes configured
+- JSONB columns for complex data storage
 
-**Existing System Entities:**
+### **Key Technical Decisions Made**
+
+1. **Full Guid Migration**: All entity IDs now use Guid for proper DDD encapsulation
+2. **Clean Configuration Pattern**: Entity configurations separated into dedicated classes
+3. **Value Object Strategy**: Domain-rich value objects with business logic
+4. **Event-Driven Architecture**: Domain events for cross-cutting concerns
+5. **Test-First Approach**: Comprehensive test coverage from day one
+
+## 🚀 **PHASE 2: Service Implementation & Integration (Next Steps)**
+
+Since this is a full rewrite without legacy constraints, we can build the complete solution directly without dual-write patterns or gradual migration strategies.
+
+### **Priority 1: Complete Core Services (Week 1-2)**
+
+**Step 1: Repository Implementation**
 ```csharp
-// In main NormaizeContext
-DataSet                    // Core entity - we need this!
-DataNormalizationJob       // Maps to our NormalizationJob aggregate  
-DataNormalizationAuditLog  // Maps to domain events
-UserSettings              // Cross-cutting concern
-Analysis                  // Related to dataset processing
-DataSetRow                // Raw data storage
-DataSetAuditLog           // Dataset audit trail
-```
-
-**Our DDD Context Currently Has:**
-```csharp
-// In DataNormalizationDbContext  
-NormalizationJob          // ✅ Main aggregate
-// Missing everything else! ❌
-```
-
-#### 2. **Required Entity Mappings for DDD Context**
-
-To make our DDD implementation functional, we need to add these entities to our `DataNormalizationDbContext`:
-
-**Priority 1: Essential Entities**
-- `DataSet` - Required by `NormalizationJob.DataSetId` foreign key
-- `DataNormalizationAuditLog` - Required for domain events persistence
-- Migration mapping from existing `DataNormalizationJob` → `NormalizationJob`
-
-**Priority 2: Integration Entities** 
-- `UserSettings` - For user preferences in normalization operations
-- `Analysis` - For linking normalization results to analysis workflows
-
-#### 3. **Detailed Implementation Steps**
-
-**Step 1: Add Missing Entities to DDD Context (Week 2)**
-
-1. **Create DataSet Entity in DDD Context**
-   ```csharp
-   // Add to DataNormalizationDbContext
-   public DbSet<DataSet> DataSets { get; set; }
-   
-   // Map existing DataSet model or create DDD-specific version
-   modelBuilder.Entity<DataSet>(entity =>
-   {
-       entity.ToTable("datasets"); // Map to existing table
-       // Configure to match existing schema
-   });
-   ```
-
-2. **Add AuditLog Entity for Domain Events**
-   ```csharp
-   public DbSet<NormalizationAuditLog> AuditLogs { get; set; }
-   
-   // Either reuse existing DataNormalizationAuditLog or create new
-   modelBuilder.Entity<NormalizationAuditLog>(entity =>
-   {
-       entity.ToTable("data_normalization_audit_logs", "data_normalization");
-       // Map domain events to audit records
-   });
-   ```
-
-3. **Update NormalizationJob Aggregate**
-   ```csharp
-   // Add navigation properties
-   public DataSet DataSet { get; private set; }
-   public IReadOnlyCollection<NormalizationAuditLog> AuditLogs { get; private set; }
-   ```
-
-**Step 2: Create Data Migration Strategy (Week 2)**
-
-1. **Bidirectional Entity Mapping**
-   ```csharp
-   // Extension methods for mapping between contexts
-   public static class EntityMappingExtensions
-   {
-       public static NormalizationJob ToNormalizationJob(this DataNormalizationJob legacy)
-       {
-           return NormalizationJob.Create(
-               legacy.DataSetId,
-               legacy.OperationType,
-               legacy.OperationParameters ?? "{}",
-               legacy.MaxRetries
-           );
-       }
-       
-       public static DataNormalizationJob ToLegacyJob(this NormalizationJob domainJob)
-       {
-           // Map back for legacy compatibility
-       }
-   }
-   ```
-
-2. **Migration Scripts**
-   ```sql
-   -- Copy existing data to new schema
-   INSERT INTO data_normalization.normalization_jobs 
-   SELECT id, dataset_id, operation_type, operation_parameters, 
-          status, retry_count, max_retries, created_at, started_at, 
-          completed_at, error_message, result, progress_percentage
-   FROM data_normalization_jobs 
-   WHERE is_deleted = false;
-   ```
-
-**Step 3: Dual-Write Pattern Implementation (Week 3)**
-
-During transition period, implement dual-write to both schemas:
-
-```csharp
-public class DualContextJobRepository : INormalizationJobRepository
+// Infrastructure/Repositories/NormalizationJobRepository.cs
+public class NormalizationJobRepository : INormalizationJobRepository
 {
-    private readonly NormaizeContext _legacyContext;
-    private readonly DataNormalizationDbContext _dddContext;
+    private readonly DataNormalizationDbContext _context;
     
     public async Task SaveAsync(NormalizationJob job)
     {
-        // Write to new DDD context
-        await _dddContext.NormalizationJobs.AddAsync(job);
-        await _dddContext.SaveChangesAsync();
+        _context.NormalizationJobs.Add(job);
+        await _context.SaveChangesAsync();
         
-        // Also write to legacy context for compatibility
-        var legacyJob = job.ToLegacyJob();
-        await _legacyContext.DataNormalizationJobs.AddAsync(legacyJob);
-        await _legacyContext.SaveChangesAsync();
+        // Publish domain events
+        await PublishDomainEventsAsync(job);
     }
 }
 ```
 
-### **Phase 1b: Repository Integration & Testing (Week 3-4)**
-
-**Step 4: Integration Repository Pattern**
-
-1. **Cross-Context Repository**
-   ```csharp
-   public class IntegratedNormalizationRepository : INormalizationJobRepository
-   {
-       private readonly IFeatureFlags _featureFlags;
-       private readonly DataNormalizationDbContext _dddContext;
-       private readonly NormaizeContext _legacyContext;
-       
-       public async Task<NormalizationJob?> GetByIdAsync(Guid jobId)
-       {
-           if (_featureFlags.UseNewDataNormalizationSchema)
-           {
-               return await _dddContext.NormalizationJobs
-                   .Include(j => j.DataSet)
-                   .FirstOrDefaultAsync(j => j.Id == jobId);
-           }
-           
-           // Fallback to legacy and map
-           var legacyJob = await _legacyContext.DataNormalizationJobs
-               .Include(j => j.DataSet)
-               .FirstOrDefaultAsync(j => j.Id == jobId.ToString());
-               
-           return legacyJob?.ToNormalizationJob();
-       }
-   }
-   ```
-
-2. **Data Consistency Validation**
-   ```csharp
-   public class DataMigrationValidator
-   {
-       public async Task ValidateDataConsistency()
-       {
-           // Compare counts
-           var legacyCount = await _legacyContext.DataNormalizationJobs.CountAsync();
-           var dddCount = await _dddContext.NormalizationJobs.CountAsync();
-           
-           // Compare sample records
-           // Validate foreign key integrity
-           // Check business rule compliance
-       }
-   }
-   ```
-
-**Step 5: Enhanced Testing Strategy**
-
+**Step 2: Background Processing Services**
 ```csharp
-[Fact]
-public async Task Repository_ShouldWorkWithBothSchemas()
+// Infrastructure/Services/JobQueueService.cs
+public class JobQueueService : IJobQueue
 {
-    // Arrange
-    var job = NormalizationJob.Create(dataSetId, "RemoveDuplicates", "{}");
+    public async Task EnqueueAsync(NormalizationJob job)
+    {
+        // Queue job for processing
+        // Publish JobCreated event
+    }
     
-    // Act - Save to both contexts
-    await _dualRepository.SaveAsync(job);
-    
-    // Assert - Verify in both contexts
-    var dddJob = await _dddContext.NormalizationJobs.FindAsync(job.Id);
-    var legacyJob = await _legacyContext.DataNormalizationJobs.FindAsync(job.Id.ToString());
-    
-    Assert.NotNull(dddJob);
-    Assert.NotNull(legacyJob);
-    Assert.Equal(dddJob.OperationType, legacyJob.OperationType);
+    public async Task<NormalizationJob?> DequeueAsync()
+    {
+        // Get next job in Queued status
+        // Mark as InProgress
+        // Return for processing
+    }
+}
+
+// Infrastructure/Workers/NormalizationWorker.cs
+public class NormalizationWorker : IBackgroundWorker
+{
+    public async Task ProcessJobsAsync(CancellationToken ct)
+    {
+        var job = await _jobQueue.DequeueAsync();
+        if (job != null)
+        {
+            await ProcessJobAsync(job, ct);
+        }
+    }
 }
 ```
 
-### **Phase 1c: Background Worker Integration (Week 4-5)**
+**Step 3: Operation Handlers**
+```csharp
+// Infrastructure/Handlers/RemoveDuplicatesHandler.cs
+public class RemoveDuplicatesHandler : INormalizationHandler
+{
+    public async Task HandleAsync(NormalizationJob job, IJobProgress progress)
+    {
+        var options = DuplicateRemovalOptions.FromJson(job.OperationParameters);
+        
+        job.Start(); // Publishes JobStarted event
+        
+        // Implement duplicate removal logic
+        // Report progress via progress.UpdateAsync()
+        
+        job.Complete(result); // Publishes JobCompleted event
+    }
+}
+```
 
-**Step 6: Worker Compatibility**
+### **Priority 2: API Integration (Week 3)**
 
-1. **Dual-Schema Worker**
-   ```csharp
-   public class CompatibleNormalizationWorker : IBackgroundWorker
-   {
-       public async Task ProcessJobsAsync(CancellationToken ct)
-       {
-           // Try new schema first
-           var newJob = await _dddQueue.DequeueAsync();
-           if (newJob != null)
-           {
-               await ProcessDDDJob(newJob);
-               return;
-           }
-           
-           // Fallback to legacy schema
-           var legacyJob = await _legacyQueue.DequeueAsync();
-           if (legacyJob != null)
-           {
-               await ProcessLegacyJob(legacyJob);
-           }
-       }
-   }
-   ```
+**Step 1: Update Controllers to Use Application Layer**
+```csharp
+[ApiController]
+[Route("api/normalization")]
+public class NormalizationController : ControllerBase
+{
+    private readonly IMediator _mediator;
+    
+    [HttpPost("jobs")]
+    public async Task<ActionResult<Guid>> SubmitJob([FromBody] SubmitJobRequest request)
+    {
+        var command = new SubmitJobCommand(request.DataSetId, request.OperationType, request.Parameters);
+        var jobId = await _mediator.Send(command);
+        return Ok(jobId);
+    }
+    
+    [HttpGet("jobs/{id}")]
+    public async Task<ActionResult<JobStatusDto>> GetJobStatus(Guid id)
+    {
+        var query = new GetJobStatusQuery(id);
+        var result = await _mediator.Send(query);
+        return result != null ? Ok(result) : NotFound();
+    }
+}
+```
 
-2. **Feature Flag Integration**
-   ```csharp
-   services.AddScoped<INormalizationJobRepository>(provider =>
-   {
-       var featureFlags = provider.GetService<IFeatureFlags>();
-       if (featureFlags.UseNewDataNormalizationSchema)
-       {
-           return provider.GetService<DataNormalizationRepository>();
-       }
-       return provider.GetService<LegacyNormalizationRepository>();
-   });
-   ```
+**Step 2: API Documentation & Contracts**
+- Update OpenAPI specifications
+- API versioning strategy
+- Error response standardization
 
-### **Updated Timeline with Database Foundation**
+### **Priority 3: Advanced Features (Week 4-5)**
 
-**Week 1-2: Database Schema Completion**
-- ✅ Add missing entities to DataNormalizationDbContext
-- ✅ Create entity mapping extensions  
-- ✅ Implement dual-write repositories
-- ✅ Create data migration scripts
+**Step 1: Domain Event Processing**
+```csharp
+// Application/EventHandlers/JobEventHandlers.cs
+public class JobStartedEventHandler : INotificationHandler<JobStarted>
+{
+    public async Task Handle(JobStarted notification, CancellationToken ct)
+    {
+        // Log job start
+        // Update metrics
+        // Send notifications
+    }
+}
 
-**Week 3-4: Integration & Validation**  
-- ✅ Cross-context repository implementation
-- ✅ Data consistency validation tools
-- ✅ Enhanced integration tests
-- ✅ Performance benchmarking
+public class JobCompletedEventHandler : INotificationHandler<JobCompleted>
+{
+    public async Task Handle(JobCompleted notification, CancellationToken ct)
+    {
+        // Log completion
+        // Update analytics
+        // Trigger downstream processes
+    }
+}
+```
 
-**Week 5-6: Background Processing Migration**
-- ✅ Compatible background worker
-- ✅ Feature flag integration
-- ✅ Parallel operation validation
-- ✅ Migration tooling
+**Step 2: Advanced Value Object Features**
+```csharp
+// Add more sophisticated file handling
+public static class FileMetadataExtensions
+{
+    public static FileMetadata WithCloudStorage(this FileMetadata metadata, string cloudPath)
+    {
+        return metadata with 
+        { 
+            FilePath = cloudPath, 
+            StorageProvider = StorageProvider.Cloud 
+        };
+    }
+}
 
-**Week 7-8: API Endpoint Migration**
-- ✅ Migrate individual endpoints
-- ✅ Validate business logic compatibility
-- ✅ Performance monitoring
+// Add retention policies
+public record RetentionPolicy
+{
+    public TimeSpan RetentionPeriod { get; init; }
+    public bool AutoCleanup { get; init; }
+    
+    public static RetentionPolicy Default => new() 
+    { 
+        RetentionPeriod = TimeSpan.FromDays(30), 
+        AutoCleanup = true 
+    };
+}
+```
 
-**Week 9: Final Migration & Cleanup**
-- ✅ Remove legacy schema dependencies
-- ✅ Clean up dual-write code
-- ✅ Performance optimization
+**Step 3: Performance Optimization**
+- Database query optimization
+- Caching strategies
+- Bulk processing capabilities
+- Memory management for large datasets
 
-### **Risk Mitigation for Database Migration**
+### **Priority 4: Testing & Quality (Week 6)**
 
-**Data Integrity Risks:**
-- **Dual-write validation**: Automated tests comparing both schemas
-- **Rollback strategy**: Quick schema rollback with data restoration
-- **Foreign key validation**: Automated FK integrity checks
+**Step 1: Integration Testing**
+```csharp
+[Collection("Database")]
+public class NormalizationJobIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    [Fact]
+    public async Task SubmitJob_ShouldCreateJobAndProcessSuccessfully()
+    {
+        // Arrange: Create test dataset
+        // Act: Submit normalization job
+        // Assert: Verify job creation, processing, and completion
+    }
+}
+```
 
-**Performance Risks:**
-- **Dual-write overhead**: Monitor performance impact during transition
-- **Index optimization**: Ensure new schema has proper indexes
-- **Connection pooling**: Separate pools for each context
+**Step 2: Performance Testing**
+- Load testing with realistic data volumes
+- Memory usage profiling
+- Database performance analysis
+- Concurrent processing validation
 
-**Compatibility Risks:**
-- **Schema evolution**: Version compatibility between old/new schemas
-- **Business rule validation**: Ensure domain invariants work with existing data
-- **API contract preservation**: Maintain existing API behavior
+**Step 3: End-to-End Testing**
+- Complete workflow testing
+- Error scenario validation
+- Recovery testing
+- User acceptance testing
 
-### **Success Criteria for Database Migration**
+### **Priority 5: Production Readiness (Week 7-8)**
 
-1. **Zero Data Loss**: All existing records migrated successfully
-2. **Performance Parity**: New schema performs within 10% of existing
-3. **Business Rule Compliance**: All domain invariants validated against existing data
-4. **Test Coverage**: 100% test coverage for entity mapping and dual-write scenarios
-5. **Rollback Capability**: < 30 minute rollback to legacy schema
+**Step 1: Monitoring & Observability**
+```csharp
+// Add comprehensive logging
+public class InstrumentedNormalizationWorker : IBackgroundWorker
+{
+    private readonly ILogger<InstrumentedNormalizationWorker> _logger;
+    private readonly IMetrics _metrics;
+    
+    public async Task ProcessJobsAsync(CancellationToken ct)
+    {
+        using var activity = _activitySource.StartActivity("ProcessJobs");
+        
+        _metrics.Counter("jobs_processed").Add(1);
+        _logger.LogInformation("Starting job processing cycle");
+        
+        // Implementation with full telemetry
+    }
+}
+```
 
-This database-first approach ensures we have a solid foundation before migrating services and APIs, reducing risk and ensuring compatibility throughout the migration process.
+**Step 2: Configuration & Deployment**
+- Environment-specific configuration
+- Database migration scripts
+- Health checks
+- Container deployment
+
+**Step 3: Documentation**
+- API documentation
+- Architecture documentation
+- Deployment guides
+- Troubleshooting guides
+
+## 📋 **Updated Implementation Roadmap**
+
+### **Week 1-2: Core Services**
+- [ ] Implement `NormalizationJobRepository` with EF Core
+- [ ] Implement `JobQueueService` with database-backed queue
+- [ ] Create `NormalizationWorker` with proper error handling
+- [ ] Implement operation handlers (RemoveDuplicates, etc.)
+- [ ] Add domain event publishing infrastructure
+
+### **Week 3: API Integration** 
+- [ ] Update controllers to use Application layer
+- [ ] Implement remaining command/query handlers
+- [ ] Add API validation and error handling
+- [ ] Update API documentation
+
+### **Week 4-5: Advanced Features**
+- [ ] Implement domain event handlers
+- [ ] Add sophisticated value object features  
+- [ ] Performance optimization
+- [ ] Advanced job management features
+
+### **Week 6: Testing & Quality**
+- [ ] Comprehensive integration tests
+- [ ] Performance testing
+- [ ] End-to-end testing
+- [ ] Code quality review
+
+### **Week 7-8: Production Readiness**
+- [ ] Monitoring and observability
+- [ ] Configuration management
+- [ ] Deployment automation
+- [ ] Documentation completion
+
+## 🎯 **Success Criteria**
+
+### **Technical Excellence**
+- [ ] **Test Coverage**: >95% code coverage across all layers
+- [ ] **Performance**: Handle 1000+ concurrent jobs efficiently  
+- [ ] **Reliability**: 99.9% job completion rate
+- [ ] **Maintainability**: Clean architecture with clear separation of concerns
+
+### **Domain Modeling Quality**
+- [ ] **Rich Domain Model**: Business logic encapsulated in domain layer
+- [ ] **Event-Driven Architecture**: Proper domain event usage
+- [ ] **Value Objects**: Complex business concepts modeled correctly
+- [ ] **Aggregates**: Proper invariant enforcement
+
+### **Production Readiness**
+- [ ] **Monitoring**: Comprehensive telemetry and alerting
+- [ ] **Documentation**: Complete API and architecture docs
+- [ ] **Deployment**: Automated deployment pipeline
+- [ ] **Security**: Proper authentication and authorization
+
+## 🔧 **Development Guidelines**
+
+### **Code Quality Standards**
+- Follow DDD patterns consistently
+- Write tests first (TDD approach)
+- Use meaningful names and clear abstractions
+- Keep aggregates focused and cohesive
+- Implement proper error handling and logging
+
+### **Performance Considerations**
+- Optimize database queries with proper indexes
+- Use async/await throughout
+- Implement proper caching strategies
+- Handle large datasets efficiently
+- Monitor memory usage and GC pressure
+
+### **Security Requirements**
+- Validate all inputs at API boundary
+- Implement proper authorization
+- Secure sensitive data in logs
+- Follow OWASP security guidelines
+- Regular security reviews
+
+This updated plan reflects the reality of a clean rewrite and allows us to build the best possible solution without legacy constraints.
 
 

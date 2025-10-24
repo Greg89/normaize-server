@@ -48,6 +48,9 @@ public static class InfrastructureServiceCollectionExtensions
         // Repositories
         services.AddScoped<INormalizationJobRepository, NormalizationJobRepository>();
 
+        // Domain Event Publishing
+        services.AddScoped<IDomainEventPublisher, MediatRDomainEventPublisher>();
+
         // Application Services
         services.AddScoped<IJobQueue, EfCoreJobQueue>();
         services.AddScoped<IJobProgress, EfCoreJobProgress>();
