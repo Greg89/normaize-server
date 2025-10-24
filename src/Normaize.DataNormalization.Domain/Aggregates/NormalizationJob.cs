@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Normaize.DataNormalization.Domain.Events;
 using Normaize.DataNormalization.Domain.ValueObjects;
+using Normaize.DataNormalization.Domain.Entities;
 
 namespace Normaize.DataNormalization.Domain.Aggregates;
 
@@ -24,6 +25,10 @@ public class NormalizationJob
     public string? Result { get; private set; }
     public int ProgressPercentage { get; private set; }
     public string? ProgressMessage { get; private set; }
+
+    // Navigation properties
+    public DataSet? DataSet { get; private set; }
+    public List<NormalizationAuditLog> AuditLogs { get; private set; } = new();
 
     private readonly List<IDomainEvent> _domainEvents = new();
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
@@ -128,6 +133,34 @@ public class NormalizationJob
     public void ClearDomainEvents()
     {
         _domainEvents.Clear();
+    }
+
+    /// <summary>
+    /// Associates the DataSet entity with this job (for navigation purposes)
+    /// </summary>
+    public void SetDataSet(DataSet dataSet)
+    {
+        if (dataSet == null)
+            throw new ArgumentNullException(nameof(dataSet));
+        
+        if (dataSet.Id != DataSetId)
+            throw new ArgumentException($"DataSet ID {dataSet.Id} does not match job DataSet ID {DataSetId}");
+
+        DataSet = dataSet;
+    }
+
+    /// <summary>
+    /// Adds an audit log entry to the job
+    /// </summary>
+    public void AddAuditLog(NormalizationAuditLog auditLog)
+    {
+        if (auditLog == null)
+            throw new ArgumentNullException(nameof(auditLog));
+        
+        if (auditLog.NormalizationJobId != Id)
+            throw new ArgumentException("Audit log job ID does not match this job's ID");
+
+        AuditLogs.Add(auditLog);
     }
 }
 
