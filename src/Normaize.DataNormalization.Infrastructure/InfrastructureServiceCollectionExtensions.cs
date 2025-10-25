@@ -78,9 +78,9 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IDataSetDataPersister, DataSetDataPersister>();
         services.AddScoped<IDuplicateRemovalProcessor, DuplicateRemovalProcessor>();
 
-        // Background Workers
+        // Background Workers (temporarily disabled for troubleshooting)
         services.AddScoped<IBackgroundWorker, NormalizationWorker>();
-        services.AddHostedService<WorkerHostedService>();
+        // services.AddHostedService<WorkerHostedService>();
 
         return services;
     }
