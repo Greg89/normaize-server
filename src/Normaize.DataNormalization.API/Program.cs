@@ -8,6 +8,22 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure web host with URLs
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenLocalhost(5001);
+    options.ListenLocalhost(7001, listenOptions =>
+    {
+        listenOptions.UseHttps();
+    });
+});
+
+// Force Development environment
+Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+builder.Environment.EnvironmentName = "Development";
+
+Console.WriteLine($"Builder Environment: {builder.Environment.EnvironmentName}");
+
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
@@ -113,6 +129,10 @@ builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
+// Configure URLs after app is built
+app.Urls.Add("http://localhost:5001");
+app.Urls.Add("https://localhost:7001");
+
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
@@ -150,23 +170,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 
-// Ensure database is created
-try
-{
-    using (var scope = app.Services.CreateScope())
-    {
-        var context = scope.ServiceProvider.GetRequiredService<Normaize.DataNormalization.Infrastructure.Data.DataNormalizationDbContext>();
-        await context.Database.EnsureCreatedAsync();
-        Console.WriteLine("Database initialized successfully");
-    }
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"Database initialization failed: {ex.Message}");
-    throw;
-}
-
-Console.WriteLine("Starting web server...");
 app.Run();
 
 // Make the implicit Program class public so test projects can access it
