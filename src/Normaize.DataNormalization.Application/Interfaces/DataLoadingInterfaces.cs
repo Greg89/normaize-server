@@ -74,7 +74,7 @@ public class DataSetData
     public int TotalRows => Rows.Count;
     public int TotalColumns => Columns.Count;
     public long EstimatedSizeBytes { get; init; }
-    
+
     public DataSetData(IEnumerable<DataSetColumn> columns, IEnumerable<DataSetRowData> rows)
     {
         Columns = columns.ToList().AsReadOnly();
@@ -98,7 +98,7 @@ public class DataSetColumn
     public string DataType { get; init; } = "string";
     public int Index { get; init; }
     public bool AllowNull { get; init; } = true;
-    
+
     public DataSetColumn(string name, string dataType, int index, bool allowNull = true)
     {
         Name = name;
@@ -115,7 +115,7 @@ public class DataSetRowData
 {
     public int RowIndex { get; init; }
     public IReadOnlyDictionary<string, object?> Values { get; init; }
-    
+
     public DataSetRowData(int rowIndex, Dictionary<string, object?> values)
     {
         RowIndex = rowIndex;
@@ -128,7 +128,7 @@ public class DataSetRowData
         {
             if (value is T typedValue)
                 return typedValue;
-            
+
             // Try to convert
             try
             {

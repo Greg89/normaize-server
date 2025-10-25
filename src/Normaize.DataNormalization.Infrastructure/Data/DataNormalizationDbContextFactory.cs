@@ -12,10 +12,10 @@ public class DataNormalizationDbContextFactory : IDesignTimeDbContextFactory<Dat
     public DataNormalizationDbContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<DataNormalizationDbContext>();
-        
+
         // Default connection string for design-time
         var connectionString = "Host=localhost;Port=5432;Database=normaize;Username=normaize_user;Password=normaize_password";
-        
+
         optionsBuilder.UseNpgsql(connectionString, npgsqlOptions =>
         {
             npgsqlOptions.MigrationsAssembly(typeof(DataNormalizationDbContext).Assembly.FullName);

@@ -9,17 +9,17 @@ public enum RetentionStrategy
     /// Keep the first occurrence of duplicate records
     /// </summary>
     First,
-    
+
     /// <summary>
     /// Keep the last occurrence of duplicate records
     /// </summary>
     Last,
-    
+
     /// <summary>
     /// Keep the record with the highest value in a specified column
     /// </summary>
     MaxValue,
-    
+
     /// <summary>
     /// Keep the record with the lowest value in a specified column
     /// </summary>

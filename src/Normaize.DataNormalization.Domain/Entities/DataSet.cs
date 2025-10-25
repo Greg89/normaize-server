@@ -23,12 +23,12 @@ public class DataSet
     public string? ProcessedData { get; private set; }
     public string? ProcessingErrors { get; private set; }
     public DateTime? RetentionExpiryDate { get; private set; }
-    
+
     // Soft delete
     public bool IsDeleted { get; private set; }
     public DateTime? DeletedAt { get; private set; }
     public string? DeletedBy { get; private set; }
-    
+
     // Audit trail
     public DateTime LastModifiedAt { get; private set; }
     public string? LastModifiedBy { get; private set; }
@@ -71,12 +71,12 @@ public class DataSet
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Dataset name cannot be null or empty", nameof(name));
-        
+
         if (string.IsNullOrWhiteSpace(userId))
             throw new ArgumentException("User ID cannot be null or empty", nameof(userId));
 
         var datasetStats = statistics ?? DatasetStatistics.Empty;
-        
+
         return new DataSet(name.Trim(), description?.Trim(), userId.Trim(), fileInfo, datasetStats);
     }
 
@@ -142,7 +142,7 @@ public class DataSet
     {
         if (expiryDate <= DateTime.UtcNow)
             throw new ArgumentException("Retention expiry date must be in the future", nameof(expiryDate));
-        
+
         RetentionExpiryDate = expiryDate;
         UpdateModificationInfo(modifiedBy);
     }
@@ -154,7 +154,7 @@ public class DataSet
     {
         if (string.IsNullOrWhiteSpace(deletedBy))
             throw new ArgumentException("DeletedBy cannot be null or empty", nameof(deletedBy));
-        
+
         if (IsDeleted)
             throw new InvalidOperationException("Dataset is already deleted");
 
@@ -171,7 +171,7 @@ public class DataSet
     {
         if (string.IsNullOrWhiteSpace(restoredBy))
             throw new ArgumentException("RestoredBy cannot be null or empty", nameof(restoredBy));
-        
+
         if (!IsDeleted)
             throw new InvalidOperationException("Dataset is not deleted");
 

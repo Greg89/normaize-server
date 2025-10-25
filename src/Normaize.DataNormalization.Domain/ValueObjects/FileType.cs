@@ -8,14 +8,14 @@ namespace Normaize.DataNormalization.Domain.ValueObjects;
 public record FileType
 {
     public string Value { get; init; }
-    
+
     private FileType(string value)
     {
         Value = value ?? throw new ArgumentNullException(nameof(value));
     }
 
     public static FileType CSV => new("CSV");
-    public static FileType JSON => new("JSON"); 
+    public static FileType JSON => new("JSON");
     public static FileType Excel => new("Excel");
     public static FileType XML => new("XML");
     public static FileType Parquet => new("Parquet");

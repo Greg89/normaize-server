@@ -142,7 +142,7 @@ public class NormalizationJob
     {
         if (dataSet == null)
             throw new ArgumentNullException(nameof(dataSet));
-        
+
         if (dataSet.Id != DataSetId)
             throw new ArgumentException($"DataSet ID {dataSet.Id} does not match job DataSet ID {DataSetId}");
 
@@ -156,7 +156,7 @@ public class NormalizationJob
     {
         if (auditLog == null)
             throw new ArgumentNullException(nameof(auditLog));
-        
+
         if (auditLog.NormalizationJobId != Id)
             throw new ArgumentException("Audit log job ID does not match this job's ID");
 

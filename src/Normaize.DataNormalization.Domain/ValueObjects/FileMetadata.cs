@@ -15,7 +15,7 @@ public record FileMetadata
     public string? DataHash { get; init; }
 
     // Parameterless constructor for EF Core
-    private FileMetadata() 
+    private FileMetadata()
     {
         FileName = string.Empty;
         FilePath = string.Empty;
@@ -25,19 +25,19 @@ public record FileMetadata
     }
 
     public FileMetadata(
-        string fileName, 
-        string filePath, 
-        FileType fileType, 
-        StorageProvider storageProvider, 
+        string fileName,
+        string filePath,
+        FileType fileType,
+        StorageProvider storageProvider,
         long fileSize,
         string? dataHash = null)
     {
         if (string.IsNullOrWhiteSpace(fileName))
             throw new ArgumentException("File name cannot be null or empty", nameof(fileName));
-        
+
         if (string.IsNullOrWhiteSpace(filePath))
             throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
-        
+
         if (fileSize < 0)
             throw new ArgumentException("File size cannot be negative", nameof(fileSize));
 
@@ -70,12 +70,12 @@ public record FileMetadata
     public bool IsLargeFile(long threshold = 50 * 1024 * 1024) => FileSize > threshold; // 50MB default
     public bool HasValidHash => !string.IsNullOrWhiteSpace(DataHash);
     public string FileExtension => System.IO.Path.GetExtension(FileName).ToLowerInvariant();
-    
+
     /// <summary>
     /// Updates the data hash while preserving other metadata
     /// </summary>
     public FileMetadata WithDataHash(string dataHash) => this with { DataHash = dataHash };
-    
+
     /// <summary>
     /// Updates the file path while preserving other metadata and auto-detecting storage provider
     /// </summary>

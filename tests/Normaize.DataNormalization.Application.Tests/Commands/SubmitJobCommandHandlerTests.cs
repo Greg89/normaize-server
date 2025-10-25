@@ -38,7 +38,7 @@ public class SubmitJobCommandHandlerTests
 
         // Assert
         result.Should().NotBeEmpty();
-        
+
         _mockRepository.Verify(r => r.SaveAsync(It.Is<NormalizationJob>(j =>
             j.DataSetId == command.DataSetId &&
             j.OperationType == command.OperationType &&

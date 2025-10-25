@@ -31,7 +31,7 @@ public class GetJobStatusQueryHandlerTests
             Guid.NewGuid(),
             "REMOVE_DUPLICATE_ROWS",
             "{\"columns\":[\"name\",\"email\"]}");
-        
+
         job.Start();
         job.UpdateProgress(50, "Processing");
 

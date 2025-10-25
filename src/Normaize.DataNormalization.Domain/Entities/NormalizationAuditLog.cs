@@ -51,7 +51,7 @@ public class NormalizationAuditLog
         string? ipAddress = null,
         string? userAgent = null)
     {
-        var changes = eventData != null 
+        var changes = eventData != null
             ? System.Text.Json.JsonSerializer.Serialize(eventData)
             : null;
 
@@ -69,7 +69,7 @@ public class NormalizationAuditLog
         string? ipAddress = null,
         string? userAgent = null)
     {
-        var changesJson = changes != null 
+        var changesJson = changes != null
             ? System.Text.Json.JsonSerializer.Serialize(changes)
             : null;
 
@@ -97,7 +97,7 @@ public class NormalizationAuditLog
     public bool HasChanges => !string.IsNullOrWhiteSpace(Changes);
     public bool IsSystemAction => string.IsNullOrWhiteSpace(IpAddress);
     public TimeSpan Age => DateTime.UtcNow - Timestamp;
-    
+
     /// <summary>
     /// Deserializes the changes JSON to a dictionary
     /// </summary>

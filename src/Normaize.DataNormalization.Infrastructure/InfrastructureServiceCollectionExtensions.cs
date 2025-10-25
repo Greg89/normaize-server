@@ -36,7 +36,7 @@ public static class InfrastructureServiceCollectionExtensions
                     maxRetryDelay: TimeSpan.FromSeconds(30),
                     errorCodesToAdd: null);
             });
-            
+
             // Enable sensitive data logging in development
             if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
             {
@@ -47,7 +47,7 @@ public static class InfrastructureServiceCollectionExtensions
 
         // Repositories
         services.AddScoped<INormalizationJobRepository, NormalizationJobRepository>();
-        
+
         // Data access repositories  
         services.AddScoped<IDataSetRepository, DataSetRepository>();
         services.AddScoped<IDataSetRowRepository, DataSetRowRepository>();

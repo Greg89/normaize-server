@@ -38,7 +38,7 @@ public class JobProgressService : IJobProgress
 
             if (job.Status != JobStatus.Processing)
             {
-                _logger.LogWarning("Job {JobId} is not in processing status, current status: {Status}", 
+                _logger.LogWarning("Job {JobId} is not in processing status, current status: {Status}",
                     jobId, job.Status);
                 return;
             }
@@ -69,7 +69,7 @@ public class JobProgressService : IJobProgress
 
         try
         {
-            _logger.LogDebug("Reporting progress for job {JobId}: {Percent}% - {Message}", 
+            _logger.LogDebug("Reporting progress for job {JobId}: {Percent}% - {Message}",
                 jobId, percent, message);
 
             var job = await _jobRepository.GetByIdAsync(jobId);
@@ -81,7 +81,7 @@ public class JobProgressService : IJobProgress
 
             if (job.Status != JobStatus.Processing)
             {
-                _logger.LogWarning("Cannot report progress for job {JobId} - job is not in processing status (current: {Status})", 
+                _logger.LogWarning("Cannot report progress for job {JobId} - job is not in processing status (current: {Status})",
                     jobId, job.Status);
                 return;
             }
@@ -90,7 +90,7 @@ public class JobProgressService : IJobProgress
             job.UpdateProgress(percent, message);
             await _jobRepository.UpdateAsync(job);
 
-            _logger.LogDebug("Progress updated for job {JobId}: {Percent}% - {Message}", 
+            _logger.LogDebug("Progress updated for job {JobId}: {Percent}% - {Message}",
                 jobId, percent, message);
         }
         catch (Exception ex)
@@ -115,7 +115,7 @@ public class JobProgressService : IJobProgress
 
             if (job.Status != JobStatus.Processing)
             {
-                _logger.LogWarning("Cannot mark job {JobId} as succeeded - job is not in processing status (current: {Status})", 
+                _logger.LogWarning("Cannot mark job {JobId} as succeeded - job is not in processing status (current: {Status})",
                     jobId, job.Status);
                 return;
             }
@@ -159,7 +159,7 @@ public class JobProgressService : IJobProgress
 
             if (job.Status != JobStatus.Processing)
             {
-                _logger.LogWarning("Cannot mark job {JobId} as failed - job is not in processing status (current: {Status})", 
+                _logger.LogWarning("Cannot mark job {JobId} as failed - job is not in processing status (current: {Status})",
                     jobId, job.Status);
                 return;
             }
@@ -172,7 +172,7 @@ public class JobProgressService : IJobProgress
                 job.ScheduleRetry(DateTime.UtcNow.AddMinutes(5)); // Schedule retry in 5 minutes
                 await _jobRepository.UpdateAsync(job);
 
-                _logger.LogInformation("Job {JobId} scheduled for retry ({RetryCount}/{MaxRetries}) due to error: {Error}", 
+                _logger.LogInformation("Job {JobId} scheduled for retry ({RetryCount}/{MaxRetries}) due to error: {Error}",
                     jobId, job.RetryCount, job.MaxRetries, error);
             }
             else
@@ -181,7 +181,7 @@ public class JobProgressService : IJobProgress
                 job.Fail(error);
                 await _jobRepository.UpdateAsync(job);
 
-                _logger.LogWarning("Job {JobId} failed permanently after {RetryCount} retries. Error: {Error}", 
+                _logger.LogWarning("Job {JobId} failed permanently after {RetryCount} retries. Error: {Error}",
                     jobId, job.RetryCount, error);
             }
         }

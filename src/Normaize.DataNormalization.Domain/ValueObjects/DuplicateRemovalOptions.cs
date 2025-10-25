@@ -15,7 +15,7 @@ public record DuplicateRemovalOptions
     public bool PreserveOriginalOrder { get; init; }
 
     public DuplicateRemovalOptions(
-        IEnumerable<string> keyColumns, 
+        IEnumerable<string> keyColumns,
         CaseSensitivity caseSensitivity = CaseSensitivity.Sensitive,
         RetentionStrategy retentionStrategy = RetentionStrategy.First,
         bool preserveOriginalOrder = true)
@@ -112,7 +112,7 @@ public record DuplicateRemovalOptions
         }
 
         // PreserveOriginalOrder is optional, default to false
-        var preserveOriginalOrder = root.TryGetProperty("PreserveOriginalOrder", out var preserveProp) && 
+        var preserveOriginalOrder = root.TryGetProperty("PreserveOriginalOrder", out var preserveProp) &&
                                    preserveProp.GetBoolean();
 
         return new DuplicateRemovalOptions(keyColumns, caseSensitivity, retentionStrategy, preserveOriginalOrder);

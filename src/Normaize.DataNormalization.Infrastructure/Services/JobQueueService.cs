@@ -40,7 +40,7 @@ public class JobQueueService : IJobQueue
             // Save the job to the database - this will also publish the JobCreated event
             await _jobRepository.SaveAsync(job);
 
-            _logger.LogInformation("Successfully enqueued job {JobId} of type {OperationType} for dataset {DataSetId}", 
+            _logger.LogInformation("Successfully enqueued job {JobId} of type {OperationType} for dataset {DataSetId}",
                 job.Id, job.OperationType, job.DataSetId);
         }
         catch (Exception ex)
@@ -58,7 +58,7 @@ public class JobQueueService : IJobQueue
 
             // Get the oldest queued job
             var job = await _jobRepository.GetNextQueuedJobAsync();
-            
+
             if (job == null)
             {
                 _logger.LogDebug("No queued jobs available for processing");
@@ -71,7 +71,7 @@ public class JobQueueService : IJobQueue
             // Update the job status in the database
             await _jobRepository.UpdateAsync(job);
 
-            _logger.LogInformation("Successfully dequeued job {JobId} of type {OperationType} for dataset {DataSetId}", 
+            _logger.LogInformation("Successfully dequeued job {JobId} of type {OperationType} for dataset {DataSetId}",
                 job.Id, job.OperationType, job.DataSetId);
 
             return job;
@@ -98,7 +98,7 @@ public class JobQueueService : IJobQueue
 
             if (job.Status != JobStatus.Processing)
             {
-                _logger.LogWarning("Cannot acknowledge job {JobId} - job is not in processing status (current: {Status})", 
+                _logger.LogWarning("Cannot acknowledge job {JobId} - job is not in processing status (current: {Status})",
                     jobId, job.Status);
                 return;
             }
@@ -132,7 +132,7 @@ public class JobQueueService : IJobQueue
 
             if (job.Status != JobStatus.Processing)
             {
-                _logger.LogWarning("Cannot nack job {JobId} - job is not in processing status (current: {Status})", 
+                _logger.LogWarning("Cannot nack job {JobId} - job is not in processing status (current: {Status})",
                     jobId, job.Status);
                 return;
             }
@@ -142,10 +142,10 @@ public class JobQueueService : IJobQueue
             {
                 // First mark as failed, then schedule retry
                 job.Fail(reason);
-                job.ScheduleRetry(DateTime.UtcNow.Add(delay ?? TimeSpan.FromMinutes(5))); 
+                job.ScheduleRetry(DateTime.UtcNow.Add(delay ?? TimeSpan.FromMinutes(5)));
                 await _jobRepository.UpdateAsync(job);
 
-                _logger.LogInformation("Job {JobId} scheduled for retry ({RetryCount}/{MaxRetries}) due to: {Reason}", 
+                _logger.LogInformation("Job {JobId} scheduled for retry ({RetryCount}/{MaxRetries}) due to: {Reason}",
                     jobId, job.RetryCount, job.MaxRetries, reason);
             }
             else
@@ -154,7 +154,7 @@ public class JobQueueService : IJobQueue
                 job.MoveToDeadLetter(reason);
                 await _jobRepository.UpdateAsync(job);
 
-                _logger.LogWarning("Job {JobId} moved to dead letter queue after {RetryCount} retries. Final reason: {Reason}", 
+                _logger.LogWarning("Job {JobId} moved to dead letter queue after {RetryCount} retries. Final reason: {Reason}",
                     jobId, job.RetryCount, reason);
             }
         }

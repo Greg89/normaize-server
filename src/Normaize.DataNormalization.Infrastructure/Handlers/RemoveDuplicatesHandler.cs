@@ -40,16 +40,16 @@ public class RemoveDuplicatesHandler : IRemoveDuplicatesHandler
 
             // Parse the operation parameters to get the duplicate removal options
             var options = DuplicateRemovalOptions.Deserialize(job.OperationParameters);
-            
+
             await progress.ReportAsync(job.Id, 5, "Loading dataset data");
-            
+
             // Load the dataset data
             var dataSetData = await _dataLoader.LoadDataSetDataAsync(job.DataSetId);
-            _logger.LogInformation("Loaded dataset with {RowCount} rows and {ColumnCount} columns", 
+            _logger.LogInformation("Loaded dataset with {RowCount} rows and {ColumnCount} columns",
                 dataSetData.TotalRows, dataSetData.TotalColumns);
 
             await progress.ReportAsync(job.Id, 10, "Validating duplicate removal options");
-            
+
             // Validate that the specified key columns exist
             ValidateKeyColumns(dataSetData, options);
 
@@ -73,7 +73,7 @@ public class RemoveDuplicatesHandler : IRemoveDuplicatesHandler
             // Save the processed data
             await progress.ReportAsync(job.Id, 90, "Saving processed data");
             var saveSuccess = await _dataPersister.SaveProcessedDataAsync(job.DataSetId, result.ProcessedData, "RemoveDuplicates");
-            
+
             if (!saveSuccess)
             {
                 throw new InvalidOperationException("Failed to save processed data");
@@ -93,7 +93,7 @@ public class RemoveDuplicatesHandler : IRemoveDuplicatesHandler
             };
 
             await progress.SucceededAsync(job.Id, jobResult);
-            _logger.LogInformation("Duplicate removal completed for job {JobId}. Removed {DuplicatesRemoved} duplicates from {OriginalCount} rows", 
+            _logger.LogInformation("Duplicate removal completed for job {JobId}. Removed {DuplicatesRemoved} duplicates from {OriginalCount} rows",
                 job.Id, result.DuplicatesRemoved, result.OriginalRowCount);
         }
         catch (Exception ex)
@@ -108,7 +108,7 @@ public class RemoveDuplicatesHandler : IRemoveDuplicatesHandler
     {
         var availableColumns = dataSetData.Columns.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var missingColumns = options.KeyColumns.Where(col => !availableColumns.Contains(col)).ToList();
-        
+
         if (missingColumns.Any())
         {
             throw new ArgumentException($"The following key columns were not found in the dataset: {string.Join(", ", missingColumns)}. Available columns: {string.Join(", ", availableColumns)}");

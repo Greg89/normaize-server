@@ -45,7 +45,7 @@ public class NormalizationWorker : IBackgroundWorker
             try
             {
                 await ProcessSingleJobAsync(cancellationToken);
-                
+
                 // Wait before polling for the next job
                 await Task.Delay(_pollingInterval, cancellationToken);
             }
@@ -57,7 +57,7 @@ public class NormalizationWorker : IBackgroundWorker
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error in normalization worker. Will retry after delay.");
-                
+
                 try
                 {
                     await Task.Delay(_errorDelay, cancellationToken);
@@ -90,7 +90,7 @@ public class NormalizationWorker : IBackgroundWorker
             return;
         }
 
-        _logger.LogInformation("Processing job {JobId} of type {OperationType} for dataset {DataSetId}", 
+        _logger.LogInformation("Processing job {JobId} of type {OperationType} for dataset {DataSetId}",
             job.Id, job.OperationType, job.DataSetId);
 
         try

@@ -41,7 +41,7 @@ public class DataSetDataLoader : IDataSetDataLoader
             }
 
             var rows = await _rowRepository.GetByDataSetIdAsync(dataSetId);
-            
+
             return ConvertToDataSetData(dataSet, rows);
         }
         catch (Exception ex)
@@ -64,7 +64,7 @@ public class DataSetDataLoader : IDataSetDataLoader
             }
 
             var rows = await _rowRepository.GetByDataSetIdAsync(dataSetId, 0, maxRows);
-            
+
             return ConvertToDataSetData(dataSet, rows);
         }
         catch (Exception ex)
@@ -99,14 +99,14 @@ public class DataSetDataLoader : IDataSetDataLoader
     {
         var columns = ExtractColumnsFromDataSet(dataSet);
         var convertedRows = ConvertRowsToDataSetRows(rows, columns);
-        
+
         return new DataSetData(columns, convertedRows);
     }
 
     private static IReadOnlyList<DataSetColumn> ExtractColumnsFromDataSet(DataSet dataSet)
     {
         var columns = new List<DataSetColumn>();
-        
+
         // Extract column information from dataset statistics
         // For now, create generic columns based on the total column count
         for (int i = 0; i < dataSet.Statistics.ColumnCount; i++)
@@ -117,22 +117,22 @@ public class DataSetDataLoader : IDataSetDataLoader
                 index: i,
                 allowNull: true));
         }
-        
+
         return columns.AsReadOnly();
     }
 
     private static IReadOnlyList<Application.Interfaces.DataSetRowData> ConvertRowsToDataSetRows(
-        IEnumerable<Domain.Entities.DataSetRow> entityRows, 
+        IEnumerable<Domain.Entities.DataSetRow> entityRows,
         IReadOnlyList<DataSetColumn> columns)
     {
         var convertedRows = new List<Application.Interfaces.DataSetRowData>();
-        
+
         foreach (var entityRow in entityRows)
         {
             var values = entityRow.GetAllValues();
             convertedRows.Add(new Application.Interfaces.DataSetRowData(entityRow.RowIndex, values));
         }
-        
+
         return convertedRows.AsReadOnly();
     }
 }
@@ -180,9 +180,9 @@ public class DataSetDataPersister : IDataSetDataPersister
             dataSet.MarkAsProcessed();
             await _dataSetRepository.UpdateAsync(dataSet);
 
-            _logger.LogInformation("Successfully saved {RowCount} processed rows for dataset {DataSetId}", 
+            _logger.LogInformation("Successfully saved {RowCount} processed rows for dataset {DataSetId}",
                 processedData.TotalRows, dataSetId);
-            
+
             return true;
         }
         catch (Exception ex)
@@ -201,10 +201,10 @@ public class DataSetDataPersister : IDataSetDataPersister
             // For now, we'll use timestamp-based backup IDs
             // In a real implementation, you'd store backups in a separate table or storage
             var backupId = $"backup_{dataSetId}_{DateTime.UtcNow:yyyyMMdd_HHmmss}";
-            
+
             // TODO: Implement actual backup logic
             // This could involve copying data to a backup table or storage location
-            
+
             _logger.LogInformation("Created backup {BackupId} for dataset {DataSetId}", backupId, dataSetId);
             return backupId;
         }
@@ -223,7 +223,7 @@ public class DataSetDataPersister : IDataSetDataPersister
         {
             // TODO: Implement actual restore logic
             // This would involve restoring data from the backup location
-            
+
             _logger.LogInformation("Successfully restored dataset {DataSetId} from backup {BackupId}", dataSetId, backupId);
             return true;
         }
@@ -237,15 +237,15 @@ public class DataSetDataPersister : IDataSetDataPersister
     private static IEnumerable<Domain.Entities.DataSetRow> ConvertToEntityRows(DataSetData processedData, Guid dataSetId)
     {
         var entityRows = new List<Domain.Entities.DataSetRow>();
-        
+
         foreach (var row in processedData.Rows)
         {
             // Convert row values to JSON for storage
             var jsonData = System.Text.Json.JsonSerializer.Serialize(row.Values);
-            
+
             entityRows.Add(Domain.Entities.DataSetRow.Create(dataSetId, row.RowIndex, jsonData));
         }
-        
+
         return entityRows;
     }
 }

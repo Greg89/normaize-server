@@ -27,7 +27,7 @@ public class NormalizationJobRouter : INormalizationJobRouter
         if (job == null) throw new ArgumentNullException(nameof(job));
         if (progress == null) throw new ArgumentNullException(nameof(progress));
 
-        _logger.LogInformation("Routing job {JobId} with operation type {OperationType} for dataset {DataSetId}", 
+        _logger.LogInformation("Routing job {JobId} with operation type {OperationType} for dataset {DataSetId}",
             job.Id, job.OperationType, job.DataSetId);
 
         try
@@ -65,7 +65,7 @@ public class NormalizationJobRouter : INormalizationJobRouter
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error routing job {JobId} of type {OperationType}", 
+            _logger.LogError(ex, "Error routing job {JobId} of type {OperationType}",
                 job.Id, job.OperationType);
             throw;
         }
@@ -75,18 +75,18 @@ public class NormalizationJobRouter : INormalizationJobRouter
     private async Task HandleNormalizeCaseAsync(NormalizationJob job, IJobProgress progress)
     {
         _logger.LogInformation("Processing normalize case operation for job {JobId}", job.Id);
-        
+
         // TODO: Implement case normalization handler
         // For now, simulate the operation
         await progress.ReportAsync(job.Id, 25, "Starting case normalization");
         await Task.Delay(1000); // Simulate work
-        
+
         await progress.ReportAsync(job.Id, 50, "Analyzing text case patterns");
         await Task.Delay(1000); // Simulate work
-        
+
         await progress.ReportAsync(job.Id, 75, "Applying case normalization rules");
         await Task.Delay(1000); // Simulate work
-        
+
         await progress.ReportAsync(job.Id, 100, "Case normalization completed");
         await progress.SucceededAsync(job.Id, new { normalizedRows = 150, caseChanges = 45 });
     }
@@ -94,21 +94,21 @@ public class NormalizationJobRouter : INormalizationJobRouter
     private async Task HandleStandardizeFormatAsync(NormalizationJob job, IJobProgress progress)
     {
         _logger.LogInformation("Processing standardize format operation for job {JobId}", job.Id);
-        
+
         // TODO: Implement format standardization handler
         // For now, simulate the operation
         await progress.ReportAsync(job.Id, 20, "Analyzing data formats");
         await Task.Delay(1000); // Simulate work
-        
+
         await progress.ReportAsync(job.Id, 40, "Detecting format inconsistencies");
         await Task.Delay(1000); // Simulate work
-        
+
         await progress.ReportAsync(job.Id, 60, "Applying standardization rules");
         await Task.Delay(1000); // Simulate work
-        
+
         await progress.ReportAsync(job.Id, 80, "Validating standardized formats");
         await Task.Delay(1000); // Simulate work
-        
+
         await progress.ReportAsync(job.Id, 100, "Format standardization completed");
         await progress.SucceededAsync(job.Id, new { standardizedColumns = 8, formatsFixed = 32 });
     }
@@ -116,18 +116,18 @@ public class NormalizationJobRouter : INormalizationJobRouter
     private async Task HandleValidateDataAsync(NormalizationJob job, IJobProgress progress)
     {
         _logger.LogInformation("Processing data validation operation for job {JobId}", job.Id);
-        
+
         // TODO: Implement data validation handler
         // For now, simulate the operation
         await progress.ReportAsync(job.Id, 30, "Setting up validation rules");
         await Task.Delay(1000); // Simulate work
-        
+
         await progress.ReportAsync(job.Id, 60, "Running data validation checks");
         await Task.Delay(1000); // Simulate work
-        
+
         await progress.ReportAsync(job.Id, 90, "Generating validation report");
         await Task.Delay(1000); // Simulate work
-        
+
         await progress.ReportAsync(job.Id, 100, "Data validation completed");
         await progress.SucceededAsync(job.Id, new { validRows = 890, invalidRows = 10, warnings = 5 });
     }

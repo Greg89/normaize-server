@@ -84,7 +84,7 @@ public class DataSetDataPersisterTests
 
         // Verify the correct sequence of operations
         _rowRepositoryMock.Verify(x => x.DeleteByDataSetIdAsync(_testDataSetId), Times.Once);
-        _rowRepositoryMock.Verify(x => x.SaveRangeAsync(It.Is<IEnumerable<DataSetRow>>(rows => 
+        _rowRepositoryMock.Verify(x => x.SaveRangeAsync(It.Is<IEnumerable<DataSetRow>>(rows =>
             rows.Count() == 5)), Times.Once);
         _dataSetRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<DataSet>()), Times.Once);
     }
@@ -191,8 +191,8 @@ public class DataSetDataPersisterTests
         await _dataPersister.SaveProcessedDataAsync(_testDataSetId, processedData, operation);
 
         // Assert
-        _rowRepositoryMock.Verify(x => x.SaveRangeAsync(It.Is<IEnumerable<DataSetRow>>(rows => 
-            rows.All(r => r.DataSetId == _testDataSetId) && 
+        _rowRepositoryMock.Verify(x => x.SaveRangeAsync(It.Is<IEnumerable<DataSetRow>>(rows =>
+            rows.All(r => r.DataSetId == _testDataSetId) &&
             rows.Count() == 2)), Times.Once);
     }
 
@@ -209,7 +209,7 @@ public class DataSetDataPersisterTests
         Assert.NotNull(backupId);
         Assert.StartsWith("backup_", backupId);
         Assert.Contains(_testDataSetId.ToString(), backupId);
-        
+
         // Should contain a timestamp
         Assert.Matches(@"backup_[a-f0-9\-]+_\d{8}_\d{6}", backupId);
     }
@@ -326,13 +326,13 @@ public class DataSetDataPersisterTests
     public void Constructor_WithNullParameters_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new DataSetDataPersister(null!, _rowRepositoryMock.Object, _loggerMock.Object));
-        
-        Assert.Throws<ArgumentNullException>(() => 
+
+        Assert.Throws<ArgumentNullException>(() =>
             new DataSetDataPersister(_dataSetRepositoryMock.Object, null!, _loggerMock.Object));
-        
-        Assert.Throws<ArgumentNullException>(() => 
+
+        Assert.Throws<ArgumentNullException>(() =>
             new DataSetDataPersister(_dataSetRepositoryMock.Object, _rowRepositoryMock.Object, null!));
     }
 
@@ -358,7 +358,7 @@ public class DataSetDataPersisterTests
 
         // Assert
         Assert.True(result);
-        _rowRepositoryMock.Verify(x => x.SaveRangeAsync(It.Is<IEnumerable<DataSetRow>>(rows => 
+        _rowRepositoryMock.Verify(x => x.SaveRangeAsync(It.Is<IEnumerable<DataSetRow>>(rows =>
             !rows.Any())), Times.Once);
     }
 
@@ -368,14 +368,14 @@ public class DataSetDataPersisterTests
         // Arrange
         var dataSet = CreateTestDataSet();
         var complexData = new DataSetData(
-            new List<DataSetColumn> 
-            { 
-                new("Data", "object", 0, true) 
+            new List<DataSetColumn>
+            {
+                new("Data", "object", 0, true)
             },
-            new List<DataSetRowData> 
-            { 
-                new(0, new Dictionary<string, object?> 
-                { 
+            new List<DataSetRowData>
+            {
+                new(0, new Dictionary<string, object?>
+                {
                     ["nested"] = new { prop = "value", array = new[] { 1, 2, 3 } }
                 })
             });
@@ -394,7 +394,7 @@ public class DataSetDataPersisterTests
 
         // Assert
         Assert.True(result);
-        _rowRepositoryMock.Verify(x => x.SaveRangeAsync(It.Is<IEnumerable<DataSetRow>>(rows => 
+        _rowRepositoryMock.Verify(x => x.SaveRangeAsync(It.Is<IEnumerable<DataSetRow>>(rows =>
             rows.Count() == 1 && !string.IsNullOrEmpty(rows.First().Data))), Times.Once);
     }
 }

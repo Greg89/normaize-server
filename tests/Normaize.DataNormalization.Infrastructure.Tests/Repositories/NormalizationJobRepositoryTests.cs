@@ -42,12 +42,12 @@ public class NormalizationJobRepositoryTests : IDisposable
     {
         // Arrange
         var dataSetId = Guid.NewGuid();
-        
+
         // Create a test dataset using the factory method
         var fileInfo = FileMetadata.Create("test.csv", "/test/path", FileType.CSV, 1024);
         var statistics = DatasetStatistics.Create(100, 10);
         var dataSet = DataSet.Create("Test Dataset", "Test description", "user123", fileInfo, statistics);
-        
+
         // Override the Id to match our test
         typeof(DataSet).GetProperty("Id")!.SetValue(dataSet, dataSetId);
 

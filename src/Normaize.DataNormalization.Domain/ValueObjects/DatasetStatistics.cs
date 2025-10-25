@@ -14,15 +14,15 @@ public record DatasetStatistics
     public bool UseSeparateTable { get; init; }
 
     public DatasetStatistics(
-        int rowCount, 
-        int columnCount, 
-        bool isProcessed = false, 
+        int rowCount,
+        int columnCount,
+        bool isProcessed = false,
         bool useSeparateTable = false,
         DateTime? processedAt = null)
     {
         if (rowCount < 0)
             throw new ArgumentException("Row count cannot be negative", nameof(rowCount));
-        
+
         if (columnCount < 0)
             throw new ArgumentException("Column count cannot be negative", nameof(columnCount));
 
@@ -34,16 +34,16 @@ public record DatasetStatistics
     }
 
     public static DatasetStatistics Empty => new(0, 0);
-    
+
     public static DatasetStatistics Create(int rowCount, int columnCount) => new(rowCount, columnCount);
 
     /// <summary>
     /// Marks the dataset as processed with current timestamp
     /// </summary>
-    public DatasetStatistics MarkAsProcessed() => this with 
-    { 
-        IsProcessed = true, 
-        ProcessedAt = DateTime.UtcNow 
+    public DatasetStatistics MarkAsProcessed() => this with
+    {
+        IsProcessed = true,
+        ProcessedAt = DateTime.UtcNow
     };
 
     /// <summary>

@@ -22,8 +22,8 @@ public class SubmitJobCommandHandler : ICommandHandler<SubmitJobCommand, Guid>
     {
         // Create the job using the domain aggregate
         var job = NormalizationJob.Create(
-            command.DataSetId, 
-            command.OperationType, 
+            command.DataSetId,
+            command.OperationType,
             command.OperationParameters);
 
         // Save to repository

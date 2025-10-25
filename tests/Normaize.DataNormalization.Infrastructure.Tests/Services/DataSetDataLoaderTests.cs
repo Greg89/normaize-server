@@ -89,7 +89,7 @@ public class DataSetDataLoaderTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _dataLoader.LoadDataSetDataAsync(_testDataSetId));
-        
+
         Assert.Contains("not found", exception.Message);
     }
 
@@ -134,7 +134,7 @@ public class DataSetDataLoaderTests
         // Assert
         Assert.Equal(50, result.TotalRows);
         Assert.Equal(50, result.Rows.Count);
-        
+
         // Verify the correct repository method was called with correct parameters
         _rowRepositoryMock.Verify(x => x.GetByDataSetIdAsync(_testDataSetId, 0, 50), Times.Once);
     }
@@ -154,7 +154,7 @@ public class DataSetDataLoaderTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal(7, result.Count);
-        
+
         for (int i = 0; i < 7; i++)
         {
             Assert.Equal($"Column{i + 1}", result[i].Name);
@@ -174,7 +174,7 @@ public class DataSetDataLoaderTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _dataLoader.GetDataSetColumnsAsync(_testDataSetId));
-        
+
         Assert.Contains("not found", exception.Message);
     }
 
@@ -255,13 +255,13 @@ public class DataSetDataLoaderTests
     public void Constructor_WithNullParameters_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new DataSetDataLoader(null!, _rowRepositoryMock.Object, _loggerMock.Object));
-        
-        Assert.Throws<ArgumentNullException>(() => 
+
+        Assert.Throws<ArgumentNullException>(() =>
             new DataSetDataLoader(_dataSetRepositoryMock.Object, null!, _loggerMock.Object));
-        
-        Assert.Throws<ArgumentNullException>(() => 
+
+        Assert.Throws<ArgumentNullException>(() =>
             new DataSetDataLoader(_dataSetRepositoryMock.Object, _rowRepositoryMock.Object, null!));
     }
 
@@ -286,7 +286,7 @@ public class DataSetDataLoaderTests
 
         // Assert
         Assert.Equal(2, result.Rows.Count);
-        
+
         var firstRow = result.Rows[0];
         Assert.Equal(0, firstRow.RowIndex);
         Assert.Contains("name", firstRow.Values.Keys);

@@ -27,7 +27,7 @@ public class MediatRDomainEventPublisher : IDomainEventPublisher
 
         try
         {
-            _logger.LogDebug("Publishing domain event: {EventType} at {OccurredAt}", 
+            _logger.LogDebug("Publishing domain event: {EventType} at {OccurredAt}",
                 domainEvent.GetType().Name, domainEvent.OccurredAt);
 
             // Convert domain event to MediatR notification
@@ -35,18 +35,18 @@ public class MediatRDomainEventPublisher : IDomainEventPublisher
             if (notification != null)
             {
                 await _mediator.Publish(notification);
-                _logger.LogDebug("Successfully published domain event: {EventType}", 
+                _logger.LogDebug("Successfully published domain event: {EventType}",
                     domainEvent.GetType().Name);
             }
             else
             {
-                _logger.LogWarning("No MediatR wrapper found for domain event: {EventType}", 
+                _logger.LogWarning("No MediatR wrapper found for domain event: {EventType}",
                     domainEvent.GetType().Name);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error publishing domain event: {EventType}", 
+            _logger.LogError(ex, "Error publishing domain event: {EventType}",
                 domainEvent.GetType().Name);
             throw;
         }

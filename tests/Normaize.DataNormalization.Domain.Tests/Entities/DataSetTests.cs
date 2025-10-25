@@ -51,14 +51,14 @@ public class DataSetTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Create_WithInvalidName_ShouldThrowArgumentException(string invalidName)
+    public void Create_WithInvalidName_ShouldThrowArgumentException(string? invalidName)
     {
         // Arrange
         var fileInfo = CreateTestFileMetadata();
         var statistics = CreateTestStatistics();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => 
+        Assert.Throws<ArgumentException>(() =>
             DataSet.Create(invalidName, "description", "user123", fileInfo, statistics));
     }
 
@@ -66,14 +66,14 @@ public class DataSetTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Create_WithInvalidUserId_ShouldThrowArgumentException(string invalidUserId)
+    public void Create_WithInvalidUserId_ShouldThrowArgumentException(string? invalidUserId)
     {
         // Arrange
         var fileInfo = CreateTestFileMetadata();
         var statistics = CreateTestStatistics();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => 
+        Assert.Throws<ArgumentException>(() =>
             DataSet.Create("Test Dataset", "description", invalidUserId, fileInfo, statistics));
     }
 
@@ -84,7 +84,7 @@ public class DataSetTests
         var statistics = CreateTestStatistics();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             DataSet.Create("Test Dataset", "description", "user123", null!, statistics));
     }
 
@@ -260,7 +260,7 @@ public class DataSetTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Delete_WithInvalidDeletedBy_ShouldThrowArgumentException(string invalidDeletedBy)
+    public void Delete_WithInvalidDeletedBy_ShouldThrowArgumentException(string? invalidDeletedBy)
     {
         // Arrange
         var dataSet = DataSet.Create("Test", "desc", "user123", CreateTestFileMetadata(), CreateTestStatistics());
@@ -351,7 +351,7 @@ public class DataSetTests
         // Arrange
         var dataSet = DataSet.Create("Test", "desc", "user123", CreateTestFileMetadata(), CreateTestStatistics());
         var expiredDate = DateTime.UtcNow.AddDays(-1);
-        
+
         // Use reflection to set the retention date to a past date for testing
         var property = typeof(DataSet).GetProperty("RetentionExpiryDate");
         property?.SetValue(dataSet, expiredDate);

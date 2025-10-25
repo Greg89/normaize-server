@@ -21,8 +21,8 @@ public interface IDuplicateRemovalProcessor
     /// <param name="progressCallback">Progress reporting callback</param>
     /// <returns>Processed data with duplicates removed</returns>
     Task<DuplicateRemovalResult> RemoveDuplicatesAsync(
-        DataSetData data, 
-        DuplicateRemovalOptions options, 
+        DataSetData data,
+        DuplicateRemovalOptions options,
         IProgress<DuplicateRemovalProgress> progressCallback);
 }
 
@@ -94,12 +94,12 @@ public class DuplicateRemovalProcessor : IDuplicateRemovalProcessor
     }
 
     public async Task<DuplicateRemovalResult> RemoveDuplicatesAsync(
-        DataSetData data, 
-        DuplicateRemovalOptions options, 
+        DataSetData data,
+        DuplicateRemovalOptions options,
         IProgress<DuplicateRemovalProgress> progressCallback)
     {
         var startTime = DateTime.UtcNow;
-        _logger.LogInformation("Starting duplicate removal for {RowCount} rows using columns: {KeyColumns}", 
+        _logger.LogInformation("Starting duplicate removal for {RowCount} rows using columns: {KeyColumns}",
             data.TotalRows, string.Join(", ", options.KeyColumns));
 
         try
@@ -148,7 +148,7 @@ public class DuplicateRemovalProcessor : IDuplicateRemovalProcessor
     {
         var availableColumns = data.Columns.Select(c => c.Name).ToHashSet();
         var missingColumns = options.KeyColumns.Where(col => !availableColumns.Contains(col)).ToList();
-        
+
         if (missingColumns.Any())
         {
             throw new ArgumentException($"Key columns not found in dataset: {string.Join(", ", missingColumns)}");
@@ -156,8 +156,8 @@ public class DuplicateRemovalProcessor : IDuplicateRemovalProcessor
     }
 
     private async Task<Dictionary<string, List<DataSetRowData>>> CreateDuplicateGroupsAsync(
-        DataSetData data, 
-        DuplicateRemovalOptions options, 
+        DataSetData data,
+        DuplicateRemovalOptions options,
         IProgress<DuplicateRemovalProgress> progressCallback)
     {
         var duplicateGroups = new Dictionary<string, List<DataSetRowData>>();
@@ -168,26 +168,26 @@ public class DuplicateRemovalProcessor : IDuplicateRemovalProcessor
         {
             // Create a composite key from the specified columns
             var key = CreateCompositeKey(row, options);
-            
+
             if (!duplicateGroups.ContainsKey(key))
             {
                 duplicateGroups[key] = new List<DataSetRowData>();
             }
-            
+
             duplicateGroups[key].Add(row);
-            
+
             processedRows++;
-            
+
             // Report progress every 1000 rows or at the end
             if (processedRows % 1000 == 0 || processedRows == totalRows)
             {
                 var percentComplete = 10 + (int)((double)processedRows / totalRows * 50); // 10-60%
                 progressCallback?.Report(new DuplicateRemovalProgress(
-                    percentComplete, 
-                    "Identifying duplicate groups", 
-                    processedRows, 
+                    percentComplete,
+                    "Identifying duplicate groups",
+                    processedRows,
                     totalRows));
-                
+
                 // Yield control to prevent blocking
                 await Task.Yield();
             }
@@ -202,26 +202,26 @@ public class DuplicateRemovalProcessor : IDuplicateRemovalProcessor
     private string CreateCompositeKey(DataSetRowData row, DuplicateRemovalOptions options)
     {
         var keyParts = new List<string>();
-        
+
         foreach (var columnName in options.KeyColumns)
         {
             var value = row.GetValue<string>(columnName) ?? string.Empty;
-            
+
             // Apply case sensitivity
             if (options.CaseSensitivity == CaseSensitivity.Insensitive)
             {
                 value = value.ToLowerInvariant();
             }
-            
+
             keyParts.Add(value);
         }
-        
+
         return string.Join("||", keyParts); // Use || as separator to avoid conflicts
     }
 
     private List<DataSetRowData> ApplyRetentionStrategy(
-        Dictionary<string, List<DataSetRowData>> duplicateGroups, 
-        DuplicateRemovalOptions options, 
+        Dictionary<string, List<DataSetRowData>> duplicateGroups,
+        DuplicateRemovalOptions options,
         IProgress<DuplicateRemovalProgress> progressCallback)
     {
         var retainedRows = new List<DataSetRowData>();
@@ -231,7 +231,7 @@ public class DuplicateRemovalProcessor : IDuplicateRemovalProcessor
         foreach (var group in duplicateGroups.Values)
         {
             DataSetRowData rowToRetain;
-            
+
             if (group.Count == 1)
             {
                 // No duplicates, keep the only row
@@ -242,28 +242,28 @@ public class DuplicateRemovalProcessor : IDuplicateRemovalProcessor
                 // Apply retention strategy
                 rowToRetain = options.RetentionStrategy switch
                 {
-                    RetentionStrategy.First => options.PreserveOriginalOrder 
+                    RetentionStrategy.First => options.PreserveOriginalOrder
                         ? group.OrderBy(r => r.RowIndex).First()
                         : group.First(),
-                    RetentionStrategy.Last => options.PreserveOriginalOrder 
+                    RetentionStrategy.Last => options.PreserveOriginalOrder
                         ? group.OrderByDescending(r => r.RowIndex).First()
                         : group.Last(),
                     _ => throw new NotSupportedException($"Retention strategy {options.RetentionStrategy} is not supported")
                 };
             }
-            
+
             retainedRows.Add(rowToRetain);
-            
+
             processedGroups++;
-            
+
             // Report progress
             if (processedGroups % 100 == 0 || processedGroups == totalGroups)
             {
                 var percentComplete = 60 + (int)((double)processedGroups / totalGroups * 30); // 60-90%
                 progressCallback?.Report(new DuplicateRemovalProgress(
-                    percentComplete, 
-                    "Selecting rows to retain", 
-                    processedGroups, 
+                    percentComplete,
+                    "Selecting rows to retain",
+                    processedGroups,
                     totalGroups));
             }
         }
@@ -280,7 +280,7 @@ public class DuplicateRemovalProcessor : IDuplicateRemovalProcessor
     private static DataSetData CreateProcessedDataSet(DataSetData originalData, List<DataSetRowData> retainedRows, DuplicateRemovalOptions options)
     {
         // Create new rows with sequential indices
-        var processedRows = retainedRows.Select((row, index) => 
+        var processedRows = retainedRows.Select((row, index) =>
             new DataSetRowData(index, row.Values.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)))
             .ToList();
 

@@ -20,8 +20,8 @@ public class DataSetRow
     public DataSet DataSet { get; private set; } = null!;
 
     // Private constructor for EF Core
-    private DataSetRow() 
-    { 
+    private DataSetRow()
+    {
         Data = string.Empty;
     }
 
@@ -38,7 +38,7 @@ public class DataSetRow
     {
         if (dataSetId == Guid.Empty)
             throw new ArgumentException("DataSet ID cannot be empty", nameof(dataSetId));
-        
+
         if (rowIndex < 0)
             throw new ArgumentException("Row index cannot be negative", nameof(rowIndex));
 
@@ -54,16 +54,16 @@ public class DataSetRow
             {
                 if (value is null)
                     return default(T);
-                
+
                 if (value is T typedValue)
                     return typedValue;
-                
+
                 // Handle JsonElement conversion for deserialized JSON
                 if (value is JsonElement jsonElement)
                 {
                     return ConvertJsonElement<T>(jsonElement);
                 }
-                
+
                 return (T?)Convert.ChangeType(value, typeof(T));
             }
         }
@@ -71,33 +71,33 @@ public class DataSetRow
         {
             // Return default if parsing fails
         }
-        
+
         return default(T);
     }
-    
+
     private static T? ConvertJsonElement<T>(JsonElement jsonElement)
     {
         var targetType = typeof(T);
-        
+
         return jsonElement.ValueKind switch
         {
             JsonValueKind.String when targetType == typeof(string) => (T)(object)jsonElement.GetString()!,
             JsonValueKind.String when targetType == typeof(int) && int.TryParse(jsonElement.GetString(), out var intVal) => (T)(object)intVal,
             JsonValueKind.String when targetType == typeof(bool) && bool.TryParse(jsonElement.GetString(), out var boolVal) => (T)(object)boolVal,
-            
+
             JsonValueKind.Number when targetType == typeof(string) => (T)(object)jsonElement.GetRawText(),
             JsonValueKind.Number when targetType == typeof(int) => (T)(object)jsonElement.GetInt32(),
             JsonValueKind.Number when targetType == typeof(double) => (T)(object)jsonElement.GetDouble(),
             JsonValueKind.Number when targetType == typeof(decimal) => (T)(object)jsonElement.GetDecimal(),
-            
+
             JsonValueKind.True when targetType == typeof(bool) => (T)(object)true,
             JsonValueKind.True when targetType == typeof(string) => (T)(object)"true",
-            
+
             JsonValueKind.False when targetType == typeof(bool) => (T)(object)false,
             JsonValueKind.False when targetType == typeof(string) => (T)(object)"false",
-            
+
             JsonValueKind.Null => default(T),
-            
+
             _ => jsonElement.Deserialize<T>()
         };
     }

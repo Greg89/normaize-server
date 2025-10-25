@@ -141,7 +141,7 @@ public class DataSetRowRepositoryTests : IDisposable
         // Assert
         var resultList = result.ToList();
         Assert.Equal(3, resultList.Count);
-        
+
         // Verify ordering by RowIndex
         Assert.Equal(0, resultList[0].RowIndex);
         Assert.Equal(1, resultList[1].RowIndex);
@@ -323,7 +323,7 @@ public class DataSetRowRepositoryTests : IDisposable
         // Assert
         Assert.NotNull(retrieved);
         Assert.Equal(complexData, retrieved.Data);
-        
+
         // Verify we can still parse the JSON
         var values = retrieved.GetAllValues();
         Assert.NotEmpty(values);
@@ -389,7 +389,7 @@ public class DataSetRowRepositoryTests : IDisposable
         // Arrange - Save rows in random order
         var random = new Random();
         var indices = Enumerable.Range(0, 100).OrderBy(x => random.Next()).ToList();
-        
+
         foreach (var index in indices)
         {
             var row = CreateTestRow(index);
@@ -402,7 +402,7 @@ public class DataSetRowRepositoryTests : IDisposable
         // Assert
         var rowsList = allRows.ToList();
         Assert.Equal(100, rowsList.Count);
-        
+
         // Verify strict ordering
         for (int i = 0; i < rowsList.Count; i++)
         {

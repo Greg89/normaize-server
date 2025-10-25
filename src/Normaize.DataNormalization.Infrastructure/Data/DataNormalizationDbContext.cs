@@ -11,7 +11,7 @@ namespace Normaize.DataNormalization.Infrastructure.Data;
 /// </summary>
 public class DataNormalizationDbContext : DbContext
 {
-    public DataNormalizationDbContext(DbContextOptions<DataNormalizationDbContext> options) 
+    public DataNormalizationDbContext(DbContextOptions<DataNormalizationDbContext> options)
         : base(options)
     {
     }

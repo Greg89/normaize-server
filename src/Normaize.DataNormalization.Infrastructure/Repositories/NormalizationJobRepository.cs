@@ -46,7 +46,7 @@ public class NormalizationJobRepository : INormalizationJobRepository
             }
             else
             {
-                _logger.LogDebug("Successfully retrieved normalization job {JobId} with status {Status}", 
+                _logger.LogDebug("Successfully retrieved normalization job {JobId} with status {Status}",
                     jobId, job.Status);
             }
 
@@ -78,7 +78,7 @@ public class NormalizationJobRepository : INormalizationJobRepository
             }
             else
             {
-                _logger.LogDebug("Retrieved next queued job: {JobId}, created at {CreatedAt}", 
+                _logger.LogDebug("Retrieved next queued job: {JobId}, created at {CreatedAt}",
                     job.Id, job.CreatedAt);
             }
 
@@ -97,7 +97,7 @@ public class NormalizationJobRepository : INormalizationJobRepository
 
         try
         {
-            _logger.LogDebug("Saving normalization job {JobId} with status {Status}", 
+            _logger.LogDebug("Saving normalization job {JobId} with status {Status}",
                 job.Id, job.Status);
 
             // Add the job to context
@@ -124,7 +124,7 @@ public class NormalizationJobRepository : INormalizationJobRepository
 
         try
         {
-            _logger.LogDebug("Updating normalization job {JobId} with status {Status}", 
+            _logger.LogDebug("Updating normalization job {JobId} with status {Status}",
                 job.Id, job.Status);
 
             // Verify the job exists and get existing entity
@@ -209,7 +209,7 @@ public class NormalizationJobRepository : INormalizationJobRepository
             return;
         }
 
-        _logger.LogDebug("Publishing {EventCount} domain events for job {JobId}", 
+        _logger.LogDebug("Publishing {EventCount} domain events for job {JobId}",
             job.DomainEvents.Count, job.Id);
 
         foreach (var domainEvent in job.DomainEvents)
@@ -217,12 +217,12 @@ public class NormalizationJobRepository : INormalizationJobRepository
             try
             {
                 await _eventPublisher.PublishAsync(domainEvent);
-                _logger.LogDebug("Published domain event {EventType} for job {JobId}", 
+                _logger.LogDebug("Published domain event {EventType} for job {JobId}",
                     domainEvent.GetType().Name, job.Id);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error publishing domain event {EventType} for job {JobId}", 
+                _logger.LogError(ex, "Error publishing domain event {EventType} for job {JobId}",
                     domainEvent.GetType().Name, job.Id);
                 // Continue publishing other events even if one fails
             }

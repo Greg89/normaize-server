@@ -8,7 +8,7 @@ namespace Normaize.DataNormalization.Domain.ValueObjects;
 public record StorageProvider
 {
     public string Value { get; init; }
-    
+
     private StorageProvider(string value)
     {
         Value = value ?? throw new ArgumentNullException(nameof(value));

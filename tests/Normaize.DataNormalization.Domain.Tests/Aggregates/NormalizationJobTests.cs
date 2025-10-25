@@ -33,7 +33,7 @@ public class NormalizationJobTests
         job.MaxRetries.Should().Be(5);
         job.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         job.ProgressPercentage.Should().Be(0);
-        
+
         // Domain events
         job.DomainEvents.Should().HaveCount(1);
         job.DomainEvents.Should().ContainSingle(e => e is JobCreated);
@@ -260,7 +260,7 @@ public class NormalizationJobTests
         job.OperationType.Should().Be("RemoveDuplicates");
         job.OperationParameters.Should().NotBeNullOrEmpty();
         job.Status.Should().Be(JobStatus.Queued);
-        
+
         // Verify the options can be deserialized back
         var deserializedOptions = DuplicateRemovalOptions.Deserialize(job.OperationParameters);
         deserializedOptions.Should().BeEquivalentTo(options);

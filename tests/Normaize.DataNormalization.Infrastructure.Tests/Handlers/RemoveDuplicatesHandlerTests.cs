@@ -31,7 +31,7 @@ public class RemoveDuplicatesHandlerTests
         _duplicateProcessorMock = new Mock<IDuplicateRemovalProcessor>();
         _loggerMock = new Mock<ILogger<RemoveDuplicatesHandler>>();
         _progressMock = new Mock<IJobProgress>();
-        
+
         _handler = new RemoveDuplicatesHandler(
             _dataLoaderMock.Object,
             _dataPersisterMock.Object,
@@ -42,7 +42,7 @@ public class RemoveDuplicatesHandlerTests
     private NormalizationJob CreateTestJob(string? operationParameters = null)
     {
         operationParameters ??= "{\"KeyColumns\":[\"email\"],\"RetentionStrategy\":\"KeepFirst\",\"CaseSensitive\":false}";
-        
+
         return NormalizationJob.Create(
             _testDataSetId,
             "RemoveDuplicates",
@@ -101,8 +101,8 @@ public class RemoveDuplicatesHandlerTests
         _dataPersisterMock.Setup(x => x.CreateBackupAsync(_testDataSetId))
             .ReturnsAsync(backupId);
         _duplicateProcessorMock.Setup(x => x.RemoveDuplicatesAsync(
-                It.IsAny<DataSetData>(), 
-                It.IsAny<DuplicateRemovalOptions>(), 
+                It.IsAny<DataSetData>(),
+                It.IsAny<DuplicateRemovalOptions>(),
                 It.IsAny<IProgress<DuplicateRemovalProgress>>()))
             .ReturnsAsync(duplicateResult);
         _dataPersisterMock.Setup(x => x.SaveProcessedDataAsync(_testDataSetId, duplicateResult.ProcessedData, "RemoveDuplicates"))
@@ -130,8 +130,8 @@ public class RemoveDuplicatesHandlerTests
         _dataPersisterMock.Setup(x => x.CreateBackupAsync(_testDataSetId))
             .ReturnsAsync("backup_test");
         _duplicateProcessorMock.Setup(x => x.RemoveDuplicatesAsync(
-                It.IsAny<DataSetData>(), 
-                It.IsAny<DuplicateRemovalOptions>(), 
+                It.IsAny<DataSetData>(),
+                It.IsAny<DuplicateRemovalOptions>(),
                 It.IsAny<IProgress<DuplicateRemovalProgress>>()))
             .ReturnsAsync(duplicateResult);
         _dataPersisterMock.Setup(x => x.SaveProcessedDataAsync(It.IsAny<Guid>(), It.IsAny<DataSetData>(), It.IsAny<string>()))
@@ -162,7 +162,7 @@ public class RemoveDuplicatesHandlerTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _handler.HandleAsync(job, _progressMock.Object));
-        
+
         Assert.Contains("key columns were not found", exception.Message);
         Assert.Contains("nonexistent", exception.Message);
     }
@@ -198,8 +198,8 @@ public class RemoveDuplicatesHandlerTests
         _dataPersisterMock.Setup(x => x.CreateBackupAsync(_testDataSetId))
             .ReturnsAsync("backup_test");
         _duplicateProcessorMock.Setup(x => x.RemoveDuplicatesAsync(
-                It.IsAny<DataSetData>(), 
-                It.IsAny<DuplicateRemovalOptions>(), 
+                It.IsAny<DataSetData>(),
+                It.IsAny<DuplicateRemovalOptions>(),
                 It.IsAny<IProgress<DuplicateRemovalProgress>>()))
             .ReturnsAsync(duplicateResult);
         _dataPersisterMock.Setup(x => x.SaveProcessedDataAsync(It.IsAny<Guid>(), It.IsAny<DataSetData>(), It.IsAny<string>()))
@@ -208,7 +208,7 @@ public class RemoveDuplicatesHandlerTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.HandleAsync(job, _progressMock.Object));
-        
+
         Assert.Contains("Failed to save processed data", exception.Message);
     }
 
@@ -226,8 +226,8 @@ public class RemoveDuplicatesHandlerTests
         _dataPersisterMock.Setup(x => x.CreateBackupAsync(_testDataSetId))
             .ReturnsAsync(backupId);
         _duplicateProcessorMock.Setup(x => x.RemoveDuplicatesAsync(
-                It.IsAny<DataSetData>(), 
-                It.IsAny<DuplicateRemovalOptions>(), 
+                It.IsAny<DataSetData>(),
+                It.IsAny<DuplicateRemovalOptions>(),
                 It.IsAny<IProgress<DuplicateRemovalProgress>>()))
             .ReturnsAsync(duplicateResult);
         _dataPersisterMock.Setup(x => x.SaveProcessedDataAsync(It.IsAny<Guid>(), It.IsAny<DataSetData>(), It.IsAny<string>()))
@@ -238,9 +238,9 @@ public class RemoveDuplicatesHandlerTests
 
         // Assert
         _dataPersisterMock.Verify(x => x.CreateBackupAsync(_testDataSetId), Times.Once);
-        
+
         // Verify backup is included in success result
-        _progressMock.Verify(x => x.SucceededAsync(job.Id, 
+        _progressMock.Verify(x => x.SucceededAsync(job.Id,
             It.Is<object>(result => result.ToString()!.Contains(backupId))), Times.Once);
     }
 
@@ -257,8 +257,8 @@ public class RemoveDuplicatesHandlerTests
         _dataPersisterMock.Setup(x => x.CreateBackupAsync(_testDataSetId))
             .ReturnsAsync("backup_test");
         _duplicateProcessorMock.Setup(x => x.RemoveDuplicatesAsync(
-                It.IsAny<DataSetData>(), 
-                It.IsAny<DuplicateRemovalOptions>(), 
+                It.IsAny<DataSetData>(),
+                It.IsAny<DuplicateRemovalOptions>(),
                 It.IsAny<IProgress<DuplicateRemovalProgress>>()))
             .ReturnsAsync(duplicateResult);
         _dataPersisterMock.Setup(x => x.SaveProcessedDataAsync(It.IsAny<Guid>(), It.IsAny<DataSetData>(), It.IsAny<string>()))
@@ -310,8 +310,8 @@ public class RemoveDuplicatesHandlerTests
         _dataPersisterMock.Setup(x => x.CreateBackupAsync(_testDataSetId))
             .ReturnsAsync(backupId);
         _duplicateProcessorMock.Setup(x => x.RemoveDuplicatesAsync(
-                It.IsAny<DataSetData>(), 
-                It.IsAny<DuplicateRemovalOptions>(), 
+                It.IsAny<DataSetData>(),
+                It.IsAny<DuplicateRemovalOptions>(),
                 It.IsAny<IProgress<DuplicateRemovalProgress>>()))
             .ReturnsAsync(duplicateResult);
         _dataPersisterMock.Setup(x => x.SaveProcessedDataAsync(It.IsAny<Guid>(), It.IsAny<DataSetData>(), It.IsAny<string>()))
@@ -321,7 +321,7 @@ public class RemoveDuplicatesHandlerTests
         await _handler.HandleAsync(job, _progressMock.Object);
 
         // Assert
-        _progressMock.Verify(x => x.SucceededAsync(job.Id, It.Is<object>(result => 
+        _progressMock.Verify(x => x.SucceededAsync(job.Id, It.Is<object>(result =>
             result.ToString()!.Contains("OriginalRowCount") &&
             result.ToString()!.Contains("DuplicatesRemoved") &&
             result.ToString()!.Contains("FinalRowCount") &&
@@ -336,16 +336,16 @@ public class RemoveDuplicatesHandlerTests
     public void Constructor_WithNullParameters_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new RemoveDuplicatesHandler(null!, _dataPersisterMock.Object, _duplicateProcessorMock.Object, _loggerMock.Object));
-        
-        Assert.Throws<ArgumentNullException>(() => 
+
+        Assert.Throws<ArgumentNullException>(() =>
             new RemoveDuplicatesHandler(_dataLoaderMock.Object, null!, _duplicateProcessorMock.Object, _loggerMock.Object));
-        
-        Assert.Throws<ArgumentNullException>(() => 
+
+        Assert.Throws<ArgumentNullException>(() =>
             new RemoveDuplicatesHandler(_dataLoaderMock.Object, _dataPersisterMock.Object, null!, _loggerMock.Object));
-        
-        Assert.Throws<ArgumentNullException>(() => 
+
+        Assert.Throws<ArgumentNullException>(() =>
             new RemoveDuplicatesHandler(_dataLoaderMock.Object, _dataPersisterMock.Object, _duplicateProcessorMock.Object, null!));
     }
 
@@ -363,8 +363,8 @@ public class RemoveDuplicatesHandlerTests
         _dataPersisterMock.Setup(x => x.CreateBackupAsync(_testDataSetId))
             .ReturnsAsync("backup_test");
         _duplicateProcessorMock.Setup(x => x.RemoveDuplicatesAsync(
-                It.IsAny<DataSetData>(), 
-                It.IsAny<DuplicateRemovalOptions>(), 
+                It.IsAny<DataSetData>(),
+                It.IsAny<DuplicateRemovalOptions>(),
                 It.IsAny<IProgress<DuplicateRemovalProgress>>()))
             .ReturnsAsync(duplicateResult);
         _dataPersisterMock.Setup(x => x.SaveProcessedDataAsync(It.IsAny<Guid>(), It.IsAny<DataSetData>(), It.IsAny<string>()))
@@ -372,7 +372,7 @@ public class RemoveDuplicatesHandlerTests
 
         // Act & Assert - Should not throw (case insensitive validation)
         await _handler.HandleAsync(job, _progressMock.Object);
-        
+
         _progressMock.Verify(x => x.SucceededAsync(job.Id, It.IsAny<object>()), Times.Once);
     }
 }
