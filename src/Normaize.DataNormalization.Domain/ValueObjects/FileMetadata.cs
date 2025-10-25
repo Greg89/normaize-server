@@ -14,6 +14,16 @@ public record FileMetadata
     public long FileSize { get; init; }
     public string? DataHash { get; init; }
 
+    // Parameterless constructor for EF Core
+    private FileMetadata() 
+    {
+        FileName = string.Empty;
+        FilePath = string.Empty;
+        FileType = FileType.Custom;
+        StorageProvider = StorageProvider.Local;
+        FileSize = 0;
+    }
+
     public FileMetadata(
         string fileName, 
         string filePath, 

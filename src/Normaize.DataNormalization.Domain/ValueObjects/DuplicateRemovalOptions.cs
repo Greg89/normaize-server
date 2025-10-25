@@ -63,7 +63,7 @@ public record DuplicateRemovalOptions
     }
 
     /// <summary>
-    /// Deserializes options from a JSON string
+    /// Deserializes DuplicateRemovalOptions from JSON string
     /// </summary>
     public static DuplicateRemovalOptions Deserialize(string json)
     {
@@ -74,9 +74,46 @@ public record DuplicateRemovalOptions
             .Select(x => x.GetString()!)
             .ToList();
 
-        var caseSensitivity = Enum.Parse<CaseSensitivity>(root.GetProperty("CaseSensitivity").GetString()!);
-        var retentionStrategy = Enum.Parse<RetentionStrategy>(root.GetProperty("RetentionStrategy").GetString()!);
-        var preserveOriginalOrder = root.GetProperty("PreserveOriginalOrder").GetBoolean();
+        // Handle both CaseSensitive (boolean) and CaseSensitivity (enum string) formats
+        CaseSensitivity caseSensitivity;
+        if (root.TryGetProperty("CaseSensitivity", out var caseSensitivityProp))
+        {
+            caseSensitivity = Enum.Parse<CaseSensitivity>(caseSensitivityProp.GetString()!);
+        }
+        else if (root.TryGetProperty("CaseSensitive", out var caseSensitiveProp))
+        {
+            // Convert boolean to enum
+            caseSensitivity = caseSensitiveProp.GetBoolean() ? CaseSensitivity.Sensitive : CaseSensitivity.Insensitive;
+        }
+        else
+        {
+            caseSensitivity = CaseSensitivity.Insensitive; // Default
+        }
+
+        // Handle RetentionStrategy with mapping from older format
+        RetentionStrategy retentionStrategy;
+        if (root.TryGetProperty("RetentionStrategy", out var retentionProp))
+        {
+            var retentionStr = retentionProp.GetString()!;
+            retentionStrategy = retentionStr switch
+            {
+                "KeepFirst" => RetentionStrategy.First,
+                "KeepLast" => RetentionStrategy.Last,
+                "First" => RetentionStrategy.First,
+                "Last" => RetentionStrategy.Last,
+                "MaxValue" => RetentionStrategy.MaxValue,
+                "MinValue" => RetentionStrategy.MinValue,
+                _ => RetentionStrategy.First // Default
+            };
+        }
+        else
+        {
+            retentionStrategy = RetentionStrategy.First; // Default
+        }
+
+        // PreserveOriginalOrder is optional, default to false
+        var preserveOriginalOrder = root.TryGetProperty("PreserveOriginalOrder", out var preserveProp) && 
+                                   preserveProp.GetBoolean();
 
         return new DuplicateRemovalOptions(keyColumns, caseSensitivity, retentionStrategy, preserveOriginalOrder);
     }

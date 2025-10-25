@@ -47,6 +47,10 @@ public static class InfrastructureServiceCollectionExtensions
 
         // Repositories
         services.AddScoped<INormalizationJobRepository, NormalizationJobRepository>();
+        
+        // Data access repositories  
+        services.AddScoped<IDataSetRepository, DataSetRepository>();
+        services.AddScoped<IDataSetRowRepository, DataSetRowRepository>();
 
         // Domain Event Publishing
         services.AddScoped<IDomainEventPublisher, MediatRDomainEventPublisher>();
@@ -68,6 +72,11 @@ public static class InfrastructureServiceCollectionExtensions
 
         // Operation Handlers
         services.AddScoped<IRemoveDuplicatesHandler, RemoveDuplicatesHandler>();
+
+        // Data loading and persistence services
+        services.AddScoped<IDataSetDataLoader, DataSetDataLoader>();
+        services.AddScoped<IDataSetDataPersister, DataSetDataPersister>();
+        services.AddScoped<IDuplicateRemovalProcessor, DuplicateRemovalProcessor>();
 
         // Background Workers
         services.AddScoped<IBackgroundWorker, NormalizationWorker>();

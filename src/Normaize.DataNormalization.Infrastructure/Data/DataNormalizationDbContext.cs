@@ -18,6 +18,7 @@ public class DataNormalizationDbContext : DbContext
 
     public DbSet<NormalizationJob> NormalizationJobs { get; set; } = null!;
     public DbSet<DataSet> DataSets { get; set; } = null!;
+    public DbSet<DataSetRow> DataSetRows { get; set; } = null!;
     public DbSet<NormalizationAuditLog> AuditLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -27,6 +28,7 @@ public class DataNormalizationDbContext : DbContext
         // Apply configurations
         modelBuilder.ApplyConfiguration(new NormalizationJobConfiguration());
         modelBuilder.ApplyConfiguration(new DataSetConfiguration());
+        modelBuilder.ApplyConfiguration(new DataSetRowConfiguration());
         modelBuilder.ApplyConfiguration(new NormalizationAuditLogConfiguration());
 
         // Configure schema

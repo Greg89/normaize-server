@@ -195,4 +195,13 @@ public class DataSet
         LastModifiedAt = DateTime.UtcNow;
         LastModifiedBy = modifiedBy;
     }
+
+    /// <summary>
+    /// Marks the dataset as processed (for compatibility with legacy code)
+    /// </summary>
+    public void MarkAsProcessed()
+    {
+        Statistics = Statistics.MarkAsProcessed();
+        UpdateModificationInfo(null);
+    }
 }
