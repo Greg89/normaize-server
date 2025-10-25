@@ -10,14 +10,13 @@ namespace Normaize.DataNormalization.API.Controllers;
 /// <summary>
 /// Controller for data normalization operations using clean DDD architecture
 /// </summary>
-[Authorize]
 public class DataNormalizationController : BaseApiController
 {
-    private readonly ICommandHandler<SubmitJobCommand, object> _submitJobHandler;
+    private readonly ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid> _submitJobHandler;
     private readonly ILogger<DataNormalizationController> _logger;
 
     public DataNormalizationController(
-        ICommandHandler<SubmitJobCommand, object> submitJobHandler,
+        ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid> submitJobHandler,
         ILogger<DataNormalizationController> logger)
     {
         _submitJobHandler = submitJobHandler ?? throw new ArgumentNullException(nameof(submitJobHandler));
@@ -53,21 +52,13 @@ public class DataNormalizationController : BaseApiController
                 _ => DuplicateRemovalOptions.KeepFirst(request.ComparisonColumns, caseSensitivity)
             };
 
-            // Create command with serialized options
-            var operationParameters = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                Strategy = request.Strategy,
-                ComparisonColumns = request.ComparisonColumns,
-                CaseSensitive = request.CaseSensitive,
-                TrimWhitespace = request.TrimWhitespace
-            });
-
-            var command = new SubmitJobCommand(request.DataSetId, "RemoveDuplicates", operationParameters);
-            var result = await _submitJobHandler.HandleAsync(command);
+            // Create command with domain value object
+            var command = new SubmitDuplicateRemovalJobCommand(request.DataSetId, options);
+            var jobId = await _submitJobHandler.HandleAsync(command);
 
             var response = new JobSubmissionResponse
             {
-                JobId = Guid.NewGuid(), // TODO: Get from actual result
+                JobId = jobId,
                 Status = "Submitted",
                 Message = "Duplicate removal job submitted successfully",
                 SubmittedAt = DateTime.UtcNow
@@ -101,13 +92,20 @@ public class DataNormalizationController : BaseApiController
             _logger.LogInformation("User {UserId} submitting {JobType} job for dataset {DataSetId}", 
                 userId, request.JobType, request.DataSetId);
 
-            var operationParameters = System.Text.Json.JsonSerializer.Serialize(request.Parameters);
-            var command = new SubmitJobCommand(request.DataSetId, request.JobType, operationParameters);
-            var result = await _submitJobHandler.HandleAsync(command);
+            // For now, only support duplicate removal jobs
+            if (request.JobType != "RemoveDuplicates")
+            {
+                return Error($"Job type '{request.JobType}' is not supported. Only 'RemoveDuplicates' is currently supported.", "UNSUPPORTED_JOB_TYPE", 400);
+            }
+
+            // Create basic duplicate removal options for generic job submission
+            var options = DuplicateRemovalOptions.KeepFirst(new List<string>(), CaseSensitivity.Insensitive);
+            var command = new SubmitDuplicateRemovalJobCommand(request.DataSetId, options);
+            var jobId = await _submitJobHandler.HandleAsync(command);
 
             var response = new JobSubmissionResponse
             {
-                JobId = Guid.NewGuid(), // TODO: Get from actual result
+                JobId = jobId,
                 Status = "Submitted",
                 Message = "Job submitted successfully",
                 SubmittedAt = DateTime.UtcNow

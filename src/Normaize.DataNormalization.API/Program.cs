@@ -1,174 +1,85 @@
 using Normaize.DataNormalization.Infrastructure;
 using Normaize.DataNormalization.Application;
-using Microsoft.EntityFrameworkCore;
 using Serilog;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure web host with URLs
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.ListenLocalhost(5001);
-    options.ListenLocalhost(7001, listenOptions =>
-    {
-        listenOptions.UseHttps();
-    });
-});
-
-// Force Development environment
+// Configure environment
 Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
 builder.Environment.EnvironmentName = "Development";
 
-Console.WriteLine($"Builder Environment: {builder.Environment.EnvironmentName}");
-
-// Configure Serilog
+// Configure Serilog for simple console logging
 Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.FromLogContext()
     .WriteTo.Console()
-    .WriteTo.File("logs/normaize-api-.txt", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
 builder.Host.UseSerilog();
 
-// Add services to the container
+// Add basic services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// Configure Swagger without authentication complexity
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() 
     { 
         Title = "Normaize Data Normalization API", 
         Version = "v1",
-        Description = "Clean DDD Architecture API for data normalization operations. This API provides endpoints for managing datasets and submitting normalization jobs following Domain-Driven Design principles.",
-        Contact = new Microsoft.OpenApi.Models.OpenApiContact
-        {
-            Name = "Normaize Team",
-            Email = "support@normaize.com"
-        }
+        Description = "Clean DDD Architecture API for data normalization operations."
     });
-    
-    // Include XML comments for better documentation
-    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    if (File.Exists(xmlPath))
-    {
-        c.IncludeXmlComments(xmlPath);
-    }
-    
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-        Name = "Authorization",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = "Bearer",
-        BearerFormat = "JWT"
-    });
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-    
-    // Add operation tags for better organization
-    c.TagActionsBy(api => new[] { api.GroupName ?? api.ActionDescriptor.RouteValues["controller"] });
-    c.DocInclusionPredicate((name, api) => true);
 });
 
-// Add authentication
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"] ?? "your-super-secret-key-here")),
-            ValidateIssuer = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidateAudience = true,
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
-        };
-    });
-
-builder.Services.AddAuthorization();
-
-// Add CORS
+// Add CORS for development testing
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
+    options.AddPolicy("AllowAll", policy =>
     {
-        policy.WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:3000" })
+        policy.AllowAnyOrigin()
               .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
+              .AllowAnyHeader();
     });
 });
 
-// Add application layers
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-builder.Services.AddDataNormalizationInfrastructure(builder.Configuration);
+// Add application layers with error handling
+try
+{
+    builder.Services.AddDataNormalizationInfrastructure(builder.Configuration);
+    Console.WriteLine("✓ Infrastructure services registered successfully");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"⚠ Warning: Infrastructure registration failed: {ex.Message}");
+    Console.WriteLine("API will run in limited mode");
+}
 
 // Add health checks
 builder.Services.AddHealthChecks();
 
+// Build the application
 var app = builder.Build();
 
-// Configure URLs after app is built
+// Configure URLs
 app.Urls.Add("http://localhost:5001");
-app.Urls.Add("https://localhost:7001");
 
-// Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
+Console.WriteLine("🚀 Starting Normaize Data Normalization API...");
+Console.WriteLine($"📍 Environment: {app.Environment.EnvironmentName}");
+Console.WriteLine($"🌐 URL: http://localhost:5001");
+
+// Configure pipeline
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Normaize Data Normalization API v1");
-        c.RoutePrefix = string.Empty; // Serve Swagger at root
-        c.DocumentTitle = "Normaize API Documentation";
-        c.DefaultModelExpandDepth(2);
-        c.DefaultModelRendering(Swashbuckle.AspNetCore.SwaggerUI.ModelRendering.Example);
-        c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
-        c.EnableDeepLinking();
-        c.DisplayOperationId();
-        c.DisplayRequestDuration();
-    });
-}
-else
-{
-    // Enable Swagger in production for API testing (you may want to secure this)
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Normaize Data Normalization API v1");
-        c.RoutePrefix = "swagger"; // Serve Swagger at /swagger in production
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Normaize API v1");
+    c.RoutePrefix = string.Empty; // Serve Swagger at root
+    c.DocumentTitle = "Normaize API Documentation";
+});
 
-app.UseHttpsRedirection();
-app.UseCors("AllowFrontend");
-
-app.UseAuthentication();
-app.UseAuthorization();
-
+app.UseCors("AllowAll");
 app.MapControllers();
 app.MapHealthChecks("/health");
+
+Console.WriteLine("✅ Starting web server...");
 
 app.Run();
 

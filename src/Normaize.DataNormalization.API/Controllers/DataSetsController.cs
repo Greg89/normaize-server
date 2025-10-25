@@ -10,7 +10,6 @@ namespace Normaize.DataNormalization.API.Controllers;
 /// <summary>
 /// Controller for dataset management operations using clean DDD architecture
 /// </summary>
-[Authorize]
 public class DataSetsController : BaseApiController
 {
     private readonly IDataSetRepository _dataSetRepository;
