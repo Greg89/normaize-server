@@ -22,7 +22,7 @@ This document tracks the migration of all services, interfaces, and components f
 
 ### Data Analysis & Statistics
 - ✅ **IDataAnalysisService / DataAnalysisService** - Fully migrated to DDD with CQRS pattern
-- 📋 **IStatisticalCalculationService / StatisticalCalculationService** - Statistical calculations for visualizations
+- � **IStatisticalCalculationService / StatisticalCalculationService** - Domain & Application layers complete, Infrastructure layer in progress
 
 ---
 

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Normaize.DataNormalization.Application.Common.Interfaces;
 using Normaize.DataNormalization.Application.Interfaces;
 using Normaize.DataNormalization.Application.Commands;
 using Normaize.DataNormalization.Application.Queries;
@@ -48,6 +49,7 @@ public static class InfrastructureServiceCollectionExtensions
         // Repositories
         services.AddScoped<INormalizationJobRepository, NormalizationJobRepository>();
         services.AddScoped<IAnalysisRepository, AnalysisRepository>();
+        services.AddScoped<IStatisticsRepository, StatisticsRepository>();
 
         // Data access repositories  
         services.AddScoped<IDataSetRepository, DataSetRepository>();
@@ -55,7 +57,10 @@ public static class InfrastructureServiceCollectionExtensions
 
         // Domain Event Publishing
         services.AddScoped<IDomainEventPublisher, MediatRDomainEventPublisher>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(InfrastructureServiceCollectionExtensions).Assembly));
+        services.AddMediatR(cfg => {
+            cfg.RegisterServicesFromAssembly(typeof(InfrastructureServiceCollectionExtensions).Assembly);
+            cfg.RegisterServicesFromAssembly(typeof(Normaize.DataNormalization.Application.Statistics.Commands.GenerateDataSummary.GenerateDataSummaryCommand).Assembly);
+        });
 
         // Application Services
         services.AddScoped<IJobQueue, JobQueueService>();
@@ -63,6 +68,11 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<INormalizationJobRouter, NormalizationJobRouter>();
         services.AddScoped<IAnalysisExecutionService, AnalysisExecutionService>();
         services.AddScoped<IAnalysisMapper, AnalysisMapper>();
+
+        // Statistical Services
+        services.AddScoped<IStatisticalCalculationService, StatisticalCalculationService>();
+        services.AddScoped<IStatisticsMapper, StatisticsMapper>();
+        services.AddScoped<Normaize.DataNormalization.Application.Common.Interfaces.IMapper, StatisticsMapper>();
 
         // Command Handlers - Jobs
         services.AddScoped<ICommandHandler<SubmitJobCommand, Guid>, SubmitJobCommandHandler>();

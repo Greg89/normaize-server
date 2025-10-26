@@ -172,8 +172,3 @@ public enum JobStatus
     Failed,
     DeadLettered
 }
-
-public interface IDomainEvent
-{
-    DateTime OccurredAt { get; }
-}

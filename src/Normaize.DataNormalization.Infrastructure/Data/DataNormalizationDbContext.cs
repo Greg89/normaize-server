@@ -3,6 +3,7 @@ using Normaize.DataNormalization.Domain.Aggregates;
 using Normaize.DataNormalization.Domain.Entities;
 using Normaize.DataNormalization.Domain.ValueObjects;
 using Normaize.DataNormalization.Infrastructure.Data.Configurations;
+using Normaize.DataNormalization.Infrastructure.Persistence.Configurations;
 using AnalysisConfig = Normaize.DataNormalization.Infrastructure.Data.Configurations.AnalysisConfiguration;
 
 namespace Normaize.DataNormalization.Infrastructure.Data;
@@ -19,6 +20,7 @@ public class DataNormalizationDbContext : DbContext
 
     public DbSet<NormalizationJob> NormalizationJobs { get; set; } = null!;
     public DbSet<Analysis> Analyses { get; set; } = null!;
+    public DbSet<Statistics> Statistics { get; set; } = null!;
     public DbSet<DataSet> DataSets { get; set; } = null!;
     public DbSet<DataSetRow> DataSetRows { get; set; } = null!;
     public DbSet<NormalizationAuditLog> AuditLogs { get; set; } = null!;
@@ -30,6 +32,7 @@ public class DataNormalizationDbContext : DbContext
         // Apply configurations
         modelBuilder.ApplyConfiguration(new NormalizationJobConfiguration());
         modelBuilder.ApplyConfiguration(new AnalysisConfig());
+        modelBuilder.ApplyConfiguration(new StatisticsConfiguration());
         modelBuilder.ApplyConfiguration(new DataSetConfiguration());
         modelBuilder.ApplyConfiguration(new DataSetRowConfiguration());
         modelBuilder.ApplyConfiguration(new NormalizationAuditLogConfiguration());

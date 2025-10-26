@@ -1,6 +1,8 @@
 using System.Threading.Tasks;
 using Normaize.DataNormalization.Domain.Aggregates;
 
+using Normaize.DataNormalization.Domain.Events;
+
 namespace Normaize.DataNormalization.Infrastructure.Services;
 
 /// <summary>
