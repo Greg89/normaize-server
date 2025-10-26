@@ -10,16 +10,28 @@ namespace Normaize.DataNormalization.Application.Commands;
 public class SubmitDuplicateRemovalJobCommandHandler : ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid>
 {
     private readonly INormalizationJobRepository _repository;
+    private readonly IDataSetRepository _dataSetRepository;
     private readonly IJobQueue _jobQueue;
 
-    public SubmitDuplicateRemovalJobCommandHandler(INormalizationJobRepository repository, IJobQueue jobQueue)
+    public SubmitDuplicateRemovalJobCommandHandler(
+        INormalizationJobRepository repository, 
+        IDataSetRepository dataSetRepository,
+        IJobQueue jobQueue)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _dataSetRepository = dataSetRepository ?? throw new ArgumentNullException(nameof(dataSetRepository));
         _jobQueue = jobQueue ?? throw new ArgumentNullException(nameof(jobQueue));
     }
 
     public async Task<Guid> HandleAsync(SubmitDuplicateRemovalJobCommand command)
     {
+        // Validate that the dataset exists
+        var dataSet = await _dataSetRepository.GetByIdAsync(command.DataSetId);
+        if (dataSet == null)
+        {
+            throw new InvalidOperationException($"Dataset with ID {command.DataSetId} not found");
+        }
+
         // Create the job using the domain aggregate with type-safe options
         var job = NormalizationJob.CreateDuplicateRemovalJob(command.DataSetId, command.Options);
 

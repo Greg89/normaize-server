@@ -37,9 +37,8 @@ public class JobQueueService : IJobQueue
                 throw new InvalidOperationException($"Job {job.Id} must be in Queued status to be enqueued, but was {job.Status}");
             }
 
-            // Save the job to the database - this will also publish the JobCreated event
-            await _jobRepository.SaveAsync(job);
-
+            // Job should already be saved by the command handler
+            // Just log the enqueue operation
             _logger.LogInformation("Successfully enqueued job {JobId} of type {OperationType} for dataset {DataSetId}",
                 job.Id, job.OperationType, job.DataSetId);
         }

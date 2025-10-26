@@ -32,7 +32,7 @@ public class DataNormalizationIntegrationTests : IClassFixture<ApiTestApplicatio
     public async Task Swagger_IsAccessible()
     {
         // Act
-        var response = await _client.GetAsync("/swagger/index.html");
+        var response = await _client.GetAsync("/");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);

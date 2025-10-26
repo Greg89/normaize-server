@@ -8,7 +8,7 @@ namespace Normaize.DataNormalization.API.Controllers;
 /// Base controller providing common API functionality following DDD principles
 /// </summary>
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("api/[controller]")]
 public abstract class BaseApiController : ControllerBase
 {
     private readonly Stopwatch _stopwatch = Stopwatch.StartNew();

@@ -42,15 +42,22 @@ builder.Services.AddCors(options =>
 });
 
 // Add application layers with error handling
-try
+if (!builder.Configuration.GetValue<bool>("SkipInfrastructureRegistration"))
 {
-    builder.Services.AddDataNormalizationInfrastructure(builder.Configuration);
-    Console.WriteLine("✓ Infrastructure services registered successfully");
+    try
+    {
+        builder.Services.AddDataNormalizationInfrastructure(builder.Configuration);
+        Console.WriteLine("✓ Infrastructure services registered successfully");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"⚠ Warning: Infrastructure registration failed: {ex.Message}");
+        Console.WriteLine("API will run in limited mode");
+    }
 }
-catch (Exception ex)
+else
 {
-    Console.WriteLine($"⚠ Warning: Infrastructure registration failed: {ex.Message}");
-    Console.WriteLine("API will run in limited mode");
+    Console.WriteLine("⚠ Skipping infrastructure registration (test mode)");
 }
 
 // Add health checks

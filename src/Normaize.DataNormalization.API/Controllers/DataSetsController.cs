@@ -375,11 +375,17 @@ public class DataSetsController : BaseApiController
                 Checksum = dataSet.FileInfo.DataHash ?? string.Empty,
                 StorageProvider = dataSet.FileInfo.StorageProvider.ToString()
             } : null,
-            Statistics = new DatasetStatisticsResponse
+            Statistics = dataSet.Statistics != null ? new DatasetStatisticsResponse
             {
                 RowCount = dataSet.Statistics.RowCount,
                 ColumnCount = dataSet.Statistics.ColumnCount,
                 FileSizeBytes = dataSet.FileInfo?.FileSize ?? 0, // Use file size as stats don't have FileSizeBytes
+                LastProcessedAt = dataSet.LastModifiedAt
+            } : new DatasetStatisticsResponse
+            {
+                RowCount = 0,
+                ColumnCount = 0,
+                FileSizeBytes = dataSet.FileInfo?.FileSize ?? 0,
                 LastProcessedAt = dataSet.LastModifiedAt
             }
         };
