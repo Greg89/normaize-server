@@ -47,6 +47,7 @@ public static class InfrastructureServiceCollectionExtensions
 
         // Repositories
         services.AddScoped<INormalizationJobRepository, NormalizationJobRepository>();
+        services.AddScoped<IAnalysisRepository, AnalysisRepository>();
 
         // Data access repositories  
         services.AddScoped<IDataSetRepository, DataSetRepository>();
@@ -60,15 +61,32 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IJobQueue, JobQueueService>();
         services.AddScoped<IJobProgress, JobProgressService>();
         services.AddScoped<INormalizationJobRouter, NormalizationJobRouter>();
+        services.AddScoped<IAnalysisExecutionService, AnalysisExecutionService>();
+        services.AddScoped<IAnalysisMapper, AnalysisMapper>();
 
-        // Command Handlers
+        // Command Handlers - Jobs
         services.AddScoped<ICommandHandler<SubmitJobCommand, Guid>, SubmitJobCommandHandler>();
         services.AddScoped<ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid>, SubmitDuplicateRemovalJobCommandHandler>();
         services.AddScoped<ICommandHandler<RetryJobCommand>, RetryJobCommandHandler>();
         services.AddScoped<ICommandHandler<CancelJobCommand>, CancelJobCommandHandler>();
 
-        // Query Handlers
+        // Command Handlers - Analysis
+        services.AddScoped<ICommandHandler<CreateAnalysisCommand, AnalysisDto>, CreateAnalysisCommandHandler>();
+        services.AddScoped<ICommandHandler<RunAnalysisCommand, AnalysisDto>, RunAnalysisCommandHandler>();
+        services.AddScoped<ICommandHandler<DeleteAnalysisCommand, bool>, DeleteAnalysisCommandHandler>();
+        services.AddScoped<ICommandHandler<UpdateAnalysisCommand, AnalysisDto>, UpdateAnalysisCommandHandler>();
+        services.AddScoped<ICommandHandler<ResetAnalysisCommand, AnalysisDto>, ResetAnalysisCommandHandler>();
+
+        // Query Handlers - Jobs
         services.AddScoped<IQueryHandler<GetJobStatusQuery, JobStatusDto?>, GetJobStatusQueryHandler>();
+
+        // Query Handlers - Analysis
+        services.AddScoped<IQueryHandler<GetAnalysisQuery, AnalysisDto?>, GetAnalysisQueryHandler>();
+        services.AddScoped<IQueryHandler<GetAnalysesByDataSetQuery, IEnumerable<AnalysisDto>>, GetAnalysesByDataSetQueryHandler>();
+        services.AddScoped<IQueryHandler<GetAnalysesByStatusQuery, IEnumerable<AnalysisDto>>, GetAnalysesByStatusQueryHandler>();
+        services.AddScoped<IQueryHandler<GetAnalysesByTypeQuery, IEnumerable<AnalysisDto>>, GetAnalysesByTypeQueryHandler>();
+        services.AddScoped<IQueryHandler<GetAnalysisResultQuery, AnalysisResultDto?>, GetAnalysisResultQueryHandler>();
+        services.AddScoped<IQueryHandler<GetAllAnalysesQuery, IEnumerable<AnalysisDto>>, GetAllAnalysesQueryHandler>();
 
         // Operation Handlers
         services.AddScoped<IRemoveDuplicatesHandler, RemoveDuplicatesHandler>();
