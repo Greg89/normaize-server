@@ -12,7 +12,7 @@ public class DataSetConfiguration : IEntityTypeConfiguration<DataSet>
 {
     public void Configure(EntityTypeBuilder<DataSet> builder)
     {
-        builder.ToTable("DataSets", "DataNormalization");
+        builder.ToTable("datasets", "data_normalization");
 
         // Primary key
         builder.HasKey(d => d.Id);
@@ -20,65 +20,80 @@ public class DataSetConfiguration : IEntityTypeConfiguration<DataSet>
         // Scalar properties
         builder.Property(d => d.Id)
             .IsRequired()
+            .HasColumnName("id")
             .HasComment("Unique identifier for the dataset");
 
         builder.Property(d => d.Name)
             .IsRequired()
             .HasMaxLength(255)
+            .HasColumnName("name")
             .HasComment("Human-readable name of the dataset");
 
         builder.Property(d => d.Description)
             .HasMaxLength(1000)
+            .HasColumnName("description")
             .HasComment("Optional description of the dataset");
 
         builder.Property(d => d.UserId)
             .IsRequired()
             .HasMaxLength(450)
+            .HasColumnName("user_id")
             .HasComment("ID of the user who owns this dataset");
 
         builder.Property(d => d.UploadedAt)
             .IsRequired()
+            .HasColumnName("uploaded_at")
             .HasComment("When the dataset was uploaded");
 
         builder.Property(d => d.Schema)
             .HasColumnType("jsonb")
+            .HasColumnName("schema")
             .HasComment("JSON schema definition for the dataset");
 
         builder.Property(d => d.PreviewData)
             .HasColumnType("jsonb")
+            .HasColumnName("preview_data")
             .HasComment("Sample data for preview purposes");
 
         builder.Property(d => d.ProcessedData)
             .HasColumnType("jsonb")
+            .HasColumnName("processed_data")
             .HasComment("Processed data for small datasets");
 
         builder.Property(d => d.ProcessingErrors)
             .HasColumnType("text")
+            .HasColumnName("processing_errors")
             .HasComment("Any errors encountered during processing");
 
         builder.Property(d => d.RetentionExpiryDate)
+            .HasColumnName("retention_expiry_date")
             .HasComment("When this dataset should be automatically deleted");
 
         // Soft delete properties
         builder.Property(d => d.IsDeleted)
             .IsRequired()
             .HasDefaultValue(false)
+            .HasColumnName("is_deleted")
             .HasComment("Whether this dataset has been soft deleted");
 
         builder.Property(d => d.DeletedAt)
+            .HasColumnName("deleted_at")
             .HasComment("When the dataset was deleted");
 
         builder.Property(d => d.DeletedBy)
             .HasMaxLength(450)
+            .HasColumnName("deleted_by")
             .HasComment("Who deleted the dataset");
 
         // Audit properties
         builder.Property(d => d.LastModifiedAt)
             .IsRequired()
+            .HasColumnName("last_modified_at")
             .HasComment("When the dataset was last modified");
 
         builder.Property(d => d.LastModifiedBy)
             .HasMaxLength(450)
+            .HasColumnName("last_modified_by")
             .HasComment("Who last modified the dataset");
 
         // Value objects
@@ -87,20 +102,20 @@ public class DataSetConfiguration : IEntityTypeConfiguration<DataSet>
             fileInfo.Property(f => f.FileName)
                 .IsRequired()
                 .HasMaxLength(255)
-                .HasColumnName("FileName");
+                .HasColumnName("file_name");
 
             fileInfo.Property(f => f.FilePath)
                 .IsRequired()
                 .HasMaxLength(500)
-                .HasColumnName("FilePath");
+                .HasColumnName("file_path");
 
             fileInfo.Property(f => f.FileSize)
                 .IsRequired()
-                .HasColumnName("FileSize");
+                .HasColumnName("file_size");
 
             fileInfo.Property(f => f.DataHash)
                 .HasMaxLength(64)
-                .HasColumnName("DataHash");
+                .HasColumnName("data_hash");
 
             // FileType stored as string directly
             fileInfo.Property(f => f.FileType)
@@ -109,7 +124,7 @@ public class DataSetConfiguration : IEntityTypeConfiguration<DataSet>
                     v => FileType.FromString(v))
                 .IsRequired()
                 .HasMaxLength(50)
-                .HasColumnName("FileType");
+                .HasColumnName("file_type");
 
             // StorageProvider stored as string directly  
             fileInfo.Property(f => f.StorageProvider)
@@ -118,40 +133,40 @@ public class DataSetConfiguration : IEntityTypeConfiguration<DataSet>
                     v => StorageProvider.FromString(v))
                 .IsRequired()
                 .HasMaxLength(100)
-                .HasColumnName("StorageProvider");
+                .HasColumnName("storage_provider");
         });
 
         builder.OwnsOne(d => d.Statistics, stats =>
         {
             stats.Property(s => s.RowCount)
                 .IsRequired()
-                .HasColumnName("StatsRowCount");
+                .HasColumnName("stats_row_count");
 
             stats.Property(s => s.ColumnCount)
                 .IsRequired()
-                .HasColumnName("StatsColumnCount");
+                .HasColumnName("stats_column_count");
 
             stats.Property(s => s.IsProcessed)
                 .IsRequired()
-                .HasColumnName("StatsIsProcessed");
+                .HasColumnName("stats_is_processed");
 
             stats.Property(s => s.UseSeparateTable)
                 .IsRequired()
-                .HasColumnName("StatsUseSeparateTable");
+                .HasColumnName("stats_use_separate_table");
 
             stats.Property(s => s.ProcessedAt)
-                .HasColumnName("StatsProcessedAt");
+                .HasColumnName("stats_processed_at");
         });
 
         // Indexes
         builder.HasIndex(d => d.UserId)
-            .HasDatabaseName("IX_DataSets_UserId");
+            .HasDatabaseName("ix_datasets_user_id");
 
         builder.HasIndex(d => d.UploadedAt)
-            .HasDatabaseName("IX_DataSets_UploadedAt");
+            .HasDatabaseName("ix_datasets_uploaded_at");
 
         builder.HasIndex(d => new { d.IsDeleted, d.UserId })
-            .HasDatabaseName("IX_DataSets_IsDeleted_UserId");
+            .HasDatabaseName("ix_datasets_is_deleted_user_id");
 
         // Filters
         builder.HasQueryFilter(d => !d.IsDeleted);
@@ -165,7 +180,7 @@ public class DataSetRowConfiguration : IEntityTypeConfiguration<DataSetRow>
 {
     public void Configure(EntityTypeBuilder<DataSetRow> builder)
     {
-        builder.ToTable("DataSetRows", "DataNormalization");
+        builder.ToTable("dataset_rows", "data_normalization");
 
         // Primary key
         builder.HasKey(r => r.Id);
@@ -173,26 +188,32 @@ public class DataSetRowConfiguration : IEntityTypeConfiguration<DataSetRow>
         // Properties
         builder.Property(r => r.Id)
             .IsRequired()
+            .HasColumnName("id")
             .HasComment("Unique identifier for the row");
 
         builder.Property(r => r.DataSetId)
             .IsRequired()
+            .HasColumnName("dataset_id")
             .HasComment("Foreign key to the parent dataset");
 
         builder.Property(r => r.RowIndex)
             .IsRequired()
+            .HasColumnName("row_index")
             .HasComment("Zero-based index of this row within the dataset");
 
         builder.Property(r => r.Data)
             .IsRequired()
             .HasColumnType("jsonb")
+            .HasColumnName("data")
             .HasComment("JSON representation of the row data");
 
         builder.Property(r => r.CreatedAt)
             .IsRequired()
+            .HasColumnName("created_at")
             .HasComment("When this row was created");
 
         builder.Property(r => r.UpdatedAt)
+            .HasColumnName("updated_at")
             .HasComment("When this row was last updated");
 
         // Relationships
@@ -203,13 +224,13 @@ public class DataSetRowConfiguration : IEntityTypeConfiguration<DataSetRow>
 
         // Indexes
         builder.HasIndex(r => r.DataSetId)
-            .HasDatabaseName("IX_DataSetRows_DataSetId");
+            .HasDatabaseName("ix_dataset_rows_dataset_id");
 
         builder.HasIndex(r => new { r.DataSetId, r.RowIndex })
             .IsUnique()
-            .HasDatabaseName("IX_DataSetRows_DataSetId_RowIndex");
+            .HasDatabaseName("ix_dataset_rows_dataset_id_row_index");
 
         builder.HasIndex(r => r.CreatedAt)
-            .HasDatabaseName("IX_DataSetRows_CreatedAt");
+            .HasDatabaseName("ix_dataset_rows_created_at");
     }
 }
