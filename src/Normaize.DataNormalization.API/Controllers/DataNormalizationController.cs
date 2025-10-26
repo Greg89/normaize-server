@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Normaize.DataNormalization.API.Controllers;
 using Normaize.DataNormalization.API.DTOs;
 using Normaize.DataNormalization.Application.Commands;
+using Normaize.DataNormalization.Application.Queries;
+using Normaize.DataNormalization.Application.DTOs;
 using Normaize.DataNormalization.Domain.ValueObjects;
 
 namespace Normaize.DataNormalization.API.Controllers;
@@ -13,13 +15,22 @@ namespace Normaize.DataNormalization.API.Controllers;
 public class DataNormalizationController : BaseApiController
 {
     private readonly ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid> _submitJobHandler;
+    private readonly ICommandHandler<RetryJobCommand> _retryJobHandler;
+    private readonly ICommandHandler<CancelJobCommand> _cancelJobHandler;
+    private readonly IQueryHandler<GetJobStatusQuery, JobStatusDto?> _getJobStatusHandler;
     private readonly ILogger<DataNormalizationController> _logger;
 
     public DataNormalizationController(
         ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid> submitJobHandler,
+        ICommandHandler<RetryJobCommand> retryJobHandler,
+        ICommandHandler<CancelJobCommand> cancelJobHandler,
+        IQueryHandler<GetJobStatusQuery, JobStatusDto?> getJobStatusHandler,
         ILogger<DataNormalizationController> logger)
     {
         _submitJobHandler = submitJobHandler ?? throw new ArgumentNullException(nameof(submitJobHandler));
+        _retryJobHandler = retryJobHandler ?? throw new ArgumentNullException(nameof(retryJobHandler));
+        _cancelJobHandler = cancelJobHandler ?? throw new ArgumentNullException(nameof(cancelJobHandler));
+        _getJobStatusHandler = getJobStatusHandler ?? throw new ArgumentNullException(nameof(getJobStatusHandler));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -138,18 +149,29 @@ public class DataNormalizationController : BaseApiController
             var userId = GetCurrentUserId();
             _logger.LogDebug("User {UserId} requesting status for job {JobId}", userId, jobId);
 
-            // TODO: Implement GetJobStatusQuery when available
+            var query = new GetJobStatusQuery(jobId);
+            var jobStatusDto = await _getJobStatusHandler.HandleAsync(query);
+
+            if (jobStatusDto == null)
+            {
+                return NotFound($"Job with ID {jobId} not found");
+            }
+
+            // Map from Application DTO to API DTO
             var response = new JobStatusResponse
             {
-                JobId = jobId,
-                DataSetId = Guid.NewGuid(),
-                JobType = "Unknown",
-                Status = "NotImplemented",
-                StatusMessage = "Job status retrieval not yet implemented",
-                ProgressPercentage = 0,
-                SubmittedAt = DateTime.UtcNow,
-                SubmittedBy = userId,
-                Parameters = new Dictionary<string, object>()
+                JobId = jobStatusDto.Id,
+                DataSetId = jobStatusDto.DataSetId,
+                JobType = jobStatusDto.OperationType,
+                Status = jobStatusDto.Status,
+                StatusMessage = jobStatusDto.ErrorMessage ?? jobStatusDto.ProgressMessage,
+                ProgressPercentage = jobStatusDto.ProgressPercentage,
+                SubmittedAt = jobStatusDto.CreatedAt,
+                StartedAt = jobStatusDto.StartedAt,
+                CompletedAt = jobStatusDto.CompletedAt,
+                SubmittedBy = userId, // TODO: Store actual submitter in domain model
+                Parameters = ParseParametersFromJson(jobStatusDto.OperationParameters),
+                Results = CreateJobResults(jobStatusDto)
             };
 
             return Success(response);
@@ -174,18 +196,63 @@ public class DataNormalizationController : BaseApiController
     [ProducesResponseType(500)]
     public async Task<IActionResult> CancelJob(Guid jobId, [FromBody] CancelJobRequest request)
     {
+        var userId = GetCurrentUserId();
+        
         try
         {
-            var userId = GetCurrentUserId();
             _logger.LogInformation("User {UserId} cancelling job {JobId}", userId, jobId);
 
-            // TODO: Implement CancelJobCommand when needed
-            return Error("Job cancellation is not yet implemented", "NOT_IMPLEMENTED", 501);
+            var command = new CancelJobCommand(jobId);
+            await _cancelJobHandler.HandleAsync(command);
+
+            _logger.LogInformation("Successfully cancelled job {JobId} for user {UserId}", jobId, userId);
+            return Success(true, "Job cancelled successfully");
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+        {
+            _logger.LogWarning("Job {JobId} not found for cancellation by user {UserId}", jobId, userId);
+            return NotFound($"Job with ID {jobId} not found");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error cancelling job {JobId}", jobId);
             return HandleException(ex, nameof(CancelJob));
+        }
+    }
+
+    /// <summary>
+    /// Retry a failed normalization job
+    /// </summary>
+    /// <param name="jobId">ID of the job to retry</param>
+    /// <returns>Whether the retry was successful</returns>
+    [HttpPost("jobs/{jobId:guid}/retry")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<IActionResult> RetryJob(Guid jobId)
+    {
+        var userId = GetCurrentUserId();
+        
+        try
+        {
+            _logger.LogInformation("User {UserId} retrying job {JobId}", userId, jobId);
+
+            var command = new RetryJobCommand(jobId);
+            await _retryJobHandler.HandleAsync(command);
+
+            _logger.LogInformation("Successfully scheduled retry for job {JobId} by user {UserId}", jobId, userId);
+            return Success(true, "Job retry scheduled successfully");
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+        {
+            _logger.LogWarning("Job {JobId} not found for retry by user {UserId}", jobId, userId);
+            return NotFound($"Job with ID {jobId} not found");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrying job {JobId}", jobId);
+            return HandleException(ex, nameof(RetryJob));
         }
     }
 
@@ -253,5 +320,98 @@ public class DataNormalizationController : BaseApiController
             _logger.LogError(ex, "Error getting jobs for dataset {DataSetId}", dataSetId);
             return HandleException(ex, nameof(GetDataSetJobs));
         }
+    }
+
+    /// <summary>
+    /// Parse operation parameters from JSON string
+    /// </summary>
+    private Dictionary<string, object> ParseParametersFromJson(string? parametersJson)
+    {
+        if (string.IsNullOrWhiteSpace(parametersJson))
+        {
+            return new Dictionary<string, object>();
+        }
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(parametersJson) 
+                   ?? new Dictionary<string, object>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse operation parameters: {Parameters}", parametersJson);
+            return new Dictionary<string, object> { { "raw", parametersJson } };
+        }
+    }
+
+    /// <summary>
+    /// Create job results response from job status DTO
+    /// </summary>
+    private JobResultsResponse? CreateJobResults(JobStatusDto jobStatus)
+    {
+        // Only create results if job is completed and has result data
+        if (jobStatus.Status != "Completed" || string.IsNullOrWhiteSpace(jobStatus.Result))
+        {
+            return null;
+        }
+
+        try
+        {
+            // Try to parse result JSON into meaningful statistics
+            var resultData = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(jobStatus.Result);
+            
+            return new JobResultsResponse
+            {
+                ProcessedRows = GetIntValue(resultData, "processedRows", 0),
+                RowsRemoved = GetIntValue(resultData, "rowsRemoved", 0),
+                RowsModified = GetIntValue(resultData, "rowsModified", 0),
+                ProcessingTime = TimeSpan.FromMilliseconds(GetIntValue(resultData, "processingTimeMs", 0)),
+                Statistics = resultData ?? new Dictionary<string, object>(),
+                Warnings = GetStringList(resultData, "warnings")
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse job result: {Result}", jobStatus.Result);
+            return new JobResultsResponse
+            {
+                Statistics = new Dictionary<string, object> { { "raw", jobStatus.Result } }
+            };
+        }
+    }
+
+    private static int GetIntValue(Dictionary<string, object>? data, string key, int defaultValue)
+    {
+        if (data?.TryGetValue(key, out var value) == true)
+        {
+            return value switch
+            {
+                int intValue => intValue,
+                long longValue => (int)longValue,
+                double doubleValue => (int)doubleValue,
+                string stringValue when int.TryParse(stringValue, out var parsed) => parsed,
+                _ => defaultValue
+            };
+        }
+        return defaultValue;
+    }
+
+    private static List<string> GetStringList(Dictionary<string, object>? data, string key)
+    {
+        if (data?.TryGetValue(key, out var value) == true && value is System.Text.Json.JsonElement jsonElement)
+        {
+            try
+            {
+                return jsonElement.EnumerateArray()
+                    .Select(item => item.GetString() ?? string.Empty)
+                    .Where(s => !string.IsNullOrEmpty(s))
+                    .ToList();
+            }
+            catch
+            {
+                // Fall through to return empty list
+            }
+        }
+        return new List<string>();
     }
 }
