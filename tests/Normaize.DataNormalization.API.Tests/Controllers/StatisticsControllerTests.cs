@@ -9,6 +9,8 @@ using Normaize.DataNormalization.Application.Commands.Statistics;
 using Normaize.DataNormalization.Application.DTOs;
 using Normaize.DataNormalization.Application.Common.DTOs;
 using Normaize.DataNormalization.Application.Queries.Statistics;
+using Normaize.DataNormalization.Application.Statistics.Commands.GenerateDataSummary;
+using Normaize.DataNormalization.Application.Statistics.Commands.GenerateStatisticalSummary;
 using Xunit;
 
 namespace Normaize.DataNormalization.API.Tests.Controllers;
@@ -336,7 +338,7 @@ public class StatisticsControllerTests
             DuplicateRows = 2,
             CalculatedAt = DateTime.UtcNow,
             ProcessingTime = TimeSpan.FromSeconds(5),
-            ColumnSummaries = new Dictionary<string, ColumnSummaryDto>(),
+            ColumnSummaries = new Dictionary<string, DetailedColumnSummaryDto>(),
             ColumnStatistics = new Dictionary<string, StatisticalMeasureDto>()
         };
     }

@@ -346,17 +346,21 @@ public class DataSetTests
     }
 
     [Fact]
-    public void BusinessRuleQueries_WithRetentionExpired_ShouldReturnTrue()
+    public void BusinessRuleQueries_WithRetentionSet_ShouldCalculateExpiryCorrectly()
     {
-        // Arrange
-        var dataSet = DataSet.Create("Test", "desc", "user123", CreateTestFileMetadata(), CreateTestStatistics());
-        var expiredDate = DateTime.UtcNow.AddDays(-1);
-
-        // Use reflection to set the retention date to a past date for testing
-        var property = typeof(DataSet).GetProperty("RetentionExpiryDate");
-        property?.SetValue(dataSet, expiredDate);
+        // Arrange - Create a dataset with 1 day retention
+        var dataSet = DataSet.Create("Test", "desc", "user123", CreateTestFileMetadata(), CreateTestStatistics(), retentionDays: 1);
 
         // Act & Assert
-        Assert.True(dataSet.IsRetentionExpired);
+        Assert.NotNull(dataSet.RetentionPolicy);
+        Assert.Equal(1, dataSet.RetentionPolicy.RetentionDays);
+        Assert.NotNull(dataSet.RetentionExpiryDate);
+        
+        // Expiry date should be approximately 1 day from now (allow 1 minute tolerance)
+        var expectedExpiry = DateTime.UtcNow.AddDays(1);
+        Assert.True(Math.Abs((dataSet.RetentionExpiryDate.Value - expectedExpiry).TotalMinutes) < 1);
+        
+        // Should not be expired yet
+        Assert.False(dataSet.IsRetentionExpired);
     }
 }

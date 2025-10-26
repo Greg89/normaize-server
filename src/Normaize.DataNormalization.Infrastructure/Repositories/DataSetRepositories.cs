@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -26,64 +27,85 @@ public class DataSetRepository : IDataSetRepository
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<DataSet?> GetByIdAsync(Guid id)
+    public async Task<DataSet?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Getting dataset by ID: {DataSetId}", id);
 
         return await _context.DataSets
             .Where(ds => ds.Id == id && !ds.IsDeleted)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<DataSet?> GetByIdWithRowsAsync(Guid id)
+    public async Task<DataSet?> GetByIdWithRowsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Getting dataset with rows by ID: {DataSetId}", id);
 
         return await _context.DataSets
             .Where(ds => ds.Id == id && !ds.IsDeleted)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
         // Note: We don't include rows here as they're managed separately
         // This keeps the query performant for large datasets
     }
 
-    public async Task<IEnumerable<DataSet>> GetByUserIdAsync(string userId)
+    public async Task<IReadOnlyList<DataSet>> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Getting datasets for user: {UserId}", userId);
 
         return await _context.DataSets
             .Where(ds => ds.UserId == userId && !ds.IsDeleted)
             .OrderByDescending(ds => ds.UploadedAt)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
     }
 
-    public async Task<DataSet> SaveAsync(DataSet dataSet)
+    public async Task<IReadOnlyList<DataSet>> GetDeletedByUserIdAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Getting deleted datasets for user: {UserId}", userId);
+
+        return await _context.DataSets
+            .Where(ds => ds.UserId == userId && ds.IsDeleted)
+            .OrderByDescending(ds => ds.DeletedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<DataSet> AddAsync(DataSet dataSet, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Adding new dataset: {DataSetId}", dataSet.Id);
+
+        await _context.DataSets.AddAsync(dataSet, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Successfully added dataset: {DataSetId}", dataSet.Id);
+        return dataSet;
+    }
+
+    public async Task<DataSet> SaveAsync(DataSet dataSet, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Saving dataset: {DataSetId}", dataSet.Id);
 
-        await _context.DataSets.AddAsync(dataSet);
-        await _context.SaveChangesAsync();
+        await _context.DataSets.AddAsync(dataSet, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Successfully saved dataset: {DataSetId}", dataSet.Id);
         return dataSet;
     }
 
-    public async Task<DataSet> UpdateAsync(DataSet dataSet)
+    public async Task<DataSet> UpdateAsync(DataSet dataSet, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Updating dataset: {DataSetId}", dataSet.Id);
 
         _context.DataSets.Update(dataSet);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Successfully updated dataset: {DataSetId}", dataSet.Id);
         return dataSet;
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Deleting dataset: {DataSetId}", id);
 
-        var dataSet = await GetByIdAsync(id);
+        var dataSet = await GetByIdAsync(id, cancellationToken);
         if (dataSet == null)
         {
             _logger.LogWarning("Dataset not found for deletion: {DataSetId}", id);
@@ -91,16 +113,16 @@ public class DataSetRepository : IDataSetRepository
         }
 
         dataSet.Delete("system"); // Use "system" as deletedBy for repository operations
-        await UpdateAsync(dataSet);
+        await UpdateAsync(dataSet, cancellationToken);
 
         _logger.LogInformation("Successfully deleted dataset: {DataSetId}", id);
         return true;
     }
 
-    public async Task<bool> ExistsAsync(Guid id)
+    public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _context.DataSets
-            .AnyAsync(ds => ds.Id == id && !ds.IsDeleted);
+            .AnyAsync(ds => ds.Id == id && !ds.IsDeleted, cancellationToken);
     }
 }
 

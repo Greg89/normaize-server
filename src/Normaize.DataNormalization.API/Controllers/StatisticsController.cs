@@ -4,7 +4,8 @@ using Normaize.DataNormalization.Application.Statistics.Commands.GenerateDataSum
 using Normaize.DataNormalization.Application.Statistics.Commands.GenerateStatisticalSummary;
 using Normaize.DataNormalization.Application.Common.DTOs;
 using Normaize.DataNormalization.Application.DTOs;
-using Normaize.DataNormalization.Application.Statistics.Queries.GetStatistics;
+using Normaize.DataNormalization.Application.Queries.Statistics;
+using Normaize.DataNormalization.Application.Commands.Statistics;
 using System.ComponentModel.DataAnnotations;
 
 namespace Normaize.DataNormalization.API.Controllers;
@@ -164,7 +165,7 @@ public class StatisticsController : ControllerBase
         {
             _logger.LogInformation("Retrieving statistics for dataset {DataSetId}", dataSetId);
 
-            var query = new GetStatisticsByDataSetIdQuery(dataSetId, "system");
+            var query = new GetStatisticsByDataSetIdQuery(dataSetId);
             var result = await _mediator.Send(query, cancellationToken);
 
             if (result == null)
@@ -208,9 +209,6 @@ public class StatisticsController : ControllerBase
         [FromRoute] Guid dataSetId,
         CancellationToken cancellationToken = default)
     {
-        // TODO: Implement DeleteStatisticsCommand
-        return NoContent();
-        /*
         try
         {
             _logger.LogInformation("Deleting statistics for dataset {DataSetId}", dataSetId);
@@ -243,7 +241,6 @@ public class StatisticsController : ControllerBase
                 Instance = HttpContext.Request.Path
             });
         }
-        */
     }
 
     /// <summary>
@@ -261,14 +258,38 @@ public class StatisticsController : ControllerBase
         [FromRoute] Guid dataSetId,
         CancellationToken cancellationToken = default)
     {
-        // TODO: Implement GetCorrelationMatrixQuery
-        return NotFound(new ProblemDetails
+        try
         {
-            Title = "Not Implemented",
-            Detail = "Correlation matrix functionality not yet implemented",
-            Status = StatusCodes.Status404NotFound,
-            Instance = HttpContext.Request.Path
-        });
+            _logger.LogInformation("Generating correlation matrix for dataset {DataSetId}", dataSetId);
+
+            var query = new GetCorrelationMatrixQuery(dataSetId);
+            var result = await _mediator.Send(query, cancellationToken);
+
+            _logger.LogInformation("Successfully generated correlation matrix for dataset {DataSetId}", dataSetId);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Dataset not found: {DataSetId}", dataSetId);
+            return NotFound(new ProblemDetails
+            {
+                Title = "Dataset Not Found",
+                Detail = ex.Message,
+                Status = StatusCodes.Status404NotFound,
+                Instance = HttpContext.Request.Path
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating correlation matrix for dataset {DataSetId}", dataSetId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while generating the correlation matrix",
+                Status = StatusCodes.Status500InternalServerError,
+                Instance = HttpContext.Request.Path
+            });
+        }
     }
 
     /// <summary>
@@ -285,14 +306,43 @@ public class StatisticsController : ControllerBase
         [FromBody, Required] ConfigurationValidationRequest request,
         CancellationToken cancellationToken = default)
     {
-        // TODO: Implement ValidateStatisticalConfigurationCommand
-        return BadRequest(new ProblemDetails
+        try
         {
-            Title = "Not Implemented",
-            Detail = "Configuration validation functionality not yet implemented",
-            Status = StatusCodes.Status400BadRequest,
-            Instance = HttpContext.Request.Path
-        });
+            _logger.LogInformation("Validating statistical configuration for dataset {DataSetId}", request.DataSetId);
+
+            var command = new ValidateStatisticalConfigurationCommand(
+                request.DataSetId,
+                request.NumericColumns,
+                request.CategoryColumns,
+                request.IgnoreColumns);
+
+            var result = await _mediator.Send(command, cancellationToken);
+
+            _logger.LogInformation("Successfully validated configuration for dataset {DataSetId}", request.DataSetId);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid configuration for dataset {DataSetId}", request.DataSetId);
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Invalid Configuration",
+                Detail = ex.Message,
+                Status = StatusCodes.Status400BadRequest,
+                Instance = HttpContext.Request.Path
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating configuration for dataset {DataSetId}", request.DataSetId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while validating the configuration",
+                Status = StatusCodes.Status500InternalServerError,
+                Instance = HttpContext.Request.Path
+            });
+        }
     }
 }
 

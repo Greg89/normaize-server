@@ -158,6 +158,37 @@ public class DataSetConfiguration : IEntityTypeConfiguration<DataSet>
                 .HasColumnName("stats_processed_at");
         });
 
+        builder.OwnsOne(d => d.ProcessingStatus, status =>
+        {
+            status.Property(s => s.IsProcessed)
+                .IsRequired()
+                .HasColumnName("processing_is_processed");
+
+            status.Property(s => s.ProcessedAt)
+                .HasColumnName("processing_processed_at");
+
+            status.Property(s => s.ProcessingError)
+                .HasMaxLength(2000)
+                .HasColumnName("processing_error");
+        });
+
+        builder.OwnsOne(d => d.RetentionPolicy, retention =>
+        {
+            retention.Property(r => r.RetentionDays)
+                .IsRequired()
+                .HasColumnName("retention_days");
+
+            retention.Property(r => r.ExpiryDate)
+                .IsRequired()
+                .HasColumnName("retention_expiry_date");
+        });
+
+        // Ignore computed properties
+        builder.Ignore(d => d.RetentionExpiryDate);
+        
+        // Ignore domain events - they're not persisted
+        builder.Ignore(d => d.DomainEvents);
+
         // Indexes
         builder.HasIndex(d => d.UserId)
             .HasDatabaseName("ix_datasets_user_id");

@@ -1,0 +1,33 @@
+﻿    /// <summary>
+    /// Maps a DTO to API response
+    /// </summary>
+    private static DataSetResponse MapFromDto(Application.DTOs.DataSetDto dataSet)
+    {
+        return new DataSetResponse
+        {
+            Id = dataSet.Id,
+            Name = dataSet.Name,
+            Description = dataSet.Description ?? string.Empty,
+            CreatedBy = dataSet.UserId,
+            CreatedAt = dataSet.UploadedAt,
+            UpdatedAt = dataSet.LastModifiedAt,
+            IsProcessed = dataSet.IsProcessed,
+            IsDeleted = dataSet.IsDeleted,
+            FileMetadata = new FileMetadataResponse
+            {
+                OriginalFileName = dataSet.FileName,
+                StoragePath = dataSet.FilePath,
+                FileType = dataSet.FileType,
+                SizeInBytes = dataSet.FileSize,
+                Checksum = string.Empty,
+                StorageProvider = dataSet.StorageProvider
+            },
+            Statistics = new DatasetStatisticsResponse
+            {
+                RowCount = dataSet.RowCount,
+                ColumnCount = dataSet.ColumnCount,
+                FileSizeBytes = dataSet.FileSize,
+                LastProcessedAt = dataSet.ProcessedAt ?? dataSet.LastModifiedAt
+            }
+        };
+    }

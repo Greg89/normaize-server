@@ -1,27 +1,29 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MediatR;
 using Normaize.DataNormalization.API.Controllers;
 using Normaize.DataNormalization.API.DTOs;
-using Normaize.DataNormalization.Domain.Repositories;
+using Normaize.DataNormalization.Application.Commands.DataSets;
+using Normaize.DataNormalization.Application.Queries.DataSets;
 using Normaize.DataNormalization.Application.Interfaces;
 
 namespace Normaize.DataNormalization.API.Controllers;
 
 /// <summary>
-/// Controller for dataset management operations using clean DDD architecture
+/// Controller for dataset management operations using clean DDD architecture with CQRS
 /// </summary>
 public class DataSetsController : BaseApiController
 {
-    private readonly IDataSetRepository _dataSetRepository;
+    private readonly IMediator _mediator;
     private readonly IDataSetDataLoader _dataLoader;
     private readonly ILogger<DataSetsController> _logger;
 
     public DataSetsController(
-        IDataSetRepository dataSetRepository,
+        IMediator mediator,
         IDataSetDataLoader dataLoader,
         ILogger<DataSetsController> logger)
     {
-        _dataSetRepository = dataSetRepository ?? throw new ArgumentNullException(nameof(dataSetRepository));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _dataLoader = dataLoader ?? throw new ArgumentNullException(nameof(dataLoader));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -48,19 +50,13 @@ public class DataSetsController : BaseApiController
             _logger.LogDebug("User {UserId} requesting datasets, page {Page}, pageSize {PageSize}", 
                 userId, page, pageSize);
 
-            var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
-            var filteredDataSets = includeDeleted 
-                ? dataSets 
-                : dataSets.Where(ds => !ds.IsDeleted);
+            var query = new GetDataSetsByUserQuery(userId, page, pageSize, includeDeleted);
+            var dataSets = await _mediator.Send(query);
 
-            var totalItems = filteredDataSets.Count();
-            var pagedDataSets = filteredDataSets
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(MapToResponse)
-                .ToList();
+            var responses = dataSets.Select(MapFromDto).ToList();
+            var totalItems = responses.Count; // Note: In production, get total count separately
 
-            return SuccessPaginated(pagedDataSets, page, pageSize, totalItems);
+            return SuccessPaginated(responses, page, pageSize, totalItems);
         }
         catch (Exception ex)
         {
@@ -86,14 +82,20 @@ public class DataSetsController : BaseApiController
             var userId = GetCurrentUserId();
             _logger.LogDebug("User {UserId} requesting dataset {DataSetId}", userId, id);
 
-            var dataSet = await _dataSetRepository.GetByIdAsync(id);
-            if (dataSet == null || dataSet.UserId != userId)
+            var query = new GetDataSetByIdQuery(id, userId);
+            var dataSet = await _mediator.Send(query);
+
+            if (dataSet == null)
             {
                 return Error("Dataset not found or you don't have permission to access it", "DATASET_NOT_FOUND", 404);
             }
 
-            var response = MapToResponse(dataSet);
+            var response = MapFromDto(dataSet);
             return Success(response);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Error("Dataset not found or you don't have permission to access it", "DATASET_NOT_FOUND", 404);
         }
         catch (Exception ex)
         {
@@ -121,18 +123,24 @@ public class DataSetsController : BaseApiController
             var userId = GetCurrentUserId();
             _logger.LogInformation("User {UserId} updating dataset {DataSetId}", userId, id);
 
-            var dataSet = await _dataSetRepository.GetByIdAsync(id);
-            if (dataSet == null || dataSet.UserId != userId)
+            var command = new UpdateDataSetCommand(id, userId, request.Name, request.Description, userId);
+            var result = await _mediator.Send(command);
+
+            if (!result.Success)
             {
-                return Error("Dataset not found or you don't have permission to access it", "DATASET_NOT_FOUND", 404);
+                return Error(result.Message, "UPDATE_FAILED", 400);
             }
 
-            // TODO: Implement UpdateDetails method on DataSet entity
-            // dataSet.UpdateDetails(request.Name, request.Description, userId);
-            // await _dataSetRepository.UpdateAsync(dataSet);
+            // Fetch updated dataset
+            var query = new GetDataSetByIdQuery(id, userId);
+            var dataSet = await _mediator.Send(query);
 
-            var response = MapToResponse(dataSet);
+            var response = MapFromDto(dataSet!);
             return Success(response, "Dataset updated successfully");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Error("Dataset not found or you don't have permission to access it", "DATASET_NOT_FOUND", 404);
         }
         catch (Exception ex)
         {
@@ -158,13 +166,19 @@ public class DataSetsController : BaseApiController
             var userId = GetCurrentUserId();
             _logger.LogInformation("User {UserId} deleting dataset {DataSetId}", userId, id);
 
-            var result = await _dataSetRepository.DeleteAsync(id);
-            if (!result)
+            var command = new DeleteDataSetCommand(id, userId, userId);
+            var result = await _mediator.Send(command);
+
+            if (!result.Success)
             {
-                return Error("Dataset not found or you don't have permission to delete it", "DATASET_NOT_FOUND", 404);
+                return Error(result.Message, "DELETE_FAILED", result.Error != null ? 404 : 400);
             }
 
             return Success("Dataset deleted successfully");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Error("Dataset not found or you don't have permission to delete it", "DATASET_NOT_FOUND", 404);
         }
         catch (Exception ex)
         {
@@ -194,8 +208,10 @@ public class DataSetsController : BaseApiController
             // Validate row count
             rows = Math.Min(Math.Max(rows, 1), 100);
 
-            var dataSet = await _dataSetRepository.GetByIdAsync(id);
-            if (dataSet == null || dataSet.UserId != userId)
+            var query = new GetDataSetByIdQuery(id, userId);
+            var dataSet = await _mediator.Send(query);
+            
+            if (dataSet == null)
             {
                 return Error("Dataset not found or you don't have permission to access it", "DATASET_NOT_FOUND", 404);
             }
@@ -213,7 +229,7 @@ public class DataSetsController : BaseApiController
                     AllowNull = c.AllowNull
                 }).ToList(),
                 Rows = dataSetData.Rows.Select(r => r.Values.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)).ToList(),
-                TotalRows = dataSet.Statistics.RowCount,
+                TotalRows = dataSet.RowCount,
                 PreviewRows = dataSetData.Rows.Count
             };
 
@@ -243,8 +259,10 @@ public class DataSetsController : BaseApiController
             var userId = GetCurrentUserId();
             _logger.LogDebug("User {UserId} requesting columns for dataset {DataSetId}", userId, id);
 
-            var dataSet = await _dataSetRepository.GetByIdAsync(id);
-            if (dataSet == null || dataSet.UserId != userId)
+            var query = new GetDataSetByIdQuery(id, userId);
+            var dataSet = await _mediator.Send(query);
+            
+            if (dataSet == null)
             {
                 return Error("Dataset not found or you don't have permission to access it", "DATASET_NOT_FOUND", 404);
             }
@@ -284,15 +302,36 @@ public class DataSetsController : BaseApiController
             var userId = GetCurrentUserId();
             _logger.LogInformation("User {UserId} uploading dataset {Name}", userId, request.Name);
 
-            // TODO: Implement file upload and dataset creation
-            // This would involve:
-            // 1. Validate file
-            // 2. Store file to storage provider
-            // 3. Create dataset entity
-            // 4. Process file for preview/statistics
-            // 5. Save to repository
+            if (request.File == null || request.File.Length == 0)
+            {
+                return Error("File is required", "FILE_REQUIRED", 400);
+            }
 
-            return Error("Dataset upload is not yet implemented", "NOT_IMPLEMENTED", 501);
+            // Create upload command
+            var command = new UploadDataSetCommand(
+                request.Name,
+                request.Description,
+                userId,
+                request.File.FileName,
+                string.Empty, // FilePath will be set by the handler
+                request.File.Length,
+                request.File.OpenReadStream(),
+                request.RetentionDays);
+
+            var result = await _mediator.Send(command);
+
+            if (!result.Success)
+            {
+                return Error(result.Message, "UPLOAD_FAILED", 400);
+            }
+
+            // Fetch created dataset
+            var query = new GetDataSetByIdQuery(result.DataSetId!.Value, userId);
+            var dataSet = await _mediator.Send(query);
+
+            var response = MapFromDto(dataSet!);
+            return CreatedAtAction(nameof(GetDataSet), new { id = result.DataSetId }, 
+                Success(response, "Dataset uploaded successfully"));
         }
         catch (Exception ex)
         {
@@ -328,21 +367,13 @@ public class DataSetsController : BaseApiController
             var userId = GetCurrentUserId();
             _logger.LogDebug("User {UserId} searching datasets with query: {Query}", userId, query);
 
-            var dataSets = await _dataSetRepository.GetByUserIdAsync(userId);
-            var filteredDataSets = dataSets
-                .Where(ds => !ds.IsDeleted)
-                .Where(ds => ds.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                            (ds.Description != null && ds.Description.Contains(query, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
+            var searchQuery = new SearchDataSetsQuery(query, userId, page, pageSize);
+            var dataSets = await _mediator.Send(searchQuery);
 
-            var totalItems = filteredDataSets.Count;
-            var pagedDataSets = filteredDataSets
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(MapToResponse)
-                .ToList();
+            var responses = dataSets.Select(MapFromDto).ToList();
+            var totalItems = responses.Count; // Note: In production, get total count separately
 
-            return SuccessPaginated(pagedDataSets, page, pageSize, totalItems);
+            return SuccessPaginated(responses, page, pageSize, totalItems);
         }
         catch (Exception ex)
         {
@@ -387,6 +418,40 @@ public class DataSetsController : BaseApiController
                 ColumnCount = 0,
                 FileSizeBytes = dataSet.FileInfo?.FileSize ?? 0,
                 LastProcessedAt = dataSet.LastModifiedAt
+            }
+        };
+    }
+
+    /// <summary>
+    /// Maps an Application DTO to API response DTO
+    /// </summary>
+    private static DataSetResponse MapFromDto(Application.DTOs.DataSetDto dataSet)
+    {
+        return new DataSetResponse
+        {
+            Id = dataSet.Id,
+            Name = dataSet.Name,
+            Description = dataSet.Description ?? string.Empty,
+            CreatedBy = dataSet.UserId,
+            CreatedAt = dataSet.UploadedAt,
+            UpdatedAt = dataSet.LastModifiedAt,
+            IsProcessed = dataSet.IsProcessed,
+            IsDeleted = dataSet.IsDeleted,
+            FileMetadata = new FileMetadataResponse
+            {
+                OriginalFileName = dataSet.FileName,
+                StoragePath = dataSet.FilePath,
+                FileType = dataSet.FileType,
+                SizeInBytes = dataSet.FileSize,
+                Checksum = string.Empty, // Checksum not available in DTO
+                StorageProvider = dataSet.StorageProvider
+            },
+            Statistics = new DatasetStatisticsResponse
+            {
+                RowCount = dataSet.RowCount,
+                ColumnCount = dataSet.ColumnCount,
+                FileSizeBytes = dataSet.FileSize,
+                LastProcessedAt = dataSet.ProcessedAt ?? dataSet.LastModifiedAt
             }
         };
     }

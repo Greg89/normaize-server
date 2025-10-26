@@ -77,6 +77,7 @@ public class CreateDataSetRequest
     public string Description { get; set; } = string.Empty;
     public IFormFile File { get; set; } = null!;
     public string? StorageProvider { get; set; }
+    public int? RetentionDays { get; set; }
 }
 
 /// <summary>

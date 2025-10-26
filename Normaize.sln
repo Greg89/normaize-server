@@ -25,6 +25,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Normaize.DataNormalization.Domain.Tests", "tests\Normaize.DataNormalization.Domain.Tests\Normaize.DataNormalization.Domain.Tests.csproj", "{789CC217-39C5-47F6-BF7B-7A3DC3311AAD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Normaize.DataNormalization.Infrastructure.Tests", "tests\Normaize.DataNormalization.Infrastructure.Tests\Normaize.DataNormalization.Infrastructure.Tests.csproj", "{7F5F90D5-A0A2-4AE5-AC54-5F883FDD0E73}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -131,6 +133,18 @@ Global
 		{789CC217-39C5-47F6-BF7B-7A3DC3311AAD}.Release|x64.Build.0 = Release|Any CPU
 		{789CC217-39C5-47F6-BF7B-7A3DC3311AAD}.Release|x86.ActiveCfg = Release|Any CPU
 		{789CC217-39C5-47F6-BF7B-7A3DC3311AAD}.Release|x86.Build.0 = Release|Any CPU
+		{7F5F90D5-A0A2-4AE5-AC54-5F883FDD0E73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F5F90D5-A0A2-4AE5-AC54-5F883FDD0E73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F5F90D5-A0A2-4AE5-AC54-5F883FDD0E73}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7F5F90D5-A0A2-4AE5-AC54-5F883FDD0E73}.Debug|x64.Build.0 = Debug|Any CPU
+		{7F5F90D5-A0A2-4AE5-AC54-5F883FDD0E73}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7F5F90D5-A0A2-4AE5-AC54-5F883FDD0E73}.Debug|x86.Build.0 = Debug|Any CPU
+		{7F5F90D5-A0A2-4AE5-AC54-5F883FDD0E73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F5F90D5-A0A2-4AE5-AC54-5F883FDD0E73}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F5F90D5-A0A2-4AE5-AC54-5F883FDD0E73}.Release|x64.ActiveCfg = Release|Any CPU
+		{7F5F90D5-A0A2-4AE5-AC54-5F883FDD0E73}.Release|x64.Build.0 = Release|Any CPU
+		{7F5F90D5-A0A2-4AE5-AC54-5F883FDD0E73}.Release|x86.ActiveCfg = Release|Any CPU
+		{7F5F90D5-A0A2-4AE5-AC54-5F883FDD0E73}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -141,5 +155,6 @@ Global
 		{E6D3F1DF-8B95-4235-AB72-F97971C9F0C0} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{F7E8D9AB-1C2D-3E4F-5A6B-789C0123DEF4} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{789CC217-39C5-47F6-BF7B-7A3DC3311AAD} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{7F5F90D5-A0A2-4AE5-AC54-5F883FDD0E73} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
