@@ -45,7 +45,7 @@ This document tracks the migration of all services, interfaces, and components f
 
 ### File Upload & Processing
 - ✅ **IFileStorageService / FileStorageService** - Migrated with S3 integration and comprehensive tests (8 tests)
-- 📋 **IFileUploadService / FileUploadService** - Main file upload service (depends on FileStorageService)
+- ✅ **IFileUploadService / FileUploadService** - Migrated to CQRS pattern with commands/queries and 17 comprehensive tests
 - 📋 **IFileUploadServices / FileUploadServices** - Extended upload services
 - ✅ **IFileProcessingService / FileProcessingService** - File processing pipeline complete with 24 comprehensive tests (CSV, JSON, XML, Excel, TXT)
 - ✅ **IFileValidationService / FileValidationService** - File validation with configuration-driven rules and 60+ comprehensive tests
@@ -189,17 +189,18 @@ For each migrated service:
 
 ## Current Progress
 
-- **Completed**: 13 services/interfaces (added FileValidationService)
+- **Completed**: 14 services/interfaces (added FileUploadService with CQRS)
 - **In Progress**: 0 services
-- **Remaining**: ~40 services/interfaces
-- **Overall Progress**: ~24% complete
+- **Remaining**: ~39 services/interfaces
+- **Overall Progress**: ~26% complete
 
 **Recent Achievements**:
 - ✅ FileProcessingService: 24 comprehensive tests covering CSV, JSON, XML, Excel, and TXT file processing
 - ✅ FileValidationService: 60+ comprehensive tests with configuration-driven validation rules
+- ✅ FileUploadService: 17 tests with CQRS pattern (UploadFileCommand, DeleteFileCommand, CheckFileExistsQuery)
+- ✅ End-to-end orchestration: Validation → Storage → Processing pipeline
 - ✅ Security tests: Path traversal detection, file type validation, size limit enforcement, blocked extensions
-- ✅ Error handling: Missing files, invalid formats, empty files, malformed data
-- ✅ Test suite: 272/272 tests passing (100% pass rate maintained)
+- ✅ Test suite: 289/289 tests passing (100% pass rate maintained)
 
 ### Recent Achievements (October 26, 2025)
 - ✅ Created and configured Application test project
@@ -208,9 +209,10 @@ For each migrated service:
 - ✅ Created FileMetadata, FileType, and StorageProvider value objects
 - ✅ Completed FileProcessingService migration with 24 comprehensive tests
 - ✅ Completed FileValidationService migration with 60+ comprehensive tests (Theory expansions)
-- ✅ Achieved 100% test pass rate: **272/272 tests passing**
+- ✅ Completed FileUploadService migration with 17 CQRS-based tests (commands/queries/handlers)
+- ✅ Achieved 100% test pass rate: **289/289 tests passing**
   - Domain: 151 tests
-  - Application: 4 tests  
+  - Application: 21 tests (GenerateDataSummary: 4, FileUpload: 14, FileDelete: 3)
   - Infrastructure: 117 tests (DataSetRepository, FileStorageService, FileProcessingService, FileValidationService)
   - API: 0 tests (pending API layer migration)
 
@@ -235,10 +237,19 @@ Following our proven 8-step workflow (documented in DDD_MIGRATION_PLAN.md):
    - ✅ Comprehensive test coverage with Theory expansions
    - Result: 67 new tests, 100% pass rate maintained (272/272)
 
-3. **FileUploadService** (Next - Estimated 12-15 hours)
-   - Application layer: Create upload commands/queries
-   - Infrastructure: Orchestrate FileStorageService + FileProcessingService + FileValidationService
-   - Testing: End-to-end upload workflows
+3. ✅ **FileUploadService** (COMPLETE - 17 comprehensive tests)
+   - ✅ Created UploadFileCommand, DeleteFileCommand, CheckFileExistsQuery
+   - ✅ Implemented CQRS handlers orchestrating validation, storage, and processing
+   - ✅ End-to-end workflow tests (success, validation failures, storage failures)
+   - ✅ Processing failure handling (upload succeeds even if processing fails)
+   - Result: 17 new tests, 100% pass rate maintained (289/289)
+
+### **Next Priority: Dataset Lifecycle Services**
+
+4. **DataSetLifecycleService** (Next - Estimated 12-15 hours)
+   - Application layer: Create lifecycle management commands/queries
+   - Infrastructure: Implement dataset creation, update, archival logic
+   - Testing: Lifecycle state transitions, expiry handling
    - Expected outcome: 15-20 new tests
 
 ### **Week 1-2**: Complete File Management Suite
