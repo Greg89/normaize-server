@@ -32,7 +32,7 @@ public class GetStatisticsByDataSetIdQueryHandler : IRequestHandler<GetStatistic
         try
         {
             var statistics = await _statisticsRepository.GetByDataSetIdAsync(request.DataSetId, cancellationToken);
-            
+
             if (statistics == null)
             {
                 _logger.LogInformation("No statistics found for dataset {DataSetId}", request.DataSetId);
@@ -40,7 +40,7 @@ public class GetStatisticsByDataSetIdQueryHandler : IRequestHandler<GetStatistic
             }
 
             var dto = _statisticsMapper.MapToStatisticsDto(statistics);
-            
+
             _logger.LogInformation("Successfully retrieved statistics for dataset {DataSetId}", request.DataSetId);
             return dto;
         }

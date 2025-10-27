@@ -52,7 +52,7 @@ public class GetCorrelationMatrixQueryHandler : IRequestHandler<GetCorrelationMa
                 GeneratedAt = DateTime.UtcNow
             };
 
-            _logger.LogInformation("Successfully generated correlation matrix for dataset {DataSetId} with {ColumnCount} columns", 
+            _logger.LogInformation("Successfully generated correlation matrix for dataset {DataSetId} with {ColumnCount} columns",
                 request.DataSetId, correlationMatrix.Count);
 
             return dto;

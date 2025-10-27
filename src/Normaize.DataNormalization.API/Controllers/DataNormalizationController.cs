@@ -50,12 +50,12 @@ public class DataNormalizationController : BaseApiController
         try
         {
             var userId = GetCurrentUserId();
-            _logger.LogInformation("User {UserId} requesting duplicate removal for dataset {DataSetId}", 
+            _logger.LogInformation("User {UserId} requesting duplicate removal for dataset {DataSetId}",
                 userId, request.DataSetId);
 
             // Map to domain value object
-            var caseSensitivity = request.CaseSensitive 
-                ? CaseSensitivity.Sensitive 
+            var caseSensitivity = request.CaseSensitive
+                ? CaseSensitivity.Sensitive
                 : CaseSensitivity.Insensitive;
 
             var options = request.Strategy.ToLower() switch
@@ -80,7 +80,7 @@ public class DataNormalizationController : BaseApiController
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error submitting duplicate removal job for dataset {DataSetId}", 
+            _logger.LogError(ex, "Error submitting duplicate removal job for dataset {DataSetId}",
                 request.DataSetId);
             return HandleException(ex, nameof(RemoveDuplicates));
         }
@@ -101,7 +101,7 @@ public class DataNormalizationController : BaseApiController
         try
         {
             var userId = GetCurrentUserId();
-            _logger.LogInformation("User {UserId} submitting {JobType} job for dataset {DataSetId}", 
+            _logger.LogInformation("User {UserId} submitting {JobType} job for dataset {DataSetId}",
                 userId, request.JobType, request.DataSetId);
 
             // For now, only support duplicate removal jobs
@@ -127,7 +127,7 @@ public class DataNormalizationController : BaseApiController
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error submitting {JobType} job for dataset {DataSetId}", 
+            _logger.LogError(ex, "Error submitting {JobType} job for dataset {DataSetId}",
                 request.JobType, request.DataSetId);
             return HandleException(ex, nameof(SubmitJob));
         }
@@ -198,7 +198,7 @@ public class DataNormalizationController : BaseApiController
     public async Task<IActionResult> CancelJob(Guid jobId, [FromBody] CancelJobRequest request)
     {
         var userId = GetCurrentUserId();
-        
+
         try
         {
             _logger.LogInformation("User {UserId} cancelling job {JobId}", userId, jobId);
@@ -234,7 +234,7 @@ public class DataNormalizationController : BaseApiController
     public async Task<IActionResult> RetryJob(Guid jobId)
     {
         var userId = GetCurrentUserId();
-        
+
         try
         {
             _logger.LogInformation("User {UserId} retrying job {JobId}", userId, jobId);
@@ -335,7 +335,7 @@ public class DataNormalizationController : BaseApiController
 
         try
         {
-            return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(parametersJson) 
+            return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(parametersJson)
                    ?? new Dictionary<string, object>();
         }
         catch (Exception ex)
@@ -360,7 +360,7 @@ public class DataNormalizationController : BaseApiController
         {
             // Try to parse result JSON into meaningful statistics
             var resultData = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(jobStatus.Result);
-            
+
             return new JobResultsResponse
             {
                 ProcessedRows = GetIntValue(resultData, "processedRows", 0),

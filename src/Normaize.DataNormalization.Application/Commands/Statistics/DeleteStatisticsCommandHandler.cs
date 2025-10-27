@@ -28,14 +28,14 @@ public class DeleteStatisticsCommandHandler : IRequestHandler<DeleteStatisticsCo
         try
         {
             var statistics = await _statisticsRepository.GetByDataSetIdAsync(request.DataSetId, cancellationToken);
-            
+
             if (statistics == null)
             {
                 throw new InvalidOperationException($"Statistics not found for dataset {request.DataSetId}");
             }
 
             await _statisticsRepository.DeleteAsync(statistics.Id.Value, cancellationToken);
-            
+
             _logger.LogInformation("Successfully deleted statistics for dataset {DataSetId}", request.DataSetId);
         }
         catch (Exception ex)

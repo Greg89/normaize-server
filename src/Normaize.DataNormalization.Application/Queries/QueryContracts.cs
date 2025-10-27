@@ -23,8 +23,8 @@ public record GetAnalysesByTypeQuery(AnalysisType Type);
 public record GetAnalysisResultQuery(int AnalysisId);
 
 public record GetAllAnalysesQuery(
-    int PageNumber = 1, 
-    int PageSize = 20, 
+    int PageNumber = 1,
+    int PageSize = 20,
     Guid? DataSetId = null,
     AnalysisStatus? Status = null,
     AnalysisType? Type = null,

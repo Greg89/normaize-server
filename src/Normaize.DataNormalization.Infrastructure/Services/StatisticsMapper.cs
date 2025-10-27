@@ -168,8 +168,8 @@ public class StatisticsMapper : IMapper, IStatisticsMapper
             SampleValues = columnSummary.SampleValues.ToList(),
             MinValue = columnSummary.MinValue,
             MaxValue = columnSummary.MaxValue,
-            Statistics = columnSummary.Statistics != null 
-                ? MapToStatisticalMeasureDto(columnSummary.Statistics) 
+            Statistics = columnSummary.Statistics != null
+                ? MapToStatisticalMeasureDto(columnSummary.Statistics)
                 : null
         };
     }

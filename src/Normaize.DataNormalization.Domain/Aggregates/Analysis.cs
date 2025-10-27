@@ -91,11 +91,11 @@ public class Analysis
         AnalysisConfiguration? configuration = null)
     {
         var analysis = new Analysis(name, description, type, dataSetId, comparisonDataSetId, configuration);
-        
+
         // Raise domain event for testing and consistency
         // Note: When persisting, SetId will ensure the event has the correct ID
         analysis._domainEvents.Add(new AnalysisCreated(analysis.Id, analysis.DataSetId, analysis.Type, analysis.Name));
-        
+
         return analysis;
     }
 
@@ -260,7 +260,7 @@ public class Analysis
             throw new InvalidOperationException("Analysis ID is already set");
 
         Id = id ?? throw new ArgumentNullException(nameof(id));
-        
+
         // Clear any existing AnalysisCreated events and add a new one with the correct ID
         _domainEvents.RemoveAll(e => e is AnalysisCreated);
         _domainEvents.Add(new AnalysisCreated(Id, DataSetId, Type, Name));
@@ -311,7 +311,7 @@ public class Analysis
     public bool HasFailed => Status == AnalysisStatus.Failed;
     public bool HasResults => Result != null && Status == AnalysisStatus.Completed;
     public bool RequiresComparisonDataSet => Type == AnalysisType.Comparison;
-    public TimeSpan? ExecutionDuration => StartedAt.HasValue && CompletedAt.HasValue 
-        ? CompletedAt.Value - StartedAt.Value 
+    public TimeSpan? ExecutionDuration => StartedAt.HasValue && CompletedAt.HasValue
+        ? CompletedAt.Value - StartedAt.Value
         : null;
 }

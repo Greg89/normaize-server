@@ -20,7 +20,7 @@ public abstract class BaseApiController : ControllerBase
     {
         // For testing without authentication, return a mock user ID
         return "test-user-id";
-        
+
         // TODO: Re-enable when authentication is working
         /*
         // Debug: Log all available claims
@@ -103,7 +103,7 @@ public abstract class BaseApiController : ControllerBase
     protected IActionResult SuccessPaginated<T>(T data, int page, int pageSize, int totalItems, string? message = null)
     {
         var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
-        
+
         var response = new PaginatedApiResponse<T>
         {
             Success = true,

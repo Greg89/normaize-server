@@ -190,7 +190,7 @@ public class StatisticsRepository : IStatisticsRepository
             {
                 _context.Statistics.UpdateRange(statistics);
                 await _context.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation("Successfully deleted {Count} statistics for DataSet {DataSetId}", 
+                _logger.LogInformation("Successfully deleted {Count} statistics for DataSet {DataSetId}",
                     statistics.Count, dataSetId);
             }
             else

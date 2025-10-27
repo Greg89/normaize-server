@@ -26,7 +26,7 @@ public class DataSet
     public string? PreviewData { get; private set; }
     public string? ProcessedData { get; private set; }
     public string? ProcessingErrors { get; private set; }
-    
+
     // Legacy compatibility - use RetentionPolicy.ExpiryDate instead
     public DateTime? RetentionExpiryDate => RetentionPolicy?.ExpiryDate;
 
@@ -91,7 +91,7 @@ public class DataSet
             throw new ArgumentException("User ID cannot be null or empty", nameof(userId));
 
         var datasetStats = statistics ?? DatasetStatistics.Empty;
-        var retentionPolicy = retentionDays.HasValue 
+        var retentionPolicy = retentionDays.HasValue
             ? ValueObjects.RetentionPolicy.Create(retentionDays.Value)
             : ValueObjects.RetentionPolicy.Default();
 
@@ -109,7 +109,7 @@ public class DataSet
         Name = name.Trim();
         Description = description?.Trim();
         UpdateModificationInfo(modifiedBy);
-        
+
         _domainEvents.Add(new DataSetMetadataUpdatedEvent(Id, Name, Description));
     }
 
@@ -144,7 +144,7 @@ public class DataSet
 
         Schema = schema;
         PreviewData = previewData;
-        
+
         // Update statistics with actual counts
         var updatedStats = new DatasetStatistics(
             rowCount,
@@ -152,7 +152,7 @@ public class DataSet
             true,
             Statistics.UseSeparateTable,
             DateTime.UtcNow);
-        
+
         Statistics = updatedStats;
         ProcessingStatus = ValueObjects.ProcessingStatus.Completed();
         UpdateModificationInfo(modifiedBy);
@@ -289,14 +289,14 @@ public class DataSet
         PreviewData = null;
         ProcessedData = null;
         ProcessingErrors = null;
-        
+
         // Reset statistics to unprocessed state
         Statistics = new DatasetStatistics(
             0,
             0,
             false,
             Statistics.UseSeparateTable);
-        
+
         UpdateModificationInfo(modifiedBy);
 
         AddDomainEvent(new DataSetResetEvent(Id, UserId));

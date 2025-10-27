@@ -50,11 +50,11 @@ public class StatisticalCalculationService : IStatisticalCalculationService
             {
                 var columnData = data.Select(row => row.GetValueOrDefault(column)).ToList();
                 var dataType = DataTypeClassification.DetermineFromValues(columnData);
-                
+
                 var nullCount = columnData.Count(v => v == null);
                 totalMissingValues += nullCount;
                 var nonNullData = columnData.Where(v => v != null).ToList();
-                
+
                 var sampleValues = columnData
                     .Take(SAMPLE_VALUES_COUNT)
                     .Select(x => x ?? "NULL")
@@ -72,7 +72,7 @@ public class StatisticalCalculationService : IStatisticalCalculationService
                     {
                         minValue = numericData.Min();
                         maxValue = numericData.Max();
-                        
+
                         statistics = new StatisticalMeasure(
                             mean: numericData.Average(),
                             median: CalculateMedian(numericData),
@@ -114,7 +114,7 @@ public class StatisticalCalculationService : IStatisticalCalculationService
                 columnSummaries,
                 processingTime);
 
-            _logger.LogInformation("Successfully generated data summary for DataSet {DataSetId} in {ProcessingTimeMs}ms", 
+            _logger.LogInformation("Successfully generated data summary for DataSet {DataSetId} in {ProcessingTimeMs}ms",
                 dataSet.Id, processingTime.TotalMilliseconds);
 
             return result;
@@ -175,7 +175,7 @@ public class StatisticalCalculationService : IStatisticalCalculationService
                 columnStatistics,
                 processingTime);
 
-            _logger.LogInformation("Successfully generated statistical summary for DataSet {DataSetId} in {ProcessingTimeMs}ms", 
+            _logger.LogInformation("Successfully generated statistical summary for DataSet {DataSetId} in {ProcessingTimeMs}ms",
                 dataSet.Id, processingTime.TotalMilliseconds);
 
             return result;

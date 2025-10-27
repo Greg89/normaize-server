@@ -54,7 +54,7 @@ public class FileValidationServiceTests : IDisposable
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public async Task ValidateFileAsync_ShouldFail_WhenFileNameIsEmpty(string fileName)
+    public async Task ValidateFileAsync_ShouldFail_WhenFileNameIsEmpty(string? fileName)
     {
         // Arrange
         var fileSize = 1024L;
@@ -267,7 +267,7 @@ public class FileValidationServiceTests : IDisposable
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void IsFileExtensionValid_ShouldReturnFalse_WhenFileNameIsEmpty(string fileName)
+    public void IsFileExtensionValid_ShouldReturnFalse_WhenFileNameIsEmpty(string? fileName)
     {
         // Act
         var result = _service.IsFileExtensionValid(fileName);
@@ -313,7 +313,7 @@ public class FileValidationServiceTests : IDisposable
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void IsFileNameSafe_ShouldReturnFalse_WhenFileNameIsEmpty(string fileName)
+    public void IsFileNameSafe_ShouldReturnFalse_WhenFileNameIsEmpty(string? fileName)
     {
         // Act
         var result = _service.IsFileNameSafe(fileName);
@@ -344,7 +344,7 @@ public class FileValidationServiceTests : IDisposable
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void GetFileExtension_ShouldReturnEmptyString_WhenFileNameIsEmpty(string fileName)
+    public void GetFileExtension_ShouldReturnEmptyString_WhenFileNameIsEmpty(string? fileName)
     {
         // Act
         var result = _service.GetFileExtension(fileName);

@@ -17,10 +17,10 @@ public sealed class ProcessingStatus
         ProcessingError = processingError;
     }
 
-    public static ProcessingStatus Pending() 
+    public static ProcessingStatus Pending()
         => new ProcessingStatus(false, null, null);
 
-    public static ProcessingStatus Completed(DateTime? processedAt = null) 
+    public static ProcessingStatus Completed(DateTime? processedAt = null)
         => new ProcessingStatus(true, processedAt ?? DateTime.UtcNow, null);
 
     public static ProcessingStatus Failed(string error)

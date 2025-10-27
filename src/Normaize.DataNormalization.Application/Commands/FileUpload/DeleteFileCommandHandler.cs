@@ -27,7 +27,7 @@ public class DeleteFileCommandHandler : IRequestHandler<DeleteFileCommand, Delet
         try
         {
             await _storageService.DeleteFileAsync(request.FilePath, cancellationToken);
-            
+
             _logger.LogInformation("File deleted successfully: {FilePath}", request.FilePath);
             return new DeleteFileResult(Success: true);
         }

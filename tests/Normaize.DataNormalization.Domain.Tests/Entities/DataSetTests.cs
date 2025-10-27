@@ -355,11 +355,11 @@ public class DataSetTests
         Assert.NotNull(dataSet.RetentionPolicy);
         Assert.Equal(1, dataSet.RetentionPolicy.RetentionDays);
         Assert.NotNull(dataSet.RetentionExpiryDate);
-        
+
         // Expiry date should be approximately 1 day from now (allow 1 minute tolerance)
         var expectedExpiry = DateTime.UtcNow.AddDays(1);
         Assert.True(Math.Abs((dataSet.RetentionExpiryDate.Value - expectedExpiry).TotalMinutes) < 1);
-        
+
         // Should not be expired yet
         Assert.False(dataSet.IsRetentionExpired);
     }

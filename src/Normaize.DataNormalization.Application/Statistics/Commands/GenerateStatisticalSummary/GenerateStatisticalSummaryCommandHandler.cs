@@ -33,7 +33,7 @@ public class GenerateStatisticalSummaryCommandHandler : IRequestHandler<Generate
 
     public async Task<StatisticalSummaryDto> Handle(GenerateStatisticalSummaryCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Generating statistical summary for DataSet {DataSetId} by user {UserId}", 
+        _logger.LogInformation("Generating statistical summary for DataSet {DataSetId} by user {UserId}",
             request.DataSetId, request.UserId);
 
         var startTime = DateTime.UtcNow;
@@ -51,7 +51,7 @@ public class GenerateStatisticalSummaryCommandHandler : IRequestHandler<Generate
             // Validate user access
             if (dataSet.UserId != request.UserId)
             {
-                _logger.LogWarning("User {UserId} attempted to access DataSet {DataSetId} owned by {OwnerId}", 
+                _logger.LogWarning("User {UserId} attempted to access DataSet {DataSetId} owned by {OwnerId}",
                     request.UserId, request.DataSetId, dataSet.UserId);
                 throw new UnauthorizedAccessException("User does not have access to this dataset");
             }
@@ -66,19 +66,19 @@ public class GenerateStatisticalSummaryCommandHandler : IRequestHandler<Generate
 
             // Generate comprehensive statistics using the infrastructure service
             var statistics = await _calculationService.GenerateStatisticalSummaryAsync(
-                dataSet, 
-                data.ToList(), 
+                dataSet,
+                data.ToList(),
                 cancellationToken);
 
             // Save statistics to repository
             await _statisticsRepository.AddAsync(statistics, cancellationToken);
 
             var processingTime = DateTime.UtcNow - startTime;
-            
+
             // Convert to DTO
             var result = _mapper.MapToStatisticalSummaryDto(statistics, processingTime);
 
-            _logger.LogInformation("Successfully generated statistical summary for DataSet {DataSetId} in {ProcessingTime}ms", 
+            _logger.LogInformation("Successfully generated statistical summary for DataSet {DataSetId} in {ProcessingTime}ms",
                 request.DataSetId, processingTime.TotalMilliseconds);
 
             return result;

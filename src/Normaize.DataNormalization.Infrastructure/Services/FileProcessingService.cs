@@ -90,7 +90,7 @@ public class FileProcessingService : IFileProcessingService
     private async Task<FileProcessingResult> ProcessCsvFileAsync(string filePath, CancellationToken cancellationToken)
     {
         var lines = await File.ReadAllLinesAsync(filePath, cancellationToken);
-        
+
         if (lines.Length == 0)
         {
             return new FileProcessingResult(false, Error: "CSV file is empty");
@@ -139,7 +139,7 @@ public class FileProcessingService : IFileProcessingService
     private async Task<FileProcessingResult> ProcessJsonFileAsync(string filePath, CancellationToken cancellationToken)
     {
         var jsonContent = await File.ReadAllTextAsync(filePath, cancellationToken);
-        
+
         using var document = JsonDocument.Parse(jsonContent);
         var root = document.RootElement;
 
@@ -224,7 +224,7 @@ public class FileProcessingService : IFileProcessingService
     private async Task<FileProcessingResult> ProcessTextFileAsync(string filePath, CancellationToken cancellationToken)
     {
         var lines = await File.ReadAllLinesAsync(filePath, cancellationToken);
-        
+
         var schema = JsonSerializer.Serialize(new
         {
             Columns = new[] { new { Name = "Line", Type = "string" } }

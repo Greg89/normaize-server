@@ -16,7 +16,7 @@ public record StatisticsId
     {
         if (value < 0)
             throw new ArgumentException("Statistics ID cannot be negative", nameof(value));
-        
+
         Value = value;
     }
 

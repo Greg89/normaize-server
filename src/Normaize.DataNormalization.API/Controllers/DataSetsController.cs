@@ -47,7 +47,7 @@ public class DataSetsController : BaseApiController
         try
         {
             var userId = GetCurrentUserId();
-            _logger.LogDebug("User {UserId} requesting datasets, page {Page}, pageSize {PageSize}", 
+            _logger.LogDebug("User {UserId} requesting datasets, page {Page}, pageSize {PageSize}",
                 userId, page, pageSize);
 
             var query = new GetDataSetsByUserQuery(userId, page, pageSize, includeDeleted);
@@ -210,14 +210,14 @@ public class DataSetsController : BaseApiController
 
             var query = new GetDataSetByIdQuery(id, userId);
             var dataSet = await _mediator.Send(query);
-            
+
             if (dataSet == null)
             {
                 return Error("Dataset not found or you don't have permission to access it", "DATASET_NOT_FOUND", 404);
             }
 
             var dataSetData = await _dataLoader.LoadDataSetSampleAsync(id, rows);
-            
+
             var response = new DataSetPreviewResponse
             {
                 DataSetId = id,
@@ -261,7 +261,7 @@ public class DataSetsController : BaseApiController
 
             var query = new GetDataSetByIdQuery(id, userId);
             var dataSet = await _mediator.Send(query);
-            
+
             if (dataSet == null)
             {
                 return Error("Dataset not found or you don't have permission to access it", "DATASET_NOT_FOUND", 404);
@@ -330,7 +330,7 @@ public class DataSetsController : BaseApiController
             var dataSet = await _mediator.Send(query);
 
             var response = MapFromDto(dataSet!);
-            return CreatedAtAction(nameof(GetDataSet), new { id = result.DataSetId }, 
+            return CreatedAtAction(nameof(GetDataSet), new { id = result.DataSetId },
                 Success(response, "Dataset uploaded successfully"));
         }
         catch (Exception ex)

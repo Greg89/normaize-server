@@ -40,7 +40,7 @@ public class DataSetRepositoryTests : IDisposable
             name: "Test Dataset",
             description: null,
             userId: "user-123",
-            fileInfo: FileMetadata .Create("test.csv", "user-123/test.csv", FileType.CSV, 1024),
+            fileInfo: FileMetadata.Create("test.csv", "user-123/test.csv", FileType.CSV, 1024),
             statistics: null,
             retentionDays: 30
         );

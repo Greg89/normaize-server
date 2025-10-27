@@ -62,7 +62,8 @@ public static class InfrastructureServiceCollectionExtensions
 
         // Domain Event Publishing
         services.AddScoped<IDomainEventPublisher, MediatRDomainEventPublisher>();
-        services.AddMediatR(cfg => {
+        services.AddMediatR(cfg =>
+        {
             cfg.RegisterServicesFromAssembly(typeof(InfrastructureServiceCollectionExtensions).Assembly);
             cfg.RegisterServicesFromAssembly(typeof(Normaize.DataNormalization.Application.Statistics.Commands.GenerateDataSummary.GenerateDataSummaryCommand).Assembly);
         });

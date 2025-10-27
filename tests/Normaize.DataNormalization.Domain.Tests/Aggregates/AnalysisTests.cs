@@ -288,10 +288,10 @@ public class AnalysisTests
         // Arrange
         var analysis = Analysis.Create("Test", null, AnalysisType.Statistical, _testDataSetId);
         analysis.Start();
-        
+
         // Simulate some processing time
         System.Threading.Thread.Sleep(10);
-        
+
         var result = AnalysisResult.FromObject(new { test = "data" });
         analysis.Complete(result);
 

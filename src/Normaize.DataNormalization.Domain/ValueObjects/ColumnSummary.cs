@@ -30,13 +30,13 @@ public record ColumnSummary
     {
         if (string.IsNullOrWhiteSpace(columnName))
             throw new ArgumentException("Column name cannot be null or empty", nameof(columnName));
-        
+
         if (nonNullCount < 0)
             throw new ArgumentException("Non-null count cannot be negative", nameof(nonNullCount));
-        
+
         if (nullCount < 0)
             throw new ArgumentException("Null count cannot be negative", nameof(nullCount));
-        
+
         if (uniqueCount < 0)
             throw new ArgumentException("Unique count cannot be negative", nameof(uniqueCount));
 

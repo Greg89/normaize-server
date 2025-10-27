@@ -9,7 +9,7 @@ namespace Normaize.DataNormalization.Domain.Aggregates;
 public class Statistics
 {
     private readonly List<IDomainEvent> _domainEvents = new();
-    
+
     public StatisticsId Id { get; private set; }
     public Guid DataSetId { get; private set; }
     public string DataSetName { get; private set; }
@@ -47,19 +47,19 @@ public class Statistics
     {
         if (dataSetId == Guid.Empty)
             throw new ArgumentException("DataSet ID cannot be empty", nameof(dataSetId));
-        
+
         if (string.IsNullOrWhiteSpace(dataSetName))
             throw new ArgumentException("DataSet name cannot be null or empty", nameof(dataSetName));
-        
+
         if (totalRows < 0)
             throw new ArgumentException("Total rows cannot be negative", nameof(totalRows));
-        
+
         if (totalColumns < 0)
             throw new ArgumentException("Total columns cannot be negative", nameof(totalColumns));
-        
+
         if (missingValues < 0)
             throw new ArgumentException("Missing values cannot be negative", nameof(missingValues));
-        
+
         if (duplicateRows < 0)
             throw new ArgumentException("Duplicate rows cannot be negative", nameof(duplicateRows));
 
@@ -191,7 +191,7 @@ public class Statistics
             throw new InvalidOperationException("Statistics ID is already set");
 
         Id = id ?? throw new ArgumentNullException(nameof(id));
-        
+
         // Update any existing domain events with the correct ID
         for (int i = 0; i < _domainEvents.Count; i++)
         {
@@ -225,7 +225,7 @@ public class Statistics
     public IReadOnlyDictionary<string, StatisticalMeasure> GetNumericColumnStatistics()
     {
         return ColumnStatistics
-            .Where(kvp => ColumnSummaries.ContainsKey(kvp.Key) && 
+            .Where(kvp => ColumnSummaries.ContainsKey(kvp.Key) &&
                          ColumnSummaries[kvp.Key].DataType.IsNumeric)
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
             .AsReadOnly();
@@ -255,7 +255,7 @@ public class Statistics
     public void SoftDelete(string deletedBy = "System")
     {
         IsDeleted = true;
-        
+
         // Add domain event
         _domainEvents.Add(new StatisticsDeleted(Id, DataSetId, deletedBy));
     }
@@ -274,16 +274,16 @@ public class Statistics
     {
         if (IsDeleted)
             throw new InvalidOperationException("Cannot update deleted statistics");
-            
+
         if (totalRows < 0)
             throw new ArgumentException("Total rows cannot be negative", nameof(totalRows));
-        
+
         if (totalColumns < 0)
             throw new ArgumentException("Total columns cannot be negative", nameof(totalColumns));
-        
+
         if (missingValues < 0)
             throw new ArgumentException("Missing values cannot be negative", nameof(missingValues));
-        
+
         if (duplicateRows < 0)
             throw new ArgumentException("Duplicate rows cannot be negative", nameof(duplicateRows));
 
@@ -296,7 +296,7 @@ public class Statistics
         ColumnStatistics = columnStatistics.AsReadOnly();
         ProcessingTime = processingTime;
         CalculatedAt = updatedAt;
-        
+
         // Add domain event
         _domainEvents.Add(new StatisticsUpdated(Id, DataSetId, updatedAt));
     }

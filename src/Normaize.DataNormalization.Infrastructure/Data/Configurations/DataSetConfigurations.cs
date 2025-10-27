@@ -185,7 +185,7 @@ public class DataSetConfiguration : IEntityTypeConfiguration<DataSet>
 
         // Ignore computed properties
         builder.Ignore(d => d.RetentionExpiryDate);
-        
+
         // Ignore domain events - they're not persisted
         builder.Ignore(d => d.DomainEvents);
 

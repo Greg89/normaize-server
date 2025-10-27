@@ -25,13 +25,13 @@ public class CheckFileExistsQueryHandler : IRequestHandler<CheckFileExistsQuery,
         try
         {
             var stream = await _storageService.GetFileAsync(request.FilePath, cancellationToken);
-            
+
             if (stream != null)
             {
                 await stream.DisposeAsync();
                 return new CheckFileExistsResult(Exists: true);
             }
-            
+
             return new CheckFileExistsResult(Exists: false);
         }
         catch (FileNotFoundException)

@@ -22,9 +22,9 @@ builder.Services.AddEndpointsApiExplorer();
 // Configure Swagger without authentication complexity
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new() 
-    { 
-        Title = "Normaize Data Normalization API", 
+    c.SwaggerDoc("v1", new()
+    {
+        Title = "Normaize Data Normalization API",
         Version = "v1",
         Description = "Clean DDD Architecture API for data normalization operations."
     });

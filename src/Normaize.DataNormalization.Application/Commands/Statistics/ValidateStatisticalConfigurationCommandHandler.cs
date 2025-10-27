@@ -46,7 +46,7 @@ public class ValidateStatisticalConfigurationCommandHandler : IRequestHandler<Va
             // TODO: Implement proper column discovery from dataset schema/structure
             var actualColumns = new HashSet<string>();  // Placeholder for now
             var allSpecifiedColumns = new HashSet<string>();
-            
+
             // Validate numeric columns
             foreach (var column in request.NumericColumns)
             {

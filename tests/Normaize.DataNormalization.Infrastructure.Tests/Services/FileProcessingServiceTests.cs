@@ -23,7 +23,7 @@ public class FileProcessingServiceTests : IDisposable
     {
         _mockLogger = new Mock<ILogger<FileProcessingService>>();
         _service = new FileProcessingService(_mockLogger.Object);
-        
+
         // Create temporary directory for test files
         _testDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(_testDirectory);
@@ -234,7 +234,7 @@ public class FileProcessingServiceTests : IDisposable
         result.Should().NotBeNull();
         result.IsSuccess.Should().BeTrue();
         result.RowCount.Should().Be(15);
-        
+
         // Verify preview is limited to 10 rows
         var previewData = JsonDocument.Parse(result.PreviewData!);
         previewData.RootElement.GetProperty("PreviewRowCount").GetInt32().Should().Be(10);

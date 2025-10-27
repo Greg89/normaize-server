@@ -18,7 +18,7 @@ public record AnalysisId
     {
         if (value < 0)
             throw new ArgumentException("Analysis ID cannot be negative", nameof(value));
-        
+
         Value = value;
     }
 

@@ -61,10 +61,10 @@ public class AnalysisExecutionService : IAnalysisExecutionService
     private async Task<AnalysisResult> ExecuteNormalizationAnalysisAsync(Analysis analysis)
     {
         _logger.LogDebug("Executing normalization analysis for analysis {AnalysisId}", analysis.Id.Value);
-        
+
         // Simulate processing time
         await Task.Delay(1000);
-        
+
         var result = new
         {
             Type = "Normalization",
@@ -84,15 +84,15 @@ public class AnalysisExecutionService : IAnalysisExecutionService
     private async Task<AnalysisResult> ExecuteComparisonAnalysisAsync(Analysis analysis)
     {
         _logger.LogDebug("Executing comparison analysis for analysis {AnalysisId}", analysis.Id.Value);
-        
+
         if (!analysis.ComparisonDataSetId.HasValue)
         {
             throw new InvalidOperationException("Comparison analysis requires a comparison dataset");
         }
-        
+
         // Simulate processing time
         await Task.Delay(1200);
-        
+
         var result = new
         {
             Type = "Comparison",
@@ -113,10 +113,10 @@ public class AnalysisExecutionService : IAnalysisExecutionService
     private async Task<AnalysisResult> ExecuteStatisticalAnalysisAsync(Analysis analysis)
     {
         _logger.LogDebug("Executing statistical analysis for analysis {AnalysisId}", analysis.Id.Value);
-        
+
         // Simulate processing time
         await Task.Delay(800);
-        
+
         var result = new
         {
             Type = "Statistical",
@@ -139,10 +139,10 @@ public class AnalysisExecutionService : IAnalysisExecutionService
     private async Task<AnalysisResult> ExecuteDataCleaningAnalysisAsync(Analysis analysis)
     {
         _logger.LogDebug("Executing data cleaning analysis for analysis {AnalysisId}", analysis.Id.Value);
-        
+
         // Simulate processing time
         await Task.Delay(1500);
-        
+
         var result = new
         {
             Type = "DataCleaning",
@@ -171,10 +171,10 @@ public class AnalysisExecutionService : IAnalysisExecutionService
     private async Task<AnalysisResult> ExecuteOutlierDetectionAnalysisAsync(Analysis analysis)
     {
         _logger.LogDebug("Executing outlier detection analysis for analysis {AnalysisId}", analysis.Id.Value);
-        
+
         // Simulate processing time
         await Task.Delay(900);
-        
+
         var result = new
         {
             Type = "OutlierDetection",
@@ -197,10 +197,10 @@ public class AnalysisExecutionService : IAnalysisExecutionService
     private async Task<AnalysisResult> ExecuteCorrelationAnalysisAsync(Analysis analysis)
     {
         _logger.LogDebug("Executing correlation analysis for analysis {AnalysisId}", analysis.Id.Value);
-        
+
         // Simulate processing time
         await Task.Delay(700);
-        
+
         var result = new
         {
             Type = "CorrelationAnalysis",
@@ -227,10 +227,10 @@ public class AnalysisExecutionService : IAnalysisExecutionService
     private async Task<AnalysisResult> ExecuteTrendAnalysisAsync(Analysis analysis)
     {
         _logger.LogDebug("Executing trend analysis for analysis {AnalysisId}", analysis.Id.Value);
-        
+
         // Simulate processing time
         await Task.Delay(1100);
-        
+
         var result = new
         {
             Type = "TrendAnalysis",
@@ -259,12 +259,12 @@ public class AnalysisExecutionService : IAnalysisExecutionService
     private async Task<AnalysisResult> ExecuteCustomAnalysisAsync(Analysis analysis)
     {
         _logger.LogDebug("Executing custom analysis for analysis {AnalysisId}", analysis.Id.Value);
-        
+
         // Simulate processing time based on complexity
         await Task.Delay(_random.Next(500, 2000));
-        
+
         var configJson = analysis.Configuration?.JsonConfiguration ?? "{}";
-        
+
         var result = new
         {
             Type = "Custom",

@@ -34,7 +34,7 @@ public class GenerateDataSummaryCommandHandler : IRequestHandler<GenerateDataSum
 
     public async Task<DataSummaryDto> Handle(GenerateDataSummaryCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Generating data summary for DataSet {DataSetId} by user {UserId}", 
+        _logger.LogInformation("Generating data summary for DataSet {DataSetId} by user {UserId}",
             request.DataSetId, request.UserId);
 
         var startTime = DateTime.UtcNow;
@@ -52,7 +52,7 @@ public class GenerateDataSummaryCommandHandler : IRequestHandler<GenerateDataSum
             // Validate user access
             if (dataSet.UserId != request.UserId)
             {
-                _logger.LogWarning("User {UserId} attempted to access DataSet {DataSetId} owned by {OwnerId}", 
+                _logger.LogWarning("User {UserId} attempted to access DataSet {DataSetId} owned by {OwnerId}",
                     request.UserId, request.DataSetId, dataSet.UserId);
                 throw new UnauthorizedAccessException("User does not have access to this dataset");
             }
@@ -67,19 +67,19 @@ public class GenerateDataSummaryCommandHandler : IRequestHandler<GenerateDataSum
 
             // Generate statistics using the infrastructure service
             var statistics = await _calculationService.GenerateDataSummaryAsync(
-                dataSet, 
-                data.ToList(), 
+                dataSet,
+                data.ToList(),
                 cancellationToken);
 
             // Save statistics to repository
             await _statisticsRepository.AddAsync(statistics, cancellationToken);
 
             var processingTime = DateTime.UtcNow - startTime;
-            
+
             // Convert to DTO
             var result = _mapper.MapToDataSummaryDto(statistics, processingTime);
 
-            _logger.LogInformation("Successfully generated data summary for DataSet {DataSetId} in {ProcessingTime}ms", 
+            _logger.LogInformation("Successfully generated data summary for DataSet {DataSetId} in {ProcessingTime}ms",
                 request.DataSetId, processingTime.TotalMilliseconds);
 
             return result;

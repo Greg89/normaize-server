@@ -14,7 +14,7 @@ public class SubmitDuplicateRemovalJobCommandHandler : ICommandHandler<SubmitDup
     private readonly IJobQueue _jobQueue;
 
     public SubmitDuplicateRemovalJobCommandHandler(
-        INormalizationJobRepository repository, 
+        INormalizationJobRepository repository,
         IDataSetRepository dataSetRepository,
         IJobQueue jobQueue)
     {

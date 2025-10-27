@@ -20,13 +20,13 @@ public record DataQualitySummary
     {
         if (columnsWithHighNullRate < 0)
             throw new ArgumentException("Columns with high null rate cannot be negative", nameof(columnsWithHighNullRate));
-        
+
         if (highCardinalityColumns < 0)
             throw new ArgumentException("High cardinality columns cannot be negative", nameof(highCardinalityColumns));
-        
+
         if (missingDataPercentage < 0 || missingDataPercentage > 100)
             throw new ArgumentException("Missing data percentage must be between 0 and 100", nameof(missingDataPercentage));
-        
+
         if (duplicateRowsPercentage < 0 || duplicateRowsPercentage > 100)
             throw new ArgumentException("Duplicate rows percentage must be between 0 and 100", nameof(duplicateRowsPercentage));
 
@@ -55,16 +55,16 @@ public record DataQualitySummary
         get
         {
             var score = 100.0;
-            
+
             // Deduct points for missing data
             score -= MissingDataPercentage * 0.5;
-            
+
             // Deduct points for duplicates
             score -= DuplicateRowsPercentage * 0.3;
-            
+
             // Deduct points for high null rate columns
             score -= ColumnsWithHighNullRate * 5;
-            
+
             // Deduct points for high cardinality columns
             score -= HighCardinalityColumns * 2;
 

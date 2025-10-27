@@ -53,7 +53,7 @@ public class GenerateDataSummaryCommandHandlerTests
             .ReturnsAsync((DataSet?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             _handler.Handle(command, cancellationToken));
 
         exception.Message.Should().Contain($"DataSet with ID {dataSetId} not found");
@@ -75,7 +75,7 @@ public class GenerateDataSummaryCommandHandlerTests
             .ReturnsAsync(dataSet);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => 
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             _handler.Handle(command, cancellationToken));
 
         exception.Message.Should().Contain("User does not have access to this dataset");
@@ -104,12 +104,12 @@ public class GenerateDataSummaryCommandHandlerTests
         result.TotalRows.Should().Be(0);
         result.TotalColumns.Should().Be(0);
         result.QualityScore.OverallScore.Should().Be(100);
-        
+
         // Should not call calculation service when there's no data
         _mockCalculationService.Verify(x => x.GenerateDataSummaryAsync(
-            It.IsAny<DataSet>(), 
-            It.IsAny<List<Dictionary<string, object?>>>(), 
-            It.IsAny<CancellationToken>()), 
+            It.IsAny<DataSet>(),
+            It.IsAny<List<Dictionary<string, object?>>>(),
+            It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -128,7 +128,7 @@ public class GenerateDataSummaryCommandHandlerTests
             .ThrowsAsync(expectedException);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _handler.Handle(command, cancellationToken));
 
         exception.Should().Be(expectedException);

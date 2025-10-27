@@ -30,7 +30,7 @@ public class GetStatisticsByDataSetIdQueryHandler : IRequestHandler<GetStatistic
 
     public async Task<StatisticalSummaryDto?> Handle(GetStatisticsByDataSetIdQuery request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Getting statistics for DataSet {DataSetId} by user {UserId}", 
+        _logger.LogInformation("Getting statistics for DataSet {DataSetId} by user {UserId}",
             request.DataSetId, request.UserId);
 
         try
@@ -45,7 +45,7 @@ public class GetStatisticsByDataSetIdQueryHandler : IRequestHandler<GetStatistic
 
             if (dataSet.UserId != request.UserId)
             {
-                _logger.LogWarning("User {UserId} attempted to access DataSet {DataSetId} owned by {OwnerId}", 
+                _logger.LogWarning("User {UserId} attempted to access DataSet {DataSetId} owned by {OwnerId}",
                     request.UserId, request.DataSetId, dataSet.UserId);
                 throw new UnauthorizedAccessException("User does not have access to this dataset");
             }

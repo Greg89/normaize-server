@@ -32,16 +32,16 @@ public record StatisticalMeasure
     {
         if (double.IsNaN(mean) || double.IsInfinity(mean))
             throw new ArgumentException("Mean must be a valid number", nameof(mean));
-        
+
         if (double.IsNaN(median) || double.IsInfinity(median))
             throw new ArgumentException("Median must be a valid number", nameof(median));
-        
+
         if (standardDeviation < 0)
             throw new ArgumentException("Standard deviation cannot be negative", nameof(standardDeviation));
-        
+
         if (min > max)
             throw new ArgumentException("Minimum value cannot be greater than maximum value");
-        
+
         if (outlierCount < 0)
             throw new ArgumentException("Outlier count cannot be negative", nameof(outlierCount));
 
