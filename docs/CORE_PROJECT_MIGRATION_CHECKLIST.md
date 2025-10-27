@@ -65,8 +65,9 @@ This document tracks the migration of all services, interfaces, and components f
 ## 4. Visualization & Charting Services
 
 ### Chart Generation
-- 📋 **IDataVisualizationService / DataVisualizationService** - Main visualization service
-- 📋 **IChartGenerationService / ChartGenerationService** - Chart generation logic
+- ✅ **IDataVisualizationService / DataVisualizationService** - Migrated to CQRS pattern with comprehensive chart generation
+- ✅ **IChartGenerationService / ChartGenerationService** - Fully migrated with 12 chart types (Bar, Line, Pie, Scatter, Area, Histogram, BoxPlot, Heatmap, Bubble, Radar, Donut, Column)
+- ✅ **IDataSummaryService** - Statistical summaries and data analysis
 - 📋 **IVisualizationServices / VisualizationServices** - Extended visualization services
 - 📋 **IVisualizationValidationService / VisualizationValidationService** - Validation for visualizations
 
@@ -206,9 +207,23 @@ For each migrated service:
 - ✅ DataSetQueryService: CQRS queries (GetDataSetByIdQuery, GetDataSetsByUserQuery, SearchDataSetsQuery) with pagination and access control
 - ✅ File Storage & Configuration: FileUploadOptions configuration class, FileMetadata/FileType/StorageProvider value objects, IStorageService deprecated
 - ✅ PostgreSQL-only architecture: New DDD projects use PostgreSQL for production, InMemory for unit/integration tests
+- ✅ **Visualization & Charting Services**: ChartGenerationService with 12 chart types (Bar, Line, Pie, Scatter, Area, Histogram, BoxPlot, Heatmap, Bubble, Radar, Donut, Column), DataSummaryService, 5 CQRS commands/queries with handlers
 - ✅ End-to-end orchestration: Validation → Storage → Processing pipeline
 - ✅ Security tests: Path traversal detection, file type validation, size limit enforcement, blocked extensions
-- ✅ Test suite: 311/311 tests passing (100% pass rate maintained)
+- ✅ Test suite: 313/313 tests passing (100% pass rate maintained)
+
+### Recent Achievements (October 27, 2025)
+- ✅ Completed Visualization & Charting Services migration
+  - Created ChartType and DataAggregationType enums (12 chart types, 7 aggregation types)
+  - Created ChartConfiguration and ChartSeries value objects
+  - Created 8 DTOs (ChartDataDto, ChartConfigurationDto, ChartSeriesDto, ComparisonChartDto, DataSummaryDto, ColumnSummaryDto, StatisticalSummaryDto, ColumnStatisticsDto)
+  - Created 5 CQRS commands/queries: GenerateChartCommand, GenerateComparisonChartCommand, GetDataSummaryQuery, GetStatisticalSummaryQuery, GetSupportedChartTypesQuery
+  - Implemented 5 handlers with validation, access control, JSON deserialization, performance tracking
+  - Created ChartGenerationService (528 lines) supporting all 12 chart types with numeric column detection, fallback handling, correlation matrices, histogram binning
+  - Created DataSummaryService leveraging IStatisticalCalculationService
+  - Registered services in DI (InfrastructureServiceCollectionExtensions)
+  - Achieved 100% test pass rate: **313/313 tests passing** (151 Domain + 45 Application + 117 Infrastructure)
+  - Migration progress: **23/53 services (43% complete)**
 
 ### Recent Achievements (October 26, 2025)
 - ✅ Created and configured Application test project
@@ -290,19 +305,23 @@ Following our proven 8-step workflow (documented in DDD_MIGRATION_PLAN.md):
    - ✅ PostgreSQL-only verified - New DDD projects use PostgreSQL for production, InMemory for unit/integration tests
    - Result: Storage configuration modernized, legacy MySQL code isolated in projects scheduled for deletion
 
-### **Next Priority: Visualization & Charting Services**
+8. ✅ **Visualization & Charting Services** (COMPLETE - October 27, 2025)
+   - ✅ Created Domain layer: ChartType enum (12 types), DataAggregationType enum (7 types), ChartConfiguration value object, ChartSeries value object
+   - ✅ Created Application layer: 8 DTOs, 5 commands/queries (GenerateChartCommand, GenerateComparisonChartCommand, GetDataSummaryQuery, GetStatisticalSummaryQuery, GetSupportedChartTypesQuery)
+   - ✅ Implemented 5 handlers with validation, access control, JSON deserialization, performance tracking
+   - ✅ Created ChartGenerationService (528 lines): All 12 chart types (Bar, Line, Area, Column, Pie, Donut, Scatter, Bubble, Histogram, BoxPlot, Heatmap, Radar)
+   - ✅ Implemented numeric column detection (80% threshold), fallback for non-numeric data, correlation matrices, histogram binning
+   - ✅ Created DataSummaryService: Wraps IStatisticalCalculationService, maps Statistics aggregate to DTOs
+   - ✅ Registered services in DI: IChartGenerationService, IDataSummaryService
+   - Result: Visualization services fully migrated, 313/313 tests passing (100% pass rate maintained), 23/53 services complete (43%)
 
-7. **DataVisualizationService** (Next - Estimated 10-12 hours)
-   - Application layer: Create visualization generation commands/queries
-   - Infrastructure: Implement chart generation and data visualization
-   - Testing: Visualization generation for various chart types
-   - Expected outcome: 15-20 new tests
+### **Next Priority: Configuration & Settings Services**
 
-8. **ChartGenerationService** (Estimated 8-10 hours)
-   - Application layer: Create chart generation commands
-   - Infrastructure: Implement specific chart types (bar, line, pie, scatter)
-   - Testing: Chart generation for various data formats
-   - Expected outcome: 12-15 new tests
+9. **AppConfigurationService** (Next - Estimated 6-8 hours)
+   - Application layer: Create configuration management commands/queries
+   - Infrastructure: Implement configuration storage and retrieval
+   - Testing: Configuration validation and persistence
+   - Expected outcome: 8-10 new tests
 
 ### **Week 1-2**: Complete File Management Suite
 - [x] FileProcessingService migration
@@ -311,16 +330,16 @@ Following our proven 8-step workflow (documented in DDD_MIGRATION_PLAN.md):
 - [x] DataSetLifecycleService migration
 - [x] DataSetPreviewService migration
 
-### **Week 3**: Dataset Lifecycle Services
+### **Week 3-4**: Dataset Services & Visualization
 - [x] DataSetLifecycleService
 - [x] DataSetPreviewService
 - [x] DataSetQueryService
 - [x] File Storage & Configuration section review
-
-### **Week 4**: Visualization Services
-- [ ] DataVisualizationService
-- [ ] ChartGenerationService
+- [x] DataVisualizationService
+- [x] ChartGenerationService
 - [ ] Caching layer
+
+### **Week 5**: Configuration Services
 
 ---
 

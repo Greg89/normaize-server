@@ -80,6 +80,10 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IStatisticsMapper, StatisticsMapper>();
         services.AddScoped<Normaize.DataNormalization.Application.Common.Interfaces.IMapper, StatisticsMapper>();
 
+        // Visualization Services
+        services.AddScoped<IChartGenerationService, ChartGenerationService>();
+        services.AddScoped<IDataSummaryService, DataSummaryService>();
+
         // Command Handlers - Jobs
         services.AddScoped<ICommandHandler<SubmitJobCommand, Guid>, SubmitJobCommandHandler>();
         services.AddScoped<ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid>, SubmitDuplicateRemovalJobCommandHandler>();
