@@ -33,7 +33,7 @@ This document tracks the migration of all services, interfaces, and components f
 - ✅ **IDataSetRowRepository / DataSetRowRepository** - Row-level operations migrated
 - ✅ **IDataSetLifecycleService / DataSetLifecycleService** - Migrated to CQRS pattern with 22 comprehensive tests (Reset, Restore, Retention, HardDelete)
 - ✅ **IDataSetPreviewService / DataSetPreviewService** - Migrated to CQRS pattern (GetDataSetPreviewQuery, GetDataSetSchemaQuery) with row limiting (max 1000) and JSON deserialization
-- 📋 **IDataSetQueryService / DataSetQueryService** - Advanced querying capabilities
+- ✅ **IDataSetQueryService / DataSetQueryService** - Migrated to CQRS pattern (GetDataSetByIdQuery, GetDataSetsByUserQuery, SearchDataSetsQuery) with pagination and access control
 
 ### Data Migration & Import
 - 📋 **IDataMigrationService / DataMigrationService** - Data migration utilities
@@ -53,9 +53,12 @@ This document tracks the migration of all services, interfaces, and components f
 
 ### File Storage & Configuration
 - ✅ **FileMetadata, FileType, StorageProvider** - Value objects created in Domain layer
-- 📋 **IStorageService** - Generic storage interface
-- 📋 **IFileConfigurationService / FileConfigurationService** - File configuration management
-- 📋 **IStorageConfigurationService** - Storage configuration
+- ✅ **FileUploadOptions** - Configuration class for file upload validation (replaces IFileConfigurationService)
+- ❌ **IStorageService** - DEPRECATED - Functionality covered by IFileStorageService
+- ❌ **IFileConfigurationService / FileConfigurationService** - DEPRECATED - Replaced by FileUploadOptions configuration class
+- ❌ **IStorageConfigurationService** - DEPRECATED - Storage provider configuration handled by Infrastructure layer
+
+**Note**: PostgreSQL-only database support. MySQL and InMemory references exist only in legacy projects (Normaize.Data, Normaize.Tests) which will be deleted post-migration. New DDD projects use PostgreSQL for production and InMemory for unit/integration tests.
 
 ---
 
@@ -189,10 +192,10 @@ For each migrated service:
 
 ## Current Progress
 
-- **Completed**: 16 services/interfaces (added DataSetPreviewService with CQRS)
+- **Completed**: 20 services/interfaces (completed File Storage & Configuration section)
 - **In Progress**: 0 services
-- **Remaining**: ~37 services/interfaces
-- **Overall Progress**: ~30% complete
+- **Remaining**: ~33 services/interfaces
+- **Overall Progress**: ~38% complete
 
 **Recent Achievements**:
 - ✅ FileProcessingService: 24 comprehensive tests covering CSV, JSON, XML, Excel, and TXT file processing
@@ -200,6 +203,9 @@ For each migrated service:
 - ✅ FileUploadService: 17 tests with CQRS pattern (UploadFileCommand, DeleteFileCommand, CheckFileExistsQuery)
 - ✅ DataSetLifecycleService: 22 tests with CQRS pattern (ResetDataSetCommand, UpdateRetentionPolicyCommand, RestoreDataSetCommand, HardDeleteDataSetCommand, GetRetentionStatusQuery)
 - ✅ DataSetPreviewService: CQRS queries (GetDataSetPreviewQuery, GetDataSetSchemaQuery) with row limiting and JSON deserialization
+- ✅ DataSetQueryService: CQRS queries (GetDataSetByIdQuery, GetDataSetsByUserQuery, SearchDataSetsQuery) with pagination and access control
+- ✅ File Storage & Configuration: FileUploadOptions configuration class, FileMetadata/FileType/StorageProvider value objects, IStorageService deprecated
+- ✅ PostgreSQL-only architecture: New DDD projects use PostgreSQL for production, InMemory for unit/integration tests
 - ✅ End-to-end orchestration: Validation → Storage → Processing pipeline
 - ✅ Security tests: Path traversal detection, file type validation, size limit enforcement, blocked extensions
 - ✅ Test suite: 311/311 tests passing (100% pass rate maintained)
@@ -214,6 +220,9 @@ For each migrated service:
 - ✅ Completed FileUploadService migration with 17 CQRS-based tests (commands/queries/handlers)
 - ✅ Completed DataSetLifecycleService migration with 22 CQRS-based tests (lifecycle operations)
 - ✅ Completed DataSetPreviewService migration - Verified existing GetDataSetPreviewQueryHandler and GetDataSetSchemaQueryHandler implementations
+- ✅ Completed DataSetQueryService migration - Verified existing GetDataSetByIdQuery, GetDataSetsByUserQuery, SearchDataSetsQuery implementations
+- ✅ Completed File Storage & Configuration section - FileUploadOptions configuration, deprecated legacy services (IStorageService, IFileConfigurationService, IStorageConfigurationService)
+- ✅ Verified PostgreSQL-only architecture - New DDD projects use PostgreSQL for production, InMemory for fast unit/integration tests, legacy MySQL code in projects scheduled for deletion
 - ✅ Achieved 100% test pass rate: **311/311 tests passing**
   - Domain: 151 tests
   - Application: 43 tests (GenerateDataSummary: 4, FileUpload: 17, DataSetLifecycle: 22)
@@ -264,13 +273,36 @@ Following our proven 8-step workflow (documented in DDD_MIGRATION_PLAN.md):
    - ✅ JSON deserialization with error handling
    - Result: Handlers implemented and ready for API integration (43 Application tests passing)
 
-### **Next Priority: Dataset Services**
+6. ✅ **DataSetQueryService** (COMPLETE - Query handlers exist in Application layer)
+   - ✅ GetDataSetByIdQueryHandler - Single dataset retrieval with access control via EnsureUserAccess
+   - ✅ GetDataSetsByUserQueryHandler - User's datasets with pagination (page, pageSize) and IncludeDeleted option
+   - ✅ Handlers map Domain entities to DataSetDto with comprehensive property mapping
+   - ✅ Access control enforced at query handler level
+   - ✅ Pagination support built-in (Skip/Take pattern)
+   - Result: Core querying implemented and ready for API integration (43 Application tests passing)
 
-6. **DataSetQueryService** (Next - Estimated 8-10 hours)
-   - Application layer: Create advanced querying commands/queries
-   - Infrastructure: Implement query optimization and filtering
-   - Testing: Query generation for various scenarios
+7. ✅ **File Storage & Configuration** (COMPLETE - Section verified)
+   - ✅ FileMetadata, FileType, StorageProvider value objects - Complete in Domain layer
+   - ✅ FileUploadOptions configuration class - Replaces IFileConfigurationService with modern configuration pattern
+   - ✅ IStorageService - DEPRECATED (functionality covered by IFileStorageService)
+   - ✅ IFileConfigurationService - DEPRECATED (replaced by FileUploadOptions)
+   - ✅ IStorageConfigurationService - DEPRECATED (handled by Infrastructure layer)
+   - ✅ PostgreSQL-only verified - New DDD projects use PostgreSQL for production, InMemory for unit/integration tests
+   - Result: Storage configuration modernized, legacy MySQL code isolated in projects scheduled for deletion
+
+### **Next Priority: Visualization & Charting Services**
+
+7. **DataVisualizationService** (Next - Estimated 10-12 hours)
+   - Application layer: Create visualization generation commands/queries
+   - Infrastructure: Implement chart generation and data visualization
+   - Testing: Visualization generation for various chart types
    - Expected outcome: 15-20 new tests
+
+8. **ChartGenerationService** (Estimated 8-10 hours)
+   - Application layer: Create chart generation commands
+   - Infrastructure: Implement specific chart types (bar, line, pie, scatter)
+   - Testing: Chart generation for various data formats
+   - Expected outcome: 12-15 new tests
 
 ### **Week 1-2**: Complete File Management Suite
 - [x] FileProcessingService migration
@@ -282,9 +314,25 @@ Following our proven 8-step workflow (documented in DDD_MIGRATION_PLAN.md):
 ### **Week 3**: Dataset Lifecycle Services
 - [x] DataSetLifecycleService
 - [x] DataSetPreviewService
-- [ ] DataSetQueryService
+- [x] DataSetQueryService
+- [x] File Storage & Configuration section review
 
 ### **Week 4**: Visualization Services
 - [ ] DataVisualizationService
 - [ ] ChartGenerationService
 - [ ] Caching layer
+
+---
+
+## Legacy Code Cleanup Plan
+
+### Projects to Delete Post-Migration:
+- **Normaize.Data** - Legacy data layer with MySQL support and old Entity Framework models
+- **Normaize.Tests** - Legacy test project with MySQL/InMemory test configurations
+
+### New DDD Architecture:
+- **PostgreSQL-only** for production database
+- **InMemory database** for unit and integration tests (fast, isolated, no Docker required)
+- **Clean separation** of Domain, Application, Infrastructure, and API layers
+- **CQRS pattern** with MediatR for commands and queries
+- **Value objects** for type safety (FileMetadata, FileType, StorageProvider, ProcessingStatus, etc.)
