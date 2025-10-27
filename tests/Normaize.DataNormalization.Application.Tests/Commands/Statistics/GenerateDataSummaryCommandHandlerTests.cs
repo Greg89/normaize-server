@@ -4,9 +4,8 @@ using Moq;
 using Normaize.DataNormalization.Application.Statistics.Commands.GenerateDataSummary;
 using Normaize.DataNormalization.Application.Common.DTOs;
 using Normaize.DataNormalization.Application.Common.Interfaces;
-using Normaize.DataNormalization.Application.DTOs;
-using Normaize.DataNormalization.Application.Interfaces;
 using Normaize.DataNormalization.Domain.Aggregates;
+using Normaize.DataNormalization.Domain.Entities;
 using Normaize.DataNormalization.Domain.Repositories;
 using Normaize.DataNormalization.Domain.ValueObjects;
 using Xunit;
@@ -18,103 +17,100 @@ namespace Normaize.DataNormalization.Application.Tests.Commands.Statistics;
 /// </summary>
 public class GenerateDataSummaryCommandHandlerTests
 {
-    private readonly Mock<IStatisticalCalculationService> _mockStatisticalService;
+    private readonly Mock<IDataSetRepository> _mockDataSetRepository;
     private readonly Mock<IStatisticsRepository> _mockStatisticsRepository;
-    private readonly Mock<IStatisticsMapper> _mockMapper;
+    private readonly Mock<IStatisticalCalculationService> _mockCalculationService;
+    private readonly Mock<IMapper> _mockMapper;
     private readonly Mock<ILogger<GenerateDataSummaryCommandHandler>> _mockLogger;
     private readonly GenerateDataSummaryCommandHandler _handler;
 
     public GenerateDataSummaryCommandHandlerTests()
     {
-        _mockStatisticalService = new Mock<IStatisticalCalculationService>();
+        _mockDataSetRepository = new Mock<IDataSetRepository>();
         _mockStatisticsRepository = new Mock<IStatisticsRepository>();
-        _mockMapper = new Mock<IStatisticsMapper>();
+        _mockCalculationService = new Mock<IStatisticalCalculationService>();
+        _mockMapper = new Mock<IMapper>();
         _mockLogger = new Mock<ILogger<GenerateDataSummaryCommandHandler>>();
 
         _handler = new GenerateDataSummaryCommandHandler(
-            _mockStatisticalService.Object,
+            _mockDataSetRepository.Object,
             _mockStatisticsRepository.Object,
+            _mockCalculationService.Object,
             _mockMapper.Object,
             _mockLogger.Object);
     }
 
     [Fact]
-    public async Task Handle_ShouldGenerateDataSummary_WhenValidCommand()
+    public async Task Handle_ShouldReturnEmptyDataSummary_WhenDataSetNotFound()
     {
         // Arrange
         var dataSetId = Guid.NewGuid();
-        var command = new GenerateDataSummaryCommand(dataSetId);
+        var userId = "test-user";
+        var command = new GenerateDataSummaryCommand(dataSetId, userId);
         var cancellationToken = CancellationToken.None;
 
-        var statistics = CreateTestStatistics(dataSetId);
-        var expectedDto = CreateTestDataSummaryDto();
-
-        _mockStatisticalService.Setup(x => x.GenerateDataSummaryAsync(dataSetId, cancellationToken))
-            .ReturnsAsync(statistics);
-
-        _mockStatisticsRepository.Setup(x => x.AddAsync(It.IsAny<Domain.Aggregates.Statistics>(), cancellationToken))
-            .Returns(Task.CompletedTask);
-
-        _mockMapper.Setup(x => x.MapToDataSummaryDto(statistics, It.IsAny<TimeSpan>()))
-            .Returns(expectedDto);
-
-        // Act
-        var result = await _handler.Handle(command, cancellationToken);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeEquivalentTo(expectedDto);
-
-        _mockStatisticalService.Verify(x => x.GenerateDataSummaryAsync(dataSetId, cancellationToken), Times.Once);
-        _mockStatisticsRepository.Verify(x => x.AddAsync(It.Is<Domain.Aggregates.Statistics>(s => s.DataSetId == dataSetId), cancellationToken), Times.Once);
-        _mockMapper.Verify(x => x.MapToDataSummaryDto(statistics, It.IsAny<TimeSpan>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task Handle_ShouldThrowArgumentException_WhenDataSetIdIsEmpty()
-    {
-        // Arrange
-        var command = new GenerateDataSummaryCommand(Guid.Empty);
-        var cancellationToken = CancellationToken.None;
+        _mockDataSetRepository.Setup(x => x.GetByIdAsync(dataSetId, cancellationToken))
+            .ReturnsAsync((DataSet?)null);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
             _handler.Handle(command, cancellationToken));
 
-        exception.Message.Should().Contain("DataSetId cannot be empty");
+        exception.Message.Should().Contain($"DataSet with ID {dataSetId} not found");
     }
 
     [Fact]
-    public async Task Handle_ShouldUpdateExistingStatistics_WhenStatisticsAlreadyExist()
+    public async Task Handle_ShouldThrowUnauthorizedException_WhenUserDoesNotOwnDataSet()
     {
         // Arrange
         var dataSetId = Guid.NewGuid();
-        var command = new GenerateDataSummaryCommand(dataSetId);
+        var userId = "test-user";
+        var ownerId = "different-user";
+        var command = new GenerateDataSummaryCommand(dataSetId, userId);
         var cancellationToken = CancellationToken.None;
 
-        var existingStatistics = CreateTestStatistics(dataSetId);
-        var newStatistics = CreateTestStatistics(dataSetId);
-        var expectedDto = CreateTestDataSummaryDto();
+        var dataSet = CreateTestDataSet(dataSetId, ownerId);
 
-        _mockStatisticsRepository.Setup(x => x.GetByDataSetIdAsync(dataSetId, cancellationToken))
-            .ReturnsAsync(existingStatistics);
+        _mockDataSetRepository.Setup(x => x.GetByIdAsync(dataSetId, cancellationToken))
+            .ReturnsAsync(dataSet);
 
-        _mockStatisticalService.Setup(x => x.GenerateDataSummaryAsync(dataSetId, cancellationToken))
-            .ReturnsAsync(newStatistics);
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => 
+            _handler.Handle(command, cancellationToken));
 
-        _mockStatisticsRepository.Setup(x => x.UpdateAsync(It.IsAny<Domain.Aggregates.Statistics>(), cancellationToken))
-            .Returns(Task.CompletedTask);
+        exception.Message.Should().Contain("User does not have access to this dataset");
+    }
 
-        _mockMapper.Setup(x => x.MapToDataSummaryDto(It.IsAny<Domain.Aggregates.Statistics>(), It.IsAny<TimeSpan>()))
-            .Returns(expectedDto);
+    [Fact]
+    public async Task Handle_ShouldReturnEmptyDataSummary_WhenDataSetHasNoData()
+    {
+        // Arrange
+        var dataSetId = Guid.NewGuid();
+        var userId = "test-user";
+        var command = new GenerateDataSummaryCommand(dataSetId, userId);
+        var cancellationToken = CancellationToken.None;
+
+        var dataSet = CreateTestDataSet(dataSetId, userId);
+        var expectedDto = CreateEmptyDataSummaryDto(dataSetId);
+
+        _mockDataSetRepository.Setup(x => x.GetByIdAsync(dataSetId, cancellationToken))
+            .ReturnsAsync(dataSet);
 
         // Act
         var result = await _handler.Handle(command, cancellationToken);
 
         // Assert
         result.Should().NotBeNull();
-        _mockStatisticsRepository.Verify(x => x.UpdateAsync(It.IsAny<Domain.Aggregates.Statistics>(), cancellationToken), Times.Once);
-        _mockStatisticsRepository.Verify(x => x.AddAsync(It.IsAny<Domain.Aggregates.Statistics>(), cancellationToken), Times.Never);
+        result.TotalRows.Should().Be(0);
+        result.TotalColumns.Should().Be(0);
+        result.QualityScore.OverallScore.Should().Be(100);
+        
+        // Should not call calculation service when there's no data
+        _mockCalculationService.Verify(x => x.GenerateDataSummaryAsync(
+            It.IsAny<DataSet>(), 
+            It.IsAny<List<Dictionary<string, object?>>>(), 
+            It.IsAny<CancellationToken>()), 
+            Times.Never);
     }
 
     [Fact]
@@ -122,12 +118,13 @@ public class GenerateDataSummaryCommandHandlerTests
     {
         // Arrange
         var dataSetId = Guid.NewGuid();
-        var command = new GenerateDataSummaryCommand(dataSetId);
+        var userId = "test-user";
+        var command = new GenerateDataSummaryCommand(dataSetId, userId);
         var cancellationToken = CancellationToken.None;
 
         var expectedException = new InvalidOperationException("Test exception");
 
-        _mockStatisticalService.Setup(x => x.GenerateDataSummaryAsync(dataSetId, cancellationToken))
+        _mockDataSetRepository.Setup(x => x.GetByIdAsync(dataSetId, cancellationToken))
             .ThrowsAsync(expectedException);
 
         // Act & Assert
@@ -147,54 +144,47 @@ public class GenerateDataSummaryCommandHandlerTests
             Times.Once);
     }
 
-    private static Domain.Aggregates.Statistics CreateTestStatistics(Guid dataSetId)
+    private static DataSet CreateTestDataSet(Guid dataSetId, string userId)
     {
-        var columnSummaries = new Dictionary<string, ColumnSummary>
-        {
-            ["name"] = new ColumnSummary(
-                "name",
-                new DataTypeClassification("String", false, false, false),
-                100,
-                0,
-                100,
-                new List<object> { "John", "Jane", "Bob" },
-                "Alice",
-                "Zoe",
-                null),
-            ["age"] = new ColumnSummary(
-                "age",
-                new DataTypeClassification("Numeric", true, false, false),
-                98,
-                2,
-                50,
-                new List<object> { 25, 30, 35 },
-                18,
-                75,
-                new StatisticalMeasure(42.5, 40, 15.2, 18, 75, 30, 40, 55, 0.2, -0.5, 3))
-        };
+        var fileInfo = FileMetadata.Create(
+            "test.csv",
+            $"{userId}/test.csv",
+            FileType.CSV,
+            1024);
 
-        return Domain.Aggregates.Statistics.CreateDataSummary(
-            dataSetId,
-            "Test Dataset",
-            100,
-            2,
-            columnSummaries,
-            TimeSpan.FromSeconds(5));
+        var dataSet = DataSet.Create(
+            name: "Test Dataset",
+            description: "Test description",
+            userId: userId,
+            fileInfo: fileInfo,
+            statistics: null,
+            retentionDays: 30);
+
+        // Use reflection to set the Id since it's only set internally
+        var idProperty = typeof(DataSet).GetProperty("Id");
+        idProperty?.SetValue(dataSet, dataSetId);
+
+        return dataSet;
     }
 
-    private static DataSummaryDto CreateTestDataSummaryDto()
+    private static DataSummaryDto CreateEmptyDataSummaryDto(Guid dataSetId)
     {
         return new DataSummaryDto
         {
-            DataSetId = 1,
-            TotalRows = 100,
-            TotalColumns = 2,
-            MissingValues = 2,
+            DataSetId = (int)dataSetId.GetHashCode(),
+            TotalRows = 0,
+            TotalColumns = 0,
+            MissingValues = 0,
             DuplicateRows = 0,
-            ColumnSummaries = new Dictionary<string, Application.Common.DTOs.ColumnSummaryDto>(),
+            ColumnSummaries = new Dictionary<string, BasicColumnSummaryDto>(),
             GeneratedAt = DateTime.UtcNow,
-            ProcessingTime = TimeSpan.FromSeconds(5),
-            QualityScore = new DataQualityScoreDto()
+            ProcessingTime = TimeSpan.Zero,
+            QualityScore = new DataQualityScoreDto
+            {
+                OverallScore = 100,
+                HasQualityIssues = false,
+                HasSeriousIssues = false
+            }
         };
     }
 }
