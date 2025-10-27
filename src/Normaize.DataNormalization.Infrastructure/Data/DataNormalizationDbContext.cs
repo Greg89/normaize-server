@@ -24,6 +24,7 @@ public class DataNormalizationDbContext : DbContext
     public DbSet<DataSet> DataSets { get; set; } = null!;
     public DbSet<DataSetRow> DataSetRows { get; set; } = null!;
     public DbSet<NormalizationAuditLog> AuditLogs { get; set; } = null!;
+    public DbSet<User> Users { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -36,6 +37,7 @@ public class DataNormalizationDbContext : DbContext
         modelBuilder.ApplyConfiguration(new DataSetConfiguration());
         modelBuilder.ApplyConfiguration(new DataSetRowConfiguration());
         modelBuilder.ApplyConfiguration(new NormalizationAuditLogConfiguration());
+        modelBuilder.ApplyConfiguration(new UserConfiguration());
 
         // Configure schema
         modelBuilder.HasDefaultSchema("data_normalization");

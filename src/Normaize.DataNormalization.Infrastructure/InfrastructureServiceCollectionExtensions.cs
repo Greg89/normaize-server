@@ -50,6 +50,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<INormalizationJobRepository, NormalizationJobRepository>();
         services.AddScoped<IAnalysisRepository, AnalysisRepository>();
         services.AddScoped<IStatisticsRepository, StatisticsRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
 
         // Data access repositories  
         services.AddScoped<IDataSetRepository, DataSetRepository>();
