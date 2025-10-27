@@ -40,14 +40,13 @@ public class DataSetRepositoryTests : IDisposable
             name: "Test Dataset",
             description: null,
             userId: "user-123",
-            fileInfo: FileMetadata.Create("test.csv", "user-123/test.csv", FileType.CSV, 1024),
+            fileInfo: FileMetadata .Create("test.csv", "user-123/test.csv", FileType.CSV, 1024),
             statistics: null,
             retentionDays: 30
         );
 
         // Act
         await _repository.AddAsync(dataSet);
-        await _dbContext.SaveChangesAsync();
 
         // Assert
         var retrieved = await _repository.GetByIdAsync(dataSet.Id);
@@ -75,11 +74,9 @@ public class DataSetRepositoryTests : IDisposable
         // Arrange
         var dataSet = CreateTestDataSet("user-123");
         await _repository.AddAsync(dataSet);
-        await _dbContext.SaveChangesAsync();
 
         dataSet.Delete("user-123");
         await _repository.UpdateAsync(dataSet);
-        await _dbContext.SaveChangesAsync();
 
         // Act
         var result = await _repository.GetByIdAsync(dataSet.Id);
@@ -102,7 +99,6 @@ public class DataSetRepositoryTests : IDisposable
         await _repository.AddAsync(dataSet1);
         await _repository.AddAsync(dataSet2);
         await _repository.AddAsync(dataSet3);
-        await _dbContext.SaveChangesAsync();
 
         // Act
         var user1DataSets = await _repository.GetByUserIdAsync(user1Id, CancellationToken.None);
@@ -124,11 +120,9 @@ public class DataSetRepositoryTests : IDisposable
 
         await _repository.AddAsync(dataSet1);
         await _repository.AddAsync(dataSet2);
-        await _dbContext.SaveChangesAsync();
 
         dataSet2.Delete(userId);
         await _repository.UpdateAsync(dataSet2);
-        await _dbContext.SaveChangesAsync();
 
         // Act
         var result = await _repository.GetByUserIdAsync(userId, CancellationToken.None);
@@ -150,13 +144,14 @@ public class DataSetRepositoryTests : IDisposable
         await _repository.AddAsync(activeDataSet);
         await _repository.AddAsync(deletedDataSet1);
         await _repository.AddAsync(deletedDataSet2);
-        await _dbContext.SaveChangesAsync();
 
         deletedDataSet1.Delete(userId);
         deletedDataSet2.Delete(userId);
         await _repository.UpdateAsync(deletedDataSet1);
         await _repository.UpdateAsync(deletedDataSet2);
-        await _dbContext.SaveChangesAsync();
+
+        // Clear the change tracker to ensure fresh query
+        _dbContext.ChangeTracker.Clear();
 
         // Act
         var result = await _repository.GetDeletedByUserIdAsync(userId, CancellationToken.None);
@@ -174,12 +169,10 @@ public class DataSetRepositoryTests : IDisposable
         // Arrange
         var dataSet = CreateTestDataSet("user-123", "Original Name");
         await _repository.AddAsync(dataSet);
-        await _dbContext.SaveChangesAsync();
 
         // Act
         dataSet.UpdateMetadata("Updated Name", "New description", "user-123");
         await _repository.UpdateAsync(dataSet);
-        await _dbContext.SaveChangesAsync();
 
         // Assert
         var updated = await _repository.GetByIdAsync(dataSet.Id);
@@ -194,12 +187,13 @@ public class DataSetRepositoryTests : IDisposable
         // Arrange
         var dataSet = CreateTestDataSet("user-123");
         await _repository.AddAsync(dataSet);
-        await _dbContext.SaveChangesAsync();
 
         // Act
         dataSet.Delete("user-123");
         await _repository.UpdateAsync(dataSet);
-        await _dbContext.SaveChangesAsync();
+
+        // Clear the change tracker to ensure fresh query
+        _dbContext.ChangeTracker.Clear();
 
         // Assert
         var result = await _repository.GetByIdAsync(dataSet.Id);
@@ -220,7 +214,6 @@ public class DataSetRepositoryTests : IDisposable
             var dataSet = CreateTestDataSet(userId, $"Dataset {i}");
             await _repository.AddAsync(dataSet);
         }
-        await _dbContext.SaveChangesAsync();
 
         // Act - Get page 2 with page size 3
         var allDataSets = await _repository.GetByUserIdAsync(userId, CancellationToken.None);
@@ -241,7 +234,6 @@ public class DataSetRepositoryTests : IDisposable
 
         // Act
         await _repository.AddAsync(dataSet);
-        await _dbContext.SaveChangesAsync();
 
         // Assert
         var retrieved = await _repository.GetByIdAsync(dataSet.Id);
@@ -259,7 +251,6 @@ public class DataSetRepositoryTests : IDisposable
 
         // Act
         await _repository.AddAsync(dataSet);
-        await _dbContext.SaveChangesAsync();
 
         // Assert
         var retrieved = await _repository.GetByIdAsync(dataSet.Id);

@@ -63,6 +63,7 @@ public class DataSetRepository : IDataSetRepository
         _logger.LogDebug("Getting deleted datasets for user: {UserId}", userId);
 
         return await _context.DataSets
+            .IgnoreQueryFilters() // Need to ignore the soft delete filter
             .Where(ds => ds.UserId == userId && ds.IsDeleted)
             .OrderByDescending(ds => ds.DeletedAt)
             .ToListAsync(cancellationToken);
