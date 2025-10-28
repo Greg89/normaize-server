@@ -86,6 +86,9 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IChartGenerationService, ChartGenerationService>();
         services.AddScoped<IDataSummaryService, DataSummaryService>();
 
+        // Environment Services
+        services.AddSingleton<IEnvironmentService, EnvironmentService>();
+
         // Command Handlers - Jobs
         services.AddScoped<ICommandHandler<SubmitJobCommand, Guid>, SubmitJobCommandHandler>();
         services.AddScoped<ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid>, SubmitDuplicateRemovalJobCommandHandler>();

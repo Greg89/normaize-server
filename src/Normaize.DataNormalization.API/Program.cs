@@ -1,5 +1,6 @@
 using Normaize.DataNormalization.Infrastructure;
 using Normaize.DataNormalization.Application;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -62,6 +63,9 @@ else
 
 // Build the application
 var app = builder.Build();
+
+// Apply database migrations automatically on startup
+await ApplyDatabaseMigrationsAsync(app);
 
 // Configure URLs
 app.Urls.Add("http://localhost:5001");
@@ -127,6 +131,57 @@ app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthC
 Console.WriteLine("✅ Starting web server...");
 
 app.Run();
+
+// Startup helper methods
+static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    
+    try
+    {
+        var dbContext = scope.ServiceProvider.GetService<Normaize.DataNormalization.Infrastructure.Data.DataNormalizationDbContext>();
+        
+        if (dbContext == null)
+        {
+            logger.LogWarning("⚠ Database context not registered - skipping migrations");
+            return;
+        }
+
+        logger.LogInformation("🔄 Checking for pending database migrations...");
+        
+        var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
+        var pendingCount = pendingMigrations.Count();
+        
+        if (pendingCount > 0)
+        {
+            logger.LogInformation("📦 Applying {Count} pending migration(s): {Migrations}", 
+                pendingCount, string.Join(", ", pendingMigrations));
+            
+            await dbContext.Database.MigrateAsync();
+            logger.LogInformation("✅ Database migrations applied successfully");
+        }
+        else
+        {
+            logger.LogInformation("✅ Database is up to date - no migrations needed");
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "❌ Error applying database migrations");
+        
+        // In production, fail fast. In development, continue to allow API exploration.
+        if (app.Environment.IsProduction())
+        {
+            logger.LogCritical("🛑 Cannot start application - database migrations failed in production");
+            throw;
+        }
+        else
+        {
+            logger.LogWarning("⚠ Continuing in development mode despite migration failure");
+        }
+    }
+}
 
 // Make the implicit Program class public so test projects can access it
 public partial class Program { }
