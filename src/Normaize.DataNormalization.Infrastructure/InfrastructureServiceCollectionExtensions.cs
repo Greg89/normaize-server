@@ -60,6 +60,7 @@ public static class InfrastructureServiceCollectionExtensions
         // File and Dataset Services
         services.AddScoped<IFileStorageService, FileStorageService>();
         services.AddScoped<IFileProcessingService, FileProcessingService>();
+        services.AddScoped<IFileHashService, FileHashService>();
         services.AddScoped<IAuditService, AuditService>();
 
         // Domain Event Publishing
