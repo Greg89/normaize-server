@@ -91,11 +91,29 @@ This document tracks the migration of all services, interfaces, and components f
 - ✅ **IDataVisualizationService / DataVisualizationService** - Migrated to CQRS pattern with comprehensive chart generation
 - ✅ **IChartGenerationService / ChartGenerationService** - Fully migrated with 12 chart types (Bar, Line, Pie, Scatter, Area, Histogram, BoxPlot, Heatmap, Bubble, Radar, Donut, Column)
 - ✅ **IDataSummaryService** - Statistical summaries and data analysis
-- 📋 **IVisualizationServices / VisualizationServices** - Extended visualization services
-- 📋 **IVisualizationValidationService / VisualizationValidationService** - Validation for visualizations
+- ✅ **IVisualizationServices / VisualizationServices** - DEPRECATED - Composite interface replaced by proper DI
+  - Grouped IStatisticalCalculationService, IChartGenerationService, ICacheManagementService, IVisualizationValidationService
+  - New architecture: Command handlers directly inject specific services as needed
+  - No longer needed with proper dependency injection
+- ✅ **IVisualizationValidationService / VisualizationValidationService** - DEPRECATED - Validation handled inline in command handlers
+  - Chart input validation → Inline `ValidateInputs()` methods in command handlers (GenerateChartCommandHandler, etc.)
+  - Configuration validation → `ChartGenerationService.ValidateChartConfiguration()`
+  - Follows CQRS best practice: validation as part of command handler logic
+  - No separate validation service needed with modern command pattern
 
 ### Caching & Performance
-- 📋 **ICacheManagementService / CacheManagementService** - Visualization caching
+- ✅ **ICacheManagementService / CacheManagementService** - Migrated to VisualizationCacheService with 17 comprehensive tests
+  - ASP.NET Core IMemoryCache integration with sliding expiration
+  - Supports: Chart caching, Comparison chart caching, Data summary caching, Statistical summary caching
+  - Configuration-aware cache keys with SHA256 hashing
+  - Cache key generation with dataset ID + chart type + configuration hash
+  - Note: IMemoryCache has limited invalidation support; consider IDistributedCache for production
+  - **17 comprehensive tests** (VisualizationCacheServiceTests.cs):
+    - Constructor validation, Chart caching (basic, with configuration, custom expiration)
+    - Comparison chart caching (basic, with reversed IDs for cache key consistency)
+    - Data summary and statistical summary caching
+    - Cache invalidation, Cache key generation and uniqueness
+    - Edge cases: cache overwriting, different chart types, null configurations
 
 ---
 
@@ -246,12 +264,13 @@ For each migrated service:
 
 ## Current Progress
 
-- **Completed**: 48 services/interfaces (Sections 1, 2, 3, 5, 6, 7 complete!)
+- **Completed**: 51 services/interfaces (Sections 1, 2, 3, 4, 5, 6, 7 complete!)
 - **In Progress**: 0 services
-- **Remaining**: ~5 services/interfaces
-- **Overall Progress**: ~91% complete 🎯
+- **Remaining**: ~2 services/interfaces (Section 8 only)
+- **Overall Progress**: ~96% complete 🎯 🚀
 
 **Recent Achievements**:
+- ✅ **Section 4 Complete**: Visualization & Charting Services (IVisualizationServices deprecated, IVisualizationValidationService deprecated, VisualizationCacheService with 17 tests)
 - ✅ **Section 3 Complete**: File Management Services (IFileUploadServices deprecated, IFileUtilityService migrated to Domain value objects + FileHashService with 14 tests)
 - ✅ **Section 1 Complete**: Data Processing & Normalization Services (2 services migrated, 2 deprecated)
 - ✅ **Section 7 Complete**: All models and DTOs migrated or verified (14 completed, 5 deprecated)
@@ -263,13 +282,14 @@ For each migrated service:
 - ✅ FileValidationService: 60+ comprehensive tests with configuration-driven validation rules
 - ✅ FileUploadService: 17 tests with CQRS pattern (UploadFileCommand, DeleteFileCommand, CheckFileExistsQuery)
 - ✅ FileHashService: 14 comprehensive tests for SHA256 hash generation with stream position restoration
+- ✅ VisualizationCacheService: 17 comprehensive tests for chart caching with IMemoryCache integration
 - ✅ DataSetLifecycleService: 22 tests with CQRS pattern (ResetDataSetCommand, UpdateRetentionPolicyCommand, RestoreDataSetCommand, HardDeleteDataSetCommand, GetRetentionStatusQuery)
 - ✅ DataSetPreviewService: CQRS queries (GetDataSetPreviewQuery, GetDataSetSchemaQuery) with row limiting and JSON deserialization
 - ✅ DataSetQueryService: CQRS queries (GetDataSetByIdQuery, GetDataSetsByUserQuery, SearchDataSetsQuery) with pagination and access control
 - ✅ File Storage & Configuration: FileUploadOptions configuration class, FileMetadata/FileType/StorageProvider value objects, IStorageService deprecated
 - ✅ PostgreSQL-only architecture: New DDD projects use PostgreSQL for production, InMemory for unit/integration tests
 - ✅ **Visualization & Charting Services**: ChartGenerationService with 12 chart types (Bar, Line, Pie, Scatter, Area, Histogram, BoxPlot, Heatmap, Bubble, Radar, Donut, Column), DataSummaryService, 5 CQRS commands/queries with handlers
-- ✅ End-to-end orchestration: Validation → Storage → Processing → Hash Generation pipeline
+- ✅ End-to-end orchestration: Validation → Storage → Processing → Hash Generation → Caching pipeline
 - ✅ Security tests: Path traversal detection, file type validation, size limit enforcement, blocked extensions
 - ✅ Test suite: **443/443 tests passing (100% pass rate maintained)**
 
@@ -321,7 +341,60 @@ For each migrated service:
   - Database migrations tested automatically on startup
   - Health checks validate migration status
 
-- ✅ Migration progress: **48/53 services (91% complete)** - crossing 90% milestone! 🎯
+- ✅ Migration progress: **51/53 services (96% complete)** - crossing 95% milestone! 🎯 🚀
+
+### Recent Achievements (December 2025) - Section 4: Visualization & Charting Services Complete
+- ✅ **Section 4: Visualization & Charting Services - 100% Complete**
+  - **IVisualizationServices** - DEPRECATED ❌
+    - Composite interface pattern no longer needed
+    - Grouped IStatisticalCalculationService, IChartGenerationService, ICacheManagementService, IVisualizationValidationService
+    - New architecture: Command handlers directly inject specific services via DI (same pattern as IFileUploadServices)
+  
+  - **IVisualizationValidationService** - DEPRECATED ❌
+    - Validation logic moved inline to command handlers
+    - Follows CQRS best practice: validation as part of command handler
+    - `ValidateInputs()` methods in GenerateChartCommandHandler, GenerateComparisonChartCommandHandler, etc.
+    - Configuration validation via `ChartGenerationService.ValidateChartConfiguration()`
+    - Eliminates unnecessary service layer for simple validation logic
+  
+  - **ICacheManagementService** - Migrated to **VisualizationCacheService** ✅
+    - **17 comprehensive tests** (VisualizationCacheServiceTests.cs)
+    - Integrated with ASP.NET Core `IMemoryCache` with sliding expiration (default 15 minutes)
+    - **Cache Operations**:
+      - `TryGetChart()` / `CacheChart()` - Chart data caching with configuration-aware keys
+      - `TryGetComparisonChart()` / `CacheComparisonChart()` - Comparison chart caching with sorted dataset IDs
+      - `TryGetDataSummary()` / `CacheDataSummary()` - Data summary caching
+      - `TryGetStatisticalSummary()` / `CacheStatisticalSummary()` - Statistical summary caching
+      - `InvalidateDataSet()` - Cache invalidation (limited by IMemoryCache constraints)
+      - `ClearAll()` - Full cache clearing (IMemoryCache limitation documented)
+    - **Cache Key Generation**:
+      - Configuration-aware: SHA256 hash of configuration JSON for uniqueness
+      - Format: `chart:{dataSetId}:{chartType}:{configHash}`
+      - Comparison charts use sorted dataset IDs for consistency
+    - **Test Coverage**:
+      - Constructor validation (null guards)
+      - Chart caching: basic, with configuration, custom expiration, cache hits/misses
+      - Comparison chart caching: basic, reversed ID consistency
+      - Data/statistical summary caching
+      - Cache invalidation patterns
+      - Cache key generation: uniqueness, configuration hashing, overwriting behavior
+      - Edge cases: different chart types stored separately, configuration variations
+    - **Design Notes**:
+      - IMemoryCache doesn't support prefix-based removal or enumeration
+      - For production with comprehensive invalidation, consider IDistributedCache (Redis, etc.)
+      - Sliding expiration ensures frequently accessed items stay cached
+
+  - **Test Results**: ✅ **474/474 tests passing (100% pass rate)** - added 17 new tests
+    - Domain: 190 tests
+    - Application: 99 tests
+    - Infrastructure: 185 tests (added VisualizationCacheServiceTests)
+
+  - **Migration Impact**:
+    - Composite pattern elimination (IVisualizationServices) reduces complexity
+    - Validation inline in handlers improves cohesion and reduces indirection
+    - Caching service provides performance optimization for expensive chart generation
+    - ASP.NET Core IMemoryCache integration leverages framework capabilities
+    - Clear documentation of IMemoryCache limitations guides future improvements
 
 ### Recent Achievements (December 2025) - Section 3: File Management Services Complete
 - ✅ **Section 3: File Management Services - 100% Complete**

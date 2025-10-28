@@ -86,6 +86,10 @@ public static class InfrastructureServiceCollectionExtensions
         // Visualization Services
         services.AddScoped<IChartGenerationService, ChartGenerationService>();
         services.AddScoped<IDataSummaryService, DataSummaryService>();
+        services.AddScoped<IVisualizationCacheService, VisualizationCacheService>();
+
+        // Caching
+        services.AddMemoryCache();
 
         // Environment Services
         services.AddSingleton<IEnvironmentService, EnvironmentService>();
