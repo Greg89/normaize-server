@@ -60,9 +60,6 @@ else
     Console.WriteLine("⚠ Skipping infrastructure registration (test mode)");
 }
 
-// Add health checks
-builder.Services.AddHealthChecks();
-
 // Build the application
 var app = builder.Build();
 
@@ -84,7 +81,48 @@ app.UseSwaggerUI(c =>
 
 app.UseCors("AllowAll");
 app.MapControllers();
-app.MapHealthChecks("/health");
+
+// Health check endpoints with detailed responses
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            timestamp = DateTime.UtcNow,
+            duration = report.TotalDuration.TotalMilliseconds,
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                duration = e.Value.Duration.TotalMilliseconds,
+                tags = e.Value.Tags,
+                data = e.Value.Data,
+                exception = e.Value.Exception?.Message
+            })
+        }, new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+        
+        await context.Response.WriteAsync(result);
+    }
+});
+
+// Separate ready/live endpoints for Kubernetes-style health checks
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
+
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false // Always healthy if app is running
+});
 
 Console.WriteLine("✅ Starting web server...");
 

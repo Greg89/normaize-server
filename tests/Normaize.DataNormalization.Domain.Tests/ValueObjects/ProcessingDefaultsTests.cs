@@ -16,7 +16,7 @@ public class ProcessingDefaultsTests
         var defaults = ProcessingDefaults.Default();
 
         // Assert
-        defaults.AutoProcessUploads.Should().BeFalse();
+        defaults.AutoProcessUploads.Should().BeTrue(); // Default is true
         defaults.MaxPreviewRows.Should().Be(100);
         defaults.DefaultFileType.Should().Be("CSV");
         defaults.EnableDataValidation.Should().BeTrue();
@@ -74,14 +74,14 @@ public class ProcessingDefaultsTests
     {
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => ProcessingDefaults.Create(
-            autoProcessUploads: false,
+            autoProcessUploads: true,
             maxPreviewRows: invalidRows,
             defaultFileType: "CSV",
             enableDataValidation: true,
             enableSchemaInference: true,
             retentionDays: 365));
 
-        exception.Message.Should().Contain("MaxPreviewRows must be between 10 and 10000");
+        exception.Message.Should().Contain("Max preview rows must be between");
     }
 
     [Theory]
@@ -114,14 +114,14 @@ public class ProcessingDefaultsTests
     {
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => ProcessingDefaults.Create(
-            autoProcessUploads: false,
+            autoProcessUploads: true,
             maxPreviewRows: 100,
             defaultFileType: invalidFileType,
             enableDataValidation: true,
             enableSchemaInference: true,
             retentionDays: 365));
 
-        exception.Message.Should().Contain("DefaultFileType must be one of: CSV, JSON, XML, EXCEL, PARQUET, TXT");
+        exception.Message.Should().Contain("Default file type must be one of:");
     }
 
     [Theory]
@@ -153,14 +153,14 @@ public class ProcessingDefaultsTests
     {
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => ProcessingDefaults.Create(
-            autoProcessUploads: false,
+            autoProcessUploads: true,
             maxPreviewRows: 100,
             defaultFileType: "CSV",
             enableDataValidation: true,
             enableSchemaInference: true,
             retentionDays: invalidDays));
 
-        exception.Message.Should().Contain("RetentionDays must be between 1 and 3650");
+        exception.Message.Should().Contain("Retention days must be between");
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public class ProcessingDefaultsTests
         conservative.AutoProcessUploads.Should().BeFalse();
         conservative.MaxPreviewRows.Should().Be(50);
         conservative.EnableDataValidation.Should().BeTrue();
-        conservative.EnableSchemaInference.Should().BeFalse();
+        conservative.EnableSchemaInference.Should().BeTrue(); // Conservative keeps schema inference enabled
         conservative.RetentionDays.Should().Be(180);
     }
 

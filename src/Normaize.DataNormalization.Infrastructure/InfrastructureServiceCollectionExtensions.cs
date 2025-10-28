@@ -13,6 +13,7 @@ using Normaize.DataNormalization.Infrastructure.Repositories;
 using Normaize.DataNormalization.Infrastructure.Services;
 using Normaize.DataNormalization.Infrastructure.Handlers;
 using Normaize.DataNormalization.Infrastructure.Workers;
+using Normaize.DataNormalization.Infrastructure.HealthChecks;
 
 namespace Normaize.DataNormalization.Infrastructure;
 
@@ -120,6 +121,18 @@ public static class InfrastructureServiceCollectionExtensions
         // Background Workers
         services.AddScoped<IBackgroundWorker, NormalizationWorker>();
         services.AddHostedService<WorkerHostedService>();
+
+        // Health Checks
+        services.AddHealthChecks()
+            .AddCheck<DatabaseHealthCheck>(
+                "database",
+                tags: new[] { "database", "sql", "ready" })
+            .AddCheck<ConfigurationHealthCheck>(
+                "configuration",
+                tags: new[] { "configuration", "ready" })
+            .AddCheck<StorageHealthCheck>(
+                "storage",
+                tags: new[] { "storage", "ready" });
 
         return services;
     }
