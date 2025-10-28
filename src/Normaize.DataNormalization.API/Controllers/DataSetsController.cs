@@ -6,6 +6,9 @@ using Normaize.DataNormalization.API.DTOs;
 using Normaize.DataNormalization.Application.Commands.DataSets;
 using Normaize.DataNormalization.Application.Queries.DataSets;
 using Normaize.DataNormalization.Application.Interfaces;
+using Normaize.DataNormalization.Application.Commands.DataSetLifecycle;
+using Normaize.DataNormalization.Application.Queries.DataSetLifecycle;
+using LifecycleUpdateRetentionPolicyCommand = Normaize.DataNormalization.Application.Commands.DataSetLifecycle.UpdateRetentionPolicyCommand;
 
 namespace Normaize.DataNormalization.API.Controllers;
 
@@ -379,6 +382,204 @@ public class DataSetsController : BaseApiController
         {
             _logger.LogError(ex, "Error searching datasets");
             return HandleException(ex, nameof(SearchDataSets));
+        }
+    }
+
+    /// <summary>
+    /// Get deleted datasets for the authenticated user
+    /// </summary>
+    /// <returns>List of soft-deleted datasets</returns>
+    [HttpGet("deleted")]
+    [ProducesResponseType(typeof(ApiResponse<List<DataSetResponse>>), 200)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(500)]
+    public async Task<IActionResult> GetDeletedDataSets()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            _logger.LogDebug("User {UserId} requesting deleted datasets", userId);
+
+            var query = new GetDataSetsByUserQuery(userId, 1, 1000, IncludeDeleted: true);
+            var allDataSets = await _mediator.Send(query);
+            
+            // Filter to only deleted datasets
+            var deletedDataSets = allDataSets.Where(ds => ds.IsDeleted).ToList();
+            var responses = deletedDataSets.Select(MapFromDto).ToList();
+
+            return Success(responses);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting deleted datasets");
+            return HandleException(ex, nameof(GetDeletedDataSets));
+        }
+    }
+
+    /// <summary>
+    /// Restore a soft-deleted dataset
+    /// </summary>
+    /// <param name="id">Dataset ID</param>
+    /// <returns>Success confirmation</returns>
+    [HttpPost("{id:guid}/restore")]
+    [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<IActionResult> RestoreDataSet(Guid id)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            _logger.LogInformation("User {UserId} restoring dataset {DataSetId}", userId, id);
+
+            var command = new RestoreDataSetCommand { DataSetId = id, UserId = userId };
+            var result = await _mediator.Send(command);
+
+            if (!result.Success)
+            {
+                return Error(result.Message, "RESTORE_FAILED", result.Error != null ? 404 : 400);
+            }
+
+            return Success("Dataset restored successfully");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Error("Dataset not found or you don't have permission to restore it", "DATASET_NOT_FOUND", 404);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error restoring dataset {DataSetId}", id);
+            return HandleException(ex, nameof(RestoreDataSet));
+        }
+    }
+
+    /// <summary>
+    /// Permanently delete a dataset and its data
+    /// </summary>
+    /// <param name="id">Dataset ID</param>
+    /// <returns>Success confirmation</returns>
+    [HttpDelete("{id:guid}/hard-delete")]
+    [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<IActionResult> HardDeleteDataSet(Guid id)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            _logger.LogWarning("User {UserId} performing hard delete of dataset {DataSetId}", userId, id);
+
+            var command = new HardDeleteDataSetCommand { DataSetId = id, UserId = userId };
+            var result = await _mediator.Send(command);
+
+            if (!result.Success)
+            {
+                return Error(result.Message, "HARD_DELETE_FAILED", result.Error != null ? 404 : 400);
+            }
+
+            return Success("Dataset permanently deleted");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Error("Dataset not found or you don't have permission to delete it", "DATASET_NOT_FOUND", 404);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error hard deleting dataset {DataSetId}", id);
+            return HandleException(ex, nameof(HardDeleteDataSet));
+        }
+    }
+
+    /// <summary>
+    /// Get retention status for a dataset
+    /// </summary>
+    /// <param name="id">Dataset ID</param>
+    /// <returns>Retention status information</returns>
+    [HttpGet("{id:guid}/retention-status")]
+    [ProducesResponseType(typeof(ApiResponse<RetentionStatusResponse>), 200)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<IActionResult> GetRetentionStatus(Guid id)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            _logger.LogDebug("User {UserId} requesting retention status for dataset {DataSetId}", userId, id);
+
+            var query = new GetRetentionStatusQuery { DataSetId = id, UserId = userId };
+            var status = await _mediator.Send(query);
+
+            if (status == null)
+            {
+                return Error("Dataset not found or you don't have permission to access it", "DATASET_NOT_FOUND", 404);
+            }
+
+            var response = new RetentionStatusResponse
+            {
+                DataSetId = status.DataSetId ?? Guid.Empty,
+                RetentionDays = status.RetentionDays ?? 0,
+                CreatedAt = DateTime.UtcNow, // Use current time as placeholder
+                ExpiryDate = status.RetentionExpiryDate ?? DateTime.MinValue,
+                DaysRemaining = status.DaysUntilExpiry,
+                IsExpired = status.IsRetentionExpired,
+                CanExtend = true, // Placeholder - this logic would be in the domain
+                FileExists = true // Placeholder - this would come from storage check
+            };
+
+            return Success(response);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Error("Dataset not found or you don't have permission to access it", "DATASET_NOT_FOUND", 404);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting retention status for dataset {DataSetId}", id);
+            return HandleException(ex, nameof(GetRetentionStatus));
+        }
+    }
+
+    /// <summary>
+    /// Update retention policy for a dataset
+    /// </summary>
+    /// <param name="id">Dataset ID</param>
+    /// <param name="request">Retention policy update request</param>
+    /// <returns>Success confirmation</returns>
+    [HttpPut("{id:guid}/retention-policy")]
+    [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<IActionResult> UpdateRetentionPolicy(Guid id, [FromBody] UpdateRetentionPolicyRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            _logger.LogInformation("User {UserId} updating retention policy for dataset {DataSetId} to {Days} days", 
+                userId, id, request.RetentionDays);
+
+            var command = new LifecycleUpdateRetentionPolicyCommand { DataSetId = id, RetentionDays = request.RetentionDays, UserId = userId };
+            var result = await _mediator.Send(command);
+
+            if (!result.Success)
+            {
+                return Error(result.Message, "UPDATE_RETENTION_FAILED", result.Error != null ? 404 : 400);
+            }
+
+            return Success($"Retention policy updated to {request.RetentionDays} days");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Error("Dataset not found or you don't have permission to update it", "DATASET_NOT_FOUND", 404);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating retention policy for dataset {DataSetId}", id);
+            return HandleException(ex, nameof(UpdateRetentionPolicy));
         }
     }
 

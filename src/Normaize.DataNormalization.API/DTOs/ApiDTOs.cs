@@ -183,3 +183,140 @@ public class JobFilterRequest
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
 }
+
+/// <summary>
+/// Response DTO for retention status
+/// </summary>
+public class RetentionStatusResponse
+{
+    public Guid DataSetId { get; set; }
+    public int RetentionDays { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime ExpiryDate { get; set; }
+    public int DaysRemaining { get; set; }
+    public bool IsExpired { get; set; }
+    public bool CanExtend { get; set; }
+    public bool FileExists { get; set; }
+}
+
+/// <summary>
+/// Request DTO for updating retention policy
+/// </summary>
+public class UpdateRetentionPolicyRequest
+{
+    public int RetentionDays { get; set; }
+}
+
+/// <summary>
+/// Response DTO for detailed dataset statistics
+/// </summary>
+public class DatasetDetailedStatisticsResponse
+{
+    public Guid DataSetId { get; set; }
+    public int RowCount { get; set; }
+    public int ColumnCount { get; set; }
+    public long FileSizeBytes { get; set; }
+    public TimeSpan ProcessingTime { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime LastUpdatedAt { get; set; }
+    public List<ColumnSummaryResponse> ColumnSummaries { get; set; } = new();
+}
+
+/// <summary>
+/// Response DTO for column summary statistics
+/// </summary>
+public class ColumnSummaryResponse
+{
+    public string ColumnName { get; set; } = string.Empty;
+    public string DataType { get; set; } = string.Empty;
+    public int UniqueValues { get; set; }
+    public int NullCount { get; set; }
+    public int NonNullCount { get; set; }
+    public string? MinValue { get; set; }
+    public string? MaxValue { get; set; }
+    public double? AverageValue { get; set; }
+    public double? StandardDeviation { get; set; }
+    public Dictionary<string, int> TopValues { get; set; } = new();
+}
+
+/// <summary>
+/// Response DTO for user statistics overview
+/// </summary>
+public class UserStatisticsOverviewResponse
+{
+    public string UserId { get; set; } = string.Empty;
+    public int TotalDataSets { get; set; }
+    public long TotalRows { get; set; }
+    public long TotalFileSize { get; set; }
+    public long AverageFileSize { get; set; }
+    public Dictionary<string, int> DataSetsByFileType { get; set; } = new();
+    public Dictionary<string, int> DataSetsByStorageProvider { get; set; } = new();
+    public int ProcessedDataSets { get; set; }
+    public int UnprocessedDataSets { get; set; }
+    public int DeletedDataSets { get; set; }
+    public int DataSetsCreatedThisMonth { get; set; }
+    public DateTime? MostRecentUpload { get; set; }
+    public DateTime? OldestDataSet { get; set; }
+}
+
+/// <summary>
+/// Response DTO for storage statistics
+/// </summary>
+public class StorageStatisticsResponse
+{
+    public string UserId { get; set; } = string.Empty;
+    public long TotalStorageUsed { get; set; }
+    public Dictionary<string, long> StorageByProvider { get; set; } = new();
+    public Dictionary<string, long> StorageByFileType { get; set; } = new();
+    public List<DataSetSizeInfo> LargestDataSets { get; set; } = new();
+    public long StorageGrowthLastMonth { get; set; }
+    public long AverageDataSetSize { get; set; }
+}
+
+/// <summary>
+/// Dataset size information
+/// </summary>
+public class DataSetSizeInfo
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public long SizeBytes { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>
+/// Response DTO for dataset analytics
+/// </summary>
+public class DataSetAnalyticsResponse
+{
+    public string UserId { get; set; } = string.Empty;
+    public string Period { get; set; } = string.Empty;
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public List<AnalyticsDataPoint> DataPoints { get; set; } = new();
+    public AnalyticsSummary Summary { get; set; } = new();
+}
+
+/// <summary>
+/// Analytics data point for time series
+/// </summary>
+public class AnalyticsDataPoint
+{
+    public DateTime Date { get; set; }
+    public int DataSetsCreated { get; set; }
+    public long TotalRows { get; set; }
+    public long TotalSizeBytes { get; set; }
+}
+
+/// <summary>
+/// Analytics summary information
+/// </summary>
+public class AnalyticsSummary
+{
+    public int TotalDataSets { get; set; }
+    public long TotalRows { get; set; }
+    public long TotalSizeBytes { get; set; }
+    public double AverageDataSetsPerPeriod { get; set; }
+    public DateTime? PeakCreationDate { get; set; }
+    public int PeakCreationCount { get; set; }
+}

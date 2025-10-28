@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
-using System.Security.Claims;
+using Normaize.DataNormalization.API.Extensions;
 
 namespace Normaize.DataNormalization.API.Controllers;
 
@@ -14,34 +14,12 @@ public abstract class BaseApiController : ControllerBase
     private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
 
     /// <summary>
-    /// Gets the current user ID from JWT claims (or returns mock user for testing)
+    /// Gets the current user ID from JWT claims (or returns test user ID for unauthenticated scenarios)
     /// </summary>
     protected string GetCurrentUserId()
     {
-        // For testing without authentication, return a mock user ID
-        return "test-user-id";
-
-        // TODO: Re-enable when authentication is working
-        /*
-        // Debug: Log all available claims
-        var allClaims = User.Claims.Select(c => $"{c.Type}={c.Value}").ToList();
-        Console.WriteLine($"Available claims: {string.Join(", ", allClaims)}");
-        
-        // Try multiple claim types for user ID
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                  ?? User.FindFirst("sub")?.Value
-                  ?? User.FindFirst("nameid")?.Value
-                  ?? User.FindFirst("user_id")?.Value;
-                  
-        if (string.IsNullOrEmpty(userId))
-        {
-            Console.WriteLine("User ID not found in any expected claim type");
-            throw new UnauthorizedAccessException("User ID not found in claims");
-        }
-        
-        Console.WriteLine($"Found User ID: {userId}");
-        return userId;
-        */
+        // Use extension method with fallback for testing/unauthenticated scenarios
+        return User.GetUserIdOrDefault("test-user-id");
     }
 
     /// <summary>
