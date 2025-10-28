@@ -79,12 +79,19 @@ This document tracks the migration of all services, interfaces, and components f
 ## 5. Configuration & Settings Services
 
 ### Application Configuration
-- 📋 **IAppConfigurationService** - Application configuration management
+- ✅ **IAppConfigurationService** - Migrated to EnvironmentService + ASP.NET Core IConfiguration
+  - Environment detection (IsProductionLike, IsContainerized) → `EnvironmentService` (14 tests)
+  - Configuration access → ASP.NET Core `IConfiguration` (appsettings.json, environment variables)
+  - Environment variables loading → Built-in ASP.NET Core configuration system
+  - Port configuration → ASP.NET Core `WebApplicationBuilder.WebHost.UseUrls()`
 - ✅ **IConfigurationValidationService** - Migrated to ASP.NET Core Health Checks (DatabaseHealthCheck, ConfigurationHealthCheck, StorageHealthCheck)
 - ✅ **IUserSettingsService** - Migrated to User bounded context with CQRS pattern
 
 ### Startup & Initialization
-- 📋 **IStartupService** - Application startup procedures
+- ✅ **IStartupService** - Migrated to Program.cs with automatic EF Core migrations
+  - Database migrations → `await dbContext.Database.MigrateAsync()` in Program.cs with retry logic
+  - Health checks → ASP.NET Core Health Checks framework (/health, /health/ready, /health/live)
+  - Startup orchestration → Simplified to modern minimal API startup pattern
 
 ### User Management & Settings
 - ✅ **User Bounded Context** - Complete DDD implementation with Auth0 integration
@@ -106,12 +113,18 @@ This document tracks the migration of all services, interfaces, and components f
   - ✅ StorageHealthCheck: Local/S3 storage provider validation with write access tests
   - ✅ Endpoints: /health (detailed JSON), /health/ready (readiness probe), /health/live (liveness probe)
   - ✅ Tagged filtering for Kubernetes integration (database, configuration, storage, ready)
-- 📋 **IDatabaseHealthService** - Database health monitoring
+- ✅ **IDatabaseHealthService** - Replaced by DatabaseHealthCheck (connectivity + pending migrations check)
+  - Legacy service checked critical columns (MySQL-specific schema validation)
+  - Modern approach: DatabaseHealthCheck handles connectivity + EF Core migrations
+  - Column validation unnecessary with migration-driven schema management
 - 📋 **IChaosEngineeringService** - Chaos engineering capabilities
 
 ### Logging & Auditing
-- 📋 **IAuditService** - Audit trail functionality
-- 📋 **IStructuredLoggingService** - Advanced logging capabilities
+- ✅ **IAuditService** - Audit trail functionality (19 comprehensive tests)
+  - Implementation: Structured logging via ILogger with action, userId, dataSetId, metadata
+  - Usage: Integrated in all DataSet command handlers (Upload, Delete, Update, Reset, Restore, HardDelete, UpdateRetentionPolicy)
+  - Future: Can be extended to write to dedicated audit table or external audit service
+- 📋 **IStructuredLoggingService** - Advanced logging capabilities (deferred to cross-repo logging package)
 
 ---
 
@@ -207,12 +220,14 @@ For each migrated service:
 
 ## Current Progress
 
-- **Completed**: 22 services/interfaces (User bounded context + Health Checks complete)
+- **Completed**: 26 services/interfaces (Infrastructure & Monitoring Services complete)
 - **In Progress**: 0 services
-- **Remaining**: ~31 services/interfaces
-- **Overall Progress**: ~42% complete
+- **Remaining**: ~27 services/interfaces
+- **Overall Progress**: ~49% complete
 
 **Recent Achievements**:
+- ✅ **Infrastructure Services**: IDatabaseHealthService replaced by DatabaseHealthCheck, IAuditService verified with 19 comprehensive tests
+- ✅ **Configuration Services**: EnvironmentService replaces IAppConfigurationService (14 tests), automatic migrations replace IStartupService
 - ✅ **User Bounded Context**: Complete DDD implementation with Auth0 integration (80 comprehensive tests)
 - ✅ **Health Checks Framework**: ASP.NET Core Health Checks with Kubernetes-ready endpoints (DatabaseHealthCheck, ConfigurationHealthCheck, StorageHealthCheck)
 - ✅ FileProcessingService: 24 comprehensive tests covering CSV, JSON, XML, Excel, and TXT file processing
@@ -226,7 +241,64 @@ For each migrated service:
 - ✅ **Visualization & Charting Services**: ChartGenerationService with 12 chart types (Bar, Line, Pie, Scatter, Area, Histogram, BoxPlot, Heatmap, Bubble, Radar, Donut, Column), DataSummaryService, 5 CQRS commands/queries with handlers
 - ✅ End-to-end orchestration: Validation → Storage → Processing pipeline
 - ✅ Security tests: Path traversal detection, file type validation, size limit enforcement, blocked extensions
-- ✅ Test suite: **410/410 tests passing (100% pass rate maintained)**
+- ✅ Test suite: **443/443 tests passing (100% pass rate maintained)**
+
+### Recent Achievements (October 27, 2025) - Infrastructure & Monitoring Services
+- ✅ Completed Infrastructure & Monitoring Services migration (IDatabaseHealthService + IAuditService)
+  - **IDatabaseHealthService** (replaced by existing DatabaseHealthCheck):
+    - Legacy service: Checked database connectivity + critical column validation (MySQL-specific)
+    - Modern approach: DatabaseHealthCheck handles connectivity + pending migrations detection
+    - Rationale: Column validation unnecessary with EF Core migration-driven schema management
+    - DatabaseHealthCheck already provides: CanConnectAsync(), GetPendingMigrationsAsync(), provider detection
+    - No additional implementation needed - marked as ✅ REPLACED
+  
+  - **IAuditService** (verified existing implementation with comprehensive tests):
+    - Already implemented in new DDD architecture via Infrastructure/Services/AuditService.cs
+    - Uses structured logging (ILogger) with action, userId, dataSetId, metadata
+    - Integrated in all DataSet command handlers: UploadDataSetCommand, DeleteDataSetCommand, UpdateDataSetCommand, ResetDataSetCommand, RestoreDataSetCommand, HardDeleteDataSetCommand, UpdateRetentionPolicyCommand
+    - Created 19 comprehensive tests: basic logging, empty/complex metadata, different action types, cancellation support, null guards, edge cases (empty GUID, long names, large metadata)
+    - Future extensibility: Can be extended to write to dedicated audit table or external audit service (Seq, Azure Application Insights, CloudWatch)
+    - Marked as ✅ COMPLETED with full test coverage
+
+- ✅ Test suite achievements:
+  - **443/443 tests passing (100% pass rate)**
+  - Domain: 190 tests
+  - Application: 99 tests
+  - Infrastructure: 154 tests (added 19 AuditService tests)
+
+- ✅ Migration progress: **26/53 services (49% complete)** - approaching 50% milestone!
+
+### Recent Achievements (October 27, 2025) - Configuration Services
+- ✅ Completed Configuration Services migration (IAppConfigurationService + IStartupService)
+  - **EnvironmentService** (replaces IAppConfigurationService):
+    - Created `IEnvironmentService` interface with 3 methods: IsProductionLike(), IsContainerized(), GetEnvironmentName()
+    - Detects production-like environments (Production, Staging, Beta) case-insensitively
+    - Detects containerization via PORT env var, /.dockerenv file, or DOTNET_RUNNING_IN_CONTAINER flag
+    - Registered as Singleton in Infrastructure DI
+    - Created 14 comprehensive tests: environment detection (Theory with 10 test cases), containerization checks, null guard clauses
+  
+  - **Automatic Database Migrations** (replaces IStartupService):
+    - Created `ApplyDatabaseMigrationsAsync()` helper method in Program.cs
+    - Uses EF Core `Database.MigrateAsync()` with pending migrations detection
+    - Fail-fast in production, graceful degradation in development
+    - Comprehensive logging with emoji indicators (🔄 checking, 📦 applying, ✅ success, ❌ error, 🛑 critical)
+    - Replaces complex StartupService orchestration with simple, focused approach
+  
+  - **Migration Rationale**:
+    - IAppConfigurationService: Most functionality already provided by ASP.NET Core (IConfiguration, IHostEnvironment, IWebHostEnvironment)
+    - Only unique functionality (IsProductionLike, IsContainerized) extracted to lightweight EnvironmentService
+    - .env file loading: Already handled by ASP.NET Core configuration system (appsettings.json, environment variables, user secrets)
+    - DatabaseConfig: Legacy MySQL-specific, new architecture uses PostgreSQL with connection strings in appsettings.json
+    - IStartupService: Complex retry/orchestration logic unnecessary with modern health checks + automatic migrations
+    - Simplified to focused, single-responsibility approach following modern ASP.NET Core patterns
+
+- ✅ Test suite achievements:
+  - **424/424 tests passing (100% pass rate)**
+  - Domain: 190 tests
+  - Application: 99 tests
+  - Infrastructure: 135 tests (added 14 EnvironmentService tests)
+
+- ✅ Migration progress: **24/53 services (45% complete)**
 
 ### Recent Achievements (October 27, 2025) - User Bounded Context + Health Checks
 - ✅ Completed User bounded context migration (IUserSettingsService → User aggregate)
