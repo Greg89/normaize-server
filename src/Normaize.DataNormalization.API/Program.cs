@@ -8,10 +8,6 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure environment
-Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
-builder.Environment.EnvironmentName = "Development";
-
 // Configure Serilog for simple console logging
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -156,9 +152,6 @@ else
 // Build the application
 var app = builder.Build();
 
-// Apply database migrations automatically on startup
-await ApplyDatabaseMigrationsAsync(app);
-
 // Configure URLs for Railway deployment
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 var url = $"http://0.0.0.0:{port}";
@@ -256,11 +249,10 @@ app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthC
 
 Console.WriteLine("✅ Starting web server...");
 
-app.Run();
-
-// Startup helper methods
-static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
+// Apply database migrations in background to not block startup
+_ = Task.Run(async () =>
 {
+    await Task.Delay(1000); // Brief delay to ensure server is starting
     using var scope = app.Services.CreateScope();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     
@@ -294,20 +286,12 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "❌ Error applying database migrations");
-        
-        // In production, fail fast. In development, continue to allow API exploration.
-        if (app.Environment.IsProduction())
-        {
-            logger.LogCritical("🛑 Cannot start application - database migrations failed in production");
-            throw;
-        }
-        else
-        {
-            logger.LogWarning("⚠ Continuing in development mode despite migration failure");
-        }
+        logger.LogError(ex, "❌ Error applying database migrations in background");
+        logger.LogWarning("⚠ Application will continue running, but database may not be up to date");
     }
-}
+});
+
+app.Run();
 
 // Make the implicit Program class public so test projects can access it
 public partial class Program { }
