@@ -213,10 +213,22 @@ jobs:
       run: |
         echo "Verifying database migration..."
         
-        # Check if tables exist
+        # Check if tables exist in all schemas
+        echo "Tables in public schema:"
         psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "\dt"
         
-        # Check if datasets table exists and has expected columns
-        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "\d datasets"
+        echo ""
+        echo "Tables in data_normalization schema:"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "\dt data_normalization.*"
+        
+        # Check if datasets table exists in data_normalization schema
+        echo ""
+        echo "Checking datasets table structure:"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "\d data_normalization.datasets"
+        
+        # Check if normalization_jobs table exists (key DDD table)
+        echo ""
+        echo "Checking normalization_jobs table structure:"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "\d data_normalization.normalization_jobs"
         
         echo "✅ Database migration verification completed"
