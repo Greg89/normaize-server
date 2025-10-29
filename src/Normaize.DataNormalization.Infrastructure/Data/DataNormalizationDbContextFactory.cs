@@ -13,8 +13,16 @@ public class DataNormalizationDbContextFactory : IDesignTimeDbContextFactory<Dat
     {
         var optionsBuilder = new DbContextOptionsBuilder<DataNormalizationDbContext>();
 
-        // Default connection string for design-time
-        var connectionString = "Host=localhost;Port=5432;Database=normaize;Username=normaize_user;Password=normaize_password";
+        // Try to read from environment variable first (for CI/CD)
+        var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+        
+        // Fall back to default connection string for local development
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            connectionString = "Host=localhost;Port=5432;Database=normaize;Username=normaize_user;Password=normaize_password";
+        }
+
+        Console.WriteLine($"Using connection string: {MaskPassword(connectionString)}");
 
         optionsBuilder.UseNpgsql(connectionString, npgsqlOptions =>
         {
@@ -26,5 +34,18 @@ public class DataNormalizationDbContextFactory : IDesignTimeDbContextFactory<Dat
         });
 
         return new DataNormalizationDbContext(optionsBuilder.Options);
+    }
+
+    private static string MaskPassword(string connectionString)
+    {
+        var parts = connectionString.Split(';');
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (parts[i].Trim().StartsWith("Password=", StringComparison.OrdinalIgnoreCase))
+            {
+                parts[i] = "Password=***";
+            }
+        }
+        return string.Join(";", parts);
     }
 }

@@ -189,7 +189,23 @@ jobs:
       env:
         ConnectionStrings__DefaultConnection: "Host=127.0.0.1;Port=5432;Database=normaize;Username=normaize_user;Password=normaize_password"
       run: |
+        echo "Applying EF Core migrations..."
+        echo "Connection: Host=127.0.0.1;Port=5432;Database=normaize;Username=normaize_user"
+        
+        # List available migrations
+        echo "Available migrations:"
+        dotnet ef migrations list --project src/Normaize.DataNormalization.Infrastructure --startup-project src/Normaize.DataNormalization.API --configuration Release
+        
+        # Apply migrations with verbose output
+        echo "Applying database update..."
         dotnet ef database update --project src/Normaize.DataNormalization.Infrastructure --startup-project src/Normaize.DataNormalization.API --configuration Release --verbose
+        
+        if [ $? -eq 0 ]; then
+          echo "✅ Migrations applied successfully"
+        else
+          echo "❌ Migration failed with exit code $?"
+          exit 1
+        fi
 
     - name: Verify Migration
       env:
