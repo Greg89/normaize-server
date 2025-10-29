@@ -161,6 +161,19 @@ jobs:
         timeout 60 bash -c 'until pg_isready -h 127.0.0.1 -p 5432 -U normaize_user > /dev/null 2>&1; do sleep 2; done'
         echo "✅ PostgreSQL is ready"
 
+    - name: Enable PostgreSQL Extensions
+      env:
+        PGPASSWORD: normaize_password
+      run: |
+        echo "Enabling required PostgreSQL extensions and creating schemas..."
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "CREATE EXTENSION IF NOT EXISTS \"pg_trgm\";"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "CREATE SCHEMA IF NOT EXISTS data_normalization;"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "CREATE SCHEMA IF NOT EXISTS data_sets;"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "CREATE SCHEMA IF NOT EXISTS user_settings;"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "CREATE SCHEMA IF NOT EXISTS audit;"
+        echo "✅ PostgreSQL extensions and schemas configured"
+
     - name: Restore dependencies
       run: dotnet restore
 
