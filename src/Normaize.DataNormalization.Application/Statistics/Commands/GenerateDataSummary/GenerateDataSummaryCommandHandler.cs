@@ -95,7 +95,7 @@ public class GenerateDataSummaryCommandHandler : IRequestHandler<GenerateDataSum
     {
         return new DataSummaryDto
         {
-            DataSetId = (int)dataSetId.GetHashCode(),
+            DataSetId = dataSetId,
             TotalRows = 0,
             TotalColumns = 0,
             MissingValues = 0,

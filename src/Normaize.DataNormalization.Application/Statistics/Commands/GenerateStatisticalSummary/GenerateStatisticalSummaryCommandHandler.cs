@@ -9,27 +9,18 @@ namespace Normaize.DataNormalization.Application.Statistics.Commands.GenerateSta
 /// <summary>
 /// Handler for generating comprehensive statistical summary
 /// </summary>
-public class GenerateStatisticalSummaryCommandHandler : IRequestHandler<GenerateStatisticalSummaryCommand, StatisticalSummaryDto>
+public class GenerateStatisticalSummaryCommandHandler(
+    IDataSetRepository dataSetRepository,
+    IStatisticsRepository statisticsRepository,
+    IStatisticalCalculationService calculationService,
+    IMapper mapper,
+    ILogger<GenerateStatisticalSummaryCommandHandler> logger) : IRequestHandler<GenerateStatisticalSummaryCommand, StatisticalSummaryDto>
 {
-    private readonly IDataSetRepository _dataSetRepository;
-    private readonly IStatisticsRepository _statisticsRepository;
-    private readonly IStatisticalCalculationService _calculationService;
-    private readonly IMapper _mapper;
-    private readonly ILogger<GenerateStatisticalSummaryCommandHandler> _logger;
-
-    public GenerateStatisticalSummaryCommandHandler(
-        IDataSetRepository dataSetRepository,
-        IStatisticsRepository statisticsRepository,
-        IStatisticalCalculationService calculationService,
-        IMapper mapper,
-        ILogger<GenerateStatisticalSummaryCommandHandler> logger)
-    {
-        _dataSetRepository = dataSetRepository;
-        _statisticsRepository = statisticsRepository;
-        _calculationService = calculationService;
-        _mapper = mapper;
-        _logger = logger;
-    }
+    private readonly IDataSetRepository _dataSetRepository = dataSetRepository;
+    private readonly IStatisticsRepository _statisticsRepository = statisticsRepository;
+    private readonly IStatisticalCalculationService _calculationService = calculationService;
+    private readonly IMapper _mapper = mapper;
+    private readonly ILogger<GenerateStatisticalSummaryCommandHandler> _logger = logger;
 
     public async Task<StatisticalSummaryDto> Handle(GenerateStatisticalSummaryCommand request, CancellationToken cancellationToken)
     {
@@ -58,7 +49,7 @@ public class GenerateStatisticalSummaryCommandHandler : IRequestHandler<Generate
 
             // Get dataset data - placeholder for now since GetDataAsync doesn't exist in current interface
             var data = new List<Dictionary<string, object?>>();  // TODO: Implement data retrieval
-            if (!data.Any())
+            if (data.Count == 0)
             {
                 _logger.LogInformation("No data found for DataSet {DataSetId}, returning empty summary", request.DataSetId);
                 return CreateEmptyStatisticalSummary(request.DataSetId);
@@ -94,7 +85,7 @@ public class GenerateStatisticalSummaryCommandHandler : IRequestHandler<Generate
     {
         return new StatisticalSummaryDto
         {
-            DataSetId = (int)dataSetId.GetHashCode(),
+            DataSetId = dataSetId,
             ColumnStatistics = new Dictionary<string, ColumnStatisticsDto>(),
             CorrelationMatrix = new Dictionary<string, double>(),
             OutlierColumns = new List<string>(),

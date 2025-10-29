@@ -5,7 +5,7 @@ namespace Normaize.DataNormalization.Application.Common.DTOs;
 /// </summary>
 public class DataSummaryDto
 {
-    public int DataSetId { get; set; }
+    public Guid DataSetId { get; set; }
     public int TotalRows { get; set; }
     public int TotalColumns { get; set; }
     public int MissingValues { get; set; }
@@ -39,7 +39,7 @@ public class BasicColumnSummaryDto
 /// </summary>
 public class StatisticalSummaryDto
 {
-    public int DataSetId { get; set; }
+    public Guid DataSetId { get; set; }
     public Dictionary<string, ColumnStatisticsDto> ColumnStatistics { get; set; } = new();
     public Dictionary<string, double> CorrelationMatrix { get; set; } = new();
     public List<string> OutlierColumns { get; set; } = new();

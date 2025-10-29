@@ -18,7 +18,7 @@ public class StatisticsMapper : IMapper, IStatisticsMapper
 
         return new DataSummaryDto
         {
-            DataSetId = (int)statistics.DataSetId.GetHashCode(), // Convert Guid to int for legacy compatibility
+            DataSetId = statistics.DataSetId,
             TotalRows = statistics.TotalRows,
             TotalColumns = statistics.TotalColumns,
             MissingValues = statistics.MissingValues,
@@ -39,7 +39,7 @@ public class StatisticsMapper : IMapper, IStatisticsMapper
 
         return new StatisticalSummaryDto
         {
-            DataSetId = (int)statistics.DataSetId.GetHashCode(), // Convert Guid to int for legacy compatibility
+            DataSetId = statistics.DataSetId,
             ColumnStatistics = numericStats.ToDictionary(
                 kvp => kvp.Key,
                 kvp => MapToColumnStatisticsDto(kvp.Key, kvp.Value)),
