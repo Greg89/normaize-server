@@ -1,6 +1,9 @@
 using Normaize.DataNormalization.Infrastructure;
 using Normaize.DataNormalization.Application;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,7 +23,56 @@ builder.Host.UseSerilog();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// Configure Swagger without authentication complexity
+// Configure Auth0 JWT Authentication
+var auth0Domain = builder.Configuration["Auth0:Domain"];
+var auth0Audience = builder.Configuration["Auth0:Audience"];
+
+if (!string.IsNullOrEmpty(auth0Domain) && !string.IsNullOrEmpty(auth0Audience))
+{
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.Authority = $"https://{auth0Domain}/";
+            options.Audience = auth0Audience;
+            
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = $"https://{auth0Domain}/",
+                ValidateAudience = true,
+                ValidAudience = auth0Audience,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.FromMinutes(5),
+                NameClaimType = ClaimTypes.NameIdentifier
+            };
+            
+            options.Events = new JwtBearerEvents
+            {
+                OnAuthenticationFailed = context =>
+                {
+                    Log.Warning("JWT authentication failed: {Error}", context.Exception.Message);
+                    return Task.CompletedTask;
+                },
+                OnTokenValidated = context =>
+                {
+                    var userId = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
+                                context.Principal?.FindFirst("sub")?.Value;
+                    Log.Information("JWT token validated for user: {UserId}", userId);
+                    return Task.CompletedTask;
+                }
+            };
+        });
+
+    builder.Services.AddAuthorization();
+    Console.WriteLine("✓ Auth0 JWT authentication configured");
+}
+else
+{
+    Console.WriteLine("⚠ Warning: Auth0 configuration missing - API endpoints will be unprotected");
+    Console.WriteLine("  Please set Auth0:Domain and Auth0:Audience in configuration");
+}
+
+// Configure Swagger with JWT Bearer authentication
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new()
@@ -28,6 +80,32 @@ builder.Services.AddSwaggerGen(c =>
         Title = "Normaize Data Normalization API",
         Version = "v1",
         Description = "Clean DDD Architecture API for data normalization operations."
+    });
+    
+    // Add JWT Bearer authentication to Swagger
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Enter 'Bearer' followed by a space and your JWT token"
+    });
+    
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
     });
 });
 
@@ -84,6 +162,11 @@ app.UseSwaggerUI(c =>
 });
 
 app.UseCors("AllowAll");
+
+// Add authentication middleware
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
 
 // Health check endpoints with detailed responses

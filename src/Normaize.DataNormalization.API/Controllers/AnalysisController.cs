@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System.ComponentModel.DataAnnotations;
 using Normaize.DataNormalization.API.Controllers;
 using Normaize.DataNormalization.Application.Commands;
@@ -14,6 +15,7 @@ namespace Normaize.DataNormalization.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class AnalysisController : BaseApiController
 {
     private readonly ICommandHandler<CreateAnalysisCommand, AnalysisDto> _createAnalysisHandler;

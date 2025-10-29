@@ -15,6 +15,7 @@ namespace Normaize.DataNormalization.API.Controllers;
 /// <summary>
 /// Controller for dataset management operations using clean DDD architecture with CQRS
 /// </summary>
+[Authorize]
 public class DataSetsController : BaseApiController
 {
     private readonly IMediator _mediator;

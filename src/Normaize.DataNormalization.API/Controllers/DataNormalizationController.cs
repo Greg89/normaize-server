@@ -13,6 +13,7 @@ namespace Normaize.DataNormalization.API.Controllers;
 /// Controller for data normalization operations using clean DDD architecture
 /// </summary>
 [Route("api/normalization")]
+[Authorize]
 public class DataNormalizationController : BaseApiController
 {
     private readonly ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid> _submitJobHandler;

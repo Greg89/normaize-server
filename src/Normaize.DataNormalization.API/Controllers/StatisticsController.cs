@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Normaize.DataNormalization.Application.Statistics.Commands.GenerateDataSummary;
 using Normaize.DataNormalization.Application.Statistics.Commands.GenerateStatisticalSummary;
 using Normaize.DataNormalization.Application.Common.DTOs;
@@ -16,6 +17,7 @@ namespace Normaize.DataNormalization.API.Controllers;
 [ApiController]
 [Route("api/v1/statistics")]
 [Produces("application/json")]
+[Authorize]
 public class StatisticsController : ControllerBase
 {
     private readonly IMediator _mediator;
