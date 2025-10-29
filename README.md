@@ -22,7 +22,7 @@ A comprehensive web application for normalizing, comparing, analyzing, and visua
 
 ### Backend
 - **.NET 9** Web API
-- **Entity Framework Core** with MySQL
+- **Entity Framework Core** with PostgreSQL
 - **AutoMapper** for object mapping
 - **Swagger/OpenAPI** for API documentation
 - **CORS** enabled for frontend communication
@@ -31,7 +31,7 @@ A comprehensive web application for normalizing, comparing, analyzing, and visua
 - **Auth0** for authentication
 
 ### Database
-- **MySQL** (via Railway)
+- **PostgreSQL** (via Railway or local)
 - **Entity Framework Core** migrations
 
 ### Deployment
@@ -64,7 +64,7 @@ normaize-server/
 
 ### Prerequisites
 - .NET 9 SDK
-- MySQL database (or use Railway's MySQL plugin)
+- PostgreSQL database (or use Railway's PostgreSQL plugin)
 - Docker (optional, for containerized development)
 
 ### Local Development
@@ -79,11 +79,11 @@ normaize-server/
    Create a `.env` file in the root directory:
    ```env
    # Database Configuration
-   MYSQLHOST=localhost
-   MYSQLDATABASE=normaize
-   MYSQLUSER=your_username
-   MYSQLPASSWORD=your_password
-   MYSQLPORT=3306
+   POSTGRES_HOST=localhost
+   POSTGRES_DB=normaize
+   POSTGRES_USER=your_username
+   POSTGRES_PASSWORD=your_password
+   POSTGRES_PORT=5432
    
    # Auth0 Configuration
    AUTH0_ISSUER=https://your-domain.auth0.com/

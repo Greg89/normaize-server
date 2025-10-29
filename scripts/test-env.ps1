@@ -24,12 +24,12 @@ try {
     $env:ASPNETCORE_ENVIRONMENT = "Test"
     $env:STORAGE_PROVIDER = "memory"
 
-    # Remove variables that could interfere
-    Remove-Item Env:MYSQLHOST -ErrorAction SilentlyContinue
-    Remove-Item Env:MYSQLDATABASE -ErrorAction SilentlyContinue
-    Remove-Item Env:MYSQLUSER -ErrorAction SilentlyContinue
-    Remove-Item Env:MYSQLPASSWORD -ErrorAction SilentlyContinue
-    Remove-Item Env:MYSQLPORT -ErrorAction SilentlyContinue
+    # Remove variables that could interfere with tests
+    Remove-Item Env:POSTGRES_HOST -ErrorAction SilentlyContinue
+    Remove-Item Env:POSTGRES_DB -ErrorAction SilentlyContinue
+    Remove-Item Env:POSTGRES_USER -ErrorAction SilentlyContinue
+    Remove-Item Env:POSTGRES_PASSWORD -ErrorAction SilentlyContinue
+    Remove-Item Env:POSTGRES_PORT -ErrorAction SilentlyContinue
     Remove-Item Env:SFTP_HOST -ErrorAction SilentlyContinue
     Remove-Item Env:SFTP_USERNAME -ErrorAction SilentlyContinue
     Remove-Item Env:SFTP_PASSWORD -ErrorAction SilentlyContinue
@@ -39,7 +39,7 @@ try {
     Write-Host "Test environment variables set:"
     Write-Host "  ASPNETCORE_ENVIRONMENT: $env:ASPNETCORE_ENVIRONMENT"
     Write-Host "  STORAGE_PROVIDER: $env:STORAGE_PROVIDER"
-    Write-Host "  MYSQLHOST: $env:MYSQLHOST"
+    Write-Host "  POSTGRES_HOST: $env:POSTGRES_HOST"
     Write-Host "  SFTP_HOST: $env:SFTP_HOST"
 
     Write-Host "Running: dotnet test $args"

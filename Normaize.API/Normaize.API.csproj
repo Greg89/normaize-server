@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.3" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0-preview.3.efcore.9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.7" />
@@ -40,6 +41,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Normaize.Core\Normaize.Core.csproj" />
     <ProjectReference Include="..\Normaize.Data\Normaize.Data.csproj" />
+    <ProjectReference Include="..\src\Normaize.DataNormalization.Infrastructure\Normaize.DataNormalization.Infrastructure.csproj" />
+    <ProjectReference Include="..\src\Normaize.DataNormalization.Application\Normaize.DataNormalization.Application.csproj" />
   </ItemGroup>
 
 </Project> 
