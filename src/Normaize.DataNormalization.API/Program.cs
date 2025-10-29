@@ -109,16 +109,30 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Add CORS for development testing
+// Configure CORS for production and development
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? 
+                    new[] { "http://localhost:5173", "http://localhost:3000" };
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("AllowSpecificOrigins", policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+    
+    // Fallback development policy (only used when no production origins configured)
+    options.AddPolicy("DevelopmentOnly", policy =>
     {
         policy.AllowAnyOrigin()
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
 });
+
+Console.WriteLine($"✓ CORS configured for origins: {string.Join(", ", allowedOrigins)}");
 
 // Add application layers with error handling
 if (!builder.Configuration.GetValue<bool>("SkipInfrastructureRegistration"))
@@ -145,23 +159,52 @@ var app = builder.Build();
 // Apply database migrations automatically on startup
 await ApplyDatabaseMigrationsAsync(app);
 
-// Configure URLs
-app.Urls.Add("http://localhost:5001");
+// Configure URLs for Railway deployment
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+var url = $"http://0.0.0.0:{port}";
+
+// Only set URLs if not in development (Railway handles this)
+if (!app.Environment.IsDevelopment())
+{
+    app.Urls.Add(url);
+}
+else
+{
+    app.Urls.Add("http://localhost:5001");
+}
 
 Console.WriteLine("🚀 Starting Normaize Data Normalization API...");
 Console.WriteLine($"📍 Environment: {app.Environment.EnvironmentName}");
-Console.WriteLine($"🌐 URL: http://localhost:5001");
+Console.WriteLine($"🌐 Listening on: {(app.Environment.IsDevelopment() ? "http://localhost:5001" : url)}");
 
 // Configure pipeline
-app.UseSwagger();
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Normaize API v1");
-    c.RoutePrefix = string.Empty; // Serve Swagger at root
-    c.DocumentTitle = "Normaize API Documentation";
-});
+// Only enable Swagger in development or when explicitly configured
+var enableSwagger = app.Environment.IsDevelopment() || 
+                   builder.Configuration.GetValue<bool>("Features:EnableSwagger", false);
 
-app.UseCors("AllowAll");
+if (enableSwagger)
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Normaize API v1");
+        c.RoutePrefix = string.Empty; // Serve Swagger at root
+        c.DocumentTitle = "Normaize API Documentation";
+    });
+    Console.WriteLine("✓ Swagger UI enabled");
+}
+else
+{
+    Console.WriteLine("⚠ Swagger UI disabled for production");
+}
+
+// Use production-ready CORS policy
+var corsPolicy = allowedOrigins.Length > 0 && !allowedOrigins.Contains("*") 
+    ? "AllowSpecificOrigins" 
+    : "DevelopmentOnly";
+app.UseCors(corsPolicy);
+
+Console.WriteLine($"✓ Using CORS policy: {corsPolicy}");
 
 // Add authentication middleware
 app.UseAuthentication();
