@@ -1,0 +1,19 @@
+ version: '3.8'
+
+# This file provides overrides for local development
+# It extends docker-compose.yml with dev-friendly settings
+
+services:
+  normaize-api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Features__EnableSwagger=true
+      - Logging__LogLevel__Default=Debug
+      - Logging__LogLevel__Microsoft.EntityFrameworkCore=Information
+    # Map local uploads folder for easy access
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    # Enable debugging
+    labels:
+      - "dev.local=true"

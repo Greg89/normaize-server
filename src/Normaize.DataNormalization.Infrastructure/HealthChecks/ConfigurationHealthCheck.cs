@@ -111,9 +111,7 @@ public class ConfigurationHealthCheck : IHealthCheck
         return new[]
         {
             "ConnectionStrings:DefaultConnection",
-            "Database:Provider",
-            "Storage:Provider",
-            "Storage:BasePath"
+            "Storage:Provider"
         };
     }
 }
