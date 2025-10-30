@@ -29,7 +29,9 @@ public static class InfrastructureServiceCollectionExtensions
         // Database
         services.AddDbContext<DataNormalizationDbContext>(options =>
         {
-            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            // Try standard .NET connection string first, fallback to Railway's DATABASE_URL
+            var connectionString = configuration.GetConnectionString("DefaultConnection") 
+                ?? ConvertDatabaseUrl(configuration["DATABASE_URL"]);
             options.UseNpgsql(connectionString, npgsqlOptions =>
             {
                 npgsqlOptions.MigrationsAssembly(typeof(DataNormalizationDbContext).Assembly.FullName);
@@ -143,5 +145,28 @@ public static class InfrastructureServiceCollectionExtensions
                 tags: new[] { "storage", "ready" });
 
         return services;
+    }
+
+    /// <summary>
+    /// Converts a DATABASE_URL (postgresql://user:pass@host:port/db) to Npgsql connection string format
+    /// </summary>
+    private static string? ConvertDatabaseUrl(string? databaseUrl)
+    {
+        if (string.IsNullOrWhiteSpace(databaseUrl))
+            return null;
+
+        try
+        {
+            // Parse postgresql://user:password@host:port/database
+            var uri = new Uri(databaseUrl);
+            var userInfo = uri.UserInfo.Split(':');
+            
+            return $"Host={uri.Host};Port={uri.Port};Database={uri.LocalPath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+        }
+        catch
+        {
+            // If parsing fails, return as-is (might already be in correct format)
+            return databaseUrl;
+        }
     }
 }

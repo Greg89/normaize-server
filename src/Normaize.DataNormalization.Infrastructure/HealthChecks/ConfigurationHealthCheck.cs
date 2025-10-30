@@ -34,6 +34,12 @@ public class ConfigurationHealthCheck : IHealthCheck
             {
                 var value = _configuration[setting];
                 
+                // Special handling for connection string - allow DATABASE_URL as fallback
+                if (setting == "ConnectionStrings:DefaultConnection" && string.IsNullOrWhiteSpace(value))
+                {
+                    value = _configuration["DATABASE_URL"];
+                }
+                
                 if (string.IsNullOrWhiteSpace(value))
                 {
                     missingSettings.Add(setting);
