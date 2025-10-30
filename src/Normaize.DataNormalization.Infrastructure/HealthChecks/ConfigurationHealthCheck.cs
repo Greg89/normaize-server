@@ -82,6 +82,13 @@ public class ConfigurationHealthCheck : IHealthCheck
             if (missingSettings.Any())
             {
                 data["missingSettingsList"] = missingSettings;
+                
+                // Enhanced logging for debugging
+                var logger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationHealthCheck>();
+                Console.WriteLine($"❌ Configuration Health Check Failed - Missing settings: {string.Join(", ", missingSettings)}");
+                Console.WriteLine($"   Checked DATABASE_URL: {(!string.IsNullOrWhiteSpace(_configuration["DATABASE_URL"]) ? "Present" : "Missing")}");
+                Console.WriteLine($"   Checked Storage:Provider: {(!string.IsNullOrWhiteSpace(_configuration["Storage:Provider"]) ? _configuration["Storage:Provider"] : "Missing")}");
+                
                 return Task.FromResult(HealthCheckResult.Unhealthy(
                     $"Missing {missingSettings.Count} required configuration setting(s)",
                     data: data));
