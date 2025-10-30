@@ -81,20 +81,21 @@ public class StorageHealthCheck : IHealthCheck
             }
             else if (provider?.Equals("S3", StringComparison.OrdinalIgnoreCase) == true)
             {
-                var bucketName = _configuration["Storage:S3BucketName"];
-                var region = _configuration["Storage:S3Region"];
+                // Use AWS standard naming to match S3StorageService
+                var bucketName = _configuration["AWS_S3_BUCKET"];
+                var region = _configuration["AWS_REGION"];
                 
                 data["bucketName"] = bucketName ?? "Not configured";
                 data["region"] = region ?? "Not configured";
 
                 if (string.IsNullOrWhiteSpace(bucketName))
                 {
-                    errors.Add("S3 storage provider requires BucketName configuration");
+                    errors.Add("AWS_S3_BUCKET configuration is required for S3 storage");
                 }
 
                 if (string.IsNullOrWhiteSpace(region))
                 {
-                    errors.Add("S3 storage provider requires Region configuration");
+                    errors.Add("AWS_REGION configuration is required for S3 storage");
                 }
 
                 // Check for AWS credentials in environment
