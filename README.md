@@ -194,6 +194,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- **Issues**: Report bugs and feature requests on GitHub
+- **Issues**: Report bugs and feature requests on GitHub please
 - **Documentation**: Check [API.md](docs/API.md) for detailed API documentation
 - **Health Check**: Use `/health` endpoint to verify service status 
