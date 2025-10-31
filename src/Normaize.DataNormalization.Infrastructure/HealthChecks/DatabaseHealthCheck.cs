@@ -24,7 +24,7 @@ public class DatabaseHealthCheck : IHealthCheck
         {
             // Check if database can be connected
             var canConnect = await _dbContext.Database.CanConnectAsync(cancellationToken);
-            
+
             if (!canConnect)
             {
                 return HealthCheckResult.Unhealthy(
@@ -52,7 +52,7 @@ public class DatabaseHealthCheck : IHealthCheck
             if (hasPendingMigrations)
             {
                 data["pendingMigrations"] = pendingMigrations.ToList();
-                
+
                 return HealthCheckResult.Degraded(
                     $"Database is accessible but has {pendingMigrations.Count()} pending migrations",
                     data: data);

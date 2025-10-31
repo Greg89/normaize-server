@@ -33,13 +33,13 @@ public class ConfigurationHealthCheck : IHealthCheck
             foreach (var setting in _requiredSettings)
             {
                 var value = _configuration[setting];
-                
+
                 // Special handling for connection string - allow DATABASE_URL as fallback
                 if (setting == "ConnectionStrings:DefaultConnection" && string.IsNullOrWhiteSpace(value))
                 {
                     value = _configuration["DATABASE_URL"];
                 }
-                
+
                 if (string.IsNullOrWhiteSpace(value))
                 {
                     missingSettings.Add(setting);
@@ -52,7 +52,7 @@ public class ConfigurationHealthCheck : IHealthCheck
 
             // Check environment-specific warnings
             var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            
+
             // Check for insecure development settings in production
             if (environment?.Equals("Production", StringComparison.OrdinalIgnoreCase) == true)
             {
@@ -82,13 +82,13 @@ public class ConfigurationHealthCheck : IHealthCheck
             if (missingSettings.Any())
             {
                 data["missingSettingsList"] = missingSettings;
-                
+
                 // Enhanced logging for debugging
                 var logger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationHealthCheck>();
                 Console.WriteLine($"❌ Configuration Health Check Failed - Missing settings: {string.Join(", ", missingSettings)}");
                 Console.WriteLine($"   Checked DATABASE_URL: {(!string.IsNullOrWhiteSpace(_configuration["DATABASE_URL"]) ? "Present" : "Missing")}");
                 Console.WriteLine($"   Checked Storage:Provider: {(!string.IsNullOrWhiteSpace(_configuration["Storage:Provider"]) ? _configuration["Storage:Provider"] : "Missing")}");
-                
+
                 return Task.FromResult(HealthCheckResult.Unhealthy(
                     $"Missing {missingSettings.Count} required configuration setting(s)",
                     data: data));

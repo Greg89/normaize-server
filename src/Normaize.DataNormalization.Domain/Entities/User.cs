@@ -14,7 +14,7 @@ public class User
     public Guid Id { get; private set; }
     public string Auth0UserId { get; private set; }
     public string? DisplayName { get; private set; }
-    
+
     // Value Objects
     public UserPreferences Preferences { get; private set; }
     public NotificationSettings NotificationSettings { get; private set; }

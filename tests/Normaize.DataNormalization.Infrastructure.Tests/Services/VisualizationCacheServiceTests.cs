@@ -274,7 +274,7 @@ public class VisualizationCacheServiceTests
 
         // Assert - Should not throw, though IMemoryCache has limited invalidation support
         act.Should().NotThrow();
-        
+
         // Note: IMemoryCache doesn't support prefix-based removal
         // For production use with comprehensive invalidation, consider IDistributedCache
     }

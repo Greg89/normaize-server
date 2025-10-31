@@ -39,9 +39,9 @@ public class AuditServiceTests
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Dataset Action") && 
-                                              v.ToString()!.Contains(action) && 
-                                              v.ToString()!.Contains(userId) && 
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Dataset Action") &&
+                                              v.ToString()!.Contains(action) &&
+                                              v.ToString()!.Contains(userId) &&
                                               v.ToString()!.Contains(dataSetId.ToString())),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
@@ -266,7 +266,7 @@ public class AuditServiceTests
         var userId = "user123";
         var action = "Upload";
         var metadata = new Dictionary<string, object>();
-        
+
         // Add many metadata items
         for (int i = 0; i < 100; i++)
         {

@@ -15,7 +15,7 @@ public class DataNormalizationDbContextFactory : IDesignTimeDbContextFactory<Dat
 
         // Try to read from environment variable first (for CI/CD)
         var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
-        
+
         // Fall back to default connection string for local development
         if (string.IsNullOrEmpty(connectionString))
         {

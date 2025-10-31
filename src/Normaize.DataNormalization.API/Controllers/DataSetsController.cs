@@ -305,12 +305,17 @@ public class DataSetsController : BaseApiController
         try
         {
             var userId = GetCurrentUserId();
-            _logger.LogInformation("User {UserId} uploading dataset {Name}", userId, request.Name);
+            _logger.LogInformation("📤 User {UserId} starting dataset upload - Name: {Name}, File: {FileName}",
+                userId, request.Name, request.File?.FileName);
 
             if (request.File == null || request.File.Length == 0)
             {
+                _logger.LogWarning("Upload failed - No file provided");
                 return Error("File is required", "FILE_REQUIRED", 400);
             }
+
+            _logger.LogInformation("File details - Size: {Size} bytes, ContentType: {ContentType}",
+                request.File.Length, request.File.ContentType);
 
             // Create upload command
             var command = new UploadDataSetCommand(
@@ -323,24 +328,37 @@ public class DataSetsController : BaseApiController
                 request.File.OpenReadStream(),
                 request.RetentionDays);
 
+            _logger.LogInformation("Sending upload command to handler...");
             var result = await _mediator.Send(command);
+            _logger.LogInformation("Upload command completed - Success: {Success}, DataSetId: {DataSetId}",
+                result.Success, result.DataSetId);
 
             if (!result.Success)
             {
+                _logger.LogWarning("Upload failed - {Message}", result.Message);
                 return Error(result.Message, "UPLOAD_FAILED", 400);
             }
 
             // Fetch created dataset
+            _logger.LogInformation("Fetching created dataset {DataSetId}...", result.DataSetId);
             var query = new GetDataSetByIdQuery(result.DataSetId!.Value, userId);
             var dataSet = await _mediator.Send(query);
 
-            var response = MapFromDto(dataSet!);
+            if (dataSet == null)
+            {
+                _logger.LogError("Dataset {DataSetId} not found after creation", result.DataSetId);
+                return Error("Dataset created but not found", "DATASET_NOT_FOUND", 500);
+            }
+
+            var response = MapFromDto(dataSet);
+            _logger.LogInformation("✅ Dataset {DataSetId} uploaded successfully", result.DataSetId);
+
             return CreatedAtAction(nameof(GetDataSet), new { id = result.DataSetId },
                 Success(response, "Dataset uploaded successfully"));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error uploading dataset");
+            _logger.LogError(ex, "❌ Error uploading dataset - {Message}", ex.Message);
             return HandleException(ex, nameof(UploadDataSet));
         }
     }
@@ -404,7 +422,7 @@ public class DataSetsController : BaseApiController
 
             var query = new GetDataSetsByUserQuery(userId, 1, 1000, IncludeDeleted: true);
             var allDataSets = await _mediator.Send(query);
-            
+
             // Filter to only deleted datasets
             var deletedDataSets = allDataSets.Where(ds => ds.IsDeleted).ToList();
             var responses = deletedDataSets.Select(MapFromDto).ToList();
@@ -561,7 +579,7 @@ public class DataSetsController : BaseApiController
         try
         {
             var userId = GetCurrentUserId();
-            _logger.LogInformation("User {UserId} updating retention policy for dataset {DataSetId} to {Days} days", 
+            _logger.LogInformation("User {UserId} updating retention policy for dataset {DataSetId} to {Days} days",
                 userId, id, request.RetentionDays);
 
             var command = new LifecycleUpdateRetentionPolicyCommand { DataSetId = id, RetentionDays = request.RetentionDays, UserId = userId };

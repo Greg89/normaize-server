@@ -63,7 +63,7 @@ public class GetDataSetPreviewQueryHandler : IRequestHandler<GetDataSetPreviewQu
 
             // Limit rows to requested amount
             var limitedRows = previewData.Rows?.Take(request.Rows).ToList() ?? new List<Dictionary<string, object>>();
-            
+
             return new DataSetPreviewDto(
                 DataSetId: request.DataSetId,
                 PreviewRowCount: request.Rows,

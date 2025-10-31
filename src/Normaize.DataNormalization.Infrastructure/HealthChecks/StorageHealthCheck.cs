@@ -42,7 +42,7 @@ public class StorageHealthCheck : IHealthCheck
             if (provider?.Equals("Local", StringComparison.OrdinalIgnoreCase) == true)
             {
                 data["basePath"] = basePath ?? "Not configured";
-                
+
                 if (string.IsNullOrWhiteSpace(basePath))
                 {
                     errors.Add("Local storage provider requires BasePath configuration");
@@ -59,12 +59,12 @@ public class StorageHealthCheck : IHealthCheck
                         }
 
                         data["directoryExists"] = Directory.Exists(basePath);
-                        
+
                         // Test write access
                         var testFile = Path.Combine(basePath, $".health_check_{Guid.NewGuid()}.tmp");
                         File.WriteAllText(testFile, "health_check");
                         File.Delete(testFile);
-                        
+
                         data["writeAccess"] = true;
                     }
                     catch (UnauthorizedAccessException)
@@ -84,7 +84,7 @@ public class StorageHealthCheck : IHealthCheck
                 // Use AWS standard naming to match S3StorageService
                 var bucketName = _configuration["AWS_S3_BUCKET"];
                 var region = _configuration["AWS_REGION"];
-                
+
                 data["bucketName"] = bucketName ?? "Not configured";
                 data["region"] = region ?? "Not configured";
 
@@ -124,14 +124,14 @@ public class StorageHealthCheck : IHealthCheck
             if (errors.Any())
             {
                 data["errors"] = errors;
-                
+
                 // Enhanced logging for debugging
                 Console.WriteLine($"❌ Storage Health Check Failed - Errors: {string.Join(", ", errors)}");
                 Console.WriteLine($"   Provider: {provider ?? "Not set"}");
                 Console.WriteLine($"   AWS_S3_BUCKET: {_configuration["AWS_S3_BUCKET"] ?? "Missing"}");
                 Console.WriteLine($"   AWS_REGION: {_configuration["AWS_REGION"] ?? "Missing"}");
                 Console.WriteLine($"   AWS_ACCESS_KEY_ID env: {(!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID")) ? "Present" : "Missing")}");
-                
+
                 return Task.FromResult(HealthCheckResult.Unhealthy(
                     $"Storage configuration has {errors.Count} error(s)",
                     data: data));

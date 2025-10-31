@@ -88,21 +88,21 @@ public class GetUserProfileQueryHandlerTests
         result!.Id.Should().Be(user.Id);
         result.CreatedAt.Should().Be(user.CreatedAt);
         result.UpdatedAt.Should().Be(user.UpdatedAt);
-        
+
         // Verify Preferences
         result.Preferences.Theme.Should().Be(user.Preferences.Theme);
         result.Preferences.Language.Should().Be(user.Preferences.Language);
         result.Preferences.TimeZone.Should().Be(user.Preferences.TimeZone);
         result.Preferences.DefaultPageSize.Should().Be(user.Preferences.DefaultPageSize);
-        
+
         // Verify Notification Settings
         result.NotificationSettings.EmailNotificationsEnabled.Should().Be(user.NotificationSettings.EmailNotificationsEnabled);
         result.NotificationSettings.PushNotificationsEnabled.Should().Be(user.NotificationSettings.PushNotificationsEnabled);
-        
+
         // Verify Processing Defaults
         result.ProcessingDefaults.AutoProcessUploads.Should().Be(user.ProcessingDefaults.AutoProcessUploads);
         result.ProcessingDefaults.MaxPreviewRows.Should().Be(user.ProcessingDefaults.MaxPreviewRows);
-        
+
         // Verify Privacy Settings
         result.PrivacySettings.ShareAnalytics.Should().Be(user.PrivacySettings.ShareAnalytics);
         result.PrivacySettings.AllowDataUsageForImprovement.Should().Be(user.PrivacySettings.AllowDataUsageForImprovement);

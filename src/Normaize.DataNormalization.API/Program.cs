@@ -34,7 +34,7 @@ if (!string.IsNullOrEmpty(auth0Domain) && !string.IsNullOrEmpty(auth0Audience))
         {
             options.Authority = $"https://{auth0Domain}/";
             options.Audience = auth0Audience;
-            
+
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
@@ -45,7 +45,7 @@ if (!string.IsNullOrEmpty(auth0Domain) && !string.IsNullOrEmpty(auth0Audience))
                 ClockSkew = TimeSpan.FromMinutes(5),
                 NameClaimType = ClaimTypes.NameIdentifier
             };
-            
+
             options.Events = new JwtBearerEvents
             {
                 OnAuthenticationFailed = context =>
@@ -70,7 +70,7 @@ else
 {
     // Register empty authentication/authorization to prevent 500 errors when [Authorize] is used
     builder.Services.AddAuthentication("Bearer")
-        .AddJwtBearer("Bearer", options => 
+        .AddJwtBearer("Bearer", options =>
         {
             // No validation - this is just to prevent exceptions
             options.RequireHttpsMetadata = false;
@@ -84,7 +84,7 @@ else
             };
         });
     builder.Services.AddAuthorization();
-    
+
     Console.WriteLine("⚠ Warning: Auth0 configuration missing - API endpoints will be unprotected");
     Console.WriteLine("  Please set Auth0:Domain and Auth0:Audience in configuration");
 }
@@ -98,7 +98,7 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "Clean DDD Architecture API for data normalization operations."
     });
-    
+
     // Add JWT Bearer authentication to Swagger
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
@@ -109,7 +109,7 @@ builder.Services.AddSwaggerGen(c =>
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Description = "Enter 'Bearer' followed by a space and your JWT token"
     });
-    
+
     c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
         {
@@ -127,7 +127,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // Configure CORS for production and development
-var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? 
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ??
                     new[] { "http://localhost:5173", "http://localhost:3000" };
 
 Console.WriteLine($"🌐 Configuring CORS with {allowedOrigins.Length} allowed origin(s):");
@@ -146,7 +146,7 @@ builder.Services.AddCors(options =>
               .AllowCredentials()
               .SetIsOriginAllowedToAllowWildcardSubdomains(); // Allow subdomains
     });
-    
+
     // Fallback development policy (only used when no production origins configured)
     options.AddPolicy("DevelopmentOnly", policy =>
     {
@@ -208,7 +208,7 @@ app.Use(async (context, next) =>
     catch (Exception ex)
     {
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "❌ Unhandled exception in request {Method} {Path}", 
+        logger.LogError(ex, "❌ Unhandled exception in request {Method} {Path}",
             context.Request.Method, context.Request.Path);
         throw;
     }
@@ -216,7 +216,7 @@ app.Use(async (context, next) =>
 
 // Configure pipeline
 // Only enable Swagger in development or when explicitly configured
-var enableSwagger = app.Environment.IsDevelopment() || 
+var enableSwagger = app.Environment.IsDevelopment() ||
                    builder.Configuration.GetValue<bool>("Features:EnableSwagger", false);
 
 if (enableSwagger)
@@ -236,8 +236,8 @@ else
 }
 
 // Use production-ready CORS policy
-var corsPolicy = allowedOrigins.Length > 0 && !allowedOrigins.Contains("*") 
-    ? "AllowSpecificOrigins" 
+var corsPolicy = allowedOrigins.Length > 0 && !allowedOrigins.Contains("*")
+    ? "AllowSpecificOrigins"
     : "DevelopmentOnly";
 app.UseCors(corsPolicy);
 
@@ -255,7 +255,7 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
     ResponseWriter = async (context, report) =>
     {
         context.Response.ContentType = "application/json";
-        
+
         var result = System.Text.Json.JsonSerializer.Serialize(new
         {
             status = report.Status.ToString(),
@@ -275,7 +275,7 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
         {
             WriteIndented = true
         });
-        
+
         await context.Response.WriteAsync(result);
     }
 });
@@ -299,11 +299,11 @@ _ = Task.Run(async () =>
     await Task.Delay(1000); // Brief delay to ensure server is starting
     using var scope = app.Services.CreateScope();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    
+
     try
     {
         var dbContext = scope.ServiceProvider.GetService<Normaize.DataNormalization.Infrastructure.Data.DataNormalizationDbContext>();
-        
+
         if (dbContext == null)
         {
             logger.LogWarning("⚠ Database context not registered - skipping migrations");
@@ -311,7 +311,7 @@ _ = Task.Run(async () =>
         }
 
         logger.LogInformation("🔄 Checking for pending database migrations...");
-        
+
         // Ensure PostgreSQL extensions are created before migrations
         try
         {
@@ -324,15 +324,15 @@ _ = Task.Run(async () =>
         {
             logger.LogWarning(extEx, "⚠ Could not create PostgreSQL extensions - may already exist or lack permissions");
         }
-        
+
         var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
         var pendingCount = pendingMigrations.Count();
-        
+
         if (pendingCount > 0)
         {
-            logger.LogInformation("📦 Applying {Count} pending migration(s): {Migrations}", 
+            logger.LogInformation("📦 Applying {Count} pending migration(s): {Migrations}",
                 pendingCount, string.Join(", ", pendingMigrations));
-            
+
             await dbContext.Database.MigrateAsync();
             logger.LogInformation("✅ Database migrations applied successfully");
         }

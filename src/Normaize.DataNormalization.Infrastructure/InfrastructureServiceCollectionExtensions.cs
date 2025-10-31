@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Normaize.DataNormalization.Application.Common.Interfaces;
 using Normaize.DataNormalization.Application.Interfaces;
 using Normaize.DataNormalization.Application.Commands;
@@ -30,7 +31,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddDbContext<DataNormalizationDbContext>(options =>
         {
             // Try standard .NET connection string first, fallback to Railway's DATABASE_URL
-            var connectionString = configuration.GetConnectionString("DefaultConnection") 
+            var connectionString = configuration.GetConnectionString("DefaultConnection")
                 ?? ConvertDatabaseUrl(configuration["DATABASE_URL"]);
             options.UseNpgsql(connectionString, npgsqlOptions =>
             {
@@ -59,8 +60,25 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IDataSetRepository, DataSetRepository>();
         services.AddScoped<IDataSetRowRepository, DataSetRowRepository>();
 
-        // File and Dataset Services
-        services.AddScoped<IFileStorageService, FileStorageService>();
+        // File Storage - Choose based on Storage:Provider configuration
+        var storageProvider = configuration["Storage:Provider"]?.ToLowerInvariant();
+        if (storageProvider == "s3")
+        {
+            services.AddScoped<IFileStorageService, S3FileStorageService>();
+            Console.WriteLine("✓ Configured S3 file storage");
+        }
+        else
+        {
+            // Default to local file storage
+            var basePath = configuration["Storage:BasePath"] ?? "uploads";
+            services.AddScoped<IFileStorageService>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<FileStorageService>>();
+                return new FileStorageService(logger, basePath);
+            });
+            Console.WriteLine($"✓ Configured local file storage at: {basePath}");
+        }
+
         services.AddScoped<IFileProcessingService, FileProcessingService>();
         services.AddScoped<IFileHashService, FileHashService>();
         services.AddScoped<IAuditService, AuditService>();
@@ -160,7 +178,7 @@ public static class InfrastructureServiceCollectionExtensions
             // Parse postgresql://user:password@host:port/database
             var uri = new Uri(databaseUrl);
             var userInfo = uri.UserInfo.Split(':');
-            
+
             return $"Host={uri.Host};Port={uri.Port};Database={uri.LocalPath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
         }
         catch

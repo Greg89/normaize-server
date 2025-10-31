@@ -60,7 +60,7 @@ public class UserRepository : IUserRepository
 
             if (user != null)
             {
-                _logger.LogInformation("Found user {UserId} with Auth0UserId {Auth0UserId}", 
+                _logger.LogInformation("Found user {UserId} with Auth0UserId {Auth0UserId}",
                     user.Id, auth0UserId);
             }
             else
@@ -84,13 +84,13 @@ public class UserRepository : IUserRepository
             var exists = await _context.Users
                 .AnyAsync(u => u.Auth0UserId == auth0UserId && !u.IsDeleted, cancellationToken);
 
-            _logger.LogInformation("User with Auth0UserId {Auth0UserId} exists: {Exists}", 
+            _logger.LogInformation("User with Auth0UserId {Auth0UserId} exists: {Exists}",
                 auth0UserId, exists);
             return exists;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking if user exists with Auth0UserId {Auth0UserId}", 
+            _logger.LogError(ex, "Error checking if user exists with Auth0UserId {Auth0UserId}",
                 auth0UserId);
             throw;
         }
@@ -110,7 +110,7 @@ public class UserRepository : IUserRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating user with Auth0UserId {Auth0UserId}", 
+            _logger.LogError(ex, "Error creating user with Auth0UserId {Auth0UserId}",
                 user.Auth0UserId);
             throw;
         }

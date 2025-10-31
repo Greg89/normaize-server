@@ -74,7 +74,7 @@ public class WorkerHostedService : BackgroundService
             {
                 using var scope = _serviceScopeFactory.CreateScope();
                 var dbContext = scope.ServiceProvider.GetService<Data.DataNormalizationDbContext>();
-                
+
                 if (dbContext != null)
                 {
                     // Check if migrations are complete by querying a table
@@ -87,14 +87,14 @@ public class WorkerHostedService : BackgroundService
                             _logger.LogInformation("Database is ready with all migrations applied");
                             return;
                         }
-                        
+
                         _logger.LogInformation("Waiting for {Count} pending migration(s) to complete...", pendingMigrations.Count());
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Database not ready yet (attempt {Attempt}/{Max}): {Message}", 
+                _logger.LogWarning("Database not ready yet (attempt {Attempt}/{Max}): {Message}",
                     i + 1, maxRetries, ex.Message);
             }
 

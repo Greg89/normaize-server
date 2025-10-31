@@ -205,13 +205,13 @@ public class VisualizationCacheService : IVisualizationCacheService
         // IMemoryCache doesn't provide a way to enumerate or remove by prefix
         // We need to remove specific keys that we know about
         // This is a limitation of IMemoryCache - for production use, consider IDistributedCache
-        
+
         // Note: Since we can't enumerate all possible configuration hashes,
         // this method removes the most common cache keys
         // A more robust solution would track cache keys separately or use a different cache implementation
-        
+
         _logger.LogInformation("Invalidating cache entries for dataset {DataSetId}", dataSetId);
-        
+
         // We can only remove keys we know about
         // For a complete solution, you would need to track cache keys separately
         // or use a cache implementation that supports prefix-based removal

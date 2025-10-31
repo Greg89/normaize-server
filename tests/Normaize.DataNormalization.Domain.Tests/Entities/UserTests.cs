@@ -30,14 +30,14 @@ public class UserTests
         user.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         user.IsDeleted.Should().BeFalse();
         user.DeletedAt.Should().BeNull();
-        
+
         // Verify default settings
         user.Preferences.Should().NotBeNull();
         user.Preferences.Theme.Should().Be("light");
         user.NotificationSettings.Should().NotBeNull();
         user.ProcessingDefaults.Should().NotBeNull();
         user.PrivacySettings.Should().NotBeNull();
-        
+
         // Verify domain event
         user.DomainEvents.Should().ContainSingle();
         user.DomainEvents.First().Should().BeOfType<UserRegisteredEvent>();
@@ -51,7 +51,7 @@ public class UserTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Register_ShouldThrowArgumentException_WhenAuth0UserIdIsInvalid(string invalidAuth0UserId)
+    public void Register_ShouldThrowArgumentException_WhenAuth0UserIdIsInvalid(string? invalidAuth0UserId)
     {
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => User.Register(invalidAuth0UserId, "Test User"));
