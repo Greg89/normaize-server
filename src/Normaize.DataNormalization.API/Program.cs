@@ -268,6 +268,19 @@ _ = Task.Run(async () =>
 
         logger.LogInformation("🔄 Checking for pending database migrations...");
         
+        // Ensure PostgreSQL extensions are created before migrations
+        try
+        {
+            logger.LogInformation("🔧 Ensuring PostgreSQL extensions are installed...");
+            await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";");
+            await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS pg_trgm;");
+            logger.LogInformation("✅ PostgreSQL extensions verified");
+        }
+        catch (Exception extEx)
+        {
+            logger.LogWarning(extEx, "⚠ Could not create PostgreSQL extensions - may already exist or lack permissions");
+        }
+        
         var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
         var pendingCount = pendingMigrations.Count();
         
