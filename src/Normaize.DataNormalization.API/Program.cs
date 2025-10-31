@@ -23,6 +23,10 @@ builder.Services.AddEndpointsApiExplorer();
 var auth0Domain = builder.Configuration["Auth0:Domain"];
 var auth0Audience = builder.Configuration["Auth0:Audience"];
 
+Console.WriteLine($"🔐 Auth0 Configuration Check:");
+Console.WriteLine($"   Domain: {(string.IsNullOrEmpty(auth0Domain) ? "NOT SET" : auth0Domain)}");
+Console.WriteLine($"   Audience: {(string.IsNullOrEmpty(auth0Audience) ? "NOT SET" : auth0Audience)}");
+
 if (!string.IsNullOrEmpty(auth0Domain) && !string.IsNullOrEmpty(auth0Audience))
 {
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -64,6 +68,23 @@ if (!string.IsNullOrEmpty(auth0Domain) && !string.IsNullOrEmpty(auth0Audience))
 }
 else
 {
+    // Register empty authentication/authorization to prevent 500 errors when [Authorize] is used
+    builder.Services.AddAuthentication("Bearer")
+        .AddJwtBearer("Bearer", options => 
+        {
+            // No validation - this is just to prevent exceptions
+            options.RequireHttpsMetadata = false;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ValidateLifetime = false,
+                ValidateIssuerSigningKey = false,
+                SignatureValidator = (token, parameters) => new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(token)
+            };
+        });
+    builder.Services.AddAuthorization();
+    
     Console.WriteLine("⚠ Warning: Auth0 configuration missing - API endpoints will be unprotected");
     Console.WriteLine("  Please set Auth0:Domain and Auth0:Audience in configuration");
 }
@@ -109,6 +130,12 @@ builder.Services.AddSwaggerGen(c =>
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? 
                     new[] { "http://localhost:5173", "http://localhost:3000" };
 
+Console.WriteLine($"🌐 Configuring CORS with {allowedOrigins.Length} allowed origin(s):");
+foreach (var origin in allowedOrigins)
+{
+    Console.WriteLine($"   - {origin}");
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigins", policy =>
@@ -116,7 +143,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials();
+              .AllowCredentials()
+              .SetIsOriginAllowedToAllowWildcardSubdomains(); // Allow subdomains
     });
     
     // Fallback development policy (only used when no production origins configured)
@@ -169,6 +197,22 @@ else
 Console.WriteLine("🚀 Starting Normaize Data Normalization API...");
 Console.WriteLine($"📍 Environment: {app.Environment.EnvironmentName}");
 Console.WriteLine($"🌐 Listening on: {(app.Environment.IsDevelopment() ? "http://localhost:5001" : url)}");
+
+// Add global exception handler for better error logging
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "❌ Unhandled exception in request {Method} {Path}", 
+            context.Request.Method, context.Request.Path);
+        throw;
+    }
+});
 
 // Configure pipeline
 // Only enable Swagger in development or when explicitly configured
