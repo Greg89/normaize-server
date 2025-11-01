@@ -13,7 +13,8 @@ public class SubmitJobRequest
 }
 
 /// <summary>
-/// Request DTO for duplicate removal job
+/// Request DTO for duplicate removal job (body-based route format)
+/// Used by /api/normalization/remove-duplicates
 /// </summary>
 public class RemoveDuplicatesRequest
 {
@@ -205,6 +206,46 @@ public class RetentionStatusResponse
 public class UpdateRetentionPolicyRequest
 {
     public int RetentionDays { get; set; }
+}
+
+/// <summary>
+/// Request DTO for dataset reset operation
+/// Matches client DataSetResetDto expectations
+/// </summary>
+public class ResetDataSetRequest
+{
+    /// <summary>
+    /// Type of reset operation: RESTORE or REPROCESS
+    /// </summary>
+    public string ResetType { get; set; } = "REPROCESS"; // Default to REPROCESS
+
+    /// <summary>
+    /// Optional reason for the reset operation
+    /// </summary>
+    public string? Reason { get; set; }
+}
+
+/// <summary>
+/// Request DTO for duplicate removal from client (legacy format)
+/// Matches client RemoveDuplicateRowsRequest expectations
+/// Used for backward compatibility with path-parameter route
+/// </summary>
+public class RemoveDuplicateRowsRequest
+{
+    /// <summary>
+    /// Column names to use for duplicate comparison
+    /// </summary>
+    public List<string> ColumnNames { get; set; } = new();
+
+    /// <summary>
+    /// Whether to keep first occurrence (true) or last occurrence (false)
+    /// </summary>
+    public bool KeepFirstOccurrence { get; set; } = true;
+
+    /// <summary>
+    /// Whether comparison should be case sensitive
+    /// </summary>
+    public bool CaseSensitive { get; set; } = false;
 }
 
 /// <summary>

@@ -9,6 +9,10 @@ using Normaize.DataNormalization.Application.Interfaces;
 using Normaize.DataNormalization.Application.Commands.DataSetLifecycle;
 using Normaize.DataNormalization.Application.Queries.DataSetLifecycle;
 using LifecycleUpdateRetentionPolicyCommand = Normaize.DataNormalization.Application.Commands.DataSetLifecycle.UpdateRetentionPolicyCommand;
+using LifecycleResetDataSetCommand = Normaize.DataNormalization.Application.Commands.DataSetLifecycle.ResetDataSetCommand;
+using LifecycleResetType = Normaize.DataNormalization.Application.Commands.DataSetLifecycle.ResetType;
+using Normaize.DataNormalization.Application.Commands;
+using Normaize.DataNormalization.Domain.ValueObjects;
 
 namespace Normaize.DataNormalization.API.Controllers;
 
@@ -20,15 +24,18 @@ public class DataSetsController : BaseApiController
 {
     private readonly IMediator _mediator;
     private readonly IDataSetDataLoader _dataLoader;
+    private readonly ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid> _submitDuplicateRemovalHandler;
     private readonly ILogger<DataSetsController> _logger;
 
     public DataSetsController(
         IMediator mediator,
         IDataSetDataLoader dataLoader,
+        ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid> submitDuplicateRemovalHandler,
         ILogger<DataSetsController> logger)
     {
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _dataLoader = dataLoader ?? throw new ArgumentNullException(nameof(dataLoader));
+        _submitDuplicateRemovalHandler = submitDuplicateRemovalHandler ?? throw new ArgumentNullException(nameof(submitDuplicateRemovalHandler));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -40,7 +47,6 @@ public class DataSetsController : BaseApiController
     /// <param name="includeDeleted">Include soft-deleted datasets (default: false)</param>
     /// <returns>Paginated list of datasets</returns>
     [HttpGet]
-    [AllowAnonymous] // Temporary: Allow testing without Auth0
     [ProducesResponseType(typeof(PaginatedApiResponse<List<DataSetResponse>>), 200)]
     [ProducesResponseType(401)]
     [ProducesResponseType(500)]
@@ -437,6 +443,91 @@ public class DataSetsController : BaseApiController
     }
 
     /// <summary>
+    /// Reset a dataset to its original state
+    /// Matches legacy endpoint: POST /api/datasets/{id}/reset
+    /// </summary>
+    /// <param name="id">Dataset ID</param>
+    /// <param name="request">Reset configuration options</param>
+    /// <returns>Updated dataset information</returns>
+    [HttpPost("{id:guid}/reset")]
+    [ProducesResponseType(typeof(ApiResponse<DataSetResponse>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(409)]
+    [ProducesResponseType(500)]
+    public async Task<IActionResult> ResetDataSet(Guid id, [FromBody] ResetDataSetRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            _logger.LogInformation("User {UserId} resetting dataset {DataSetId} with type {ResetType}", 
+                userId, id, request.ResetType);
+
+            // Map client ResetType (RESTORE/REPROCESS) to domain ResetType enum
+            if (!Enum.TryParse<LifecycleResetType>(request.ResetType, ignoreCase: true, out var resetType))
+            {
+                return Error($"Invalid reset type: {request.ResetType}. Valid values are RESTORE or REPROCESS", 
+                    "INVALID_RESET_TYPE", 400);
+            }
+
+            var command = new LifecycleResetDataSetCommand
+            {
+                DataSetId = id,
+                UserId = userId,
+                ResetType = resetType,
+                Reason = request.Reason
+            };
+
+            var result = await _mediator.Send(command);
+
+            if (!result.Success)
+            {
+                // Check if it's a file availability issue (409 Conflict)
+                if (result.Error != null && 
+                    (result.Error.Contains("no longer available") || 
+                     result.Error.Contains("not found") || 
+                     result.ErrorCode == "FILE_NOT_AVAILABLE"))
+                {
+                    return Error(result.Error ?? result.Message, result.ErrorCode ?? "FILE_NOT_AVAILABLE", 409);
+                }
+
+                // Check if dataset not found or access denied (404)
+                if (result.Error != null && 
+                    (result.Error.Contains("not found") || result.Error.Contains("Access denied")))
+                {
+                    return Error(result.Error, "DATASET_NOT_FOUND", 404);
+                }
+
+                // Other errors (400 Bad Request)
+                return Error(result.Error ?? result.Message, "RESET_FAILED", 400);
+            }
+
+            // Fetch updated dataset to return
+            var query = new GetDataSetByIdQuery(id, userId);
+            var dataSet = await _mediator.Send(query);
+
+            if (dataSet == null)
+            {
+                return Error("Dataset reset successfully but could not retrieve updated dataset", 
+                    "RETRIEVAL_FAILED", 500);
+            }
+
+            var response = MapFromDto(dataSet);
+            return Success(response, result.Message);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Error("Dataset not found or you don't have permission to reset it", "DATASET_NOT_FOUND", 404);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resetting dataset {DataSetId}", id);
+            return HandleException(ex, nameof(ResetDataSet));
+        }
+    }
+
+    /// <summary>
     /// Restore a soft-deleted dataset
     /// </summary>
     /// <param name="id">Dataset ID</param>
@@ -600,6 +691,71 @@ public class DataSetsController : BaseApiController
         {
             _logger.LogError(ex, "Error updating retention policy for dataset {DataSetId}", id);
             return HandleException(ex, nameof(UpdateRetentionPolicy));
+        }
+    }
+
+    /// <summary>
+    /// Remove duplicate rows from a dataset
+    /// Matches legacy endpoint: POST /api/datasets/{dataSetId}/remove-duplicates
+    /// This endpoint provides backward compatibility with client expectations (path-parameter based route)
+    /// </summary>
+    /// <param name="dataSetId">Dataset ID from path</param>
+    /// <param name="request">Duplicate removal configuration (client format)</param>
+    /// <returns>Job submission response</returns>
+    [HttpPost("{dataSetId:guid}/remove-duplicates")]
+    [ProducesResponseType(typeof(ApiResponse<JobSubmissionResponse>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<IActionResult> RemoveDuplicates(Guid dataSetId, [FromBody] RemoveDuplicateRowsRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            _logger.LogInformation("User {UserId} requesting duplicate removal for dataset {DataSetId} via path-parameter route",
+                userId, dataSetId);
+
+            // Map client format to domain value objects
+            var caseSensitivity = request.CaseSensitive
+                ? CaseSensitivity.Sensitive
+                : CaseSensitivity.Insensitive;
+
+            // Map KeepFirstOccurrence boolean to Strategy string
+            var strategy = request.KeepFirstOccurrence ? "KeepFirst" : "KeepLast";
+
+            var options = strategy.ToLower() switch
+            {
+                "keeplast" => DuplicateRemovalOptions.KeepLast(request.ColumnNames, caseSensitivity),
+                _ => DuplicateRemovalOptions.KeepFirst(request.ColumnNames, caseSensitivity)
+            };
+
+            // Create command with domain value object
+            var command = new SubmitDuplicateRemovalJobCommand(dataSetId, options);
+            var jobId = await _submitDuplicateRemovalHandler.HandleAsync(command);
+
+            var response = new JobSubmissionResponse
+            {
+                JobId = jobId,
+                Status = "Submitted",
+                Message = "Duplicate removal job submitted successfully",
+                SubmittedAt = DateTime.UtcNow
+            };
+
+            return Success(response, "Duplicate removal job submitted successfully");
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+        {
+            return Error($"Dataset with ID {dataSetId} not found", "DATASET_NOT_FOUND", 404);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Error("Dataset not found or you don't have permission to access it", "DATASET_NOT_FOUND", 404);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error submitting duplicate removal job for dataset {DataSetId}", dataSetId);
+            return HandleException(ex, nameof(RemoveDuplicates));
         }
     }
 
