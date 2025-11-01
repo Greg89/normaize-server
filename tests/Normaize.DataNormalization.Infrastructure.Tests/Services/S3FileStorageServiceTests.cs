@@ -1,13 +1,7 @@
-using System;
-using System.IO;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Normaize.DataNormalization.Infrastructure.Services;
-using Xunit;
 
 namespace Normaize.DataNormalization.Infrastructure.Tests.Services;
 
@@ -104,7 +98,7 @@ public class S3FileStorageServiceTests
     // are private static methods in S3FileStorageService and are covered by integration tests
     // Testing them directly would require making them public or using reflection
 
-    private IConfiguration CreateMockConfiguration(
+    private static IConfiguration CreateMockConfiguration(
         bool includeAccessKey = true,
         bool includeSecretKey = true,
         bool includeBucket = true,
