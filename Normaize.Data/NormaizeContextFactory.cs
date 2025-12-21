@@ -30,11 +30,25 @@ public class NormaizeContextFactory : IDesignTimeDbContextFactory<NormaizeContex
             Console.WriteLine("Using environment variables directly (CI/CD environment)");
         }
 
-        var host = Environment.GetEnvironmentVariable("MYSQLHOST");
-        var database = Environment.GetEnvironmentVariable("MYSQLDATABASE");
-        var user = Environment.GetEnvironmentVariable("MYSQLUSER");
-        var password = Environment.GetEnvironmentVariable("MYSQLPASSWORD");
-        var port = Environment.GetEnvironmentVariable("MYSQLPORT");
+        // Prefer an explicit connection string (docker-compose / CI)
+        var explicitConnectionString =
+            Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") ??
+            Environment.GetEnvironmentVariable("CONNECTIONSTRINGS__DEFAULTCONNECTION") ??
+            Environment.GetEnvironmentVariable("DATABASE_URL");
+
+        if (!string.IsNullOrWhiteSpace(explicitConnectionString))
+        {
+            Console.WriteLine("Using explicit database connection string from environment");
+            var optionsBuilder1 = new DbContextOptionsBuilder<NormaizeContext>();
+            optionsBuilder1.UseNpgsql(explicitConnectionString);
+            return new NormaizeContext(optionsBuilder1.Options);
+        }
+
+        var host = Environment.GetEnvironmentVariable("POSTGRES_HOST");
+        var database = Environment.GetEnvironmentVariable("POSTGRES_DB");
+        var user = Environment.GetEnvironmentVariable("POSTGRES_USER");
+        var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+        var port = Environment.GetEnvironmentVariable("POSTGRES_PORT");
 
         // Log the environment variables (without password)
         Console.WriteLine($"Database configuration:");
@@ -47,19 +61,19 @@ public class NormaizeContextFactory : IDesignTimeDbContextFactory<NormaizeContex
         {
             throw new InvalidOperationException(
                 "Database environment variables are not set. Please check your .env file or environment variables contain:\n" +
-                "MYSQLHOST=your_host\n" +
-                "MYSQLDATABASE=your_database\n" +
-                "MYSQLUSER=your_user\n" +
-                "MYSQLPASSWORD=your_password\n" +
-                "MYSQLPORT=3306");
+                "POSTGRES_HOST=your_host\n" +
+                "POSTGRES_DB=your_database\n" +
+                "POSTGRES_USER=your_user\n" +
+                "POSTGRES_PASSWORD=your_password\n" +
+                "POSTGRES_PORT=5432");
         }
 
-        var connectionString = $"Server={host};Database={database};User={user};Password={password};Port={port};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
+        var connectionString = $"Host={host};Port={port ?? "5432"};Database={database};Username={user};Password={password};";
 
-        Console.WriteLine($"Using MySQL database: {database} on {host}:{port}");
+        Console.WriteLine($"Using Postgres database: {database} on {host}:{port ?? "5432"}");
 
         var optionsBuilder = new DbContextOptionsBuilder<NormaizeContext>();
-        optionsBuilder.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 0)));
+        optionsBuilder.UseNpgsql(connectionString);
 
         return new NormaizeContext(optionsBuilder.Options);
     }

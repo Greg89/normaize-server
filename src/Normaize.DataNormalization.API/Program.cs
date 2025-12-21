@@ -184,6 +184,11 @@ var app = builder.Build();
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 var url = $"http://0.0.0.0:{port}";
 
+var isRunningInContainer = string.Equals(
+    Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
+    "true",
+    StringComparison.OrdinalIgnoreCase);
+
 // Only set URLs if not in development (Railway handles this)
 if (!app.Environment.IsDevelopment())
 {
@@ -191,12 +196,14 @@ if (!app.Environment.IsDevelopment())
 }
 else
 {
-    app.Urls.Add("http://localhost:5001");
+    // In local dev we prefer a stable localhost port, but inside Docker we must bind to 0.0.0.0
+    // so healthchecks and port publishing work.
+    app.Urls.Add(isRunningInContainer ? url : "http://localhost:5001");
 }
 
 Console.WriteLine("🚀 Starting Normaize Data Normalization API...");
 Console.WriteLine($"📍 Environment: {app.Environment.EnvironmentName}");
-Console.WriteLine($"🌐 Listening on: {(app.Environment.IsDevelopment() ? "http://localhost:5001" : url)}");
+Console.WriteLine($"🌐 Listening on: {(app.Environment.IsDevelopment() ? (isRunningInContainer ? url : "http://localhost:5001") : url)}");
 
 // Add global exception handler for better error logging
 app.Use(async (context, next) =>

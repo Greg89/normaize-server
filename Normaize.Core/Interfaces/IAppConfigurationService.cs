@@ -68,8 +68,8 @@ public record DatabaseConfig
     public string? Database { get; init; }
     public string? User { get; init; }
     public string? Password { get; init; }
-    public string Port { get; init; } = "3306";
+    public string Port { get; init; } = "5432";
 
     public string ToConnectionString() =>
-        $"Server={Host};Database={Database};User={User};Password={Password};Port={Port};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
+        $"Host={Host};Port={Port};Database={Database};Username={User};Password={Password};";
 }

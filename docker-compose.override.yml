@@ -1,5 +1,3 @@
- version: '3.8'
-
 # This file provides overrides for local development
 # It extends docker-compose.yml with dev-friendly settings
 
@@ -10,6 +8,10 @@ services:
       - Features__EnableSwagger=true
       - Logging__LogLevel__Default=Debug
       - Logging__LogLevel__Microsoft.EntityFrameworkCore=Information
+      # Required for readiness health checks
+      - Storage__Provider=local
+      - Storage__BasePath=uploads
+      - DATABASE_URL=postgresql://normaize_user:normaize_password@postgres:5432/normaize
     # Map local uploads folder for easy access
     volumes:
       - ./uploads:/app/uploads

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Normaize.Core.Interfaces;
+using System.Data;
 
 namespace Normaize.Data.Services;
 
@@ -84,20 +85,26 @@ public class MigrationService : IMigrationService
 
         try
         {
-            // Simple schema verification - just check if critical tables exist
-            var dataSetsTableExists = await _context.Database.ExecuteSqlRawAsync(
-                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'DataSets'");
+            // For non-relational providers (e.g., InMemory), skip schema verification.
+            if (!_context.Database.IsRelational())
+            {
+                result.Success = true;
+                result.Message = "Schema verification skipped (non-relational provider)";
+                _logger.LogInformation("Schema verification skipped for non-relational provider");
+                return result;
+            }
 
-            var dataSetRowsTableExists = await _context.Database.ExecuteSqlRawAsync(
-                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'DataSetRows'");
-
+            // Relational schema verification (Postgres): check a couple of critical tables.
             var missingTables = new List<string>();
-            if (dataSetsTableExists == 0) missingTables.Add("DataSets");
-            if (dataSetRowsTableExists == 0) missingTables.Add("DataSetRows");
+
+            if (!await TableExistsAsync("DataSets")) missingTables.Add("DataSets");
+            if (!await TableExistsAsync("DataSetRows")) missingTables.Add("DataSetRows");
 
             result.Success = missingTables.Count == 0;
             result.MissingColumns = missingTables; // Reusing for missing tables
-            result.Message = missingTables.Count == 0 ? "Schema verification passed" : $"Missing tables: {string.Join(", ", missingTables)}";
+            result.Message = missingTables.Count == 0
+                ? "Schema verification passed"
+                : $"Missing tables: {string.Join(", ", missingTables)}";
 
             _logger.LogInformation("Schema verification: {Result}", result.Message);
 
@@ -109,6 +116,34 @@ public class MigrationService : IMigrationService
             result.ErrorMessage = ex.Message;
             _logger.LogWarning(ex, "Error verifying database schema");
             return result;
+        }
+    }
+
+    private async Task<bool> TableExistsAsync(string tableName)
+    {
+        var connection = _context.Database.GetDbConnection();
+        var shouldClose = connection.State != ConnectionState.Open;
+        if (shouldClose)
+            await connection.OpenAsync();
+
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = @table LIMIT 1";
+
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "@table";
+        parameter.Value = tableName;
+        command.Parameters.Add(parameter);
+
+        try
+        {
+            var scalar = await command.ExecuteScalarAsync();
+            return scalar != null && scalar != DBNull.Value;
+        }
+        finally
+        {
+            if (shouldClose)
+                await connection.CloseAsync();
         }
     }
 }

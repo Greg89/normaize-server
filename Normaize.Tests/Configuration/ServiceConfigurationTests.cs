@@ -31,11 +31,11 @@ public class ServiceConfigurationTests : IDisposable
         _originalEnvironmentVariables = new Dictionary<string, string?>
         {
             ["ASPNETCORE_ENVIRONMENT"] = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
-            ["MYSQLHOST"] = Environment.GetEnvironmentVariable("MYSQLHOST"),
-            ["MYSQLDATABASE"] = Environment.GetEnvironmentVariable("MYSQLDATABASE"),
-            ["MYSQLUSER"] = Environment.GetEnvironmentVariable("MYSQLUSER"),
-            ["MYSQLPASSWORD"] = Environment.GetEnvironmentVariable("MYSQLPASSWORD"),
-            ["MYSQLPORT"] = Environment.GetEnvironmentVariable("MYSQLPORT"),
+            ["POSTGRES_HOST"] = Environment.GetEnvironmentVariable("POSTGRES_HOST"),
+            ["POSTGRES_DB"] = Environment.GetEnvironmentVariable("POSTGRES_DB"),
+            ["POSTGRES_USER"] = Environment.GetEnvironmentVariable("POSTGRES_USER"),
+            ["POSTGRES_PASSWORD"] = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD"),
+            ["POSTGRES_PORT"] = Environment.GetEnvironmentVariable("POSTGRES_PORT"),
             ["STORAGE_PROVIDER"] = Environment.GetEnvironmentVariable("STORAGE_PROVIDER"),
             ["AWS_ACCESS_KEY_ID"] = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
             ["AWS_SECRET_ACCESS_KEY"] = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY"),
@@ -182,11 +182,11 @@ public class ServiceConfigurationTests : IDisposable
     private static void SetupValidEnvironment()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
-        Environment.SetEnvironmentVariable("MYSQLHOST", "localhost");
-        Environment.SetEnvironmentVariable("MYSQLDATABASE", "testdb");
-        Environment.SetEnvironmentVariable("MYSQLUSER", "testuser");
-        Environment.SetEnvironmentVariable("MYSQLPASSWORD", "testpass");
-        Environment.SetEnvironmentVariable("MYSQLPORT", "3306");
+        Environment.SetEnvironmentVariable("POSTGRES_HOST", "localhost");
+        Environment.SetEnvironmentVariable("POSTGRES_DB", "testdb");
+        Environment.SetEnvironmentVariable("POSTGRES_USER", "testuser");
+        Environment.SetEnvironmentVariable("POSTGRES_PASSWORD", "testpass");
+        Environment.SetEnvironmentVariable("POSTGRES_PORT", "5432");
         Environment.SetEnvironmentVariable("AUTH0_ISSUER", "https://test.auth0.com/");
         Environment.SetEnvironmentVariable("AUTH0_AUDIENCE", "test-audience");
     }
@@ -195,21 +195,21 @@ public class ServiceConfigurationTests : IDisposable
     {
         // Remove required environment variables to cause configuration failure
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", null);
-        Environment.SetEnvironmentVariable("MYSQLHOST", null);
-        Environment.SetEnvironmentVariable("MYSQLDATABASE", null);
-        Environment.SetEnvironmentVariable("MYSQLUSER", null);
-        Environment.SetEnvironmentVariable("MYSQLPASSWORD", null);
-        Environment.SetEnvironmentVariable("MYSQLPORT", null);
+        Environment.SetEnvironmentVariable("POSTGRES_HOST", null);
+        Environment.SetEnvironmentVariable("POSTGRES_DB", null);
+        Environment.SetEnvironmentVariable("POSTGRES_USER", null);
+        Environment.SetEnvironmentVariable("POSTGRES_PASSWORD", null);
+        Environment.SetEnvironmentVariable("POSTGRES_PORT", null);
     }
 
     private static void SetupEnvironmentWithoutDatabase()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
-        Environment.SetEnvironmentVariable("MYSQLHOST", null);
-        Environment.SetEnvironmentVariable("MYSQLDATABASE", null);
-        Environment.SetEnvironmentVariable("MYSQLUSER", null);
-        Environment.SetEnvironmentVariable("MYSQLPASSWORD", null);
-        Environment.SetEnvironmentVariable("MYSQLPORT", null);
+        Environment.SetEnvironmentVariable("POSTGRES_HOST", null);
+        Environment.SetEnvironmentVariable("POSTGRES_DB", null);
+        Environment.SetEnvironmentVariable("POSTGRES_USER", null);
+        Environment.SetEnvironmentVariable("POSTGRES_PASSWORD", null);
+        Environment.SetEnvironmentVariable("POSTGRES_PORT", null);
         Environment.SetEnvironmentVariable("AUTH0_ISSUER", "https://test.auth0.com/");
         Environment.SetEnvironmentVariable("AUTH0_AUDIENCE", "test-audience");
     }
@@ -240,11 +240,11 @@ public class ServiceConfigurationTests : IDisposable
     private static void SetupDevelopmentEnvironment()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
-        Environment.SetEnvironmentVariable("MYSQLHOST", "localhost");
-        Environment.SetEnvironmentVariable("MYSQLDATABASE", "testdb");
-        Environment.SetEnvironmentVariable("MYSQLUSER", "testuser");
-        Environment.SetEnvironmentVariable("MYSQLPASSWORD", "testpass");
-        Environment.SetEnvironmentVariable("MYSQLPORT", "3306");
+        Environment.SetEnvironmentVariable("POSTGRES_HOST", "localhost");
+        Environment.SetEnvironmentVariable("POSTGRES_DB", "testdb");
+        Environment.SetEnvironmentVariable("POSTGRES_USER", "testuser");
+        Environment.SetEnvironmentVariable("POSTGRES_PASSWORD", "testpass");
+        Environment.SetEnvironmentVariable("POSTGRES_PORT", "5432");
         Environment.SetEnvironmentVariable("AUTH0_ISSUER", "https://test.auth0.com/");
         Environment.SetEnvironmentVariable("AUTH0_AUDIENCE", "test-audience");
     }
@@ -253,11 +253,11 @@ public class ServiceConfigurationTests : IDisposable
     {
         // Clear only the environment variables that could cause database provider conflicts
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", null);
-        Environment.SetEnvironmentVariable("MYSQLHOST", null);
-        Environment.SetEnvironmentVariable("MYSQLDATABASE", null);
-        Environment.SetEnvironmentVariable("MYSQLUSER", null);
-        Environment.SetEnvironmentVariable("MYSQLPASSWORD", null);
-        Environment.SetEnvironmentVariable("MYSQLPORT", null);
+        Environment.SetEnvironmentVariable("POSTGRES_HOST", null);
+        Environment.SetEnvironmentVariable("POSTGRES_DB", null);
+        Environment.SetEnvironmentVariable("POSTGRES_USER", null);
+        Environment.SetEnvironmentVariable("POSTGRES_PASSWORD", null);
+        Environment.SetEnvironmentVariable("POSTGRES_PORT", null);
         Environment.SetEnvironmentVariable("STORAGE_PROVIDER", null);
         Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", null);
         Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", null);

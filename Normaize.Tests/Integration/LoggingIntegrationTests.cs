@@ -47,11 +47,11 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Test");
 
         // Ensure environment variables are cleared before host is built
-        Environment.SetEnvironmentVariable("MYSQLHOST", null);
-        Environment.SetEnvironmentVariable("MYSQLDATABASE", null);
-        Environment.SetEnvironmentVariable("MYSQLUSER", null);
-        Environment.SetEnvironmentVariable("MYSQLPASSWORD", null);
-        Environment.SetEnvironmentVariable("MYSQLPORT", null);
+            Environment.SetEnvironmentVariable("POSTGRES_HOST", null);
+            Environment.SetEnvironmentVariable("POSTGRES_DB", null);
+            Environment.SetEnvironmentVariable("POSTGRES_USER", null);
+            Environment.SetEnvironmentVariable("POSTGRES_PASSWORD", null);
+            Environment.SetEnvironmentVariable("POSTGRES_PORT", null);
         Environment.SetEnvironmentVariable("STORAGE_PROVIDER", null);
         Environment.SetEnvironmentVariable("SFTP_HOST", null);
 

@@ -300,80 +300,88 @@ public static class ServiceConfiguration
     {
         logger.LogDebug("Configuring database. CorrelationId: {CorrelationId}", correlationId);
 
-        // Get environment directly instead of using service provider
         var environment = Environment.GetEnvironmentVariable(SharedConstants.EnvironmentVariables.ASPNETCORE_ENVIRONMENT) ?? SharedConstants.Environment.DEVELOPMENT;
 
-        // Check for database connection directly
-        var mysqlHost = Environment.GetEnvironmentVariable(SharedConstants.EnvironmentVariables.MYSQLHOST);
-        var mysqlDatabase = Environment.GetEnvironmentVariable(SharedConstants.EnvironmentVariables.MYSQLDATABASE);
-        var mysqlUser = Environment.GetEnvironmentVariable(SharedConstants.EnvironmentVariables.MYSQLUSER);
-        var mysqlPassword = Environment.GetEnvironmentVariable(SharedConstants.EnvironmentVariables.MYSQLPASSWORD);
-        var mysqlPort = Environment.GetEnvironmentVariable(SharedConstants.EnvironmentVariables.MYSQLPORT) ?? DatabaseConstants.Database.DEFAULT_PORT;
+        // Prefer an explicit connection string (used by docker-compose)
+        var explicitConnectionString =
+            Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") ??
+            Environment.GetEnvironmentVariable("CONNECTIONSTRINGS__DEFAULTCONNECTION") ??
+            Environment.GetEnvironmentVariable("DATABASE_URL");
 
-        var hasDatabaseConnection = !string.IsNullOrEmpty(mysqlHost) &&
-                                   !string.IsNullOrEmpty(mysqlDatabase) &&
-                                   !string.IsNullOrEmpty(mysqlUser) &&
-                                   !string.IsNullOrEmpty(mysqlPassword);
+        string? connectionString = null;
+        var hasDatabaseConnection = false;
 
-        if (hasDatabaseConnection)
+        if (!string.IsNullOrWhiteSpace(explicitConnectionString))
         {
-            logger.LogInformation("Configuring MySQL database connection. Environment: {Environment}, CorrelationId: {CorrelationId}",
-                environment, correlationId);
-
-            var connectionString = $"{DatabaseConstants.Database.SERVER_PREFIX}{mysqlHost};{DatabaseConstants.Database.DATABASE_PREFIX}{mysqlDatabase};{DatabaseConstants.Database.USER_PREFIX}{mysqlUser};{DatabaseConstants.Database.PASSWORD_PREFIX}{mysqlPassword};{DatabaseConstants.Database.PORT_PREFIX}{mysqlPort};{DatabaseConstants.Database.CHARSET_PREFIX}{DatabaseConstants.Database.DEFAULT_CHARSET};{DatabaseConstants.Database.ALLOW_LOAD_LOCAL_INFILE};{DatabaseConstants.Database.CONVERT_ZERO_DATETIME};{DatabaseConstants.Database.ALLOW_ZERO_DATETIME};";
-
-            // Configure DbContext options
-            var dbContextOptions = new DbContextOptionsBuilder<NormaizeContext>()
-                .UseMySql(connectionString, new MySqlServerVersion(new Version(DatabaseConstants.Database.MYSQL_VERSION)))
-                .Options;
-
-            // Configure based on environment
-            if (environment.Equals(SharedConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
-            {
-                dbContextOptions = new DbContextOptionsBuilder<NormaizeContext>()
-                    .UseMySql(connectionString, new MySqlServerVersion(new Version(DatabaseConstants.Database.MYSQL_VERSION)))
-                    .EnableSensitiveDataLogging()
-                    .EnableDetailedErrors()
-                    .Options;
-            }
-
-            // Register DbContext and DbContextFactory with singleton options
-            builder.Services.AddSingleton(dbContextOptions);
-            builder.Services.AddDbContext<NormaizeContext>(options =>
-            {
-                options.UseMySql(connectionString, new MySqlServerVersion(new Version(DatabaseConstants.Database.MYSQL_VERSION)));
-
-                // Configure based on environment
-                if (environment.Equals(SharedConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
-                {
-                    options.EnableSensitiveDataLogging();
-                    options.EnableDetailedErrors();
-                }
-            });
-
-            // Add DbContextFactory for singleton services that need DbContext
-            builder.Services.AddDbContextFactory<NormaizeContext>(options =>
-            {
-                options.UseMySql(connectionString, new MySqlServerVersion(new Version(DatabaseConstants.Database.MYSQL_VERSION)));
-
-                // Configure based on environment
-                if (environment.Equals(SharedConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
-                {
-                    options.EnableSensitiveDataLogging();
-                    options.EnableDetailedErrors();
-                }
-            });
+            connectionString = explicitConnectionString;
+            hasDatabaseConnection = true;
         }
         else
         {
-            logger.LogInformation("No database connection detected, using in-memory database. CorrelationId: {CorrelationId}", correlationId);
+            // Standard Postgres env vars
+            var postgresHost = Environment.GetEnvironmentVariable("POSTGRES_HOST");
+            var postgresDatabase = Environment.GetEnvironmentVariable("POSTGRES_DB");
+            var postgresUser = Environment.GetEnvironmentVariable("POSTGRES_USER");
+            var postgresPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+            var postgresPort = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
+
+            hasDatabaseConnection = !string.IsNullOrEmpty(postgresHost) &&
+                                   !string.IsNullOrEmpty(postgresDatabase) &&
+                                   !string.IsNullOrEmpty(postgresUser) &&
+                                   !string.IsNullOrEmpty(postgresPassword);
+
+            if (hasDatabaseConnection)
+            {
+                connectionString = $"Host={postgresHost};Port={postgresPort};Database={postgresDatabase};Username={postgresUser};Password={postgresPassword}";
+            }
+        }
+
+        if (!hasDatabaseConnection || string.IsNullOrWhiteSpace(connectionString))
+        {
+            logger.LogInformation("No Postgres database connection detected, using in-memory database. CorrelationId: {CorrelationId}", correlationId);
             builder.Services.AddDbContext<NormaizeContext>(options =>
                 options.UseInMemoryDatabase(DatabaseConstants.Database.TEST_DATABASE_NAME));
-
-            // Add DbContextFactory for singleton services that need DbContext
             builder.Services.AddDbContextFactory<NormaizeContext>(options =>
                 options.UseInMemoryDatabase(DatabaseConstants.Database.TEST_DATABASE_NAME));
+            return;
         }
+
+        logger.LogInformation("Configuring PostgreSQL database connection for main application DB. Environment: {Environment}, CorrelationId: {CorrelationId}",
+            environment, correlationId);
+
+        builder.Services.AddDbContext<NormaizeContext>(options =>
+        {
+            options.UseNpgsql(connectionString, npgsqlOptions =>
+            {
+                npgsqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 3,
+                    maxRetryDelay: TimeSpan.FromSeconds(30),
+                    errorCodesToAdd: null);
+            });
+
+            if (environment.Equals(SharedConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
+            {
+                options.EnableSensitiveDataLogging();
+                options.EnableDetailedErrors();
+            }
+        });
+
+        builder.Services.AddDbContextFactory<NormaizeContext>(options =>
+        {
+            options.UseNpgsql(connectionString, npgsqlOptions =>
+            {
+                npgsqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 3,
+                    maxRetryDelay: TimeSpan.FromSeconds(30),
+                    errorCodesToAdd: null);
+            });
+
+            if (environment.Equals(SharedConstants.Environment.DEVELOPMENT, StringComparison.OrdinalIgnoreCase))
+            {
+                options.EnableSensitiveDataLogging();
+                options.EnableDetailedErrors();
+            }
+        });
     }
 
     private static void ConfigureDataNormalizationDatabase(WebApplicationBuilder builder, ILogger logger, string correlationId)

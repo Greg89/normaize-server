@@ -53,6 +53,11 @@ public static class SharedConstants
         public const string MYSQLUSER = "MYSQLUSER";
         public const string MYSQLPASSWORD = "MYSQLPASSWORD";
         public const string MYSQLPORT = "MYSQLPORT";
+        public const string POSTGRES_HOST = "POSTGRES_HOST";
+        public const string POSTGRES_DB = "POSTGRES_DB";
+        public const string POSTGRES_USER = "POSTGRES_USER";
+        public const string POSTGRES_PASSWORD = "POSTGRES_PASSWORD";
+        public const string POSTGRES_PORT = "POSTGRES_PORT";
         public const string STORAGE_PROVIDER = "STORAGE_PROVIDER";
         public const string AWS_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID";
         public const string AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY";

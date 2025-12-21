@@ -189,7 +189,6 @@ public class AppConfigurationServiceTests
         connectionString.Should().Contain($"{DatabaseConstants.Database.USER_PREFIX}{DatabaseConstants.Database.DEFAULT_USER}");
         connectionString.Should().Contain($"{DatabaseConstants.Database.PASSWORD_PREFIX}{DatabaseConstants.Database.DEFAULT_PASSWORD}");
         connectionString.Should().Contain($"{DatabaseConstants.Database.PORT_PREFIX}{DatabaseConstants.Database.DEFAULT_PORT}");
-        connectionString.Should().Contain($"{DatabaseConstants.Database.CHARSET_PREFIX}{DatabaseConstants.Database.DEFAULT_CHARSET}");
     }
 
     [Fact]

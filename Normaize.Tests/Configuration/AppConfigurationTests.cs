@@ -50,14 +50,14 @@ public class AppConfigurationTests
         result.Database.Should().BeNull();
         result.User.Should().BeNull();
         result.Password.Should().BeNull();
-        result.Port.Should().Be("3306");
+        result.Port.Should().Be("5432");
     }
 
     [Fact]
     public void GetDatabaseConfig_WhenEnvVarsSet_ShouldReturnCorrectValues()
     {
         // Arrange
-        SetDatabaseEnvironmentVariables("testhost", "testdb", "testuser", "testpass", "3307");
+        SetDatabaseEnvironmentVariables("testhost", "testdb", "testuser", "testpass", "5433");
 
         // Act
         var result = AppConfiguration.GetDatabaseConfig();
@@ -67,7 +67,7 @@ public class AppConfigurationTests
         result.Database.Should().Be("testdb");
         result.User.Should().Be("testuser");
         result.Password.Should().Be("testpass");
-        result.Port.Should().Be("3307");
+        result.Port.Should().Be("5433");
 
         // Cleanup
         ClearDatabaseEnvironmentVariables();
@@ -77,9 +77,8 @@ public class AppConfigurationTests
     public void GetDatabaseConfig_ShouldPrioritizeMYSQLHOST_OverOtherVariants()
     {
         // Arrange
-        Environment.SetEnvironmentVariable("MYSQLHOST", "primary");
-        Environment.SetEnvironmentVariable("MYSQL_HOST", "secondary");
-        Environment.SetEnvironmentVariable("DB_HOST", "tertiary");
+        Environment.SetEnvironmentVariable("POSTGRES_HOST", "primary");
+        Environment.SetEnvironmentVariable("DB_HOST", "secondary");
 
         // Act
         var result = AppConfiguration.GetDatabaseConfig();
@@ -95,7 +94,7 @@ public class AppConfigurationTests
     public void HasDatabaseConnection_WhenAllRequiredVarsSet_ShouldReturnTrue()
     {
         // Arrange
-        SetDatabaseEnvironmentVariables("host", "db", "user", "pass", "3306");
+        SetDatabaseEnvironmentVariables("host", "db", "user", "pass", "5432");
 
         // Act
         var result = AppConfiguration.HasDatabaseConnection();
@@ -111,8 +110,8 @@ public class AppConfigurationTests
     public void HasDatabaseConnection_WhenMissingRequiredVars_ShouldReturnFalse()
     {
         // Arrange
-        Environment.SetEnvironmentVariable("MYSQLHOST", "host");
-        Environment.SetEnvironmentVariable("MYSQLDATABASE", "db");
+        Environment.SetEnvironmentVariable("POSTGRES_HOST", "host");
+        Environment.SetEnvironmentVariable("POSTGRES_DB", "db");
         // Missing user and password
 
         // Act
@@ -233,29 +232,24 @@ public class AppConfigurationTests
 
     private static void SetDatabaseEnvironmentVariables(string host, string database, string user, string password, string port)
     {
-        Environment.SetEnvironmentVariable("MYSQLHOST", host);
-        Environment.SetEnvironmentVariable("MYSQLDATABASE", database);
-        Environment.SetEnvironmentVariable("MYSQLUSER", user);
-        Environment.SetEnvironmentVariable("MYSQLPASSWORD", password);
-        Environment.SetEnvironmentVariable("MYSQLPORT", port);
+        Environment.SetEnvironmentVariable("POSTGRES_HOST", host);
+        Environment.SetEnvironmentVariable("POSTGRES_DB", database);
+        Environment.SetEnvironmentVariable("POSTGRES_USER", user);
+        Environment.SetEnvironmentVariable("POSTGRES_PASSWORD", password);
+        Environment.SetEnvironmentVariable("POSTGRES_PORT", port);
     }
 
     private static void ClearDatabaseEnvironmentVariables()
     {
-        Environment.SetEnvironmentVariable("MYSQLHOST", null);
-        Environment.SetEnvironmentVariable("MYSQLDATABASE", null);
-        Environment.SetEnvironmentVariable("MYSQLUSER", null);
-        Environment.SetEnvironmentVariable("MYSQLPASSWORD", null);
-        Environment.SetEnvironmentVariable("MYSQLPORT", null);
-        Environment.SetEnvironmentVariable("MYSQL_HOST", null);
-        Environment.SetEnvironmentVariable("MYSQL_DATABASE", null);
-        Environment.SetEnvironmentVariable("MYSQL_USER", null);
-        Environment.SetEnvironmentVariable("MYSQL_PASSWORD", null);
-        Environment.SetEnvironmentVariable("MYSQL_PORT", null);
+        Environment.SetEnvironmentVariable("POSTGRES_HOST", null);
         Environment.SetEnvironmentVariable("DB_HOST", null);
+        Environment.SetEnvironmentVariable("POSTGRES_DB", null);
         Environment.SetEnvironmentVariable("DB_NAME", null);
+        Environment.SetEnvironmentVariable("POSTGRES_USER", null);
         Environment.SetEnvironmentVariable("DB_USER", null);
+        Environment.SetEnvironmentVariable("POSTGRES_PASSWORD", null);
         Environment.SetEnvironmentVariable("DB_PASSWORD", null);
+        Environment.SetEnvironmentVariable("POSTGRES_PORT", null);
         Environment.SetEnvironmentVariable("DB_PORT", null);
     }
 }

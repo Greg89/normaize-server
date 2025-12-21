@@ -3,6 +3,19 @@ WORKDIR /app
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 
+# Healthcheck uses curl; install it in the runtime image.
+RUN set -eux; \
+  if command -v apt-get >/dev/null 2>&1; then \
+    apt-get update; \
+    apt-get install -y --no-install-recommends curl; \
+    rm -rf /var/lib/apt/lists/*; \
+  elif command -v apk >/dev/null 2>&1; then \
+    apk add --no-cache curl; \
+  else \
+    echo "No supported package manager found to install curl"; \
+    exit 1; \
+  fi
+
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src

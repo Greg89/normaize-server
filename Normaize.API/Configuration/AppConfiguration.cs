@@ -37,35 +37,40 @@ public static class AppConfiguration
 
     public static DatabaseConfig GetDatabaseConfig()
     {
-        var mysqlHost = Environment.GetEnvironmentVariable("MYSQLHOST") ??
-                        Environment.GetEnvironmentVariable("MYSQL_HOST") ??
-                        Environment.GetEnvironmentVariable("DB_HOST");
-        var mysqlDatabase = Environment.GetEnvironmentVariable("MYSQLDATABASE") ??
-                           Environment.GetEnvironmentVariable("MYSQL_DATABASE") ??
-                           Environment.GetEnvironmentVariable("DB_NAME");
-        var mysqlUser = Environment.GetEnvironmentVariable("MYSQLUSER") ??
-                       Environment.GetEnvironmentVariable("MYSQL_USER") ??
-                       Environment.GetEnvironmentVariable("DB_USER");
-        var mysqlPassword = Environment.GetEnvironmentVariable("MYSQLPASSWORD") ??
-                           Environment.GetEnvironmentVariable("MYSQL_PASSWORD") ??
-                           Environment.GetEnvironmentVariable("DB_PASSWORD");
-        var mysqlPort = Environment.GetEnvironmentVariable("MYSQLPORT") ??
-                       Environment.GetEnvironmentVariable("MYSQL_PORT") ??
-                       Environment.GetEnvironmentVariable("DB_PORT") ??
-                       "3306";
+        var host = Environment.GetEnvironmentVariable("POSTGRES_HOST") ??
+                   Environment.GetEnvironmentVariable("DB_HOST");
+        var database = Environment.GetEnvironmentVariable("POSTGRES_DB") ??
+                       Environment.GetEnvironmentVariable("DB_NAME");
+        var user = Environment.GetEnvironmentVariable("POSTGRES_USER") ??
+                   Environment.GetEnvironmentVariable("DB_USER");
+        var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ??
+                       Environment.GetEnvironmentVariable("DB_PASSWORD");
+        var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ??
+                   Environment.GetEnvironmentVariable("DB_PORT") ??
+                   "5432";
 
         return new DatabaseConfig
         {
-            Host = mysqlHost,
-            Database = mysqlDatabase,
-            User = mysqlUser,
-            Password = mysqlPassword,
-            Port = mysqlPort
+            Host = host,
+            Database = database,
+            User = user,
+            Password = password,
+            Port = port
         };
     }
 
     public static bool HasDatabaseConnection()
     {
+        var explicitConnectionString =
+            Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") ??
+            Environment.GetEnvironmentVariable("CONNECTIONSTRINGS__DEFAULTCONNECTION") ??
+            Environment.GetEnvironmentVariable("DATABASE_URL");
+
+        if (!string.IsNullOrWhiteSpace(explicitConnectionString))
+        {
+            return true;
+        }
+
         var config = GetDatabaseConfig();
         return !string.IsNullOrEmpty(config.Host) &&
                !string.IsNullOrEmpty(config.Database) &&
@@ -101,8 +106,8 @@ public record DatabaseConfig
     public string? Database { get; init; }
     public string? User { get; init; }
     public string? Password { get; init; }
-    public string Port { get; init; } = "3306";
+    public string Port { get; init; } = "5432";
 
     public string ToConnectionString() =>
-        $"Server={Host};Database={Database};User={User};Password={Password};Port={Port};CharSet=utf8mb4;AllowLoadLocalInfile=true;Convert Zero Datetime=True;Allow Zero Datetime=True;";
+        $"Host={Host};Port={Port};Database={Database};Username={User};Password={Password};";
 }

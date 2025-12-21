@@ -70,40 +70,50 @@ public class AppConfigurationService : IAppConfigurationService
 
     public DatabaseConfig GetDatabaseConfig()
     {
-        var mysqlHost = Environment.GetEnvironmentVariable("MYSQLHOST") ??
-                        Environment.GetEnvironmentVariable("MYSQL_HOST") ??
-                        Environment.GetEnvironmentVariable("DB_HOST");
-        var mysqlDatabase = Environment.GetEnvironmentVariable("MYSQLDATABASE") ??
-                           Environment.GetEnvironmentVariable("MYSQL_DATABASE") ??
-                           Environment.GetEnvironmentVariable("DB_NAME");
-        var mysqlUser = Environment.GetEnvironmentVariable("MYSQLUSER") ??
-                       Environment.GetEnvironmentVariable("MYSQL_USER") ??
-                       Environment.GetEnvironmentVariable("DB_USER");
-        var mysqlPassword = Environment.GetEnvironmentVariable("MYSQLPASSWORD") ??
-                           Environment.GetEnvironmentVariable("MYSQL_PASSWORD") ??
-                           Environment.GetEnvironmentVariable("DB_PASSWORD");
-        var mysqlPort = Environment.GetEnvironmentVariable("MYSQLPORT") ??
-                       Environment.GetEnvironmentVariable("MYSQL_PORT") ??
-                       Environment.GetEnvironmentVariable("DB_PORT") ??
-                       "3306";
+        // Prefer standard Postgres env vars; allow generic DB_* fallbacks.
+        // Note: docker-compose sets ConnectionStrings__DefaultConnection for the API container,
+        // but this method returns structured components (Host/Database/User/Password/Port).
+        var host = Environment.GetEnvironmentVariable("POSTGRES_HOST") ??
+                   Environment.GetEnvironmentVariable("DB_HOST");
+        var database = Environment.GetEnvironmentVariable("POSTGRES_DB") ??
+                       Environment.GetEnvironmentVariable("DB_NAME");
+        var user = Environment.GetEnvironmentVariable("POSTGRES_USER") ??
+                   Environment.GetEnvironmentVariable("DB_USER");
+        var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ??
+                       Environment.GetEnvironmentVariable("DB_PASSWORD");
+        var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ??
+                   Environment.GetEnvironmentVariable("DB_PORT") ??
+                   "5432";
 
         return new DatabaseConfig
         {
-            Host = mysqlHost,
-            Database = mysqlDatabase,
-            User = mysqlUser,
-            Password = mysqlPassword,
-            Port = mysqlPort
+            Host = host,
+            Database = database,
+            User = user,
+            Password = password,
+            Port = port
         };
     }
 
     public bool HasDatabaseConnection()
     {
+        // docker-compose uses this, so treat it as a configured DB
+        var explicitConnectionString =
+            Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") ??
+            Environment.GetEnvironmentVariable("CONNECTIONSTRINGS__DEFAULTCONNECTION") ??
+            Environment.GetEnvironmentVariable("DATABASE_URL");
+
+        if (!string.IsNullOrWhiteSpace(explicitConnectionString))
+        {
+            _logger.LogDebug("Database connection detected via explicit connection string");
+            return true;
+        }
+
         var config = GetDatabaseConfig();
         var hasConnection = !string.IsNullOrEmpty(config.Host) &&
-                           !string.IsNullOrEmpty(config.Database) &&
-                           !string.IsNullOrEmpty(config.User) &&
-                           !string.IsNullOrEmpty(config.Password);
+                            !string.IsNullOrEmpty(config.Database) &&
+                            !string.IsNullOrEmpty(config.User) &&
+                            !string.IsNullOrEmpty(config.Password);
 
         _logger.LogDebug("Database connection check: Host={Host}, Database={Database}, User={User}, HasConnection={HasConnection}",
             !string.IsNullOrEmpty(config.Host), !string.IsNullOrEmpty(config.Database), !string.IsNullOrEmpty(config.User),

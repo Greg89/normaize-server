@@ -80,6 +80,7 @@ public static class InfrastructureServiceCollectionExtensions
         }
 
         services.AddScoped<IFileProcessingService, FileProcessingService>();
+        services.AddScoped<IFileValidationService, FileValidationService>();
         services.AddScoped<IFileHashService, FileHashService>();
         services.AddScoped<IAuditService, AuditService>();
 

@@ -18,12 +18,12 @@ namespace Normaize.Tests
 
         static TestSetup()
         {
-            // Clear all MySQL and storage env vars before any tests run
-            Environment.SetEnvironmentVariable("MYSQLHOST", null);
-            Environment.SetEnvironmentVariable("MYSQLDATABASE", null);
-            Environment.SetEnvironmentVariable("MYSQLUSER", null);
-            Environment.SetEnvironmentVariable("MYSQLPASSWORD", null);
-            Environment.SetEnvironmentVariable("MYSQLPORT", null);
+            // Clear all Postgres and storage env vars before any tests run
+            Environment.SetEnvironmentVariable("POSTGRES_HOST", null);
+            Environment.SetEnvironmentVariable("POSTGRES_DB", null);
+            Environment.SetEnvironmentVariable("POSTGRES_USER", null);
+            Environment.SetEnvironmentVariable("POSTGRES_PASSWORD", null);
+            Environment.SetEnvironmentVariable("POSTGRES_PORT", null);
 
             // Clear storage provider configuration
             Environment.SetEnvironmentVariable("STORAGE_PROVIDER", null);
