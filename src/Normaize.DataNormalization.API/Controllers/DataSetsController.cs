@@ -359,8 +359,8 @@ public class DataSetsController : BaseApiController
             var response = MapFromDto(dataSet);
             _logger.LogInformation("✅ Dataset {DataSetId} uploaded successfully", result.DataSetId);
 
-            return CreatedAtAction(nameof(GetDataSet), new { id = result.DataSetId },
-                Success(response, "Dataset uploaded successfully"));
+            return CreatedSuccess(nameof(GetDataSet), new { id = result.DataSetId },
+                response, "Dataset uploaded successfully");
         }
         catch (Exception ex)
         {

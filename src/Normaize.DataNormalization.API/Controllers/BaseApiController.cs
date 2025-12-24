@@ -49,6 +49,24 @@ public abstract class BaseApiController : ControllerBase
     }
 
     /// <summary>
+    /// Creates a 201 Created API response with data and a Location header.
+    /// </summary>
+    protected IActionResult CreatedSuccess<T>(string actionName, object? routeValues, T data, string? message = null)
+    {
+        var response = new ApiResponse<T>
+        {
+            Success = true,
+            Data = data,
+            Message = message ?? "Resource created successfully",
+            Timestamp = DateTime.UtcNow,
+            CorrelationId = GetCorrelationId(),
+            DurationMs = _stopwatch.ElapsedMilliseconds
+        };
+
+        return CreatedAtAction(actionName, routeValues, response);
+    }
+
+    /// <summary>
     /// Creates a successful API response without data
     /// </summary>
     protected IActionResult Success(string? message = null)
