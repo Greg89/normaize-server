@@ -70,10 +70,8 @@ public class GetDataSetsByUserQueryHandler : IRequestHandler<GetDataSetsByUserQu
     public async Task<IReadOnlyList<DataSetDto>> Handle(GetDataSetsByUserQuery request, CancellationToken cancellationToken)
     {
         var dataSets = request.IncludeDeleted
-            ? await _dataSetRepository.GetByUserIdAsync(request.UserId, cancellationToken)
-            : (await _dataSetRepository.GetByUserIdAsync(request.UserId, cancellationToken))
-                .Where(ds => !ds.IsDeleted)
-                .ToList();
+            ? await _dataSetRepository.GetAllByUserIdAsync(request.UserId, cancellationToken)
+            : await _dataSetRepository.GetByUserIdAsync(request.UserId, cancellationToken);
 
         // Apply pagination
         var paginatedDataSets = dataSets

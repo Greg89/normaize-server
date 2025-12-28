@@ -20,24 +20,16 @@ namespace Normaize.DataNormalization.API.Controllers;
 /// Controller for dataset management operations using clean DDD architecture with CQRS
 /// </summary>
 [Authorize]
-public class DataSetsController : BaseApiController
+public class DataSetsController(
+    IMediator mediator,
+    IDataSetDataLoader dataLoader,
+    ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid> submitDuplicateRemovalHandler,
+    ILogger<DataSetsController> logger) : BaseApiController
 {
-    private readonly IMediator _mediator;
-    private readonly IDataSetDataLoader _dataLoader;
-    private readonly ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid> _submitDuplicateRemovalHandler;
-    private readonly ILogger<DataSetsController> _logger;
-
-    public DataSetsController(
-        IMediator mediator,
-        IDataSetDataLoader dataLoader,
-        ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid> submitDuplicateRemovalHandler,
-        ILogger<DataSetsController> logger)
-    {
-        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
-        _dataLoader = dataLoader ?? throw new ArgumentNullException(nameof(dataLoader));
-        _submitDuplicateRemovalHandler = submitDuplicateRemovalHandler ?? throw new ArgumentNullException(nameof(submitDuplicateRemovalHandler));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
+    private readonly IMediator _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+    private readonly IDataSetDataLoader _dataLoader = dataLoader ?? throw new ArgumentNullException(nameof(dataLoader));
+    private readonly ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid> _submitDuplicateRemovalHandler = submitDuplicateRemovalHandler ?? throw new ArgumentNullException(nameof(submitDuplicateRemovalHandler));
+    private readonly ILogger<DataSetsController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
     /// <summary>
     /// Get all datasets for the authenticated user

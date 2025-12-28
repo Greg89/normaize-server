@@ -13,6 +13,10 @@ public interface IDataSetRepository
 {
     Task<DataSet?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<DataSet?> GetByIdWithRowsAsync(Guid id, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Returns all datasets for a user, including soft-deleted datasets.
+    /// </summary>
+    Task<IReadOnlyList<DataSet>> GetAllByUserIdAsync(string userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<DataSet>> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<DataSet>> GetDeletedByUserIdAsync(string userId, CancellationToken cancellationToken = default);
     Task<DataSet> AddAsync(DataSet dataSet, CancellationToken cancellationToken = default);

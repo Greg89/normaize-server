@@ -164,6 +164,31 @@ public class DataSetRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAllByUserIdAsync_ShouldReturnActiveAndDeletedDataSets()
+    {
+        // Arrange
+        var userId = "user-123";
+        var activeDataSet = CreateTestDataSet(userId, "Active Dataset");
+        var deletedDataSet = CreateTestDataSet(userId, "Deleted Dataset");
+
+        await _repository.AddAsync(activeDataSet);
+        await _repository.AddAsync(deletedDataSet);
+
+        deletedDataSet.Delete(userId);
+        await _repository.UpdateAsync(deletedDataSet);
+
+        _dbContext.ChangeTracker.Clear();
+
+        // Act
+        var result = await _repository.GetAllByUserIdAsync(userId, CancellationToken.None);
+
+        // Assert
+        result.Should().HaveCount(2);
+        result.Should().Contain(ds => ds.Name == "Active Dataset" && !ds.IsDeleted);
+        result.Should().Contain(ds => ds.Name == "Deleted Dataset" && ds.IsDeleted);
+    }
+
+    [Fact]
     public async Task UpdateAsync_ShouldUpdateDataSetProperties()
     {
         // Arrange

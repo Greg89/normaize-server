@@ -58,6 +58,17 @@ public class DataSetRepository : IDataSetRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<DataSet>> GetAllByUserIdAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Getting all datasets (including deleted) for user: {UserId}", userId);
+
+        return await _context.DataSets
+            .IgnoreQueryFilters()
+            .Where(ds => ds.UserId == userId)
+            .OrderByDescending(ds => ds.UploadedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<DataSet>> GetDeletedByUserIdAsync(string userId, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Getting deleted datasets for user: {UserId}", userId);
