@@ -461,13 +461,13 @@ public class DataSetsController : BaseApiController
         try
         {
             var userId = GetCurrentUserId();
-            _logger.LogInformation("User {UserId} resetting dataset {DataSetId} with type {ResetType}", 
+            _logger.LogInformation("User {UserId} resetting dataset {DataSetId} with type {ResetType}",
                 userId, id, request.ResetType);
 
             // Map client ResetType (RESTORE/REPROCESS) to domain ResetType enum
             if (!Enum.TryParse<LifecycleResetType>(request.ResetType, ignoreCase: true, out var resetType))
             {
-                return Error($"Invalid reset type: {request.ResetType}. Valid values are RESTORE or REPROCESS", 
+                return Error($"Invalid reset type: {request.ResetType}. Valid values are RESTORE or REPROCESS",
                     "INVALID_RESET_TYPE", 400);
             }
 
@@ -484,16 +484,16 @@ public class DataSetsController : BaseApiController
             if (!result.Success)
             {
                 // Check if it's a file availability issue (409 Conflict)
-                if (result.Error != null && 
-                    (result.Error.Contains("no longer available") || 
-                     result.Error.Contains("not found") || 
+                if (result.Error != null &&
+                    (result.Error.Contains("no longer available") ||
+                     result.Error.Contains("not found") ||
                      result.ErrorCode == "FILE_NOT_AVAILABLE"))
                 {
                     return Error(result.Error ?? result.Message, result.ErrorCode ?? "FILE_NOT_AVAILABLE", 409);
                 }
 
                 // Check if dataset not found or access denied (404)
-                if (result.Error != null && 
+                if (result.Error != null &&
                     (result.Error.Contains("not found") || result.Error.Contains("Access denied")))
                 {
                     return Error(result.Error, "DATASET_NOT_FOUND", 404);
@@ -509,7 +509,7 @@ public class DataSetsController : BaseApiController
 
             if (dataSet == null)
             {
-                return Error("Dataset reset successfully but could not retrieve updated dataset", 
+                return Error("Dataset reset successfully but could not retrieve updated dataset",
                     "RETRIEVAL_FAILED", 500);
             }
 
