@@ -59,7 +59,7 @@ public class DataSetTests
 
         // Act & Assert
         Assert.Throws<ArgumentException>(() =>
-            DataSet.Create(invalidName, "description", "user123", fileInfo, statistics));
+            DataSet.Create(invalidName!, "description", "user123", fileInfo, statistics));
     }
 
     [Theory]
@@ -74,7 +74,7 @@ public class DataSetTests
 
         // Act & Assert
         Assert.Throws<ArgumentException>(() =>
-            DataSet.Create("Test Dataset", "description", invalidUserId, fileInfo, statistics));
+            DataSet.Create("Test Dataset", "description", invalidUserId!, fileInfo, statistics));
     }
 
     [Fact]
@@ -266,7 +266,7 @@ public class DataSetTests
         var dataSet = DataSet.Create("Test", "desc", "user123", CreateTestFileMetadata(), CreateTestStatistics());
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => dataSet.Delete(invalidDeletedBy));
+        Assert.Throws<ArgumentException>(() => dataSet.Delete(invalidDeletedBy!));
     }
 
     [Fact]

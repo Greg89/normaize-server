@@ -50,6 +50,19 @@ public class UpdateDataSetCommandHandler : IRequestHandler<UpdateDataSetCommand,
                 request.Description,
                 request.ModifiedBy);
 
+            if (request.RetentionExpiryDate.HasValue)
+            {
+                var expiryDate = request.RetentionExpiryDate.Value;
+                var expiryDateUtc = expiryDate.Kind switch
+                {
+                    DateTimeKind.Local => expiryDate.ToUniversalTime(),
+                    DateTimeKind.Unspecified => DateTime.SpecifyKind(expiryDate, DateTimeKind.Utc),
+                    _ => expiryDate
+                };
+
+                dataSet.SetRetentionPolicy(expiryDateUtc, request.ModifiedBy);
+            }
+
             // Save changes
             await _dataSetRepository.UpdateAsync(dataSet, cancellationToken);
 
@@ -61,7 +74,8 @@ public class UpdateDataSetCommandHandler : IRequestHandler<UpdateDataSetCommand,
                 new Dictionary<string, object>
                 {
                     { "Name", request.Name },
-                    { "Description", request.Description ?? string.Empty }
+                    { "Description", request.Description ?? string.Empty },
+                    { "RetentionExpiryDate", request.RetentionExpiryDate?.ToString("O") ?? string.Empty }
                 },
                 cancellationToken);
 

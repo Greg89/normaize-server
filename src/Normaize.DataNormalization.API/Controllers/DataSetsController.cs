@@ -126,7 +126,7 @@ public class DataSetsController(
             var userId = GetCurrentUserId();
             _logger.LogInformation("User {UserId} updating dataset {DataSetId}", userId, id);
 
-            var command = new UpdateDataSetCommand(id, userId, request.Name, request.Description, userId);
+            var command = new UpdateDataSetCommand(id, userId, request.Name, request.Description, request.RetentionExpiryDate, userId);
             var result = await _mediator.Send(command);
 
             if (!result.Success)
@@ -766,6 +766,7 @@ public class DataSetsController(
             UpdatedAt = dataSet.LastModifiedAt,
             IsProcessed = !string.IsNullOrEmpty(dataSet.ProcessedData),
             IsDeleted = dataSet.IsDeleted,
+            RetentionExpiryDate = dataSet.RetentionExpiryDate,
             FileMetadata = dataSet.FileInfo != null ? new FileMetadataResponse
             {
                 OriginalFileName = dataSet.FileInfo.FileName,
@@ -806,6 +807,7 @@ public class DataSetsController(
             UpdatedAt = dataSet.LastModifiedAt,
             IsProcessed = dataSet.IsProcessed,
             IsDeleted = dataSet.IsDeleted,
+            RetentionExpiryDate = dataSet.RetentionExpiryDate,
             FileMetadata = new FileMetadataResponse
             {
                 OriginalFileName = dataSet.FileName,

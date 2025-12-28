@@ -94,6 +94,7 @@ public class DataSetResponse
     public DateTime? UpdatedAt { get; set; }
     public bool IsProcessed { get; set; }
     public bool IsDeleted { get; set; }
+    public DateTime? RetentionExpiryDate { get; set; }
     public FileMetadataResponse? FileMetadata { get; set; }
     public DatasetStatisticsResponse Statistics { get; set; } = new();
 }
@@ -129,6 +130,7 @@ public class UpdateDataSetRequest
 {
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public DateTime? RetentionExpiryDate { get; set; }
 }
 
 /// <summary>

@@ -54,7 +54,7 @@ public class UserTests
     public void Register_ShouldThrowArgumentException_WhenAuth0UserIdIsInvalid(string? invalidAuth0UserId)
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => User.Register(invalidAuth0UserId, "Test User"));
+        var exception = Assert.Throws<ArgumentException>(() => User.Register(invalidAuth0UserId!, "Test User"));
         exception.Message.Should().Contain("Auth0 user ID cannot be null or empty");
     }
 

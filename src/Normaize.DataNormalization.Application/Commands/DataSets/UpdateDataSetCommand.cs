@@ -10,6 +10,7 @@ public record UpdateDataSetCommand(
     string UserId,
     string Name,
     string? Description,
+    DateTime? RetentionExpiryDate = null,
     string? ModifiedBy = null) : IRequest<UpdateDataSetResult>;
 
 public record UpdateDataSetResult(
