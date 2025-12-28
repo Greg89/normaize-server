@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Normaize.DataNormalization.Application.Interfaces;
@@ -40,8 +41,16 @@ public class DataSetDataLoader : IDataSetDataLoader
                 throw new InvalidOperationException($"Dataset {dataSetId} not found");
             }
 
-            var rows = await _rowRepository.GetByDataSetIdAsync(dataSetId);
+            // Prefer processed JSON payloads if present (small datasets / legacy path)
+            var processedRows = TryExtractRowsFromJsonPayload(dataSet.ProcessedData, maxRows: int.MaxValue);
+            if (processedRows.Count > 0)
+            {
+                var columns = ExtractColumnsFromDataSet(dataSet, processedRows);
+                return new DataSetData(columns, processedRows);
+            }
 
+            // Fall back to separate rows table
+            var rows = await _rowRepository.GetByDataSetIdAsync(dataSetId);
             return ConvertToDataSetData(dataSet, rows);
         }
         catch (Exception ex)
@@ -63,8 +72,17 @@ public class DataSetDataLoader : IDataSetDataLoader
                 throw new InvalidOperationException($"Dataset {dataSetId} not found");
             }
 
-            var rows = await _rowRepository.GetByDataSetIdAsync(dataSetId, 0, maxRows);
+            // Primary source for preview: DataSet.PreviewData generated at upload/processing time.
+            // This fixes the common case where DataSetRows were never persisted.
+            var previewRows = TryExtractRowsFromPreviewPayload(dataSet.PreviewData, maxRows);
+            if (previewRows.Count > 0)
+            {
+                var columns = ExtractColumnsFromDataSet(dataSet, previewRows);
+                return new DataSetData(columns, previewRows);
+            }
 
+            // Fall back to rows table
+            var rows = await _rowRepository.GetByDataSetIdAsync(dataSetId, 0, maxRows);
             return ConvertToDataSetData(dataSet, rows);
         }
         catch (Exception ex)
@@ -86,7 +104,7 @@ public class DataSetDataLoader : IDataSetDataLoader
                 throw new InvalidOperationException($"Dataset {dataSetId} not found");
             }
 
-            return ExtractColumnsFromDataSet(dataSet);
+            return ExtractColumnsFromDataSet(dataSet, parsedRows: null);
         }
         catch (Exception ex)
         {
@@ -97,33 +115,56 @@ public class DataSetDataLoader : IDataSetDataLoader
 
     private static DataSetData ConvertToDataSetData(DataSet dataSet, IEnumerable<Domain.Entities.DataSetRow> rows)
     {
-        var columns = ExtractColumnsFromDataSet(dataSet);
-        var convertedRows = ConvertRowsToDataSetRows(rows, columns);
+        var columns = ExtractColumnsFromDataSet(dataSet, parsedRows: null);
+        var convertedRows = ConvertRowsToDataSetRows(rows);
 
         return new DataSetData(columns, convertedRows);
     }
 
-    private static IReadOnlyList<DataSetColumn> ExtractColumnsFromDataSet(DataSet dataSet)
+    private static IReadOnlyList<DataSetColumn> ExtractColumnsFromDataSet(
+        DataSet dataSet,
+        IReadOnlyList<Application.Interfaces.DataSetRowData>? parsedRows)
     {
-        var columns = new List<DataSetColumn>();
-
-        // Extract column information from dataset statistics
-        // For now, create generic columns based on the total column count
-        for (int i = 0; i < dataSet.Statistics.ColumnCount; i++)
+        // 1) Best: parse schema JSON produced by FileProcessingService
+        var schemaColumns = TryExtractColumnsFromSchema(dataSet.Schema);
+        if (schemaColumns.Count > 0)
         {
-            columns.Add(new DataSetColumn(
-                name: $"Column{i + 1}",
-                dataType: "string",
-                index: i,
-                allowNull: true));
+            return schemaColumns;
+        }
+
+        // 2) Next: columns can be embedded in preview payload
+        var previewColumns = TryExtractColumnsFromPreviewPayload(dataSet.PreviewData);
+        if (previewColumns.Count > 0)
+        {
+            return previewColumns;
+        }
+
+        // 3) Next: infer from parsed preview/processed rows
+        if (parsedRows is { Count: > 0 })
+        {
+            var firstRow = parsedRows[0].Values;
+            var inferred = firstRow.Keys
+                .Select((name, index) => new DataSetColumn(name, "string", index, allowNull: true))
+                .ToList();
+            if (inferred.Count > 0)
+            {
+                return inferred.AsReadOnly();
+            }
+        }
+
+        // 4) Fallback: generic columns based on statistics
+        var fallbackCount = Math.Max(dataSet.Statistics.ColumnCount, 0);
+        var columns = new List<DataSetColumn>(capacity: fallbackCount);
+        for (int i = 0; i < fallbackCount; i++)
+        {
+            columns.Add(new DataSetColumn($"Column{i + 1}", "string", i, allowNull: true));
         }
 
         return columns.AsReadOnly();
     }
 
     private static IReadOnlyList<Application.Interfaces.DataSetRowData> ConvertRowsToDataSetRows(
-        IEnumerable<Domain.Entities.DataSetRow> entityRows,
-        IReadOnlyList<DataSetColumn> columns)
+        IEnumerable<Domain.Entities.DataSetRow> entityRows)
     {
         var convertedRows = new List<Application.Interfaces.DataSetRowData>();
 
@@ -134,6 +175,203 @@ public class DataSetDataLoader : IDataSetDataLoader
         }
 
         return convertedRows.AsReadOnly();
+    }
+
+    private static IReadOnlyList<DataSetColumn> TryExtractColumnsFromSchema(string? schema)
+    {
+        if (string.IsNullOrWhiteSpace(schema))
+        {
+            return Array.Empty<DataSetColumn>();
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(schema);
+            var root = doc.RootElement;
+
+            if (!TryGetPropertyIgnoreCase(root, "Columns", out var columnsElement) ||
+                columnsElement.ValueKind != JsonValueKind.Array)
+            {
+                return Array.Empty<DataSetColumn>();
+            }
+
+            var columns = new List<DataSetColumn>();
+            var index = 0;
+            foreach (var col in columnsElement.EnumerateArray())
+            {
+                // schema shape: { Columns: [ { Name, Type }, ... ] }
+                var name = TryGetPropertyIgnoreCase(col, "Name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String
+                    ? nameEl.GetString()
+                    : null;
+
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                var dataType = TryGetPropertyIgnoreCase(col, "Type", out var typeEl) && typeEl.ValueKind == JsonValueKind.String
+                    ? typeEl.GetString()
+                    : "string";
+
+                columns.Add(new DataSetColumn(name!, dataType ?? "string", index, allowNull: true));
+                index++;
+            }
+
+            return columns.Count > 0 ? columns.AsReadOnly() : Array.Empty<DataSetColumn>();
+        }
+        catch
+        {
+            return Array.Empty<DataSetColumn>();
+        }
+    }
+
+    private static IReadOnlyList<DataSetColumn> TryExtractColumnsFromPreviewPayload(string? previewData)
+    {
+        if (string.IsNullOrWhiteSpace(previewData))
+        {
+            return Array.Empty<DataSetColumn>();
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(previewData);
+            var root = doc.RootElement;
+
+            if (!TryGetPropertyIgnoreCase(root, "Columns", out var columnsEl) ||
+                columnsEl.ValueKind != JsonValueKind.Array)
+            {
+                return Array.Empty<DataSetColumn>();
+            }
+
+            // preview shape: { Columns: [ "A", "B" ] } (or sometimes array of objects)
+            var columns = new List<DataSetColumn>();
+            var index = 0;
+            foreach (var item in columnsEl.EnumerateArray())
+            {
+                string? name = item.ValueKind switch
+                {
+                    JsonValueKind.String => item.GetString(),
+                    JsonValueKind.Object when TryGetPropertyIgnoreCase(item, "Name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String => nameEl.GetString(),
+                    _ => null
+                };
+
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                columns.Add(new DataSetColumn(name!, "string", index, allowNull: true));
+                index++;
+            }
+
+            return columns.Count > 0 ? columns.AsReadOnly() : Array.Empty<DataSetColumn>();
+        }
+        catch
+        {
+            return Array.Empty<DataSetColumn>();
+        }
+    }
+
+    private static IReadOnlyList<Application.Interfaces.DataSetRowData> TryExtractRowsFromPreviewPayload(string? previewData, int maxRows)
+    {
+        if (string.IsNullOrWhiteSpace(previewData) || maxRows <= 0)
+        {
+            return Array.Empty<Application.Interfaces.DataSetRowData>();
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(previewData);
+            var root = doc.RootElement;
+
+            if (!TryGetPropertyIgnoreCase(root, "Rows", out var rowsEl) || rowsEl.ValueKind != JsonValueKind.Array)
+            {
+                return Array.Empty<Application.Interfaces.DataSetRowData>();
+            }
+
+            var take = Math.Min(maxRows, rowsEl.GetArrayLength());
+            var rowsJson = rowsEl.GetRawText();
+            var dictionaries = JsonSerializer.Deserialize<List<Dictionary<string, object?>>>(rowsJson) ?? new();
+
+            var results = new List<Application.Interfaces.DataSetRowData>(capacity: take);
+            for (var i = 0; i < Math.Min(take, dictionaries.Count); i++)
+            {
+                results.Add(new Application.Interfaces.DataSetRowData(i, dictionaries[i]));
+            }
+
+            return results.AsReadOnly();
+        }
+        catch
+        {
+            return Array.Empty<Application.Interfaces.DataSetRowData>();
+        }
+    }
+
+    private static IReadOnlyList<Application.Interfaces.DataSetRowData> TryExtractRowsFromJsonPayload(string? jsonPayload, int maxRows)
+    {
+        if (string.IsNullOrWhiteSpace(jsonPayload) || maxRows <= 0)
+        {
+            return Array.Empty<Application.Interfaces.DataSetRowData>();
+        }
+
+        // Accept either an array of row objects OR the same wrapped preview shape.
+        try
+        {
+            using var doc = JsonDocument.Parse(jsonPayload);
+            var root = doc.RootElement;
+
+            JsonElement rowsEl;
+            if (root.ValueKind == JsonValueKind.Array)
+            {
+                rowsEl = root;
+            }
+            else if (root.ValueKind == JsonValueKind.Object &&
+                     TryGetPropertyIgnoreCase(root, "Rows", out var wrappedRows) &&
+                     wrappedRows.ValueKind == JsonValueKind.Array)
+            {
+                rowsEl = wrappedRows;
+            }
+            else
+            {
+                return Array.Empty<Application.Interfaces.DataSetRowData>();
+            }
+
+            var take = Math.Min(maxRows, rowsEl.GetArrayLength());
+            var dictionaries = JsonSerializer.Deserialize<List<Dictionary<string, object?>>>(rowsEl.GetRawText()) ?? new();
+
+            var results = new List<Application.Interfaces.DataSetRowData>(capacity: take);
+            for (var i = 0; i < Math.Min(take, dictionaries.Count); i++)
+            {
+                results.Add(new Application.Interfaces.DataSetRowData(i, dictionaries[i]));
+            }
+
+            return results.AsReadOnly();
+        }
+        catch
+        {
+            return Array.Empty<Application.Interfaces.DataSetRowData>();
+        }
+    }
+
+    private static bool TryGetPropertyIgnoreCase(JsonElement element, string name, out JsonElement value)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            value = default;
+            return false;
+        }
+
+        foreach (var prop in element.EnumerateObject())
+        {
+            if (string.Equals(prop.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                value = prop.Value;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
     }
 }
 
