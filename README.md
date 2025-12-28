@@ -7,6 +7,8 @@
 
 A comprehensive web application for normalizing, comparing, analyzing, and visualizing data from various sources.
 
+This repository is the backend API (ASP.NET Core) for the Normaize client. The API uses PostgreSQL via Entity Framework Core and exposes dataset upload/preview, normalization jobs, and analysis endpoints.
+
 ## Features
 
 - **Data Loading**: Support for multiple data sources (CSV, JSON, Excel)
@@ -23,7 +25,7 @@ A comprehensive web application for normalizing, comparing, analyzing, and visua
 ### Backend
 - **.NET 9** Web API
 - **Entity Framework Core** with PostgreSQL
-- **AutoMapper** for object mapping
+- **CQRS (MediatR)** for request/handler routing
 - **Swagger/OpenAPI** for API documentation
 - **CORS** enabled for frontend communication
 - **Docker** for containerization
@@ -43,20 +45,14 @@ A comprehensive web application for normalizing, comparing, analyzing, and visua
 
 ```
 normaize-server/
-├── Normaize.API/           # Main API project
-│   ├── Controllers/        # API endpoints
-│   ├── Services/          # Business logic services
-│   ├── Middleware/        # Custom middleware
-│   └── Program.cs         # Application entry point
-├── Normaize.Core/         # Business logic & models
-│   ├── DTOs/             # Data transfer objects
-│   ├── Interfaces/       # Service interfaces
-│   └── Models/           # Domain models
-├── Normaize.Data/         # Data access layer
-│   ├── Repositories/     # Data repositories
-│   └── NormaizeContext.cs # EF Core context
-├── Normaize.Tests/        # Unit tests
-├── Dockerfile            # Docker configuration
+├── src/
+│   ├── Normaize.DataNormalization.API/            # ASP.NET Core Web API (controllers, Program.cs)
+│   ├── Normaize.DataNormalization.Application/    # CQRS handlers, DTOs, interfaces
+│   ├── Normaize.DataNormalization.Domain/         # Domain entities and value objects
+│   └── Normaize.DataNormalization.Infrastructure/ # EF Core, repositories, services
+├── tests/                                          # Unit/integration tests
+├── docker-compose.yml                               # Local Docker orchestration
+├── Dockerfile                                       # API container image
 └── README.md
 ```
 
@@ -75,42 +71,60 @@ normaize-server/
    cd normaize-server
    ```
 
-2. **Set up environment variables**
-   Create a `.env` file in the root directory:
+2. **Set up configuration / environment variables**
+
+   The API reads configuration from standard .NET configuration sources (appsettings + environment variables). For the database, you can use either:
+
+   - `ConnectionStrings:DefaultConnection` (recommended locally), or
+   - `DATABASE_URL` (Railway-style URL, used as a fallback)
+
+   Example:
    ```env
-   # Database Configuration
-   POSTGRES_HOST=localhost
-   POSTGRES_DB=normaize
-   POSTGRES_USER=your_username
-   POSTGRES_PASSWORD=your_password
-   POSTGRES_PORT=5432
-   
-   # Auth0 Configuration
-   AUTH0_ISSUER=https://your-domain.auth0.com/
-   AUTH0_AUDIENCE=https://your-api.com
-   
-   # Seq Logging (optional for local development)
-   SEQ_URL=https://your-seq-instance.railway.app
-   SEQ_API_KEY=your-seq-api-key
+   # Database
+   ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=normaize;Username=postgres;Password=postgres
+   # or
+   DATABASE_URL=postgresql://user:pass@host:5432/db
+
+   # Auth0 (optional in local dev; API will run unprotected if missing)
+   Auth0__Domain=your-tenant.us.auth0.com
+   Auth0__Audience=your-api-identifier
+
+   # CORS
+   AllowedOrigins__0=http://localhost:5173
+
+   # Storage (local default)
+   Storage__Provider=local
+   Storage__BasePath=uploads
    ```
 
 3. **Run the application**
    ```bash
-   cd Normaize.API
-   dotnet restore
-   dotnet run
+   dotnet run --project src/Normaize.DataNormalization.API
    ```
 
 4. **Access the application**
-   - API: http://localhost:5000
-   - Swagger Documentation: http://localhost:5000/swagger
-   - Health Check: http://localhost:5000/health
+   - API: http://localhost:5001
+   - Swagger UI (development / enabled): http://localhost:5001/
+   - Health Check: http://localhost:5001/health
+
+   Health endpoints:
+   - `GET /health`
+   - `GET /health/ready`
+   - `GET /health/live`
 
 ### Docker Development
 
+Preferred (uses `docker-compose.yml`):
+
+```bash
+docker compose up -d --build
+```
+
+Or build/run the API container directly:
+
 ```bash
 docker build -t normaize-api .
-docker run -p 5000:8080 normaize-api
+docker run -p 5001:8080 normaize-api
 ```
 
 ## API Endpoints
@@ -120,10 +134,11 @@ docker run -p 5000:8080 normaize-api
 
 ### DataSets
 - `GET /api/datasets` - Get all datasets
+- `GET /api/datasets?includeDeleted=true` - Include soft-deleted datasets
 - `GET /api/datasets/{id}` - Get specific dataset
 - `POST /api/datasets/upload` - Upload new dataset
-- `GET /api/datasets/{id}/preview` - Preview dataset data
-- `GET /api/datasets/{id}/schema` - Get dataset schema
+- `GET /api/datasets/{id}/preview?rows=10` - Preview dataset data (default 10 rows, max 100)
+- `GET /api/datasets/{id}/columns` - Get dataset columns
 - `DELETE /api/datasets/{id}` - Delete dataset
 
 For detailed API documentation, see [API.md](docs/API.md).
@@ -138,28 +153,24 @@ For detailed API documentation, see [API.md](docs/API.md).
 
 ### Steps
 1. **Connect your repository** to Railway
-2. **Add MySQL plugin** in Railway dashboard
-3. **Set environment variables** in Railway:
-   - `MYSQLHOST` (from Railway MySQL plugin)
-   - `MYSQLDATABASE` (from Railway MySQL plugin)
-   - `MYSQLUSER` (from Railway MySQL plugin)
-   - `MYSQLPASSWORD` (from Railway MySQL plugin)
-   - `MYSQLPORT` (from Railway MySQL plugin)
+2. **Add PostgreSQL plugin** in Railway dashboard
+3. **Set environment variables** in Railway (typical):
+   - `DATABASE_URL` (from Railway PostgreSQL)
+   - `Auth0__Domain` / `Auth0__Audience` (if enabling auth)
+   - `AllowedOrigins__0` (your client URL)
 4. **Deploy** - Railway will automatically build and deploy using the Dockerfile
 
 ### Environment Variables
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `MYSQLHOST` | MySQL host address | Yes |
-| `MYSQLDATABASE` | Database name | Yes |
-| `MYSQLUSER` | Database username | Yes |
-| `MYSQLPASSWORD` | Database password | Yes |
-| `MYSQLPORT` | Database port | Yes |
-| `AUTH0_ISSUER` | Auth0 issuer URL | Yes |
-| `AUTH0_AUDIENCE` | Auth0 audience | Yes |
-| `SEQ_URL` | Seq logging server URL | No* |
-| `SEQ_API_KEY` | Seq API key | No* |
+| `DATABASE_URL` | Railway Postgres URL (fallback if no connection string) | Yes (Railway) |
+| `ConnectionStrings__DefaultConnection` | Standard Npgsql connection string | Yes (local) |
+| `Auth0__Domain` | Auth0 domain (without `https://`) | No (recommended) |
+| `Auth0__Audience` | Auth0 audience / API identifier | No (recommended) |
+| `AllowedOrigins__0` | Allowed CORS origin for the client | Yes (production) |
+| `Storage__Provider` | `local` or `s3` | No |
+| `Storage__BasePath` | Local upload base directory | No (local) |
 | `PORT` | Application port (set by Railway) | No |
 
 *Seq logging is only enabled in non-Development environments when `SEQ_URL` is provided.
@@ -173,9 +184,8 @@ dotnet test
 
 ### Database Migrations
 ```bash
-cd Normaize.API
-dotnet ef migrations add MigrationName
-dotnet ef database update
+dotnet ef migrations add MigrationName --project src/Normaize.DataNormalization.Infrastructure --startup-project src/Normaize.DataNormalization.API
+dotnet ef database update --project src/Normaize.DataNormalization.Infrastructure --startup-project src/Normaize.DataNormalization.API
 ```
 
 ### Code Style
