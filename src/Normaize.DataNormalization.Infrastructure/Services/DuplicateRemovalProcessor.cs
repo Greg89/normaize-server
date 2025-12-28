@@ -23,7 +23,7 @@ public interface IDuplicateRemovalProcessor
     Task<DuplicateRemovalResult> RemoveDuplicatesAsync(
         DataSetData data,
         DuplicateRemovalOptions options,
-        IProgress<DuplicateRemovalProgress> progressCallback);
+        IProgress<DuplicateRemovalProgress>? progressCallback = null);
 }
 
 /// <summary>
@@ -96,7 +96,7 @@ public class DuplicateRemovalProcessor : IDuplicateRemovalProcessor
     public async Task<DuplicateRemovalResult> RemoveDuplicatesAsync(
         DataSetData data,
         DuplicateRemovalOptions options,
-        IProgress<DuplicateRemovalProgress> progressCallback)
+        IProgress<DuplicateRemovalProgress>? progressCallback = null)
     {
         var startTime = DateTime.UtcNow;
         _logger.LogInformation("Starting duplicate removal for {RowCount} rows using columns: {KeyColumns}",
@@ -158,7 +158,7 @@ public class DuplicateRemovalProcessor : IDuplicateRemovalProcessor
     private async Task<Dictionary<string, List<DataSetRowData>>> CreateDuplicateGroupsAsync(
         DataSetData data,
         DuplicateRemovalOptions options,
-        IProgress<DuplicateRemovalProgress> progressCallback)
+        IProgress<DuplicateRemovalProgress>? progressCallback)
     {
         var duplicateGroups = new Dictionary<string, List<DataSetRowData>>();
         var processedRows = 0;
@@ -222,7 +222,7 @@ public class DuplicateRemovalProcessor : IDuplicateRemovalProcessor
     private List<DataSetRowData> ApplyRetentionStrategy(
         Dictionary<string, List<DataSetRowData>> duplicateGroups,
         DuplicateRemovalOptions options,
-        IProgress<DuplicateRemovalProgress> progressCallback)
+        IProgress<DuplicateRemovalProgress>? progressCallback)
     {
         var retainedRows = new List<DataSetRowData>();
         var processedGroups = 0;

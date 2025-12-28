@@ -22,7 +22,7 @@ public class FileValidationService : IFileValidationService
     }
 
     public Task<FileValidationResult> ValidateFileAsync(
-        string fileName,
+        string? fileName,
         long fileSize,
         CancellationToken cancellationToken = default)
     {
@@ -76,7 +76,7 @@ public class FileValidationService : IFileValidationService
         return fileSize > 0 && fileSize <= maxSize;
     }
 
-    public bool IsFileExtensionValid(string fileName)
+    public bool IsFileExtensionValid(string? fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
         {
@@ -102,7 +102,7 @@ public class FileValidationService : IFileValidationService
         return true;
     }
 
-    public bool IsFileNameSafe(string fileName)
+    public bool IsFileNameSafe(string? fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
         {
@@ -125,7 +125,7 @@ public class FileValidationService : IFileValidationService
         return true;
     }
 
-    public string GetFileExtension(string fileName)
+    public string GetFileExtension(string? fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
         {

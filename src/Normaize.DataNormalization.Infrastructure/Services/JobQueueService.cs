@@ -23,7 +23,7 @@ public class JobQueueService : IJobQueue
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task EnqueueAsync(NormalizationJob job)
+    public Task EnqueueAsync(NormalizationJob job)
     {
         if (job == null) throw new ArgumentNullException(nameof(job));
 
@@ -47,6 +47,8 @@ public class JobQueueService : IJobQueue
             _logger.LogError(ex, "Error enqueuing job {JobId}", job.Id);
             throw;
         }
+
+        return Task.CompletedTask;
     }
 
     public async Task<NormalizationJob?> DequeueAsync()

@@ -46,7 +46,7 @@ public class GetUserProfileQueryHandler : IRequestHandler<GetUserProfileQuery, U
         {
             Id = user.Id,
             Auth0UserId = user.Auth0UserId,
-            DisplayName = user.DisplayName,
+            DisplayName = user.DisplayName ?? string.Empty,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt,
             Preferences = new UserPreferencesDto

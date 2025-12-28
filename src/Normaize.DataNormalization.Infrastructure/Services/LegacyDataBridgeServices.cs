@@ -192,7 +192,7 @@ public class DataSetDataPersister : IDataSetDataPersister
         }
     }
 
-    public async Task<string> CreateBackupAsync(Guid dataSetId)
+    public Task<string> CreateBackupAsync(Guid dataSetId)
     {
         _logger.LogInformation("Creating backup for dataset {DataSetId}", dataSetId);
 
@@ -206,7 +206,7 @@ public class DataSetDataPersister : IDataSetDataPersister
             // This could involve copying data to a backup table or storage location
 
             _logger.LogInformation("Created backup {BackupId} for dataset {DataSetId}", backupId, dataSetId);
-            return backupId;
+            return Task.FromResult(backupId);
         }
         catch (Exception ex)
         {
@@ -215,7 +215,7 @@ public class DataSetDataPersister : IDataSetDataPersister
         }
     }
 
-    public async Task<bool> RestoreFromBackupAsync(Guid dataSetId, string backupId)
+    public Task<bool> RestoreFromBackupAsync(Guid dataSetId, string backupId)
     {
         _logger.LogInformation("Restoring dataset {DataSetId} from backup {BackupId}", dataSetId, backupId);
 
@@ -225,12 +225,12 @@ public class DataSetDataPersister : IDataSetDataPersister
             // This would involve restoring data from the backup location
 
             _logger.LogInformation("Successfully restored dataset {DataSetId} from backup {BackupId}", dataSetId, backupId);
-            return true;
+            return Task.FromResult(true);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to restore dataset {DataSetId} from backup {BackupId}", dataSetId, backupId);
-            return false;
+            return Task.FromResult(false);
         }
     }
 

@@ -21,7 +21,7 @@ public class StatisticalCalculationService : IStatisticalCalculationService
         _logger = logger;
     }
 
-    public async Task<Statistics> GenerateDataSummaryAsync(
+    public Task<Statistics> GenerateDataSummaryAsync(
         DataSet dataSet,
         List<Dictionary<string, object?>> data,
         CancellationToken cancellationToken = default)
@@ -34,12 +34,12 @@ public class StatisticalCalculationService : IStatisticalCalculationService
         {
             if (data.Count == 0)
             {
-                return Statistics.CreateDataSummary(
+                return Task.FromResult(Statistics.CreateDataSummary(
                     dataSet.Id,
                     dataSet.Name,
                     0, 0, 0, 0,
                     new Dictionary<string, ColumnSummary>(),
-                    TimeSpan.Zero);
+                    TimeSpan.Zero));
             }
 
             var columns = data[0].Keys.ToList();
@@ -117,7 +117,7 @@ public class StatisticalCalculationService : IStatisticalCalculationService
             _logger.LogInformation("Successfully generated data summary for DataSet {DataSetId} in {ProcessingTimeMs}ms",
                 dataSet.Id, processingTime.TotalMilliseconds);
 
-            return result;
+            return Task.FromResult(result);
         }
         catch (Exception ex)
         {
