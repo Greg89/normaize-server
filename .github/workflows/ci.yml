@@ -109,13 +109,13 @@ jobs:
         echo "Validating image contents..."
         docker run --rm --entrypoint="" normaize-api ls -la /app/ || exit 1
         
-        # Test that the main application DLL exists
+        # Test that the main application DLL exists (updated for DDD structure)
         echo "Testing application files..."
-        docker run --rm --entrypoint="" normaize-api test -f /app/Normaize.API.dll && echo "✅ Application DLL found" || exit 1
+        docker run --rm --entrypoint="" normaize-api test -f /app/Normaize.DataNormalization.API.dll && echo "✅ Application DLL found" || exit 1
         
         # Test that the health check endpoint is accessible
         echo "Testing health check endpoint..."
-        docker run --rm --entrypoint="" normaize-api test -f /app/Normaize.API.dll && echo "✅ Health check endpoint available" || exit 1
+        docker run --rm --entrypoint="" normaize-api test -f /app/Normaize.DataNormalization.API.dll && echo "✅ Health check endpoint available" || exit 1
         
         echo "✅ Docker image test completed"
         echo "Image builds successfully and contains all required files"
@@ -129,14 +129,19 @@ jobs:
     timeout-minutes: 15
     
     services:
-      mysql:
-        image: mysql:8.0
+      postgres:
+        image: postgres:15-alpine
         env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_TEST_ROOT_PASSWORD }}
-          MYSQL_DATABASE: normaize
+          POSTGRES_PASSWORD: normaize_password
+          POSTGRES_USER: normaize_user
+          POSTGRES_DB: normaize
         ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U normaize_user -d normaize"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
  
     steps:
     - name: Checkout code
@@ -147,14 +152,27 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
-    - name: Install MySQL Client
-      run: sudo apt-get update && sudo apt-get install -y mysql-client
+    - name: Install PostgreSQL Client
+      run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
-    - name: Wait for MySQL
+    - name: Wait for PostgreSQL
       run: |
-        echo "Waiting for MySQL to be ready..."
-        timeout 60 bash -c 'until mysql -h 127.0.0.1 -P 3306 -u root -p${{ secrets.MYSQL_TEST_ROOT_PASSWORD }} -e "SELECT 1" > /dev/null 2>&1; do sleep 2; done'
-        echo "✅ MySQL is ready"
+        echo "Waiting for PostgreSQL to be ready..."
+        timeout 60 bash -c 'until pg_isready -h 127.0.0.1 -p 5432 -U normaize_user > /dev/null 2>&1; do sleep 2; done'
+        echo "✅ PostgreSQL is ready"
+
+    - name: Enable PostgreSQL Extensions
+      env:
+        PGPASSWORD: normaize_password
+      run: |
+        echo "Enabling required PostgreSQL extensions and creating schemas..."
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "CREATE EXTENSION IF NOT EXISTS \"pg_trgm\";"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "CREATE SCHEMA IF NOT EXISTS data_normalization;"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "CREATE SCHEMA IF NOT EXISTS data_sets;"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "CREATE SCHEMA IF NOT EXISTS user_settings;"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "CREATE SCHEMA IF NOT EXISTS audit;"
+        echo "✅ PostgreSQL extensions and schemas configured"
 
     - name: Restore dependencies
       run: dotnet restore
@@ -164,27 +182,53 @@ jobs:
 
     - name: Install EF Core Tools
       run: |
-        dotnet tool install --global dotnet-ef || dotnet tool update --global dotnet-ef
+        dotnet tool install --global dotnet-ef --version 9.0.10 || dotnet tool update --global dotnet-ef --version 9.0.10
         dotnet ef --version
 
     - name: Apply EF Core Migration
       env:
-        MYSQLHOST: 127.0.0.1
-        MYSQLDATABASE: normaize
-        MYSQLUSER: root
-        MYSQLPASSWORD: ${{ secrets.MYSQL_TEST_ROOT_PASSWORD }}
-        MYSQLPORT: 3306
+        ConnectionStrings__DefaultConnection: "Host=127.0.0.1;Port=5432;Database=normaize;Username=normaize_user;Password=normaize_password"
       run: |
-        dotnet ef database update --project Normaize.Data --startup-project Normaize.API --configuration Release --verbose
+        echo "Applying EF Core migrations..."
+        echo "Connection: Host=127.0.0.1;Port=5432;Database=normaize;Username=normaize_user"
+        
+        # List available migrations
+        echo "Available migrations:"
+        dotnet ef migrations list --project src/Normaize.DataNormalization.Infrastructure --startup-project src/Normaize.DataNormalization.API --configuration Release
+        
+        # Apply migrations with verbose output
+        echo "Applying database update..."
+        dotnet ef database update --project src/Normaize.DataNormalization.Infrastructure --startup-project src/Normaize.DataNormalization.API --configuration Release --verbose
+        
+        if [ $? -eq 0 ]; then
+          echo "✅ Migrations applied successfully"
+        else
+          echo "❌ Migration failed with exit code $?"
+          exit 1
+        fi
 
     - name: Verify Migration
+      env:
+        PGPASSWORD: normaize_password
       run: |
         echo "Verifying database migration..."
         
-        # Check if tables exist
-        mysql -h 127.0.0.1 -P 3306 -u root -p${{ secrets.MYSQL_TEST_ROOT_PASSWORD }} normaize -e "SHOW TABLES;"
+        # Check if tables exist in all schemas
+        echo "Tables in public schema:"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "\dt"
         
-        # Check if DataSets table exists and has expected columns
-        mysql -h 127.0.0.1 -P 3306 -u root -p${{ secrets.MYSQL_TEST_ROOT_PASSWORD }} normaize -e "DESCRIBE DataSets;"
+        echo ""
+        echo "Tables in data_normalization schema:"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "\dt data_normalization.*"
+        
+        # Check if datasets table exists in data_normalization schema
+        echo ""
+        echo "Checking datasets table structure:"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "\d data_normalization.datasets"
+        
+        # Check if normalization_jobs table exists (key DDD table)
+        echo ""
+        echo "Checking normalization_jobs table structure:"
+        psql -h 127.0.0.1 -p 5432 -U normaize_user -d normaize -c "\d data_normalization.normalization_jobs"
         
         echo "✅ Database migration verification completed"

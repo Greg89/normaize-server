@@ -39,7 +39,7 @@ jobs:
     - name: Get current version from .csproj
       id: current-version
       run: |
-        version=$(grep -o '<Version>.*</Version>' Normaize.API/Normaize.API.csproj | sed 's/<Version>\(.*\)<\/Version>/\1/')
+        version=$(grep -o '<Version>.*</Version>' src/Normaize.DataNormalization.API/Normaize.DataNormalization.API.csproj | sed 's/<Version>\(.*\)<\/Version>/\1/')
         if [ -z "$version" ]; then
           version="1.0.0"
         fi

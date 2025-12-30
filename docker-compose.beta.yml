@@ -1,0 +1,21 @@
+version: '3.8'
+
+# This file simulates the Beta/Railway environment locally
+# Use: docker-compose -f docker-compose.yml -f docker-compose.beta.yml up
+
+services:
+  normaize-api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Beta
+      - Features__EnableSwagger=true
+      - HealthChecks__DetailedErrors=true
+      - Logging__LogLevel__Default=Information
+      - Logging__LogLevel__Microsoft.EntityFrameworkCore=Information
+      - Database__Provider=PostgreSQL
+      - Storage__Provider=Local
+      - Storage__BasePath=/app/data
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    # Remove restart policy for testing
+    restart: "no"

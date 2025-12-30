@@ -1,0 +1,27 @@
+# This file provides overrides for local development
+# It extends docker-compose.yml with dev-friendly settings
+
+services:
+  normaize-api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Features__EnableSwagger=true
+      - Logging__LogLevel__Default=Debug
+      - Logging__LogLevel__Microsoft.EntityFrameworkCore=Information
+      # Auth0 (must match client VITE_AUTH0_DOMAIN / VITE_AUTH0_AUDIENCE)
+      - Auth0__Domain=dev-0kihwasowi558bwz.us.auth0.com
+      - Auth0__Audience=https://api.normaize.com
+      # CORS
+      - AllowedOrigins__0=http://localhost:5173
+      - AllowedOrigins__1=http://localhost:5174
+      # Required for readiness health checks
+      - Storage__Provider=local
+      - Storage__BasePath=uploads
+      - DATABASE_URL=postgresql://normaize_user:normaize_password@postgres:5432/normaize
+    # Map local uploads folder for easy access
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    # Enable debugging
+    labels:
+      - "dev.local=true"
