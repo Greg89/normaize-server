@@ -1,3 +1,4 @@
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +16,7 @@ using Normaize.DataNormalization.Infrastructure.Services;
 using Normaize.DataNormalization.Infrastructure.Handlers;
 using Normaize.DataNormalization.Infrastructure.Workers;
 using Normaize.DataNormalization.Infrastructure.HealthChecks;
+using Normaize.DataNormalization.Infrastructure.Behaviors;
 using Normaize.DataNormalization.Infrastructure.Logging;
 
 namespace Normaize.DataNormalization.Infrastructure;
@@ -95,6 +97,10 @@ public static class InfrastructureServiceCollectionExtensions
             cfg.RegisterServicesFromAssembly(typeof(InfrastructureServiceCollectionExtensions).Assembly);
             cfg.RegisterServicesFromAssembly(typeof(Normaize.DataNormalization.Application.Statistics.Commands.GenerateDataSummary.GenerateDataSummaryCommand).Assembly);
         });
+
+        // MediatR Pipeline Behaviors - Observability
+        // This behavior adds logging, timing, and tracing to all MediatR requests
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ObservabilityBehavior<,>));
 
         // Application Services
         services.AddScoped<IJobQueue, JobQueueService>();
