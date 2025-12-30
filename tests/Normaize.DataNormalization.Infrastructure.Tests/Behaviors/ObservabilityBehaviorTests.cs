@@ -32,11 +32,11 @@ public class ObservabilityBehaviorTests
         var expectedResponse = new TestResponse("Success");
         var nextCalled = false;
 
-        RequestHandlerDelegate<TestResponse> next = () =>
+        Task<TestResponse> next()
         {
             nextCalled = true;
             return Task.FromResult(expectedResponse);
-        };
+        }
 
         // Act
         var result = await _behavior.Handle(request, next, CancellationToken.None);
@@ -64,11 +64,11 @@ public class ObservabilityBehaviorTests
         var expectedResponse = new TestResponse("Success");
         var delay = TimeSpan.FromMilliseconds(50);
 
-        RequestHandlerDelegate<TestResponse> next = async () =>
+        async Task<TestResponse> next()
         {
             await Task.Delay(delay);
             return expectedResponse;
-        };
+        }
 
         // Act
         var result = await _behavior.Handle(request, next, CancellationToken.None);
@@ -104,10 +104,10 @@ public class ObservabilityBehaviorTests
         var request = new TestRequest();
         var expectedException = new InvalidOperationException("Test error");
 
-        RequestHandlerDelegate<TestResponse> next = () =>
+        Task<TestResponse> next()
         {
             throw expectedException;
-        };
+        }
 
         // Act
         Func<Task> act = async () => await _behavior.Handle(request, next, CancellationToken.None);
@@ -156,10 +156,10 @@ public class ObservabilityBehaviorTests
         var request = new TestRequest();
         var expectedResponse = new TestResponse("Success");
 
-        RequestHandlerDelegate<TestResponse> next = () =>
+        Task<TestResponse> next()
         {
             return Task.FromResult(expectedResponse);
-        };
+        }
 
         // Act
         var result = await _behavior.Handle(request, next, CancellationToken.None);
@@ -198,13 +198,13 @@ public class ObservabilityBehaviorTests
         var requestTypeTag = (string?)null;
         var requestStatusTag = (string?)null;
 
-        RequestHandlerDelegate<TestResponse> next = () =>
+        Task<TestResponse> next()
         {
             requestNameTag = Activity.Current?.GetTagItem("request.name")?.ToString();
             requestIdTag = Activity.Current?.GetTagItem("request.id")?.ToString();
             requestTypeTag = Activity.Current?.GetTagItem("request.type")?.ToString();
             return Task.FromResult(expectedResponse);
-        };
+        }
 
         // Act
         var result = await _behavior.Handle(request, next, CancellationToken.None);
@@ -246,10 +246,10 @@ public class ObservabilityBehaviorTests
         var errorMessageTag = (string?)null;
         var requestStatusTag = (string?)null;
 
-        RequestHandlerDelegate<TestResponse> next = () =>
+        Task<TestResponse> next()
         {
             throw expectedException;
-        };
+        }
 
         // Act
         Func<Task> act = async () => await _behavior.Handle(request, next, CancellationToken.None);
@@ -275,10 +275,10 @@ public class ObservabilityBehaviorTests
         var expectedResponse = new TestResponse("Success");
         Activity.Current = null;
 
-        RequestHandlerDelegate<TestResponse> next = () =>
+        Task<TestResponse> next()
         {
             return Task.FromResult(expectedResponse);
-        };
+        }
 
         // Act
         var result = await _behavior.Handle(request, next, CancellationToken.None);
@@ -296,11 +296,11 @@ public class ObservabilityBehaviorTests
         var delay = TimeSpan.FromMilliseconds(100);
         var tolerance = TimeSpan.FromMilliseconds(50); // Allow some tolerance for test execution
 
-        RequestHandlerDelegate<TestResponse> next = async () =>
+        async Task<TestResponse> next()
         {
             await Task.Delay(delay);
             return expectedResponse;
-        };
+        }
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -361,10 +361,10 @@ public class ObservabilityBehaviorTests
         var request = new TestRequest();
         var expectedException = new ArgumentException("Invalid argument", "paramName");
 
-        RequestHandlerDelegate<TestResponse> next = () =>
+        Task<TestResponse> next()
         {
             throw expectedException;
-        };
+        }
 
         // Act
         Func<Task> act = async () => await _behavior.Handle(request, next, CancellationToken.None);
