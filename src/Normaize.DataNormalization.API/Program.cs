@@ -1,5 +1,6 @@
 using Normaize.DataNormalization.Infrastructure;
 using Normaize.DataNormalization.Infrastructure.Logging;
+using Normaize.DataNormalization.Infrastructure.Middleware;
 using Normaize.DataNormalization.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -201,6 +202,10 @@ else
 Console.WriteLine("🚀 Starting Normaize Data Normalization API...");
 Console.WriteLine($"📍 Environment: {app.Environment.EnvironmentName}");
 Console.WriteLine($"🌐 Listening on: {(app.Environment.IsDevelopment() ? (isRunningInContainer ? url : "http://localhost:5001") : url)}");
+
+// Add correlation ID middleware early in pipeline (before exception handler)
+// This ensures correlation IDs are available for all logs, including error logs
+app.UseCorrelationId();
 
 // Add global exception handler for better error logging
 app.Use(async (context, next) =>
