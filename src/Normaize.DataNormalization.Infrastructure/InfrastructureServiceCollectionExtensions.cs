@@ -17,6 +17,7 @@ using Normaize.DataNormalization.Infrastructure.Handlers;
 using Normaize.DataNormalization.Infrastructure.Workers;
 using Normaize.DataNormalization.Infrastructure.HealthChecks;
 using Normaize.DataNormalization.Infrastructure.Behaviors;
+using Normaize.DataNormalization.Infrastructure.Telemetry;
 using Normaize.DataNormalization.Infrastructure.Logging;
 
 namespace Normaize.DataNormalization.Infrastructure;
@@ -32,6 +33,9 @@ public static class InfrastructureServiceCollectionExtensions
     {
         // Note: Serilog is configured earlier via builder.Host.ConfigureSerilog() in Program.cs
         // This ensures proper initialization order with the host builder
+
+        // OpenTelemetry Tracing
+        services.AddOpenTelemetryTracing(configuration);
 
         // Database
         services.AddDbContext<DataNormalizationDbContext>(options =>

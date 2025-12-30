@@ -53,7 +53,8 @@ public static class SerilogConfiguration
             .Enrich.WithMachineName()
             .Enrich.WithEnvironmentName()
             .Enrich.WithProperty("Application", "Normaize")
-            .Enrich.WithProperty("Version", GetVersion());
+            .Enrich.WithProperty("Version", GetVersion())
+            .Enrich.With<TraceContextEnricher>(); // Add OpenTelemetry trace context
 
         // Add Seq sink if configured
         var seqServerUrl = configuration["Seq:ServerUrl"];
