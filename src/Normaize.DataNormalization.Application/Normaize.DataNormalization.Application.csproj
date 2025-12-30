@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\Normaize.DataNormalization.Domain\Normaize.DataNormalization.Domain.csproj" />
@@ -16,3 +16,4 @@
   </PropertyGroup>
 
 </Project>
+
