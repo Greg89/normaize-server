@@ -15,6 +15,7 @@ using Normaize.DataNormalization.Infrastructure.Services;
 using Normaize.DataNormalization.Infrastructure.Handlers;
 using Normaize.DataNormalization.Infrastructure.Workers;
 using Normaize.DataNormalization.Infrastructure.HealthChecks;
+using Normaize.DataNormalization.Infrastructure.Logging;
 
 namespace Normaize.DataNormalization.Infrastructure;
 
@@ -27,6 +28,9 @@ public static class InfrastructureServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        // Note: Serilog is configured earlier via builder.Host.ConfigureSerilog() in Program.cs
+        // This ensures proper initialization order with the host builder
+
         // Database
         services.AddDbContext<DataNormalizationDbContext>(options =>
         {

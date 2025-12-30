@@ -1,4 +1,5 @@
 using Normaize.DataNormalization.Infrastructure;
+using Normaize.DataNormalization.Infrastructure.Logging;
 using Normaize.DataNormalization.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -8,12 +9,8 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog for simple console logging
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .CreateLogger();
-
-builder.Host.UseSerilog();
+// Configure Serilog early via Infrastructure extension
+builder.Host.ConfigureSerilog(builder.Configuration);
 
 // Add basic services
 builder.Services.AddControllers();
