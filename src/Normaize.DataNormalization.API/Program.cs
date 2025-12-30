@@ -92,7 +92,7 @@ else
 // Configure Swagger with JWT Bearer authentication
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new()
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
         Title = "Normaize Data Normalization API",
         Version = "v1",

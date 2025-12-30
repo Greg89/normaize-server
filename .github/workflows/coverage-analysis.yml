@@ -8,7 +8,7 @@ on:
     - cron: '0 2 * * *'
 
 env:
-  DOTNET_VERSION: '9.0.x'
+  DOTNET_VERSION: '10.0.x'
   SONAR_PROJECT_KEY: 'Greg89_normaize-server'
   SONAR_ORGANIZATION: 'greg89'
 

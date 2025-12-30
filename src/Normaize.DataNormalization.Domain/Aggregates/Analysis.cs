@@ -40,6 +40,7 @@ public class Analysis
 
     private Analysis() // EF Core constructor
     {
+        Id = AnalysisId.Unpersisted;
         Name = string.Empty;
     }
 
