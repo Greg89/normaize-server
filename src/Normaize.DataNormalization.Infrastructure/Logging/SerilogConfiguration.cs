@@ -57,12 +57,41 @@ public static class SerilogConfiguration
             .Enrich.With<TraceContextEnricher>(); // Add OpenTelemetry trace context
 
         // Add Seq sink if configured
-        var seqServerUrl = configuration["Seq:ServerUrl"];
+        // Check both configuration and environment variable
+        var seqServerUrl = configuration["Seq:ServerUrl"] 
+            ?? Environment.GetEnvironmentVariable("SEQ_URL");
+        
+        // Also check for API key
+        var seqApiKey = configuration["Seq:ApiKey"] 
+            ?? Environment.GetEnvironmentVariable("SEQ_API_KEY");
+        
         if (!string.IsNullOrWhiteSpace(seqServerUrl))
         {
-            loggerConfiguration.WriteTo.Seq(
+            // Configure Seq sink with optional API key
+            var seqSinkConfig = loggerConfiguration.WriteTo.Seq(
                 serverUrl: seqServerUrl,
                 restrictedToMinimumLevel: LogEventLevel.Information);
+            
+            // Set API key if provided (using the Seq sink's configuration)
+            if (!string.IsNullOrWhiteSpace(seqApiKey))
+            {
+                seqSinkConfig = loggerConfiguration.WriteTo.Seq(
+                    serverUrl: seqServerUrl,
+                    apiKey: seqApiKey,
+                    restrictedToMinimumLevel: LogEventLevel.Information);
+            }
+            
+            // Always log Seq configuration for diagnostics
+            Console.WriteLine($"✅ Seq logging configured: {seqServerUrl}{(string.IsNullOrWhiteSpace(seqApiKey) ? "" : " (with API key)")}");
+        }
+        else
+        {
+            // Always log when Seq is not configured for troubleshooting
+            var configValue = configuration["Seq:ServerUrl"];
+            var envValue = Environment.GetEnvironmentVariable("SEQ_URL");
+            Console.WriteLine($"⚠️  Seq logging not configured");
+            Console.WriteLine($"   Config value: {(string.IsNullOrWhiteSpace(configValue) ? "empty" : "set")}");
+            Console.WriteLine($"   SEQ_URL env var: {(string.IsNullOrWhiteSpace(envValue) ? "not set" : "set")}");
         }
 
         // Always write to console
