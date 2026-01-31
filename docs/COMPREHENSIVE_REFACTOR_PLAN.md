@@ -43,7 +43,7 @@ This document outlines a comprehensive, incremental refactor plan for both the N
 - ✅ ID types consistent (Analysis migrated to Guid)
 - ✅ Pagination total counts implemented (Analyses + DataSets)
 - ✅ Jobs list pagination implemented
-- ⚠️ Temporary `[AllowAnonymous]` attributes for testing
+- ✅ Removed temporary anonymous access patterns (auth hardened; no test-user fallback in API)
 - ⚠️ Placeholder logic in some endpoints (e.g., `GetRetentionStatus`)
 - ⚠️ Missing comprehensive error handling
 - ⚠️ Application layer test coverage needs expansion
@@ -85,6 +85,10 @@ This document outlines a comprehensive, incremental refactor plan for both the N
    - Impact: Security vulnerability
    - Effort: 1-2 days
    - Files: All controllers in API layer
+   - Status: ✅ Completed (January 31, 2026)
+   - Notes:
+     - API no longer falls back to a hardcoded user id for unauthenticated requests
+     - When Auth0 config is missing, protected endpoints return 401 (deny-all auth scheme)
 
 2. **Fix Placeholder Implementations**
    - Location: `GetRetentionStatus` and similar endpoints
@@ -97,6 +101,7 @@ This document outlines a comprehensive, incremental refactor plan for both the N
    - Impact: Inconsistent error responses
    - Effort: 1 week
    - Files: All handlers, controllers
+   - Status: ▶️ In progress (starting January 31, 2026)
 
 #### Client
 1. **API Error Handling Consistency**
