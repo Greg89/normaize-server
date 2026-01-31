@@ -28,7 +28,7 @@ public class AnalysisController : BaseApiController
     private readonly IQueryHandler<GetAnalysesByStatusQuery, IEnumerable<AnalysisDto>> _getAnalysesByStatusHandler;
     private readonly IQueryHandler<GetAnalysesByTypeQuery, IEnumerable<AnalysisDto>> _getAnalysesByTypeHandler;
     private readonly IQueryHandler<GetAnalysisResultQuery, AnalysisResultDto?> _getAnalysisResultHandler;
-    private readonly IQueryHandler<GetAllAnalysesQuery, IEnumerable<AnalysisDto>> _getAllAnalysesHandler;
+    private readonly IQueryHandler<GetAllAnalysesQuery, PaginatedResult<AnalysisDto>> _getAllAnalysesHandler;
 
     public AnalysisController(
         ICommandHandler<CreateAnalysisCommand, AnalysisDto> createAnalysisHandler,
@@ -41,7 +41,7 @@ public class AnalysisController : BaseApiController
         IQueryHandler<GetAnalysesByStatusQuery, IEnumerable<AnalysisDto>> getAnalysesByStatusHandler,
         IQueryHandler<GetAnalysesByTypeQuery, IEnumerable<AnalysisDto>> getAnalysesByTypeHandler,
         IQueryHandler<GetAnalysisResultQuery, AnalysisResultDto?> getAnalysisResultHandler,
-        IQueryHandler<GetAllAnalysesQuery, IEnumerable<AnalysisDto>> getAllAnalysesHandler)
+        IQueryHandler<GetAllAnalysesQuery, PaginatedResult<AnalysisDto>> getAllAnalysesHandler)
     {
         _createAnalysisHandler = createAnalysisHandler ?? throw new ArgumentNullException(nameof(createAnalysisHandler));
         _runAnalysisHandler = runAnalysisHandler ?? throw new ArgumentNullException(nameof(runAnalysisHandler));
@@ -301,13 +301,13 @@ public class AnalysisController : BaseApiController
 
             var query = new GetAllAnalysesQuery(page, pageSize, dataSetId, status, type, includeDeleted);
             var result = await _getAllAnalysesHandler.HandleAsync(query);
-            var analyses = result.ToList();
 
-            // For simplicity, we're not implementing true pagination count here
-            // In a real scenario, you'd want a separate count query
-            var totalItems = analyses.Count;
-
-            return SuccessPaginated(analyses, page, pageSize, totalItems, "Analyses retrieved successfully");
+            return SuccessPaginated(
+                result.Items,
+                page,
+                pageSize,
+                result.TotalItems,
+                "Analyses retrieved successfully");
         }
         catch (Exception ex)
         {

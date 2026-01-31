@@ -7,7 +7,7 @@ namespace Normaize.DataNormalization.Application.Queries.DataSets;
 /// <summary>
 /// Handler for searching datasets
 /// </summary>
-public class SearchDataSetsQueryHandler : IRequestHandler<SearchDataSetsQuery, IReadOnlyList<DataSetDto>>
+public class SearchDataSetsQueryHandler : IRequestHandler<SearchDataSetsQuery, PaginatedResult<DataSetDto>>
 {
     private readonly IDataSetRepository _dataSetRepository;
 
@@ -16,7 +16,7 @@ public class SearchDataSetsQueryHandler : IRequestHandler<SearchDataSetsQuery, I
         _dataSetRepository = dataSetRepository ?? throw new ArgumentNullException(nameof(dataSetRepository));
     }
 
-    public async Task<IReadOnlyList<DataSetDto>> Handle(SearchDataSetsQuery request, CancellationToken cancellationToken)
+    public async Task<PaginatedResult<DataSetDto>> Handle(SearchDataSetsQuery request, CancellationToken cancellationToken)
     {
         // Get all datasets for user
         var dataSets = await _dataSetRepository.GetByUserIdAsync(request.UserId, cancellationToken);
@@ -29,15 +29,19 @@ public class SearchDataSetsQueryHandler : IRequestHandler<SearchDataSetsQuery, I
                           (ds.Description != null && ds.Description.ToLowerInvariant().Contains(searchLower))))
             .ToList();
 
+        var totalItems = filteredDataSets.Count;
+
         // Apply pagination
         var paginatedDataSets = filteredDataSets
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .ToList();
 
-        return paginatedDataSets
+        var items = paginatedDataSets
             .Select(MapToDto)
             .ToList();
+
+        return new PaginatedResult<DataSetDto>(items, totalItems);
     }
 
     private static DataSetDto MapToDto(Domain.Entities.DataSet dataSet)

@@ -40,8 +40,9 @@ This document outlines a comprehensive, incremental refactor plan for both the N
 - ✅ Enhanced telemetry and logging
 
 **Areas for Improvement:**
-- ⚠️ Mixed ID types (Guid vs int) - Analysis still uses int
-- ⚠️ Incomplete pagination implementations
+- ✅ ID types consistent (Analysis migrated to Guid)
+- ✅ Pagination total counts implemented (Analyses + DataSets)
+- ⚠️ Jobs list pagination still placeholder
 - ⚠️ Temporary `[AllowAnonymous]` attributes for testing
 - ⚠️ Placeholder logic in some endpoints (e.g., `GetRetentionStatus`)
 - ⚠️ Missing comprehensive error handling
@@ -117,13 +118,15 @@ This document outlines a comprehensive, incremental refactor plan for both the N
    - Location: Analysis entity and related code
    - Impact: Type safety and consistency
    - Effort: 1 week
-   - Migration: Convert Analysis from int to Guid
+   - ✅ Migration complete: Analysis converted from int to Guid
 
 2. **Complete Pagination Implementation**
    - Location: Query handlers returning paginated responses
    - Impact: Client pagination breaks
    - Effort: 3-5 days
    - Files: All query handlers with pagination
+   - ✅ Completed for Analyses + DataSets (correct `TotalItems`)
+   - ⚠️ Remaining: Jobs list endpoint (currently placeholder)
 
 3. **Expand Test Coverage**
    - Location: Application layer, Infrastructure layer
@@ -268,10 +271,11 @@ This document outlines a comprehensive, incremental refactor plan for both the N
 **Focus:** Data integrity, pagination, type safety
 
 #### Server Tasks
-- [ ] Migrate Analysis entity from int to Guid
-- [ ] Fix all pagination implementations
+- [x] Migrate Analysis entity from int to Guid
+- [x] Fix pagination implementations (Analyses + DataSets)
 - [ ] Add database migrations for schema changes
-- [ ] Implement proper total count calculations
+- [x] Implement proper total count calculations (Analyses + DataSets)
+- [ ] Implement Jobs list pagination (`GET /api/datanormalization/jobs`)
 - [ ] Add validation using FluentValidation
 - [ ] Create integration tests for all endpoints
 - [ ] Add XML documentation to public APIs
@@ -356,11 +360,12 @@ This document outlines a comprehensive, incremental refactor plan for both the N
 #### Critical Files
 - [ ] `src/Normaize.DataNormalization.API/Controllers/*.cs` - Remove temporary auth
 - [ ] `src/Normaize.DataNormalization.Application/Queries/**/*Handler.cs` - Fix placeholders
-- [ ] `src/Normaize.DataNormalization.Domain/Entities/Analysis.cs` - Convert ID type
+- [x] `src/Normaize.DataNormalization.Domain/Entities/Analysis.cs` - Convert ID type
 - [ ] `src/Normaize.DataNormalization.Infrastructure/Repositories/*.cs` - Query optimization
 
 #### Supporting Files
-- [ ] All query handlers with pagination
+- [x] Pagination handlers (Analyses + DataSets)
+- [ ] Jobs list pagination (DataNormalizationController)
 - [ ] All command handlers with validation
 - [ ] Background worker implementations
 - [ ] Health check implementations
@@ -473,7 +478,7 @@ This document outlines a comprehensive, incremental refactor plan for both the N
 | Security | Temporary anonymous access | Controllers | High | Low |
 | Data | Inconsistent ID types | Analysis entity | High | Medium |
 | Logic | Placeholder implementations | Query handlers | High | Medium |
-| Quality | Incomplete pagination | Multiple handlers | Medium | Low |
+| Quality | Pagination total counts incomplete (Jobs) | Controllers/queries | Medium | Low |
 | Testing | Low application test coverage | Application layer | Medium | High |
 | Docs | Missing XML comments | All public APIs | Low | Medium |
 | Performance | No caching strategy | Query handlers | Medium | Medium |

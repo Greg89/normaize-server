@@ -58,7 +58,7 @@ public class GetDataSetByIdQueryHandler : IRequestHandler<GetDataSetByIdQuery, D
 /// <summary>
 /// Handler for getting datasets by user
 /// </summary>
-public class GetDataSetsByUserQueryHandler : IRequestHandler<GetDataSetsByUserQuery, IReadOnlyList<DataSetDto>>
+public class GetDataSetsByUserQueryHandler : IRequestHandler<GetDataSetsByUserQuery, PaginatedResult<DataSetDto>>
 {
     private readonly IDataSetRepository _dataSetRepository;
 
@@ -67,11 +67,13 @@ public class GetDataSetsByUserQueryHandler : IRequestHandler<GetDataSetsByUserQu
         _dataSetRepository = dataSetRepository ?? throw new ArgumentNullException(nameof(dataSetRepository));
     }
 
-    public async Task<IReadOnlyList<DataSetDto>> Handle(GetDataSetsByUserQuery request, CancellationToken cancellationToken)
+    public async Task<PaginatedResult<DataSetDto>> Handle(GetDataSetsByUserQuery request, CancellationToken cancellationToken)
     {
         var dataSets = request.IncludeDeleted
             ? await _dataSetRepository.GetAllByUserIdAsync(request.UserId, cancellationToken)
             : await _dataSetRepository.GetByUserIdAsync(request.UserId, cancellationToken);
+
+        var totalItems = dataSets.Count;
 
         // Apply pagination
         var paginatedDataSets = dataSets
@@ -79,9 +81,11 @@ public class GetDataSetsByUserQueryHandler : IRequestHandler<GetDataSetsByUserQu
             .Take(request.PageSize)
             .ToList();
 
-        return paginatedDataSets
+        var items = paginatedDataSets
             .Select(MapToDto)
             .ToList();
+
+        return new PaginatedResult<DataSetDto>(items, totalItems);
     }
 
     private static DataSetDto MapToDto(Domain.Entities.DataSet dataSet)

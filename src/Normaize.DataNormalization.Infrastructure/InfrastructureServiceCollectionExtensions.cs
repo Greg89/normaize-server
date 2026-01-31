@@ -136,7 +136,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IQueryHandler<GetAnalysesByStatusQuery, IEnumerable<AnalysisDto>>, GetAnalysesByStatusQueryHandler>();
         services.AddScoped<IQueryHandler<GetAnalysesByTypeQuery, IEnumerable<AnalysisDto>>, GetAnalysesByTypeQueryHandler>();
         services.AddScoped<IQueryHandler<GetAnalysisResultQuery, AnalysisResultDto?>, GetAnalysisResultQueryHandler>();
-        services.AddScoped<IQueryHandler<GetAllAnalysesQuery, IEnumerable<AnalysisDto>>, GetAllAnalysesQueryHandler>();
+        services.AddScoped<IQueryHandler<GetAllAnalysesQuery, PaginatedResult<AnalysisDto>>, GetAllAnalysesQueryHandler>();
 
         // Operation Handlers
         services.AddScoped<IRemoveDuplicatesHandler, RemoveDuplicatesHandler>();

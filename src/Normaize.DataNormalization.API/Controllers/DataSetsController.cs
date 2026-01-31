@@ -49,15 +49,25 @@ public class DataSetsController(
     {
         try
         {
+            if (page < 1)
+            {
+                return Error("Page number must be greater than 0", "INVALID_PAGE");
+            }
+
+            if (pageSize < 1 || pageSize > 100)
+            {
+                return Error("Page size must be between 1 and 100", "INVALID_PAGE_SIZE");
+            }
+
             var userId = GetCurrentUserId();
             _logger.LogDebug("User {UserId} requesting datasets, page {Page}, pageSize {PageSize}",
                 userId, page, pageSize);
 
             var query = new GetDataSetsByUserQuery(userId, page, pageSize, includeDeleted);
-            var dataSets = await _mediator.Send(query);
+            var result = await _mediator.Send(query);
 
-            var responses = dataSets.Select(MapFromDto).ToList();
-            var totalItems = responses.Count; // Note: In production, get total count separately
+            var responses = result.Items.Select(MapFromDto).ToList();
+            var totalItems = result.TotalItems;
 
             return SuccessPaginated(responses, page, pageSize, totalItems);
         }
@@ -398,14 +408,24 @@ public class DataSetsController(
                 return Error("Search query is required", "INVALID_QUERY", 400);
             }
 
+            if (page < 1)
+            {
+                return Error("Page number must be greater than 0", "INVALID_PAGE");
+            }
+
+            if (pageSize < 1 || pageSize > 100)
+            {
+                return Error("Page size must be between 1 and 100", "INVALID_PAGE_SIZE");
+            }
+
             var userId = GetCurrentUserId();
             _logger.LogDebug("User {UserId} searching datasets with query: {Query}", userId, query);
 
             var searchQuery = new SearchDataSetsQuery(query, userId, page, pageSize);
-            var dataSets = await _mediator.Send(searchQuery);
+            var result = await _mediator.Send(searchQuery);
 
-            var responses = dataSets.Select(MapFromDto).ToList();
-            var totalItems = responses.Count; // Note: In production, get total count separately
+            var responses = result.Items.Select(MapFromDto).ToList();
+            var totalItems = result.TotalItems;
 
             return SuccessPaginated(responses, page, pageSize, totalItems);
         }
@@ -432,7 +452,7 @@ public class DataSetsController(
             _logger.LogDebug("User {UserId} requesting deleted datasets", userId);
 
             var query = new GetDataSetsByUserQuery(userId, 1, 1000, IncludeDeleted: true);
-            var allDataSets = await _mediator.Send(query);
+            var allDataSets = (await _mediator.Send(query)).Items;
 
             // Filter to only deleted datasets
             var deletedDataSets = allDataSets.Where(ds => ds.IsDeleted).ToList();

@@ -131,7 +131,7 @@ public class GetAnalysisResultQueryHandler : IQueryHandler<GetAnalysisResultQuer
 /// <summary>
 /// Query handler for getting all analyses with filtering and pagination
 /// </summary>
-public class GetAllAnalysesQueryHandler : IQueryHandler<GetAllAnalysesQuery, IEnumerable<AnalysisDto>>
+public class GetAllAnalysesQueryHandler : IQueryHandler<GetAllAnalysesQuery, PaginatedResult<AnalysisDto>>
 {
     private readonly IAnalysisRepository _analysisRepository;
     private readonly IAnalysisMapper _mapper;
@@ -144,7 +144,7 @@ public class GetAllAnalysesQueryHandler : IQueryHandler<GetAllAnalysesQuery, IEn
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
     }
 
-    public async Task<IEnumerable<AnalysisDto>> HandleAsync(GetAllAnalysesQuery query)
+    public async Task<PaginatedResult<AnalysisDto>> HandleAsync(GetAllAnalysesQuery query)
     {
         var analyses = await _analysisRepository.GetByCriteriaAsync(
             query.DataSetId,
@@ -154,8 +154,16 @@ public class GetAllAnalysesQueryHandler : IQueryHandler<GetAllAnalysesQuery, IEn
 
         var analysisData = analyses.Select(_mapper.ToDto).ToList();
 
+        var totalItems = analysisData.Count;
+
         // Apply pagination
         var skip = (query.PageNumber - 1) * query.PageSize;
-        return analysisData.Skip(skip).Take(query.PageSize);
+
+        var items = analysisData
+            .Skip(skip)
+            .Take(query.PageSize)
+            .ToList();
+
+        return new PaginatedResult<AnalysisDto>(items, totalItems);
     }
 }

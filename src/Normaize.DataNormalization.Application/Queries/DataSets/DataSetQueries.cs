@@ -17,7 +17,7 @@ public record GetDataSetsByUserQuery(
     string UserId,
     int Page = 1,
     int PageSize = 20,
-    bool IncludeDeleted = false) : IRequest<IReadOnlyList<DataSetDto>>;
+    bool IncludeDeleted = false) : IRequest<PaginatedResult<DataSetDto>>;
 
 /// <summary>
 /// Query to search datasets
@@ -26,7 +26,7 @@ public record SearchDataSetsQuery(
     string SearchTerm,
     string UserId,
     int Page = 1,
-    int PageSize = 20) : IRequest<IReadOnlyList<DataSetDto>>;
+    int PageSize = 20) : IRequest<PaginatedResult<DataSetDto>>;
 
 /// <summary>
 /// Query to get dataset preview
