@@ -58,20 +58,20 @@ public static class SerilogConfiguration
 
         // Add Seq sink if configured
         // Check both configuration and environment variable
-        var seqServerUrl = configuration["Seq:ServerUrl"] 
+        var seqServerUrl = configuration["Seq:ServerUrl"]
             ?? Environment.GetEnvironmentVariable("SEQ_URL");
-        
+
         // Also check for API key
-        var seqApiKey = configuration["Seq:ApiKey"] 
+        var seqApiKey = configuration["Seq:ApiKey"]
             ?? Environment.GetEnvironmentVariable("SEQ_API_KEY");
-        
+
         if (!string.IsNullOrWhiteSpace(seqServerUrl))
         {
             // Configure Seq sink with optional API key
             var seqSinkConfig = loggerConfiguration.WriteTo.Seq(
                 serverUrl: seqServerUrl,
                 restrictedToMinimumLevel: LogEventLevel.Information);
-            
+
             // Set API key if provided (using the Seq sink's configuration)
             if (!string.IsNullOrWhiteSpace(seqApiKey))
             {
@@ -80,7 +80,7 @@ public static class SerilogConfiguration
                     apiKey: seqApiKey,
                     restrictedToMinimumLevel: LogEventLevel.Information);
             }
-            
+
             // Always log Seq configuration for diagnostics
             Console.WriteLine($"✅ Seq logging configured: {seqServerUrl}{(string.IsNullOrWhiteSpace(seqApiKey) ? "" : " (with API key)")}");
         }

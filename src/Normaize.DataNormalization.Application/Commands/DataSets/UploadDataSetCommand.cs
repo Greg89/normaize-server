@@ -19,4 +19,5 @@ public record UploadDataSetResult(
     bool Success,
     string Message,
     Guid? DataSetId = null,
+    Guid? ProcessingJobId = null,
     string? Error = null);

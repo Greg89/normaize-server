@@ -140,6 +140,7 @@ public static class InfrastructureServiceCollectionExtensions
 
         // Operation Handlers
         services.AddScoped<IRemoveDuplicatesHandler, RemoveDuplicatesHandler>();
+        services.AddScoped<IProcessDataSetFileHandler, ProcessDataSetFileHandler>();
 
         // Data loading and persistence services
         services.AddScoped<IDataSetDataLoader, DataSetDataLoader>();

@@ -41,3 +41,12 @@ public interface IRemoveDuplicatesHandler
 {
     Task HandleAsync(NormalizationJob job, IJobProgress progress);
 }
+
+/// <summary>
+/// Handler for processing uploaded dataset files asynchronously
+/// Extracts schema, preview data, and statistics
+/// </summary>
+public interface IProcessDataSetFileHandler
+{
+    Task HandleAsync(NormalizationJob job, IJobProgress progress);
+}

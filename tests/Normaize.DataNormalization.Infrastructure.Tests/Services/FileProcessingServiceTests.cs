@@ -495,12 +495,12 @@ public class FileProcessingServiceTests
     {
         var contentBytes = Encoding.UTF8.GetBytes(content);
         var stream = new MemoryStream(contentBytes);
-        
+
         _mockFileStorageService
             .Setup(x => x.GetFileAsync(s3FilePath, It.IsAny<CancellationToken>()))
             .ReturnsAsync(stream);
     }
-    
+
     /// <summary>
     /// Creates an S3 URI for testing
     /// </summary>

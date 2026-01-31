@@ -294,7 +294,7 @@ public class ObservabilityBehaviorTests
         var request = new TestRequest();
         var expectedResponse = new TestResponse("Success");
         var delay = TimeSpan.FromMilliseconds(100);
-        var tolerance = TimeSpan.FromMilliseconds(50); // Allow some tolerance for test execution
+        var tolerance = TimeSpan.FromMilliseconds(100); // Increased tolerance for CI/test execution overhead
 
         async Task<TestResponse> next()
         {

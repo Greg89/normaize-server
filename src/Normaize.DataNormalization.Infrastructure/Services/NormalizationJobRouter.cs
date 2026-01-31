@@ -12,13 +12,16 @@ namespace Normaize.DataNormalization.Infrastructure.Services;
 public class NormalizationJobRouter : INormalizationJobRouter
 {
     private readonly IRemoveDuplicatesHandler _removeDuplicatesHandler;
+    private readonly IProcessDataSetFileHandler _processFileHandler;
     private readonly ILogger<NormalizationJobRouter> _logger;
 
     public NormalizationJobRouter(
         IRemoveDuplicatesHandler removeDuplicatesHandler,
+        IProcessDataSetFileHandler processFileHandler,
         ILogger<NormalizationJobRouter> logger)
     {
         _removeDuplicatesHandler = removeDuplicatesHandler ?? throw new ArgumentNullException(nameof(removeDuplicatesHandler));
+        _processFileHandler = processFileHandler ?? throw new ArgumentNullException(nameof(processFileHandler));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -34,6 +37,13 @@ public class NormalizationJobRouter : INormalizationJobRouter
         {
             switch (job.OperationType.ToLowerInvariant())
             {
+                case "processfile":
+                case "process_file":
+                case "processdatasetfile":
+                case "process_dataset_file":
+                    await _processFileHandler.HandleAsync(job, progress);
+                    break;
+
                 case "removeduplicates":
                 case "remove_duplicates":
                     await _removeDuplicatesHandler.HandleAsync(job, progress);

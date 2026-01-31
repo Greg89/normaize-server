@@ -351,8 +351,21 @@ public class DataSetsController(
             var response = MapFromDto(dataSet);
             _logger.LogInformation("✅ Dataset {DataSetId} uploaded successfully", result.DataSetId);
 
-            return CreatedSuccess(nameof(GetDataSet), new { id = result.DataSetId },
-                response, "Dataset uploaded successfully");
+            // Include processing job ID if async processing
+            var successMessage = result.ProcessingJobId.HasValue
+                ? "Dataset uploaded successfully. Processing in background..."
+                : "Dataset uploaded and processed successfully";
+
+            var createdResponse = new
+            {
+                success = true,
+                message = successMessage,
+                data = response,
+                processingJobId = result.ProcessingJobId,
+                isAsyncProcessing = result.ProcessingJobId.HasValue
+            };
+
+            return StatusCode(201, createdResponse);
         }
         catch (Exception ex)
         {

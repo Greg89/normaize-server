@@ -214,7 +214,7 @@ public class S3FileStorageService : IFileStorageService, IDisposable
             // Remove s3://bucketname/ prefix manually to avoid Uri encoding issues
             var pathAfterScheme = filePath.Substring("s3://".Length);
             var firstSlashIndex = pathAfterScheme.IndexOf('/');
-            
+
             if (firstSlashIndex >= 0)
             {
                 // Return everything after the bucket name
