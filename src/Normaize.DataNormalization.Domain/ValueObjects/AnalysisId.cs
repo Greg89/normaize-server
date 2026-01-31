@@ -7,28 +7,30 @@ namespace Normaize.DataNormalization.Domain.ValueObjects;
 /// </summary>
 public record AnalysisId
 {
-    public int Value { get; init; }
+    public Guid Value { get; init; }
 
     /// <summary>
     /// Represents an ID for an unpersisted Analysis entity
     /// </summary>
-    public static readonly AnalysisId Unpersisted = new(0);
+    public static readonly AnalysisId Unpersisted = new(Guid.Empty);
 
-    public AnalysisId(int value)
+    public AnalysisId(Guid value)
     {
-        if (value < 0)
-            throw new ArgumentException("Analysis ID cannot be negative", nameof(value));
-
         Value = value;
     }
 
     /// <summary>
+    /// Creates a new AnalysisId with a generated Guid
+    /// </summary>
+    public static AnalysisId NewId() => new(Guid.NewGuid());
+
+    /// <summary>
     /// Indicates whether this Analysis has been persisted to the database
     /// </summary>
-    public bool IsPersisted => Value > 0;
+    public bool IsPersisted => Value != Guid.Empty;
 
-    public static implicit operator int(AnalysisId analysisId) => analysisId.Value;
-    public static implicit operator AnalysisId(int value) => new(value);
+    public static implicit operator Guid(AnalysisId analysisId) => analysisId.Value;
+    public static implicit operator AnalysisId(Guid value) => new(value);
 
     public override string ToString() => Value.ToString();
 }

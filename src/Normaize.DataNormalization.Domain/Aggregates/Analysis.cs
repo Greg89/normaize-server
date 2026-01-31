@@ -257,7 +257,7 @@ public class Analysis
     /// </summary>
     public void SetId(AnalysisId id)
     {
-        if (Id.Value != 0)
+        if (Id.Value != Guid.Empty)
             throw new InvalidOperationException("Analysis ID is already set");
 
         Id = id ?? throw new ArgumentNullException(nameof(id));
