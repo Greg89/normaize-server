@@ -14,12 +14,11 @@ public abstract class BaseApiController : ControllerBase
     private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
 
     /// <summary>
-    /// Gets the current user ID from JWT claims (or returns test user ID for unauthenticated scenarios)
+    /// Gets the current user ID from JWT claims.
     /// </summary>
     protected string GetCurrentUserId()
     {
-        // Use extension method with fallback for testing/unauthenticated scenarios
-        return User.GetUserIdOrDefault("test-user-id");
+        return User.GetUserId();
     }
 
     /// <summary>

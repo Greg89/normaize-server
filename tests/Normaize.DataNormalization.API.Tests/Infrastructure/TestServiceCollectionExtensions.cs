@@ -27,9 +27,6 @@ public static class TestServiceCollectionExtensions
         // Program.cs maps health check endpoints unconditionally; make sure the required services exist.
         services.AddHealthChecks();
 
-        // AuthenticationHandler now prefers TimeProvider; register a default instance for handler activation.
-        services.TryAddSingleton(System.TimeProvider.System);
-
         // Repositories
         services.AddScoped<INormalizationJobRepository, NormalizationJobRepository>();
         services.AddScoped<IUserRepository, UserRepository>();

@@ -1,12 +1,13 @@
 using Normaize.DataNormalization.Infrastructure;
 using Normaize.DataNormalization.Infrastructure.Logging;
 using Normaize.DataNormalization.Infrastructure.Middleware;
-using Normaize.DataNormalization.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 using Serilog;
+using Normaize.DataNormalization.API.Authentication;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,24 +67,13 @@ if (!string.IsNullOrEmpty(auth0Domain) && !string.IsNullOrEmpty(auth0Audience))
 }
 else
 {
-    // Register empty authentication/authorization to prevent 500 errors when [Authorize] is used
-    builder.Services.AddAuthentication("Bearer")
-        .AddJwtBearer("Bearer", options =>
-        {
-            // No validation - this is just to prevent exceptions
-            options.RequireHttpsMetadata = false;
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = false,
-                ValidateAudience = false,
-                ValidateLifetime = false,
-                ValidateIssuerSigningKey = false,
-                SignatureValidator = (token, parameters) => new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(token)
-            };
-        });
+    // Auth0 config missing. Keep [Authorize] endpoints protected by denying authentication,
+    // rather than silently accepting arbitrary bearer tokens.
+    builder.Services.AddAuthentication("Deny")
+        .AddScheme<AuthenticationSchemeOptions, DenyAllAuthenticationHandler>("Deny", _ => { });
     builder.Services.AddAuthorization();
 
-    Console.WriteLine("⚠ Warning: Auth0 configuration missing - API endpoints will be unprotected");
+    Console.WriteLine("⚠ Warning: Auth0 configuration missing - protected endpoints will return 401");
     Console.WriteLine("  Please set Auth0:Domain and Auth0:Audience in configuration");
 }
 

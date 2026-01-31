@@ -9,8 +9,7 @@ namespace Normaize.DataNormalization.API.Tests.Infrastructure;
 public sealed class TestAuthenticationHandler(
     Microsoft.Extensions.Options.IOptionsMonitor<AuthenticationSchemeOptions> options,
     Microsoft.Extensions.Logging.ILoggerFactory logger,
-    System.Text.Encodings.Web.UrlEncoder encoder,
-    System.TimeProvider timeProvider) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder, timeProvider)
+    System.Text.Encodings.Web.UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
