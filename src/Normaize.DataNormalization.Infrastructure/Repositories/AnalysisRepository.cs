@@ -176,7 +176,7 @@ public class AnalysisRepository : IAnalysisRepository
 
             // Set the generated ID on the domain entity
             var entry = _context.Entry(analysis);
-            var generatedId = new AnalysisId((int)entry.Property(e => e.Id).CurrentValue!);
+            var generatedId = new AnalysisId((Guid)entry.Property(e => e.Id).CurrentValue!);
             analysis.SetId(generatedId);
 
             // Save again to persist any domain events that were raised

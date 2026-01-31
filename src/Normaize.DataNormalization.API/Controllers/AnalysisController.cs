@@ -93,11 +93,11 @@ public class AnalysisController : BaseApiController
     /// </summary>
     /// <param name="id">Analysis ID</param>
     /// <returns>Analysis details if found</returns>
-    [HttpGet("{id:int}")]
+    [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ApiResponse<AnalysisDto>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     [ProducesResponseType(typeof(ApiResponse<object>), 500)]
-    public async Task<IActionResult> GetAnalysis(int id)
+    public async Task<IActionResult> GetAnalysis(Guid id)
     {
         try
         {
@@ -192,11 +192,11 @@ public class AnalysisController : BaseApiController
     /// </summary>
     /// <param name="id">Analysis ID</param>
     /// <returns>Analysis results if available</returns>
-    [HttpGet("{id:int}/result")]
+    [HttpGet("{id:guid}/result")]
     [ProducesResponseType(typeof(ApiResponse<AnalysisResultDto>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     [ProducesResponseType(typeof(ApiResponse<object>), 500)]
-    public async Task<IActionResult> GetAnalysisResult(int id)
+    public async Task<IActionResult> GetAnalysisResult(Guid id)
     {
         try
         {
@@ -220,12 +220,12 @@ public class AnalysisController : BaseApiController
     /// </summary>
     /// <param name="id">Analysis ID</param>
     /// <returns>Updated analysis with execution results</returns>
-    [HttpPost("{id:int}/run")]
+    [HttpPost("{id:guid}/run")]
     [ProducesResponseType(typeof(ApiResponse<AnalysisDto>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     [ProducesResponseType(typeof(ApiResponse<object>), 500)]
-    public async Task<IActionResult> RunAnalysis(int id)
+    public async Task<IActionResult> RunAnalysis(Guid id)
     {
         try
         {
@@ -245,11 +245,11 @@ public class AnalysisController : BaseApiController
     /// </summary>
     /// <param name="id">Analysis ID</param>
     /// <returns>Success status</returns>
-    [HttpDelete("{id:int}")]
+    [HttpDelete("{id:guid}")]
     [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     [ProducesResponseType(typeof(ApiResponse<object>), 500)]
-    public async Task<IActionResult> DeleteAnalysis(int id)
+    public async Task<IActionResult> DeleteAnalysis(Guid id)
     {
         try
         {
@@ -322,12 +322,12 @@ public class AnalysisController : BaseApiController
     /// <param name="id">Analysis ID</param>
     /// <param name="request">Update request</param>
     /// <returns>Updated analysis</returns>
-    [HttpPut("{id:int}")]
+    [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(ApiResponse<AnalysisDto>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     [ProducesResponseType(typeof(ApiResponse<object>), 500)]
-    public async Task<IActionResult> UpdateAnalysis(int id, [FromBody] UpdateAnalysisRequest request)
+    public async Task<IActionResult> UpdateAnalysis(Guid id, [FromBody] UpdateAnalysisRequest request)
     {
         try
         {
@@ -347,12 +347,12 @@ public class AnalysisController : BaseApiController
     /// </summary>
     /// <param name="id">Analysis ID</param>
     /// <returns>Reset analysis</returns>
-    [HttpPost("{id:int}/reset")]
+    [HttpPost("{id:guid}/reset")]
     [ProducesResponseType(typeof(ApiResponse<AnalysisDto>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     [ProducesResponseType(typeof(ApiResponse<object>), 500)]
-    public async Task<IActionResult> ResetAnalysis(int id)
+    public async Task<IActionResult> ResetAnalysis(Guid id)
     {
         try
         {
