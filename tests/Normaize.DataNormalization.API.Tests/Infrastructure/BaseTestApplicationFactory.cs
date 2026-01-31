@@ -9,6 +9,7 @@ using Normaize.DataNormalization.Infrastructure.Data;
 using Normaize.DataNormalization.Domain.Entities;
 using Normaize.DataNormalization.Domain.Aggregates;
 using Normaize.DataNormalization.Domain.ValueObjects;
+using Xunit;
 
 namespace Normaize.DataNormalization.API.Tests.Infrastructure;
 
@@ -123,11 +124,9 @@ public abstract class BaseTestApplicationFactory : WebApplicationFactory<Program
 /// <summary>
 /// Test application factory that auto-seeds data for each test
 /// </summary>
-public class SeededApiTestApplicationFactory : BaseTestApplicationFactory
+public class SeededApiTestApplicationFactory : BaseTestApplicationFactory, IAsyncLifetime
 {
-    public override async ValueTask DisposeAsync()
-    {
-        await SeedTestDataAsync();
-        await base.DisposeAsync();
-    }
+    async Task IAsyncLifetime.InitializeAsync() => await SeedTestDataAsync();
+
+    Task IAsyncLifetime.DisposeAsync() => base.DisposeAsync().AsTask();
 }
