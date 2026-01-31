@@ -8,6 +8,7 @@ using System.Security.Claims;
 using Serilog;
 using Normaize.DataNormalization.API.Authentication;
 using Microsoft.IdentityModel.Tokens;
+using Normaize.DataNormalization.API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -197,21 +198,8 @@ Console.WriteLine($"🌐 Listening on: {(app.Environment.IsDevelopment() ? (isRu
 // This ensures correlation IDs are available for all logs, including error logs
 app.UseCorrelationId();
 
-// Add global exception handler for better error logging
-app.Use(async (context, next) =>
-{
-    try
-    {
-        await next();
-    }
-    catch (Exception ex)
-    {
-        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "❌ Unhandled exception in request {Method} {Path}",
-            context.Request.Method, context.Request.Path);
-        throw;
-    }
-});
+// Global exception handling (consistent JSON response + logging)
+app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
 // Configure pipeline
 // Only enable Swagger in development or when explicitly configured
