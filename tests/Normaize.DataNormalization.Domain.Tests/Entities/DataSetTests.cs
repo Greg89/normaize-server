@@ -11,7 +11,7 @@ public class DataSetTests
     {
         return FileMetadata.Create(
             "test.csv",
-            "/uploads/test.csv",
+            "s3://normaize-uploads/user123/test.csv",
             FileType.CSV,
             1024,
             "abc123");
@@ -342,7 +342,7 @@ public class DataSetTests
         Assert.False(dataSet.RequiresSeparateTable); // Small dataset
         Assert.False(dataSet.HasProcessingErrors); // No errors
         Assert.True(dataSet.IsTextBasedFile); // CSV is text-based
-        Assert.False(dataSet.IsStoredInCloud); // Local storage
+        Assert.True(dataSet.IsStoredInCloud); // S3 cloud storage
     }
 
     [Fact]

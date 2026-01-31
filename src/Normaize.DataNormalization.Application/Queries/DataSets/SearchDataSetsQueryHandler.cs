@@ -51,7 +51,7 @@ public class SearchDataSetsQueryHandler : IRequestHandler<SearchDataSetsQuery, I
             dataSet.FileInfo?.FilePath ?? string.Empty,
             dataSet.FileInfo?.FileSize ?? 0,
             dataSet.FileInfo?.FileType.Value ?? "Unknown",
-            dataSet.FileInfo?.StorageProvider.Value ?? "Local",
+            dataSet.FileInfo?.StorageProvider.Value ?? "S3",
             dataSet.Statistics?.RowCount ?? 0,
             dataSet.Statistics?.ColumnCount ?? 0,
             dataSet.ProcessingStatus?.IsProcessed ?? false,

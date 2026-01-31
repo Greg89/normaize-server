@@ -8,16 +8,16 @@ namespace Normaize.DataNormalization.Infrastructure.Services;
 /// <summary>
 /// Implementation of file processing service for validating and processing uploaded files
 /// </summary>
-public class FileProcessingService : IFileProcessingService
+public class FileProcessingService(
+    ILogger<FileProcessingService> logger,
+    IFileStorageService fileStorageService) : IFileProcessingService
 {
-    private readonly ILogger<FileProcessingService> _logger;
+    private readonly ILogger<FileProcessingService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly IFileStorageService _fileStorageService = fileStorageService ?? throw new ArgumentNullException(nameof(fileStorageService));
     private const long MaxFileSize = 100 * 1024 * 1024; // 100 MB
     private static readonly string[] AllowedExtensions = { ".csv", ".json", ".xml", ".xlsx", ".txt" };
-
-    public FileProcessingService(ILogger<FileProcessingService> logger)
-    {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
+    private static readonly string[] value = ["Line"];
+    private static readonly string[] valueArray = new[] { "Data" };
 
     public Task<FileValidationResult> ValidateFileAsync(
         Stream fileStream,
@@ -89,7 +89,7 @@ public class FileProcessingService : IFileProcessingService
 
     private async Task<FileProcessingResult> ProcessCsvFileAsync(string filePath, CancellationToken cancellationToken)
     {
-        var lines = await File.ReadAllLinesAsync(filePath, cancellationToken);
+        var lines = await ReadAllLinesAsync(filePath, cancellationToken);
 
         if (lines.Length == 0)
         {
@@ -138,7 +138,7 @@ public class FileProcessingService : IFileProcessingService
 
     private async Task<FileProcessingResult> ProcessJsonFileAsync(string filePath, CancellationToken cancellationToken)
     {
-        var jsonContent = await File.ReadAllTextAsync(filePath, cancellationToken);
+        var jsonContent = await ReadAllTextAsync(filePath, cancellationToken);
 
         using var document = JsonDocument.Parse(jsonContent);
         var root = document.RootElement;
@@ -218,12 +218,12 @@ public class FileProcessingService : IFileProcessingService
             JsonSerializer.Serialize(new { Columns = new[] { new { Name = "Data", Type = "string" } } }),
             1,
             1,
-            JsonSerializer.Serialize(new { Columns = new[] { "Data" }, Rows = new object[0], TotalRows = 0, PreviewRowCount = 0 })));
+            JsonSerializer.Serialize(new { Columns = valueArray, Rows = Array.Empty<object>(), TotalRows = 0, PreviewRowCount = 0 })));
     }
 
     private async Task<FileProcessingResult> ProcessTextFileAsync(string filePath, CancellationToken cancellationToken)
     {
-        var lines = await File.ReadAllLinesAsync(filePath, cancellationToken);
+        var lines = await ReadAllLinesAsync(filePath, cancellationToken);
 
         var schema = JsonSerializer.Serialize(new
         {
@@ -237,7 +237,7 @@ public class FileProcessingService : IFileProcessingService
 
         var previewData = JsonSerializer.Serialize(new
         {
-            Columns = new[] { "Line" },
+            Columns = value,
             Rows = previewRows,
             TotalRows = lines.Length,
             PreviewRowCount = previewRows.Count
@@ -249,5 +249,33 @@ public class FileProcessingService : IFileProcessingService
             lines.Length,
             1,
             previewData);
+    }
+
+    /// <summary>
+    /// Reads all lines from a file stored in S3
+    /// </summary>
+    private async Task<string[]> ReadAllLinesAsync(string filePath, CancellationToken cancellationToken)
+    {
+        // All files are stored in S3
+        using var stream = await _fileStorageService.GetFileAsync(filePath, cancellationToken);
+        using var reader = new StreamReader(stream);
+        var lines = new List<string>();
+        string? line;
+        while ((line = await reader.ReadLineAsync(cancellationToken)) != null)
+        {
+            lines.Add(line);
+        }
+        return [.. lines];
+    }
+
+    /// <summary>
+    /// Reads all text from a file stored in S3
+    /// </summary>
+    private async Task<string> ReadAllTextAsync(string filePath, CancellationToken cancellationToken)
+    {
+        // All files are stored in S3
+        using var stream = await _fileStorageService.GetFileAsync(filePath, cancellationToken);
+        using var reader = new StreamReader(stream);
+        return await reader.ReadToEndAsync(cancellationToken);
     }
 }

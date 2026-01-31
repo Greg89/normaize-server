@@ -37,7 +37,7 @@ public class GetRetentionStatusQueryHandlerTests
             "Test Dataset",
             "Test Description",
             userId,
-            new FileMetadata("test.csv", "uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024),
+            new FileMetadata("test.csv", "s3://normaize-uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024),
             retentionDays: retentionDays);
 
         var query = new GetRetentionStatusQuery
@@ -71,7 +71,7 @@ public class GetRetentionStatusQueryHandlerTests
             "Test Dataset",
             "Test Description",
             userId,
-            new FileMetadata("test.csv", "uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024));
+            new FileMetadata("test.csv", "s3://normaize-uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024));
 
         // Set retention policy to expire in the past
         var expiredDate = DateTime.UtcNow.AddDays(-5);
@@ -130,7 +130,7 @@ public class GetRetentionStatusQueryHandlerTests
             "Test Dataset",
             "Test Description",
             ownerId,
-            new FileMetadata("test.csv", "uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024));
+            new FileMetadata("test.csv", "s3://normaize-uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024));
 
         var query = new GetRetentionStatusQuery
         {

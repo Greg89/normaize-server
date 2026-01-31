@@ -22,64 +22,16 @@ public class StorageHealthCheck : IHealthCheck
     {
         try
         {
-            var provider = _configuration["Storage:Provider"];
-            var basePath = _configuration["Storage:BasePath"];
             var warnings = new List<string>();
             var errors = new List<string>();
 
-            if (string.IsNullOrWhiteSpace(provider))
-            {
-                errors.Add("Storage provider not configured");
-            }
-
             var data = new Dictionary<string, object>
             {
-                ["provider"] = provider ?? "Unknown",
+                ["provider"] = "S3",
                 ["timestamp"] = DateTime.UtcNow
             };
 
-            // Validate based on provider type
-            if (provider?.Equals("Local", StringComparison.OrdinalIgnoreCase) == true)
-            {
-                data["basePath"] = basePath ?? "Not configured";
-
-                if (string.IsNullOrWhiteSpace(basePath))
-                {
-                    errors.Add("Local storage provider requires BasePath configuration");
-                }
-                else
-                {
-                    // Check if directory exists and is writable
-                    try
-                    {
-                        if (!Directory.Exists(basePath))
-                        {
-                            Directory.CreateDirectory(basePath);
-                            data["directoryCreated"] = true;
-                        }
-
-                        data["directoryExists"] = Directory.Exists(basePath);
-
-                        // Test write access
-                        var testFile = Path.Combine(basePath, $".health_check_{Guid.NewGuid()}.tmp");
-                        File.WriteAllText(testFile, "health_check");
-                        File.Delete(testFile);
-
-                        data["writeAccess"] = true;
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        errors.Add($"No write access to storage path: {basePath}");
-                        data["writeAccess"] = false;
-                    }
-                    catch (Exception ex)
-                    {
-                        errors.Add($"Storage path validation failed: {ex.Message}");
-                        data["writeAccess"] = false;
-                    }
-                }
-            }
-            else if (provider?.Equals("S3", StringComparison.OrdinalIgnoreCase) == true)
+            // Validate S3 configuration (only storage option)
             {
                 // Use AWS standard naming to match S3StorageService
                 var bucketName = _configuration["AWS_S3_BUCKET"];
@@ -115,10 +67,6 @@ public class StorageHealthCheck : IHealthCheck
                 data["hasAwsAccessKey"] = !string.IsNullOrWhiteSpace(awsAccessKey);
                 data["hasAwsSecretKey"] = !string.IsNullOrWhiteSpace(awsSecretKey);
             }
-            else if (!string.IsNullOrWhiteSpace(provider))
-            {
-                warnings.Add($"Unknown storage provider: {provider}");
-            }
 
             // Determine health status
             if (errors.Any())
@@ -127,13 +75,13 @@ public class StorageHealthCheck : IHealthCheck
 
                 // Enhanced logging for debugging
                 Console.WriteLine($"❌ Storage Health Check Failed - Errors: {string.Join(", ", errors)}");
-                Console.WriteLine($"   Provider: {provider ?? "Not set"}");
+                Console.WriteLine($"   Provider: S3");
                 Console.WriteLine($"   AWS_S3_BUCKET: {_configuration["AWS_S3_BUCKET"] ?? "Missing"}");
                 Console.WriteLine($"   AWS_REGION: {_configuration["AWS_REGION"] ?? "Missing"}");
                 Console.WriteLine($"   AWS_ACCESS_KEY_ID env: {(!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID")) ? "Present" : "Missing")}");
 
                 return Task.FromResult(HealthCheckResult.Unhealthy(
-                    $"Storage configuration has {errors.Count} error(s)",
+                    $"S3 storage configuration has {errors.Count} error(s)",
                     data: data));
             }
 
@@ -141,12 +89,12 @@ public class StorageHealthCheck : IHealthCheck
             {
                 data["warnings"] = warnings;
                 return Task.FromResult(HealthCheckResult.Degraded(
-                    $"Storage is configured but has {warnings.Count} warning(s)",
+                    $"S3 storage is configured but has {warnings.Count} warning(s)",
                     data: data));
             }
 
             return Task.FromResult(HealthCheckResult.Healthy(
-                $"Storage provider '{provider}' is properly configured",
+                "S3 storage is properly configured",
                 data: data));
         }
         catch (Exception ex)

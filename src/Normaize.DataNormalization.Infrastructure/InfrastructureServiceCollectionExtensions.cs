@@ -70,24 +70,9 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IDataSetRepository, DataSetRepository>();
         services.AddScoped<IDataSetRowRepository, DataSetRowRepository>();
 
-        // File Storage - Choose based on Storage:Provider configuration
-        var storageProvider = configuration["Storage:Provider"]?.ToLowerInvariant();
-        if (storageProvider == "s3")
-        {
-            services.AddScoped<IFileStorageService, S3FileStorageService>();
-            Console.WriteLine("✓ Configured S3 file storage");
-        }
-        else
-        {
-            // Default to local file storage
-            var basePath = configuration["Storage:BasePath"] ?? "uploads";
-            services.AddScoped<IFileStorageService>(sp =>
-            {
-                var logger = sp.GetRequiredService<ILogger<FileStorageService>>();
-                return new FileStorageService(logger, basePath);
-            });
-            Console.WriteLine($"✓ Configured local file storage at: {basePath}");
-        }
+        // File Storage - Always use S3 (local storage removed)
+        services.AddScoped<IFileStorageService, S3FileStorageService>();
+        Console.WriteLine("✓ Configured S3 file storage");
 
         services.AddScoped<IFileProcessingService, FileProcessingService>();
         services.AddScoped<IFileValidationService, FileValidationService>();

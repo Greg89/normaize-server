@@ -41,13 +41,13 @@ public class ResetDataSetCommandHandlerTests
         // Arrange
         var dataSetId = Guid.NewGuid();
         var userId = "test-user";
-        var filePath = "uploads/test.csv";
+        var filePath = "s3://normaize-uploads/test.csv";
 
         var dataSet = DataSet.Create(
             "Test Dataset",
             "Test Description",
             userId,
-            new FileMetadata("test.csv", filePath, Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024));
+            new FileMetadata("test.csv", filePath, Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024));
 
         var command = new ResetDataSetCommand
         {
@@ -104,13 +104,13 @@ public class ResetDataSetCommandHandlerTests
         // Arrange
         var dataSetId = Guid.NewGuid();
         var userId = "test-user";
-        var filePath = "uploads/missing.csv";
+        var filePath = "s3://normaize-uploads/missing.csv";
 
         var dataSet = DataSet.Create(
             "Test Dataset",
             "Test Description",
             userId,
-            new FileMetadata("missing.csv", filePath, Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024));
+            new FileMetadata("missing.csv", filePath, Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024));
 
         var command = new ResetDataSetCommand
         {
@@ -145,13 +145,13 @@ public class ResetDataSetCommandHandlerTests
         // Arrange
         var dataSetId = Guid.NewGuid();
         var userId = "test-user";
-        var filePath = "uploads/test.csv";
+        var filePath = "s3://normaize-uploads/test.csv";
 
         var dataSet = DataSet.Create(
             "Test Dataset",
             "Test Description",
             userId,
-            new FileMetadata("test.csv", filePath, Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024));
+            new FileMetadata("test.csv", filePath, Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024));
 
         var command = new ResetDataSetCommand
         {
@@ -191,7 +191,7 @@ public class ResetDataSetCommandHandlerTests
             "Test Dataset",
             "Test Description",
             userId,
-            new FileMetadata("test.csv", "uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024));
+            new FileMetadata("test.csv", "s3://normaize-uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024));
 
         // Soft delete the dataset
         dataSet.Delete(userId);
@@ -270,7 +270,7 @@ public class ResetDataSetCommandHandlerTests
             "Test Dataset",
             "Test Description",
             ownerId,
-            new FileMetadata("test.csv", "uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024));
+            new FileMetadata("test.csv", "s3://normaize-uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024));
 
         var command = new ResetDataSetCommand
         {
@@ -297,13 +297,13 @@ public class ResetDataSetCommandHandlerTests
         // Arrange
         var dataSetId = Guid.NewGuid();
         var userId = "test-user";
-        var filePath = "uploads/test.csv";
+        var filePath = "s3://normaize-uploads/test.csv";
 
         var dataSet = DataSet.Create(
             "Test Dataset",
             "Test Description",
             userId,
-            new FileMetadata("test.csv", filePath, Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024));
+            new FileMetadata("test.csv", filePath, Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024));
 
         // Soft delete the dataset
         dataSet.Delete(userId);

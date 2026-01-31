@@ -40,7 +40,7 @@ public class RestoreDataSetCommandHandlerTests
             "Test Dataset",
             "Test Description",
             userId,
-            new FileMetadata("test.csv", "uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024));
+            new FileMetadata("test.csv", "s3://normaize-uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024));
 
         // Soft delete the dataset
         dataSet.Delete(userId);
@@ -92,7 +92,7 @@ public class RestoreDataSetCommandHandlerTests
             "Test Dataset",
             "Test Description",
             userId,
-            new FileMetadata("test.csv", "uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024));
+            new FileMetadata("test.csv", "s3://normaize-uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024));
 
         var command = new RestoreDataSetCommand
         {
@@ -154,7 +154,7 @@ public class RestoreDataSetCommandHandlerTests
             "Test Dataset",
             "Test Description",
             ownerId,
-            new FileMetadata("test.csv", "uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024));
+            new FileMetadata("test.csv", "s3://normaize-uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024));
 
         var command = new RestoreDataSetCommand
         {

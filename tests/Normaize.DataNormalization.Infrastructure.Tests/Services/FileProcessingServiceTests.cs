@@ -13,29 +13,17 @@ namespace Normaize.DataNormalization.Infrastructure.Tests.Services;
 /// <summary>
 /// Tests for FileProcessingService
 /// </summary>
-public class FileProcessingServiceTests : IDisposable
+public class FileProcessingServiceTests
 {
     private readonly FileProcessingService _service;
     private readonly Mock<ILogger<FileProcessingService>> _mockLogger;
-    private readonly string _testDirectory;
+    private readonly Mock<IFileStorageService> _mockFileStorageService;
 
     public FileProcessingServiceTests()
     {
         _mockLogger = new Mock<ILogger<FileProcessingService>>();
-        _service = new FileProcessingService(_mockLogger.Object);
-
-        // Create temporary directory for test files
-        _testDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(_testDirectory);
-    }
-
-    public void Dispose()
-    {
-        // Cleanup test directory
-        if (Directory.Exists(_testDirectory))
-        {
-            Directory.Delete(_testDirectory, true);
-        }
+        _mockFileStorageService = new Mock<IFileStorageService>();
+        _service = new FileProcessingService(_mockLogger.Object, _mockFileStorageService.Object);
     }
 
     #region ValidateFileAsync Tests
@@ -160,7 +148,8 @@ public class FileProcessingServiceTests : IDisposable
     {
         // Arrange
         var csvContent = "Name,Age,City\nJohn,30,NYC\nJane,25,LA\nBob,35,Chicago";
-        var filePath = CreateTestFile("test.csv", csvContent);
+        var filePath = CreateS3Path("test.csv");
+        SetupMockFileStorage(filePath, csvContent);
 
         // Act
         var result = await _service.ProcessFileAsync(filePath, FileType.CSV);
@@ -187,7 +176,8 @@ public class FileProcessingServiceTests : IDisposable
     public async Task ProcessFileAsync_ShouldFail_WhenCsvFileIsEmpty()
     {
         // Arrange
-        var filePath = CreateTestFile("empty.csv", "");
+        var filePath = CreateS3Path("empty.csv");
+        SetupMockFileStorage(filePath, "");
 
         // Act
         var result = await _service.ProcessFileAsync(filePath, FileType.CSV);
@@ -203,7 +193,8 @@ public class FileProcessingServiceTests : IDisposable
     {
         // Arrange
         var csvContent = "Name,Age,City";
-        var filePath = CreateTestFile("header-only.csv", csvContent);
+        var filePath = CreateS3Path("header-only.csv");
+        SetupMockFileStorage(filePath, csvContent);
 
         // Act
         var result = await _service.ProcessFileAsync(filePath, FileType.CSV);
@@ -225,7 +216,8 @@ public class FileProcessingServiceTests : IDisposable
             csvLines.Add($"Person{i},{20 + i}");
         }
         var csvContent = string.Join("\n", csvLines);
-        var filePath = CreateTestFile("large.csv", csvContent);
+        var filePath = CreateS3Path("large.csv");
+        SetupMockFileStorage(filePath, csvContent);
 
         // Act
         var result = await _service.ProcessFileAsync(filePath, FileType.CSV);
@@ -253,7 +245,8 @@ public class FileProcessingServiceTests : IDisposable
             {""name"": ""Jane"", ""age"": 25, ""city"": ""LA""},
             {""name"": ""Bob"", ""age"": 35, ""city"": ""Chicago""}
         ]";
-        var filePath = CreateTestFile("test.json", jsonContent);
+        var filePath = CreateS3Path("test.json");
+        SetupMockFileStorage(filePath, jsonContent);
 
         // Act
         var result = await _service.ProcessFileAsync(filePath, FileType.JSON);
@@ -277,7 +270,8 @@ public class FileProcessingServiceTests : IDisposable
     {
         // Arrange
         var jsonContent = @"{""name"": ""John"", ""age"": 30}";
-        var filePath = CreateTestFile("object.json", jsonContent);
+        var filePath = CreateS3Path("object.json");
+        SetupMockFileStorage(filePath, jsonContent);
 
         // Act
         var result = await _service.ProcessFileAsync(filePath, FileType.JSON);
@@ -293,7 +287,8 @@ public class FileProcessingServiceTests : IDisposable
     {
         // Arrange
         var jsonContent = "[]";
-        var filePath = CreateTestFile("empty.json", jsonContent);
+        var filePath = CreateS3Path("empty.json");
+        SetupMockFileStorage(filePath, jsonContent);
 
         // Act
         var result = await _service.ProcessFileAsync(filePath, FileType.JSON);
@@ -314,7 +309,8 @@ public class FileProcessingServiceTests : IDisposable
             items.Add(new { name = $"Person{i}", age = 20 + i });
         }
         var jsonContent = JsonSerializer.Serialize(items);
-        var filePath = CreateTestFile("large.json", jsonContent);
+        var filePath = CreateS3Path("large.json");
+        SetupMockFileStorage(filePath, jsonContent);
 
         // Act
         var result = await _service.ProcessFileAsync(filePath, FileType.JSON);
@@ -338,7 +334,8 @@ public class FileProcessingServiceTests : IDisposable
     {
         // Arrange
         var textContent = "Line 1\nLine 2\nLine 3\nLine 4\nLine 5";
-        var filePath = CreateTestFile("test.txt", textContent);
+        var filePath = CreateS3Path("test.txt");
+        SetupMockFileStorage(filePath, textContent);
 
         // Act
         var result = await _service.ProcessFileAsync(filePath, FileType.TXT);
@@ -359,7 +356,8 @@ public class FileProcessingServiceTests : IDisposable
     public async Task ProcessFileAsync_ShouldHandleEmptyTextFile()
     {
         // Arrange
-        var filePath = CreateTestFile("empty.txt", "");
+        var filePath = CreateS3Path("empty.txt");
+        SetupMockFileStorage(filePath, "");
 
         // Act
         var result = await _service.ProcessFileAsync(filePath, FileType.TXT);
@@ -377,7 +375,8 @@ public class FileProcessingServiceTests : IDisposable
         // Arrange
         var lines = Enumerable.Range(1, 15).Select(i => $"Line {i}");
         var textContent = string.Join("\n", lines);
-        var filePath = CreateTestFile("large.txt", textContent);
+        var filePath = CreateS3Path("large.txt");
+        SetupMockFileStorage(filePath, textContent);
 
         // Act
         var result = await _service.ProcessFileAsync(filePath, FileType.TXT);
@@ -401,7 +400,8 @@ public class FileProcessingServiceTests : IDisposable
     {
         // Arrange
         var xmlContent = "<?xml version=\"1.0\"?><root><item>test</item></root>";
-        var filePath = CreateTestFile("test.xml", xmlContent);
+        var filePath = CreateS3Path("test.xml");
+        SetupMockFileStorage(filePath, xmlContent);
 
         // Act
         var result = await _service.ProcessFileAsync(filePath, FileType.XML);
@@ -416,7 +416,8 @@ public class FileProcessingServiceTests : IDisposable
     public async Task ProcessFileAsync_ShouldHandleExcelFile()
     {
         // Arrange
-        var filePath = CreateTestFile("test.xlsx", "dummy excel content");
+        var filePath = CreateS3Path("test.xlsx");
+        SetupMockFileStorage(filePath, "dummy excel content");
 
         // Act
         var result = await _service.ProcessFileAsync(filePath, FileType.Excel);
@@ -435,7 +436,10 @@ public class FileProcessingServiceTests : IDisposable
     public async Task ProcessFileAsync_ShouldFail_WhenFileNotFound()
     {
         // Arrange
-        var nonExistentPath = Path.Combine(_testDirectory, "nonexistent.csv");
+        var nonExistentPath = CreateS3Path("nonexistent.csv");
+        _mockFileStorageService
+            .Setup(x => x.GetFileAsync(nonExistentPath, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new FileNotFoundException("File not found"));
 
         // Act
         var result = await _service.ProcessFileAsync(nonExistentPath, FileType.CSV);
@@ -450,7 +454,8 @@ public class FileProcessingServiceTests : IDisposable
     public async Task ProcessFileAsync_ShouldFail_ForUnsupportedFileType()
     {
         // Arrange
-        var filePath = CreateTestFile("test.pdf", "dummy content");
+        var filePath = CreateS3Path("test.pdf");
+        SetupMockFileStorage(filePath, "dummy content");
         var unsupportedType = FileType.FromString("PDF");
 
         // Act
@@ -467,7 +472,8 @@ public class FileProcessingServiceTests : IDisposable
     {
         // Arrange
         var invalidJson = "{invalid json content}}}";
-        var filePath = CreateTestFile("invalid.json", invalidJson);
+        var filePath = CreateS3Path("invalid.json");
+        SetupMockFileStorage(filePath, invalidJson);
 
         // Act
         var result = await _service.ProcessFileAsync(filePath, FileType.JSON);
@@ -482,12 +488,23 @@ public class FileProcessingServiceTests : IDisposable
 
     #region Helper Methods
 
-    private string CreateTestFile(string fileName, string content)
+    /// <summary>
+    /// Sets up the mock file storage service to return a stream with the provided content for the given S3 path
+    /// </summary>
+    private void SetupMockFileStorage(string s3FilePath, string content)
     {
-        var filePath = Path.Combine(_testDirectory, fileName);
-        File.WriteAllText(filePath, content);
-        return filePath;
+        var contentBytes = Encoding.UTF8.GetBytes(content);
+        var stream = new MemoryStream(contentBytes);
+        
+        _mockFileStorageService
+            .Setup(x => x.GetFileAsync(s3FilePath, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(stream);
     }
+    
+    /// <summary>
+    /// Creates an S3 URI for testing
+    /// </summary>
+    private static string CreateS3Path(string fileName) => $"s3://normaize-uploads/test/{fileName}";
 
     #endregion
 }

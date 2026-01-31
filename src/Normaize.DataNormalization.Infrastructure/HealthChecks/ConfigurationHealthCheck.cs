@@ -87,7 +87,7 @@ public class ConfigurationHealthCheck : IHealthCheck
                 var logger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationHealthCheck>();
                 Console.WriteLine($"❌ Configuration Health Check Failed - Missing settings: {string.Join(", ", missingSettings)}");
                 Console.WriteLine($"   Checked DATABASE_URL: {(!string.IsNullOrWhiteSpace(_configuration["DATABASE_URL"]) ? "Present" : "Missing")}");
-                Console.WriteLine($"   Checked Storage:Provider: {(!string.IsNullOrWhiteSpace(_configuration["Storage:Provider"]) ? _configuration["Storage:Provider"] : "Missing")}");
+                Console.WriteLine($"   Checked AWS_S3_BUCKET: {(!string.IsNullOrWhiteSpace(_configuration["AWS_S3_BUCKET"]) ? "Present" : "Missing")}");
 
                 return Task.FromResult(HealthCheckResult.Unhealthy(
                     $"Missing {missingSettings.Count} required configuration setting(s)",
@@ -124,7 +124,7 @@ public class ConfigurationHealthCheck : IHealthCheck
         return new[]
         {
             "ConnectionStrings:DefaultConnection",
-            "Storage:Provider"
+            "AWS_S3_BUCKET"
         };
     }
 }

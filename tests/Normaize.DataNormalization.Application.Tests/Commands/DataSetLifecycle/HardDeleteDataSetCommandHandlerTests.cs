@@ -38,13 +38,13 @@ public class HardDeleteDataSetCommandHandlerTests
         // Arrange
         var dataSetId = Guid.NewGuid();
         var userId = "test-user";
-        var filePath = "uploads/test.csv";
+        var filePath = "s3://normaize-uploads/test.csv";
 
         var dataSet = DataSet.Create(
             "Test Dataset",
             "Test Description",
             userId,
-            new FileMetadata("test.csv", filePath, Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024));
+            new FileMetadata("test.csv", filePath, Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024));
 
         var command = new HardDeleteDataSetCommand
         {
@@ -93,13 +93,13 @@ public class HardDeleteDataSetCommandHandlerTests
         // Arrange
         var dataSetId = Guid.NewGuid();
         var userId = "test-user";
-        var filePath = "uploads/test.csv";
+        var filePath = "s3://normaize-uploads/test.csv";
 
         var dataSet = DataSet.Create(
             "Test Dataset",
             "Test Description",
             userId,
-            new FileMetadata("test.csv", filePath, Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024));
+            new FileMetadata("test.csv", filePath, Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024));
 
         var command = new HardDeleteDataSetCommand
         {
@@ -169,7 +169,7 @@ public class HardDeleteDataSetCommandHandlerTests
             "Test Dataset",
             "Test Description",
             ownerId,
-            new FileMetadata("test.csv", "uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.Local, 1024));
+            new FileMetadata("test.csv", "s3://normaize-uploads/test.csv", Domain.ValueObjects.FileType.CSV, StorageProvider.S3, 1024));
 
         var command = new HardDeleteDataSetCommand
         {

@@ -20,7 +20,7 @@ public record FileMetadata
         FileName = string.Empty;
         FilePath = string.Empty;
         FileType = FileType.Custom;
-        StorageProvider = StorageProvider.Local;
+        StorageProvider = StorageProvider.S3; // Default to S3
         FileSize = 0;
     }
 
