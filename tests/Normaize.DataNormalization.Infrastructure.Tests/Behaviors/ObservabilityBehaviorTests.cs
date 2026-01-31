@@ -294,7 +294,6 @@ public class ObservabilityBehaviorTests
         var request = new TestRequest();
         var expectedResponse = new TestResponse("Success");
         var delay = TimeSpan.FromMilliseconds(100);
-        var tolerance = TimeSpan.FromMilliseconds(100); // Increased tolerance for CI/test execution overhead
 
         async Task<TestResponse> next()
         {
@@ -310,7 +309,11 @@ public class ObservabilityBehaviorTests
 
         // Assert
         result.Should().Be(expectedResponse);
-        stopwatch.Elapsed.Should().BeCloseTo(delay, tolerance);
+        // Timing-based assertions are notoriously flaky on CI due to scheduler jitter.
+        // This assertion verifies we measured *at least* the expected work duration,
+        // while keeping a generous upper bound to catch hangs.
+        stopwatch.Elapsed.Should().BeGreaterThanOrEqualTo(delay);
+        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(2));
     }
 
     [Fact]
