@@ -42,7 +42,7 @@ This document outlines a comprehensive, incremental refactor plan for both the N
 **Areas for Improvement:**
 - ✅ ID types consistent (Analysis migrated to Guid)
 - ✅ Pagination total counts implemented (Analyses + DataSets)
-- ⚠️ Jobs list pagination still placeholder
+- ✅ Jobs list pagination implemented
 - ⚠️ Temporary `[AllowAnonymous]` attributes for testing
 - ⚠️ Placeholder logic in some endpoints (e.g., `GetRetentionStatus`)
 - ⚠️ Missing comprehensive error handling
@@ -275,7 +275,7 @@ This document outlines a comprehensive, incremental refactor plan for both the N
 - [x] Fix pagination implementations (Analyses + DataSets)
 - [ ] Add database migrations for schema changes
 - [x] Implement proper total count calculations (Analyses + DataSets)
-- [ ] Implement Jobs list pagination (`GET /api/datanormalization/jobs`)
+- [x] Implement Jobs list pagination (`GET /api/datanormalization/jobs`)
 - [ ] Add validation using FluentValidation
 - [ ] Create integration tests for all endpoints
 - [ ] Add XML documentation to public APIs
@@ -365,7 +365,7 @@ This document outlines a comprehensive, incremental refactor plan for both the N
 
 #### Supporting Files
 - [x] Pagination handlers (Analyses + DataSets)
-- [ ] Jobs list pagination (DataNormalizationController)
+- [x] Jobs list pagination (DataNormalizationController)
 - [ ] All command handlers with validation
 - [ ] Background worker implementations
 - [ ] Health check implementations

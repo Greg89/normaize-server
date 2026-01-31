@@ -20,6 +20,7 @@ public class DataNormalizationController : BaseApiController
     private readonly ICommandHandler<RetryJobCommand> _retryJobHandler;
     private readonly ICommandHandler<CancelJobCommand> _cancelJobHandler;
     private readonly IQueryHandler<GetJobStatusQuery, JobStatusDto?> _getJobStatusHandler;
+    private readonly IQueryHandler<GetUserJobsQuery, PaginatedResult<JobStatusDto>> _getUserJobsHandler;
     private readonly ILogger<DataNormalizationController> _logger;
 
     public DataNormalizationController(
@@ -27,12 +28,14 @@ public class DataNormalizationController : BaseApiController
         ICommandHandler<RetryJobCommand> retryJobHandler,
         ICommandHandler<CancelJobCommand> cancelJobHandler,
         IQueryHandler<GetJobStatusQuery, JobStatusDto?> getJobStatusHandler,
+        IQueryHandler<GetUserJobsQuery, PaginatedResult<JobStatusDto>> getUserJobsHandler,
         ILogger<DataNormalizationController> logger)
     {
         _submitJobHandler = submitJobHandler ?? throw new ArgumentNullException(nameof(submitJobHandler));
         _retryJobHandler = retryJobHandler ?? throw new ArgumentNullException(nameof(retryJobHandler));
         _cancelJobHandler = cancelJobHandler ?? throw new ArgumentNullException(nameof(cancelJobHandler));
         _getJobStatusHandler = getJobStatusHandler ?? throw new ArgumentNullException(nameof(getJobStatusHandler));
+        _getUserJobsHandler = getUserJobsHandler ?? throw new ArgumentNullException(nameof(getUserJobsHandler));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -274,14 +277,50 @@ public class DataNormalizationController : BaseApiController
             var userId = GetCurrentUserId();
             _logger.LogDebug("User {UserId} requesting job list", userId);
 
-            // TODO: Implement GetUserJobsQuery when needed
+            if (filter.Page < 1)
+                return Error("Page must be >= 1", "INVALID_ARGUMENT", 400);
+
+            if (filter.PageSize < 1 || filter.PageSize > 100)
+                return Error("PageSize must be between 1 and 100", "INVALID_ARGUMENT", 400);
+
+            if (filter.StartDate.HasValue && filter.EndDate.HasValue && filter.StartDate.Value > filter.EndDate.Value)
+                return Error("StartDate must be <= EndDate", "INVALID_ARGUMENT", 400);
+
+            var query = new GetUserJobsQuery(
+                UserId: userId,
+                PageNumber: filter.Page,
+                PageSize: filter.PageSize,
+                DataSetId: filter.DataSetId,
+                Status: filter.Status,
+                JobType: filter.JobType,
+                StartDate: filter.StartDate,
+                EndDate: filter.EndDate);
+
+            var result = await _getUserJobsHandler.HandleAsync(query);
+
+            var jobs = result.Items.Select(jobStatusDto => new JobStatusResponse
+            {
+                JobId = jobStatusDto.Id,
+                DataSetId = jobStatusDto.DataSetId,
+                JobType = jobStatusDto.OperationType,
+                Status = jobStatusDto.Status,
+                StatusMessage = jobStatusDto.ErrorMessage ?? jobStatusDto.ProgressMessage ?? "Job is processing",
+                ProgressPercentage = jobStatusDto.ProgressPercentage,
+                SubmittedAt = jobStatusDto.CreatedAt,
+                StartedAt = jobStatusDto.StartedAt,
+                CompletedAt = jobStatusDto.CompletedAt,
+                SubmittedBy = userId,
+                Parameters = ParseParametersFromJson(jobStatusDto.OperationParameters),
+                Results = CreateJobResults(jobStatusDto)
+            }).ToList();
+
             var response = new JobListResponse
             {
-                Jobs = new List<JobStatusResponse>(),
-                TotalJobs = 0
+                Jobs = jobs,
+                TotalJobs = result.TotalItems
             };
 
-            return SuccessPaginated(response, filter.Page, filter.PageSize, 0);
+            return SuccessPaginated(response, filter.Page, filter.PageSize, result.TotalItems);
         }
         catch (Exception ex)
         {
@@ -297,7 +336,7 @@ public class DataNormalizationController : BaseApiController
     /// <param name="filter">Job filtering parameters</param>
     /// <returns>List of jobs for the dataset</returns>
     [HttpGet("datasets/{dataSetId:guid}/jobs")]
-    [ProducesResponseType(typeof(ApiResponse<JobListResponse>), 200)]
+    [ProducesResponseType(typeof(PaginatedApiResponse<JobListResponse>), 200)]
     [ProducesResponseType(401)]
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
@@ -308,14 +347,53 @@ public class DataNormalizationController : BaseApiController
             var userId = GetCurrentUserId();
             _logger.LogDebug("User {UserId} requesting jobs for dataset {DataSetId}", userId, dataSetId);
 
-            // TODO: Implement GetDataSetJobsQuery when needed
+            if (filter.Page < 1)
+                return Error("Page must be >= 1", "INVALID_ARGUMENT", 400);
+
+            if (filter.PageSize < 1 || filter.PageSize > 100)
+                return Error("PageSize must be between 1 and 100", "INVALID_ARGUMENT", 400);
+
+            if (filter.DataSetId.HasValue && filter.DataSetId.Value != dataSetId)
+                return Error("DataSetId filter must match route dataSetId", "INVALID_ARGUMENT", 400);
+
+            if (filter.StartDate.HasValue && filter.EndDate.HasValue && filter.StartDate.Value > filter.EndDate.Value)
+                return Error("StartDate must be <= EndDate", "INVALID_ARGUMENT", 400);
+
+            var query = new GetUserJobsQuery(
+                UserId: userId,
+                PageNumber: filter.Page,
+                PageSize: filter.PageSize,
+                DataSetId: dataSetId,
+                Status: filter.Status,
+                JobType: filter.JobType,
+                StartDate: filter.StartDate,
+                EndDate: filter.EndDate);
+
+            var result = await _getUserJobsHandler.HandleAsync(query);
+
+            var jobs = result.Items.Select(jobStatusDto => new JobStatusResponse
+            {
+                JobId = jobStatusDto.Id,
+                DataSetId = jobStatusDto.DataSetId,
+                JobType = jobStatusDto.OperationType,
+                Status = jobStatusDto.Status,
+                StatusMessage = jobStatusDto.ErrorMessage ?? jobStatusDto.ProgressMessage ?? "Job is processing",
+                ProgressPercentage = jobStatusDto.ProgressPercentage,
+                SubmittedAt = jobStatusDto.CreatedAt,
+                StartedAt = jobStatusDto.StartedAt,
+                CompletedAt = jobStatusDto.CompletedAt,
+                SubmittedBy = userId,
+                Parameters = ParseParametersFromJson(jobStatusDto.OperationParameters),
+                Results = CreateJobResults(jobStatusDto)
+            }).ToList();
+
             var response = new JobListResponse
             {
-                Jobs = new List<JobStatusResponse>(),
-                TotalJobs = 0
+                Jobs = jobs,
+                TotalJobs = result.TotalItems
             };
 
-            return Success(response);
+            return SuccessPaginated(response, filter.Page, filter.PageSize, result.TotalItems);
         }
         catch (Exception ex)
         {

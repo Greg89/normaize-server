@@ -129,6 +129,7 @@ public static class InfrastructureServiceCollectionExtensions
 
         // Query Handlers - Jobs
         services.AddScoped<IQueryHandler<GetJobStatusQuery, JobStatusDto?>, GetJobStatusQueryHandler>();
+        services.AddScoped<IQueryHandler<GetUserJobsQuery, PaginatedResult<JobStatusDto>>, GetUserJobsQueryHandler>();
 
         // Query Handlers - Analysis
         services.AddScoped<IQueryHandler<GetAnalysisQuery, AnalysisDto?>, GetAnalysisQueryHandler>();

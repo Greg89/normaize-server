@@ -11,6 +11,16 @@ public record GetJobStatusQuery(Guid JobId);
 
 public record GetJobsQuery(int PageNumber = 1, int PageSize = 20, string? Status = null);
 
+public record GetUserJobsQuery(
+    string UserId,
+    int PageNumber = 1,
+    int PageSize = 20,
+    Guid? DataSetId = null,
+    string? Status = null,
+    string? JobType = null,
+    DateTime? StartDate = null,
+    DateTime? EndDate = null);
+
 // Analysis Queries
 public record GetAnalysisQuery(Guid AnalysisId);
 

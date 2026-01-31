@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -87,6 +88,77 @@ public class NormalizationJobRepository : INormalizationJobRepository
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving next queued normalization job");
+            throw;
+        }
+    }
+
+    public async Task<(IReadOnlyList<NormalizationJob> Jobs, int TotalItems)> GetJobsForUserAsync(
+        string userId,
+        Guid? dataSetId = null,
+        JobStatus? status = null,
+        string? operationType = null,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        int pageNumber = 1,
+        int pageSize = 20)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+                throw new ArgumentException("User ID cannot be null or empty", nameof(userId));
+
+            if (pageNumber < 1)
+                throw new ArgumentException("PageNumber must be >= 1", nameof(pageNumber));
+
+            if (pageSize < 1 || pageSize > 100)
+                throw new ArgumentException("PageSize must be between 1 and 100", nameof(pageSize));
+
+            if (startDate.HasValue && endDate.HasValue && startDate.Value > endDate.Value)
+                throw new ArgumentException("StartDate must be <= EndDate");
+
+            var query = _context.NormalizationJobs
+                .AsNoTracking()
+                .Include(j => j.DataSet)
+                .Where(j => j.DataSet != null && j.DataSet.UserId == userId);
+
+            if (dataSetId.HasValue)
+            {
+                query = query.Where(j => j.DataSetId == dataSetId.Value);
+            }
+
+            if (status.HasValue)
+            {
+                query = query.Where(j => j.Status == status.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(operationType))
+            {
+                query = query.Where(j => j.OperationType == operationType);
+            }
+
+            if (startDate.HasValue)
+            {
+                query = query.Where(j => j.CreatedAt >= startDate.Value);
+            }
+
+            if (endDate.HasValue)
+            {
+                query = query.Where(j => j.CreatedAt <= endDate.Value);
+            }
+
+            var totalItems = await query.CountAsync();
+
+            var jobs = await query
+                .OrderByDescending(j => j.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (jobs, totalItems);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving normalization jobs for user {UserId}", userId);
             throw;
         }
     }

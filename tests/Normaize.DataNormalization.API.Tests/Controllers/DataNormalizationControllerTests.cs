@@ -15,6 +15,7 @@ public class DataNormalizationControllerTests
     private readonly Mock<ICommandHandler<RetryJobCommand>> _retryJobHandlerMock;
     private readonly Mock<ICommandHandler<CancelJobCommand>> _cancelJobHandlerMock;
     private readonly Mock<IQueryHandler<GetJobStatusQuery, JobStatusDto?>> _getJobStatusHandlerMock;
+    private readonly Mock<IQueryHandler<GetUserJobsQuery, PaginatedResult<JobStatusDto>>> _getUserJobsHandlerMock;
     private readonly Mock<ILogger<DataNormalizationController>> _loggerMock;
     private readonly DataNormalizationController _controller;
 
@@ -24,6 +25,7 @@ public class DataNormalizationControllerTests
         _retryJobHandlerMock = new Mock<ICommandHandler<RetryJobCommand>>();
         _cancelJobHandlerMock = new Mock<ICommandHandler<CancelJobCommand>>();
         _getJobStatusHandlerMock = new Mock<IQueryHandler<GetJobStatusQuery, JobStatusDto?>>();
+        _getUserJobsHandlerMock = new Mock<IQueryHandler<GetUserJobsQuery, PaginatedResult<JobStatusDto>>>();
         _loggerMock = new Mock<ILogger<DataNormalizationController>>();
         
         _controller = new DataNormalizationController(
@@ -31,6 +33,7 @@ public class DataNormalizationControllerTests
             _retryJobHandlerMock.Object,
             _cancelJobHandlerMock.Object,
             _getJobStatusHandlerMock.Object,
+            _getUserJobsHandlerMock.Object,
             _loggerMock.Object);
     }
 
