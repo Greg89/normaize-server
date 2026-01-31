@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +31,7 @@ public abstract class BaseTestApplicationFactory : WebApplicationFactory<Program
         // Configure app settings to avoid PostgreSQL configuration loading
         builder.UseSetting("UseInMemoryDatabase", "true");
         builder.UseSetting("SkipInfrastructureRegistration", "true");
+        builder.UseSetting("Features:EnableSwagger", "true");
         
         // Override the configuration to prevent the main Program from registering PostgreSQL services
         builder.ConfigureServices((context, services) =>
@@ -60,6 +62,16 @@ public abstract class BaseTestApplicationFactory : WebApplicationFactory<Program
             
             // Add our test infrastructure services
             services.AddTestDataNormalizationInfrastructureWithoutDatabase();
+
+            // Ensures [Authorize] endpoints do not return 401 unless a test opts into that explicitly.
+            services.AddAuthentication(options =>
+                {
+                    options.DefaultAuthenticateScheme = "Test";
+                    options.DefaultChallengeScheme = "Test";
+                })
+                .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                    "Test", _ => { });
+            services.AddAuthorization();
         });
     }
 

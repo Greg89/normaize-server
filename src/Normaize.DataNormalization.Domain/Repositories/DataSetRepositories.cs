@@ -12,6 +12,7 @@ namespace Normaize.DataNormalization.Domain.Repositories;
 public interface IDataSetRepository
 {
     Task<DataSet?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<DataSet?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default);
     Task<DataSet?> GetByIdWithRowsAsync(Guid id, CancellationToken cancellationToken = default);
     /// <summary>
     /// Returns all datasets for a user, including soft-deleted datasets.

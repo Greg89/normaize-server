@@ -24,7 +24,7 @@ public class CompleteWorkflowIntegrationTests : IClassFixture<ApiTestApplication
     public CompleteWorkflowIntegrationTests(ApiTestApplicationFactory factory)
     {
         _factory = factory;
-        _client = _factory.CreateClient();
+        _client = _factory.CreateAuthenticatedClient();
         // Seed test data synchronously - this will be called once per test class
         Task.Run(async () => await _factory.SeedTestDataAsync()).Wait();
     }
@@ -71,7 +71,7 @@ public class CompleteWorkflowIntegrationTests : IClassFixture<ApiTestApplication
         statusResult.Data!.JobId.Should().Be(jobId);
         statusResult.Data.DataSetId.Should().Be(dataSetId);
         statusResult.Data.JobType.Should().Be("RemoveDuplicates");
-        statusResult.Data.Status.Should().BeOneOf("Queued", "Processing", "Completed");
+        statusResult.Data.Status.Should().BeOneOf("Queued", "Processing", "Succeeded", "Completed");
     }
 
     [Fact]
@@ -215,7 +215,7 @@ public class CompleteWorkflowIntegrationTests : IClassFixture<ApiTestApplication
         var dataSet = DataSet.Create(
             name: "Test Dataset",
             description: "A test dataset for integration testing",
-            userId: "test-user-123",
+            userId: "test-user-id",
             fileInfo: fileInfo,
             statistics: statistics
         );

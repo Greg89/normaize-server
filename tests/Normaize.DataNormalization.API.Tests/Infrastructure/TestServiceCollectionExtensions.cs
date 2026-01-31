@@ -1,16 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Normaize.DataNormalization.Application.Interfaces;
-using Normaize.DataNormalization.Application.Commands;
-using Normaize.DataNormalization.Application.Queries;
-using Normaize.DataNormalization.Application.DTOs;
-using Normaize.DataNormalization.Domain.Repositories;
-using Normaize.DataNormalization.Infrastructure.Data;
-using Normaize.DataNormalization.Infrastructure.Repositories;
-using Normaize.DataNormalization.Infrastructure.Services;
-using Normaize.DataNormalization.Infrastructure.Handlers;
-using Normaize.DataNormalization.Infrastructure.Workers;
 
 namespace Normaize.DataNormalization.API.Tests.Infrastructure;
 
@@ -37,8 +24,15 @@ public static class TestServiceCollectionExtensions
         this IServiceCollection services)
     {
 
+        // Program.cs maps health check endpoints unconditionally; make sure the required services exist.
+        services.AddHealthChecks();
+
+        // AuthenticationHandler now prefers TimeProvider; register a default instance for handler activation.
+        services.TryAddSingleton(System.TimeProvider.System);
+
         // Repositories
         services.AddScoped<INormalizationJobRepository, NormalizationJobRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
 
         // Data access repositories  
         services.AddScoped<IDataSetRepository, DataSetRepository>();
@@ -56,6 +50,12 @@ public static class TestServiceCollectionExtensions
         services.AddScoped<IJobProgress, JobProgressService>();
         services.AddScoped<INormalizationJobRouter, NormalizationJobRouter>();
 
+        // External services - use lightweight test implementations
+        // (no S3, no real file parsing pipeline, no persistent audit logging)
+        services.AddSingleton<IFileStorageService, InMemoryTestFileStorageService>();
+        services.AddSingleton<IFileProcessingService, FakeFileProcessingService>();
+        services.AddSingleton<IAuditService, NoopAuditService>();
+
         // Command Handlers
         services.AddScoped<ICommandHandler<SubmitJobCommand, Guid>, SubmitJobCommandHandler>();
         services.AddScoped<ICommandHandler<SubmitDuplicateRemovalJobCommand, Guid>, SubmitDuplicateRemovalJobCommandHandler>();
@@ -64,6 +64,7 @@ public static class TestServiceCollectionExtensions
 
         // Query Handlers
         services.AddScoped<IQueryHandler<GetJobStatusQuery, JobStatusDto?>, GetJobStatusQueryHandler>();
+        services.AddScoped<IQueryHandler<GetUserJobsQuery, PaginatedResult<JobStatusDto>>, GetUserJobsQueryHandler>();
 
         // Operation Handlers
         services.AddScoped<IRemoveDuplicatesHandler, RemoveDuplicatesHandler>();

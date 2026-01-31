@@ -47,8 +47,25 @@ public static class SerilogConfiguration
     /// </summary>
     private static void ConfigureLogger(LoggerConfiguration loggerConfiguration, IConfiguration configuration)
     {
+        var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+            ?? configuration["ASPNETCORE_ENVIRONMENT"]
+            ?? "";
+
+        // In test runs we want logging to be non-blocking and resilient.
+        // Some environments inject partial/invalid Serilog config; don't let that crash the host.
+        if (!string.Equals(environmentName, "Testing", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                loggerConfiguration.ReadFrom.Configuration(configuration);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠ Serilog configuration could not be loaded; falling back to defaults. Error: {ex.Message}");
+            }
+        }
+
         loggerConfiguration
-            .ReadFrom.Configuration(configuration)
             .Enrich.FromLogContext()
             .Enrich.WithMachineName()
             .Enrich.WithEnvironmentName()

@@ -14,18 +14,12 @@ namespace Normaize.DataNormalization.Infrastructure.Repositories;
 /// <summary>
 /// Entity Framework implementation of DataSet repository
 /// </summary>
-public class DataSetRepository : IDataSetRepository
+public class DataSetRepository(
+    DataNormalizationDbContext context,
+    ILogger<DataSetRepository> logger) : IDataSetRepository
 {
-    private readonly DataNormalizationDbContext _context;
-    private readonly ILogger<DataSetRepository> _logger;
-
-    public DataSetRepository(
-        DataNormalizationDbContext context,
-        ILogger<DataSetRepository> logger)
-    {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
+    private readonly DataNormalizationDbContext _context = context ?? throw new ArgumentNullException(nameof(context));
+    private readonly ILogger<DataSetRepository> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
     public async Task<DataSet?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -34,6 +28,15 @@ public class DataSetRepository : IDataSetRepository
         return await _context.DataSets
             .Where(ds => ds.Id == id && !ds.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<DataSet?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Getting dataset by ID (including deleted): {DataSetId}", id);
+
+        return await _context.DataSets
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(ds => ds.Id == id, cancellationToken);
     }
 
     public async Task<DataSet?> GetByIdWithRowsAsync(Guid id, CancellationToken cancellationToken = default)

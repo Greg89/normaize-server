@@ -36,7 +36,9 @@ public class ResetDataSetCommandHandler : IRequestHandler<ResetDataSetCommand, R
         try
         {
             // Retrieve dataset (allow retrieval of deleted datasets for restore)
-            var dataSet = await _dataSetRepository.GetByIdAsync(request.DataSetId, cancellationToken);
+            var dataSet = request.ResetType == ResetType.Restore
+                ? await _dataSetRepository.GetByIdIncludingDeletedAsync(request.DataSetId, cancellationToken)
+                : await _dataSetRepository.GetByIdAsync(request.DataSetId, cancellationToken);
 
             if (dataSet == null)
             {

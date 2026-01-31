@@ -508,20 +508,18 @@ public class DataSetsController(
 
             if (!result.Success)
             {
-                // Check if it's a file availability issue (409 Conflict)
-                if (result.Error != null &&
-                    (result.Error.Contains("no longer available") ||
-                     result.Error.Contains("not found") ||
-                     result.ErrorCode == "FILE_NOT_AVAILABLE"))
-                {
-                    return Error(result.Error ?? result.Message, result.ErrorCode ?? "FILE_NOT_AVAILABLE", 409);
-                }
-
                 // Check if dataset not found or access denied (404)
                 if (result.Error != null &&
                     (result.Error.Contains("not found") || result.Error.Contains("Access denied")))
                 {
                     return Error(result.Error, "DATASET_NOT_FOUND", 404);
+                }
+
+                // Check if it's a file availability issue (409 Conflict)
+                if (result.ErrorCode is "FILE_NOT_AVAILABLE" or "FILE_NOT_FOUND" or "FILE_NOT_AVAILABLE" ||
+                    (result.Error != null && result.Error.Contains("no longer available")))
+                {
+                    return Error(result.Error ?? result.Message, result.ErrorCode ?? "FILE_NOT_AVAILABLE", 409);
                 }
 
                 // Other errors (400 Bad Request)

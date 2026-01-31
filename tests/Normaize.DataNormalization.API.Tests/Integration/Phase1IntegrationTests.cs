@@ -1,10 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Security.Claims;
 using System.Text.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Normaize.DataNormalization.API.Tests.Infrastructure;
@@ -99,7 +96,8 @@ public class Phase1IntegrationTests : IClassFixture<ApiTestApplicationFactory>
         result.Should().NotBeNull();
         result!.Success.Should().BeTrue();
         result.Data.Should().NotBeNull();
-        result.Data!.Name.Should().Be("Updated Name");
+        result.Data!.Name.Should().Be(TestName);
+        result.Data.Settings.DisplayName.Should().Be("Updated Name");
         result.Data.Settings.Theme.Should().Be("dark");
         result.Data.Settings.Language.Should().Be("es");
         result.Data.Settings.DefaultPageSize.Should().Be(50);
@@ -130,7 +128,7 @@ public class Phase1IntegrationTests : IClassFixture<ApiTestApplicationFactory>
         result.Data!.JobId.Should().Be(jobId);
         result.Data.DataSetId.Should().Be(dataSetId);
         result.Data.JobType.Should().Be("RemoveDuplicates");
-        result.Data.Status.Should().BeOneOf("Queued", "Processing", "Completed");
+        result.Data.Status.Should().BeOneOf("Queued", "Processing", "Succeeded", "Completed");
     }
 
     [Fact]
@@ -173,7 +171,7 @@ public class Phase1IntegrationTests : IClassFixture<ApiTestApplicationFactory>
         result.Should().NotBeNull();
         result!.Success.Should().BeTrue();
         result.Data.Should().NotBeNull();
-        result.Data!.Status.Should().Be("Completed");
+        result.Data!.Status.Should().BeOneOf("Succeeded", "Completed");
         result.Data.Results.Should().NotBeNull();
     }
 
@@ -463,82 +461,3 @@ public class Phase1IntegrationTests : IClassFixture<ApiTestApplicationFactory>
 
     #endregion
 }
-
-/// <summary>
-/// Helper extensions for creating authenticated test clients
-/// </summary>
-public static class TestApplicationFactoryExtensions
-{
-    public static HttpClient CreateAuthenticatedClient(
-        this ApiTestApplicationFactory factory,
-        string userId,
-        string email,
-        string name)
-    {
-        var client = factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureTestServices(services =>
-            {
-                services.AddAuthentication("Test")
-                    .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
-                        "Test", options => { });
-
-                services.AddAuthorization(options =>
-                {
-                    options.AddPolicy("Test", policy =>
-                    {
-                        policy.AuthenticationSchemes.Add("Test");
-                        policy.RequireAuthenticatedUser();
-                    });
-                });
-            });
-        }).CreateClient();
-
-        // Add test authentication header
-        client.DefaultRequestHeaders.Add("X-Test-User-Id", userId);
-        client.DefaultRequestHeaders.Add("X-Test-User-Email", email);
-        client.DefaultRequestHeaders.Add("X-Test-User-Name", name);
-
-        return client;
-    }
-}
-
-/// <summary>
-/// Test authentication handler that creates a test user principal
-/// </summary>
-public class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
-{
-    public TestAuthenticationHandler(
-        Microsoft.Extensions.Options.IOptionsMonitor<AuthenticationSchemeOptions> options,
-        Microsoft.Extensions.Logging.ILoggerFactory logger,
-        System.Text.Encodings.Web.UrlEncoder encoder,
-        Microsoft.AspNetCore.Authentication.ISystemClock clock)
-        : base(options, logger, encoder, clock)
-    {
-    }
-
-    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
-    {
-        var userId = Request.Headers["X-Test-User-Id"].FirstOrDefault() ?? "auth0|test-user-123";
-        var email = Request.Headers["X-Test-User-Email"].FirstOrDefault() ?? "test@example.com";
-        var name = Request.Headers["X-Test-User-Name"].FirstOrDefault() ?? "Test User";
-
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, userId),
-            new Claim("sub", userId),
-            new Claim(ClaimTypes.Email, email),
-            new Claim("email", email),
-            new Claim(ClaimTypes.Name, name),
-            new Claim("name", name),
-            new Claim("email_verified", "true")
-        };
-
-        var identity = new ClaimsIdentity(claims, "Test");
-        var principal = new ClaimsPrincipal(identity);
-        var ticket = new AuthenticationTicket(principal, "Test");
-
-        return Task.FromResult(AuthenticateResult.Success(ticket));
-    }
-}
-

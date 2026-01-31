@@ -115,7 +115,8 @@ public class JobsController : BaseApiController
     private JobResultsResponse? CreateJobResults(JobStatusDto jobStatus)
     {
         // Only create results if job is completed and has result data
-        if (jobStatus.Status != "Completed" || string.IsNullOrWhiteSpace(jobStatus.Result))
+        var isCompletedStatus = jobStatus.Status is "Completed" or "Succeeded";
+        if (!isCompletedStatus || string.IsNullOrWhiteSpace(jobStatus.Result))
         {
             return null;
         }

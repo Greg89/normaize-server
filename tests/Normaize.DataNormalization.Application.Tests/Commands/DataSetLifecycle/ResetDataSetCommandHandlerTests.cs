@@ -204,7 +204,7 @@ public class ResetDataSetCommandHandlerTests
             UserId = userId
         };
 
-        _mockRepository.Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        _mockRepository.Setup(x => x.GetByIdIncludingDeletedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(dataSet);
 
         _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<DataSet>(), It.IsAny<CancellationToken>()))
