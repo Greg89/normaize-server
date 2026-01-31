@@ -46,7 +46,7 @@ public class UploadDataSetCommandHandlerTests
         var fileSize = 1 * 1024 * 1024; // 1MB - below 5MB threshold
         var command = CreateCommand(fileSize);
         var savedFilePath = "s3://bucket/file.csv";
-        
+
         SetupSuccessfulValidation();
         SetupFileStorage(savedFilePath);
         SetupSynchronousProcessing();
@@ -195,7 +195,7 @@ public class UploadDataSetCommandHandlerTests
         var storageError = "Failed to save file to S3";
 
         SetupSuccessfulValidation();
-        
+
         _fileStorageService
             .Setup(x => x.SaveFileAsync(
                 It.IsAny<Stream>(),
@@ -224,7 +224,7 @@ public class UploadDataSetCommandHandlerTests
 
         SetupSuccessfulValidation();
         SetupFileStorage(savedFilePath);
-        
+
         _fileProcessingService
             .Setup(x => x.ProcessFileAsync(
                 It.IsAny<string>(),
