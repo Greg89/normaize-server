@@ -14,7 +14,7 @@ public class AnalysisDto
     /// Gets or sets the unique identifier for the analysis
     /// </summary>
     [JsonPropertyName("id")]
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the analysis
@@ -160,7 +160,7 @@ public class AnalysisResultDto
     /// Gets or sets the identifier of the analysis
     /// </summary>
     [JsonPropertyName("analysisId")]
-    public int AnalysisId { get; set; }
+    public Guid AnalysisId { get; set; }
 
     /// <summary>
     /// Gets or sets the current status of the analysis

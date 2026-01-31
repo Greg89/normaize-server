@@ -12,7 +12,7 @@ public record GetJobStatusQuery(Guid JobId);
 public record GetJobsQuery(int PageNumber = 1, int PageSize = 20, string? Status = null);
 
 // Analysis Queries
-public record GetAnalysisQuery(int AnalysisId);
+public record GetAnalysisQuery(Guid AnalysisId);
 
 public record GetAnalysesByDataSetQuery(Guid DataSetId);
 
@@ -20,7 +20,7 @@ public record GetAnalysesByStatusQuery(AnalysisStatus Status);
 
 public record GetAnalysesByTypeQuery(AnalysisType Type);
 
-public record GetAnalysisResultQuery(int AnalysisId);
+public record GetAnalysisResultQuery(Guid AnalysisId);
 
 public record GetAllAnalysesQuery(
     int PageNumber = 1,

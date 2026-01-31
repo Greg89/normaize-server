@@ -24,18 +24,18 @@ public record CreateAnalysisCommand(
     string? Configuration = null
 );
 
-public record RunAnalysisCommand(int AnalysisId);
+public record RunAnalysisCommand(Guid AnalysisId);
 
-public record DeleteAnalysisCommand(int AnalysisId, string DeletedBy);
+public record DeleteAnalysisCommand(Guid AnalysisId, string DeletedBy);
 
 public record UpdateAnalysisCommand(
-    int AnalysisId,
+    Guid AnalysisId,
     string Name,
     string? Description = null,
     string? Configuration = null
 );
 
-public record ResetAnalysisCommand(int AnalysisId);
+public record ResetAnalysisCommand(Guid AnalysisId);
 
 public interface ICommandHandler<TCommand, TResult>
 {
