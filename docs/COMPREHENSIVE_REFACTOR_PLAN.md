@@ -101,7 +101,10 @@ This document outlines a comprehensive, incremental refactor plan for both the N
    - Impact: Inconsistent error responses
    - Effort: 1 week
    - Files: All handlers, controllers
-   - Status: ▶️ In progress (starting January 31, 2026)
+   - Status: ✅ Completed (January 31, 2026)
+   - Notes:
+     - Added global exception-handling middleware to return consistent JSON error envelopes
+     - Extracted shared API response envelope types for reuse outside controllers
 
 #### Client
 1. **API Error Handling Consistency**
