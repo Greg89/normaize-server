@@ -69,8 +69,11 @@ public class S3FileStorageService : IFileStorageService, IDisposable
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.ToLowerInvariant() ?? "development";
         var environmentFolder = MapEnvironmentFolder(environment);
 
-        // Create object key: environment/userId/date/filename
-        var objectKey = $"{environmentFolder}/{userId}/{datePath}/{uniqueFileName}";
+        // URL encode userId to handle special characters like | in Auth0 IDs
+        var encodedUserId = Uri.EscapeDataString(userId);
+
+        // Create object key: environment/encodedUserId/date/filename
+        var objectKey = $"{environmentFolder}/{encodedUserId}/{datePath}/{uniqueFileName}";
 
         _logger.LogInformation("Uploading file {FileName} to S3: {ObjectKey}", fileName, objectKey);
 
@@ -208,8 +211,15 @@ public class S3FileStorageService : IFileStorageService, IDisposable
     {
         if (filePath.StartsWith("s3://", StringComparison.OrdinalIgnoreCase))
         {
-            var uri = new Uri(filePath);
-            return uri.AbsolutePath.TrimStart('/');
+            // Remove s3://bucketname/ prefix manually to avoid Uri encoding issues
+            var pathAfterScheme = filePath.Substring("s3://".Length);
+            var firstSlashIndex = pathAfterScheme.IndexOf('/');
+            
+            if (firstSlashIndex >= 0)
+            {
+                // Return everything after the bucket name
+                return pathAfterScheme.Substring(firstSlashIndex + 1);
+            }
         }
         return filePath;
     }
