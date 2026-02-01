@@ -1,5 +1,3 @@
-using System;
-using System.Threading.Tasks;
 using Normaize.DataNormalization.Application.Interfaces;
 using Normaize.DataNormalization.Domain.Aggregates;
 using Normaize.DataNormalization.Domain.Repositories;
@@ -25,7 +23,7 @@ public class EfCoreJobQueue : IJobQueue
 
     public async Task<NormalizationJob?> DequeueAsync()
     {
-        return await _repository.GetNextQueuedJobAsync();
+        return await _repository.ClaimNextQueuedJobAsync();
     }
 
     public async Task AckAsync(Guid jobId)

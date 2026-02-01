@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Normaize.DataNormalization.Domain.Aggregates;
@@ -88,6 +84,65 @@ public class NormalizationJobRepository : INormalizationJobRepository
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving next queued normalization job");
+            throw;
+        }
+    }
+
+    public async Task<NormalizationJob?> ClaimNextQueuedJobAsync()
+    {
+        try
+        {
+            _logger.LogDebug("Attempting to claim next queued normalization job atomically");
+
+            // Best-effort provider detection without taking a hard dependency on provider packages.
+            var providerName = _context.Database.ProviderName;
+
+            if (!string.IsNullOrWhiteSpace(providerName)
+                && providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase))
+            {
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+
+                // PostgreSQL: claim a single queued job with row locking, skipping rows locked by other workers.
+                var job = await _context.NormalizationJobs
+                    .FromSqlInterpolated($"\nSELECT *\nFROM \"data_normalization\".\"normalization_jobs\"\nWHERE \"status\" = {JobStatus.Queued.ToString()}\nORDER BY \"created_at\"\nLIMIT 1\nFOR UPDATE SKIP LOCKED")
+                    .Include(j => j.DataSet)
+                    .Include(j => j.AuditLogs)
+                    .FirstOrDefaultAsync();
+
+                if (job == null)
+                {
+                    await transaction.CommitAsync();
+                    _logger.LogDebug("No queued normalization jobs available to claim");
+                    return null;
+                }
+
+                job.Start();
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                await PublishDomainEventsAsync(job);
+
+                _logger.LogInformation(
+                    "Claimed job {JobId} of type {OperationType} for dataset {DataSetId}",
+                    job.Id, job.OperationType, job.DataSetId);
+
+                return job;
+            }
+
+            // Fallback for non-Postgres providers (best-effort; not multi-worker safe).
+            var fallbackJob = await GetNextQueuedJobAsync();
+            if (fallbackJob == null)
+            {
+                return null;
+            }
+
+            fallbackJob.Start();
+            await UpdateAsync(fallbackJob);
+            return fallbackJob;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error claiming next queued normalization job");
             throw;
         }
     }

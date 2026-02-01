@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Normaize.DataNormalization.Domain.Aggregates;
 
 namespace Normaize.DataNormalization.Domain.Repositories;
@@ -12,6 +9,7 @@ public interface INormalizationJobRepository
 {
     Task<NormalizationJob?> GetByIdAsync(Guid jobId);
     Task<NormalizationJob?> GetNextQueuedJobAsync();
+    Task<NormalizationJob?> ClaimNextQueuedJobAsync();
 
     Task<(IReadOnlyList<NormalizationJob> Jobs, int TotalItems)> GetJobsForUserAsync(
         string userId,

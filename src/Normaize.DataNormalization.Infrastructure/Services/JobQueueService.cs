@@ -1,5 +1,3 @@
-using System;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Normaize.DataNormalization.Application.Interfaces;
 using Normaize.DataNormalization.Domain.Aggregates;
@@ -10,18 +8,12 @@ namespace Normaize.DataNormalization.Infrastructure.Services;
 /// <summary>
 /// Database-backed job queue implementation using the NormalizationJob repository
 /// </summary>
-public class JobQueueService : IJobQueue
+public class JobQueueService(
+    INormalizationJobRepository jobRepository,
+    ILogger<JobQueueService> logger) : IJobQueue
 {
-    private readonly INormalizationJobRepository _jobRepository;
-    private readonly ILogger<JobQueueService> _logger;
-
-    public JobQueueService(
-        INormalizationJobRepository jobRepository,
-        ILogger<JobQueueService> logger)
-    {
-        _jobRepository = jobRepository ?? throw new ArgumentNullException(nameof(jobRepository));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
+    private readonly INormalizationJobRepository _jobRepository = jobRepository ?? throw new ArgumentNullException(nameof(jobRepository));
+    private readonly ILogger<JobQueueService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
     public Task EnqueueAsync(NormalizationJob job)
     {
@@ -57,20 +49,14 @@ public class JobQueueService : IJobQueue
         {
             _logger.LogDebug("Attempting to dequeue next available job");
 
-            // Get the oldest queued job
-            var job = await _jobRepository.GetNextQueuedJobAsync();
+            // Atomically claim the oldest queued job (multi-worker safe on PostgreSQL)
+            var job = await _jobRepository.ClaimNextQueuedJobAsync();
 
             if (job == null)
             {
                 _logger.LogDebug("No queued jobs available for processing");
                 return null;
             }
-
-            // Mark the job as processing to prevent other workers from picking it up
-            job.Start();
-
-            // Update the job status in the database
-            await _jobRepository.UpdateAsync(job);
 
             _logger.LogInformation("Successfully dequeued job {JobId} of type {OperationType} for dataset {DataSetId}",
                 job.Id, job.OperationType, job.DataSetId);

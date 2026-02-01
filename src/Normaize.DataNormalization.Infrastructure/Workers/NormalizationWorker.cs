@@ -1,9 +1,5 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Normaize.DataNormalization.Application.Interfaces;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Normaize.DataNormalization.Infrastructure.Workers;
@@ -44,10 +40,13 @@ public class NormalizationWorker : IBackgroundWorker
         {
             try
             {
-                await ProcessSingleJobAsync(cancellationToken);
+                var processedJob = await ProcessSingleJobAsync(cancellationToken);
 
-                // Wait before polling for the next job
-                await Task.Delay(_pollingInterval, cancellationToken);
+                // Only wait when the queue is empty; if we just processed a job, continue immediately.
+                if (!processedJob)
+                {
+                    await Task.Delay(_pollingInterval, cancellationToken);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -72,7 +71,7 @@ public class NormalizationWorker : IBackgroundWorker
         _logger.LogInformation("Normalization worker stopped");
     }
 
-    private async Task ProcessSingleJobAsync(CancellationToken cancellationToken)
+    private async Task<bool> ProcessSingleJobAsync(CancellationToken cancellationToken)
     {
         // Use a new scope for each job to ensure proper resource disposal
         using var scope = _serviceProvider.CreateScope();
@@ -87,7 +86,7 @@ public class NormalizationWorker : IBackgroundWorker
         if (job == null)
         {
             _logger.LogTrace("No jobs available in queue");
-            return;
+            return false;
         }
 
         _logger.LogInformation("Processing job {JobId} of type {OperationType} for dataset {DataSetId}",
@@ -105,6 +104,7 @@ public class NormalizationWorker : IBackgroundWorker
             await jobQueue.AckAsync(job.Id);
 
             _logger.LogInformation("Successfully processed job {JobId}", job.Id);
+            return true;
         }
         catch (Exception ex)
         {
@@ -119,6 +119,8 @@ public class NormalizationWorker : IBackgroundWorker
             {
                 _logger.LogError(nackEx, "Error negative acknowledging job {JobId}", job.Id);
             }
+
+            return true;
         }
     }
 }
