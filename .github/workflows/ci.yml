@@ -68,13 +68,62 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore Normaize.sln
 
     - name: Build
-      run: dotnet build --no-restore --configuration Release
+      run: dotnet build Normaize.sln --no-restore --configuration Release
 
     - name: Run tests
-      run: dotnet test --no-build --verbosity normal --configuration Release --logger "console;verbosity=detailed"
+      run: dotnet test Normaize.sln --no-build --verbosity normal --configuration Release --logger "console;verbosity=detailed"
+
+  postgres-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: check-skip-ci
+    if: needs.check-skip-ci.outputs.should-skip != 'true'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Check Docker availability
+      id: docker
+      run: |
+        if docker info > /dev/null 2>&1; then
+          echo "available=true" >> $GITHUB_OUTPUT
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
+          echo "::warning title=Postgres tests skipped::Docker is not available on this runner; skipping Testcontainers-based tests."
+        fi
+
+    - name: Run Postgres/Testcontainers tests (non-blocking)
+      id: pgtests
+      if: steps.docker.outputs.available == 'true'
+      continue-on-error: true
+      run: |
+        dotnet test ./tests/Normaize.DataNormalization.PostgresTests/Normaize.DataNormalization.PostgresTests.csproj \
+          --verbosity normal \
+          --configuration Release \
+          --logger "console;verbosity=detailed"
+
+    - name: Report Postgres test status
+      if: always()
+      run: |
+        if [ "${{ steps.docker.outputs.available }}" != "true" ]; then
+          echo "Postgres tests skipped (Docker unavailable)." >> $GITHUB_STEP_SUMMARY
+          exit 0
+        fi
+
+        if [ "${{ steps.pgtests.outcome }}" = "failure" ]; then
+          echo "::warning title=Postgres tests failed::Postgres/Testcontainers tests failed but were allowed to continue (non-blocking)."
+          echo "Postgres tests: FAILED (non-blocking)." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "Postgres tests: PASSED." >> $GITHUB_STEP_SUMMARY
+        fi
 
   docker-build:
     runs-on: ubuntu-latest
