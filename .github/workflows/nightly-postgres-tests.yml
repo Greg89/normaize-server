@@ -1,0 +1,39 @@
+name: Nightly Postgres Tests
+
+on:
+  schedule:
+    # Nightly at 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+concurrency:
+  group: nightly-postgres-tests
+  cancel-in-progress: true
+
+jobs:
+  postgres-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Verify Docker availability
+        run: |
+          docker info
+
+      - name: Run Postgres/Testcontainers tests (blocking)
+        run: |
+          dotnet test ./tests/Normaize.DataNormalization.PostgresTests/Normaize.DataNormalization.PostgresTests.csproj \
+            --verbosity normal \
+            --configuration Release \
+            --logger "console;verbosity=detailed"

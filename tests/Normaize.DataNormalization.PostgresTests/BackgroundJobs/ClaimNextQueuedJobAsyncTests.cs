@@ -1,3 +1,14 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Npgsql;
+using Normaize.DataNormalization.Domain.Aggregates;
+using Normaize.DataNormalization.Domain.Entities;
+using Normaize.DataNormalization.Domain.Events;
+using Normaize.DataNormalization.Domain.ValueObjects;
+using Normaize.DataNormalization.Infrastructure.Data;
+using Normaize.DataNormalization.Infrastructure.Repositories;
+using Normaize.DataNormalization.Infrastructure.Services;
+using Xunit;
 
 namespace Normaize.DataNormalization.PostgresTests.BackgroundJobs;
 
@@ -73,6 +84,46 @@ public sealed class ClaimNextQueuedJobAsyncTests(PostgresContainerFixture fixtur
         Assert.NotNull(persisted.StartedAt);
     }
 
+    [SkippableFact]
+    public async Task ClaimNextQueuedJobAsync_AllowsOnlyOneConcurrentClaim_WhenSingleQueuedRowExists()
+    {
+        Skip.IfNot(_fixture.IsAvailable, _fixture.SkipReason);
+
+        await CleanupAsync();
+
+        var (_, jobId) = await SeedOneQueuedJobAsync();
+
+        await using var context1 = CreateDbContext();
+        await using var context2 = CreateDbContext();
+
+        var repo1 = CreateRepository(context1);
+        var repo2 = CreateRepository(context2);
+
+        var start = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        async Task<NormalizationJob?> ClaimAsync(NormalizationJobRepository repo)
+        {
+            await start.Task;
+            return await repo.ClaimNextQueuedJobAsync();
+        }
+
+        var claim1 = ClaimAsync(repo1);
+        var claim2 = ClaimAsync(repo2);
+
+        start.TrySetResult(true);
+
+        var results = await Task.WhenAll(claim1, claim2);
+        var claimed = results.Where(r => r != null).Select(r => r!).ToList();
+
+        Assert.Single(claimed);
+        Assert.Equal(jobId, claimed[0].Id);
+
+        await using var verifyContext = CreateDbContext();
+        var persisted = await verifyContext.NormalizationJobs.AsNoTracking().FirstAsync(j => j.Id == jobId);
+        Assert.Equal(JobStatus.Processing, persisted.Status);
+        Assert.NotNull(persisted.StartedAt);
+    }
+
     private DataNormalizationDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<DataNormalizationDbContext>()
@@ -85,6 +136,11 @@ public sealed class ClaimNextQueuedJobAsyncTests(PostgresContainerFixture fixtur
     private NormalizationJobRepository CreateRepository()
     {
         var context = CreateDbContext();
+        return CreateRepository(context);
+    }
+
+    private NormalizationJobRepository CreateRepository(DataNormalizationDbContext context)
+    {
         var publisher = new NoopDomainEventPublisher();
         var logger = NullLogger<NormalizationJobRepository>.Instance;
 

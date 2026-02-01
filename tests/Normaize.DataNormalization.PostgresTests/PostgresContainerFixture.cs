@@ -1,3 +1,9 @@
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using Normaize.DataNormalization.Infrastructure.Data;
+using Testcontainers.PostgreSql;
+using Xunit;
+
 namespace Normaize.DataNormalization.PostgresTests;
 
 public sealed class PostgresContainerFixture : IAsyncLifetime
