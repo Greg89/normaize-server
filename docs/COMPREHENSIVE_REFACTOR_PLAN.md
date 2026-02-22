@@ -118,6 +118,13 @@ This document outlines a comprehensive, incremental refactor plan for both the N
    - Impact: Unpredictable error states
    - Effort: 2-3 days
    - Files: All API service methods
+   - Status: ✅ Completed (February 22, 2026)
+   - Notes:
+     - Added `ErrorHandler.extractErrorMessage(error, fallback)` static helper — eliminates the duplicated `err instanceof Error ? err.message : 'Failed to ...'` inline pattern that appeared in every mutation hook
+     - Refactored all 5 mutation hooks (`useDeleteDataSet`, `useUpdateDataSet`, `useResetDataSet`, `useDatasetPreview`, `useRemoveDuplicates`) to use `extractErrorMessage` and `finally` blocks, eliminating duplicated `setLoading(false)` calls in both try and catch
+     - Improved `uploadDataSet` error handling: now attempts to parse a structured JSON error body (reads `message` or first `errors` entry) before falling back to HTTP status-code hints (413 → "File too large", 415 → "Unsupported file type", 422 → "File validation error")
+     - Removed stray blank comment block in `getDataSets` method
+     - Added 6 new tests for `uploadDataSet` error paths (JSON body, errors array, 413/415/422 without JSON body); total tests: 723 (up from 717)
 
 2. **Authentication Edge Cases**
    - Location: `AuthStateProvider.tsx`, `useAuth.ts`
