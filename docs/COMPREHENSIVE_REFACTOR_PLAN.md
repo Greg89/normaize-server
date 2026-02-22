@@ -95,6 +95,12 @@ This document outlines a comprehensive, incremental refactor plan for both the N
    - Impact: Incorrect data returned to clients
    - Effort: 3-5 days
    - Files: Query handlers with TODO/placeholder comments
+   - Status: ✅ Completed (February 22, 2026)
+   - Notes:
+     - `GetRetentionStatus`: Added `UploadedAt`, `CanExtend`, and `FileExists` to `GetRetentionStatusResult`; handler now populates these from the domain entity; controller uses real values instead of `DateTime.UtcNow` / hardcoded `true` placeholders
+     - `StatisticsConfiguration`: Fixed placeholder JSON serialization for `ColumnSummaries` and `ColumnStatistics` — now uses `System.Text.Json` so statistics are correctly persisted and loaded
+     - `NormalizationJobRouter`: Removed fake `Task.Delay` simulations for `normalize_case`, `standardize_format`, and `validate_data` operation types; they now fail fast with `NotSupportedException` and mark the job as failed
+     - `DatasetDetailsModal` (client): Fixed form state not syncing when dataset prop changes (added `useEffect` to sync on prop changes)
 
 3. **Standardize Error Handling**
    - Location: All layers

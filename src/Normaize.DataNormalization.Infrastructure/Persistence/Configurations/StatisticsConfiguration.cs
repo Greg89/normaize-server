@@ -58,17 +58,17 @@ public class StatisticsConfiguration : IEntityTypeConfiguration<Statistics>
             .IsRequired()
             .HasDefaultValue(false);
 
-        // Complex properties stored as JSON - simplified for now
+        // Complex properties stored as JSON
         builder.Property(s => s.ColumnSummaries)
             .HasConversion(
-                summaries => "{}",  // Placeholder serialization
-                json => new Dictionary<string, ColumnSummary>())  // Placeholder deserialization
+                summaries => JsonSerializer.Serialize(summaries, (JsonSerializerOptions?)null),
+                json => JsonSerializer.Deserialize<Dictionary<string, ColumnSummary>>(json, (JsonSerializerOptions?)null) ?? new Dictionary<string, ColumnSummary>())
             .HasColumnType("jsonb");
 
         builder.Property(s => s.ColumnStatistics)
             .HasConversion(
-                statistics => "{}",  // Placeholder serialization  
-                json => new Dictionary<string, StatisticalMeasure>())  // Placeholder deserialization
+                statistics => JsonSerializer.Serialize(statistics, (JsonSerializerOptions?)null),
+                json => JsonSerializer.Deserialize<Dictionary<string, StatisticalMeasure>>(json, (JsonSerializerOptions?)null) ?? new Dictionary<string, StatisticalMeasure>())
             .HasColumnType("jsonb");
 
         // Indexes for performance

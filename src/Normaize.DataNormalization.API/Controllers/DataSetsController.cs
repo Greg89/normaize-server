@@ -646,21 +646,22 @@ public class DataSetsController(
             var query = new GetRetentionStatusQuery { DataSetId = id, UserId = userId };
             var status = await _mediator.Send(query);
 
-            if (status == null)
+            if (!status.Success)
             {
-                return Error("Dataset not found or you don't have permission to access it", "DATASET_NOT_FOUND", 404);
+                var statusCode = status.Error?.Contains("Access denied") == true ? 404 : 404;
+                return Error(status.Error ?? "Dataset not found or you don't have permission to access it", "DATASET_NOT_FOUND", statusCode);
             }
 
             var response = new RetentionStatusResponse
             {
                 DataSetId = status.DataSetId ?? Guid.Empty,
                 RetentionDays = status.RetentionDays ?? 0,
-                CreatedAt = DateTime.UtcNow, // Use current time as placeholder
+                CreatedAt = status.UploadedAt ?? DateTime.MinValue,
                 ExpiryDate = status.RetentionExpiryDate ?? DateTime.MinValue,
                 DaysRemaining = status.DaysUntilExpiry,
                 IsExpired = status.IsRetentionExpired,
-                CanExtend = true, // Placeholder - this logic would be in the domain
-                FileExists = true // Placeholder - this would come from storage check
+                CanExtend = status.CanExtend,
+                FileExists = status.FileExists
             };
 
             return Success(response);

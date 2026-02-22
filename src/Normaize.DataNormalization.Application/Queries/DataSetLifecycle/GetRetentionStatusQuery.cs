@@ -54,6 +54,21 @@ public class GetRetentionStatusResult
     public int DaysUntilExpiry { get; set; }
 
     /// <summary>
+    /// Gets or sets the date the dataset was originally uploaded
+    /// </summary>
+    public DateTime? UploadedAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the retention period can be extended (dataset is not deleted and retention hasn't expired)
+    /// </summary>
+    public bool CanExtend { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the dataset file is accessible (not soft-deleted)
+    /// </summary>
+    public bool FileExists { get; set; }
+
+    /// <summary>
     /// Gets or sets the error message if operation failed
     /// </summary>
     public string? Error { get; set; }

@@ -74,7 +74,10 @@ public class GetRetentionStatusQueryHandler : IRequestHandler<GetRetentionStatus
                 RetentionDays = retentionDays,
                 RetentionExpiryDate = expiryDate,
                 IsRetentionExpired = isExpired,
-                DaysUntilExpiry = daysRemaining
+                DaysUntilExpiry = daysRemaining,
+                UploadedAt = dataSet.UploadedAt,
+                CanExtend = !dataSet.IsDeleted,
+                FileExists = !dataSet.IsDeleted
             };
         }
         catch (Exception ex)
