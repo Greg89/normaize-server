@@ -100,33 +100,49 @@ public class NormalizationJobRepository : INormalizationJobRepository
             if (!string.IsNullOrWhiteSpace(providerName)
                 && providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase))
             {
-                await using var transaction = await _context.Database.BeginTransactionAsync();
+                // NpgsqlRetryingExecutionStrategy does not support user-initiated transactions directly.
+                // Wrapping in CreateExecutionStrategy().ExecuteAsync() tells EF Core to treat the entire
+                // block as one retriable unit, which satisfies the strategy while still allowing us to
+                // manage the transaction manually for the FOR UPDATE SKIP LOCKED semantics.
+                NormalizationJob? claimedJob = null;
 
-                // PostgreSQL: claim a single queued job with row locking, skipping rows locked by other workers.
-                var job = await _context.NormalizationJobs
-                    .FromSqlInterpolated($"\nSELECT *\nFROM \"data_normalization\".\"normalization_jobs\"\nWHERE \"status\" = {JobStatus.Queued.ToString()}\nORDER BY \"created_at\"\nLIMIT 1\nFOR UPDATE SKIP LOCKED")
-                    .Include(j => j.DataSet)
-                    .Include(j => j.AuditLogs)
-                    .FirstOrDefaultAsync();
-
-                if (job == null)
+                await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
                 {
+                    await using var transaction = await _context.Database.BeginTransactionAsync();
+
+                    // PostgreSQL: claim a single queued job with row locking, skipping rows locked by other workers.
+                    var job = await _context.NormalizationJobs
+                        .FromSqlInterpolated($"\nSELECT *\nFROM \"data_normalization\".\"normalization_jobs\"\nWHERE \"status\" = {JobStatus.Queued.ToString()}\nORDER BY \"created_at\"\nLIMIT 1\nFOR UPDATE SKIP LOCKED")
+                        .Include(j => j.DataSet)
+                        .Include(j => j.AuditLogs)
+                        .FirstOrDefaultAsync();
+
+                    if (job == null)
+                    {
+                        await transaction.CommitAsync();
+                        return;
+                    }
+
+                    job.Start();
+                    await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
+
+                    claimedJob = job;
+                });
+
+                if (claimedJob == null)
+                {
                     _logger.LogDebug("No queued normalization jobs available to claim");
                     return null;
                 }
 
-                job.Start();
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                await PublishDomainEventsAsync(job);
+                await PublishDomainEventsAsync(claimedJob);
 
                 _logger.LogInformation(
                     "Claimed job {JobId} of type {OperationType} for dataset {DataSetId}",
-                    job.Id, job.OperationType, job.DataSetId);
+                    claimedJob.Id, claimedJob.OperationType, claimedJob.DataSetId);
 
-                return job;
+                return claimedJob;
             }
 
             // Fallback for non-Postgres providers (best-effort; not multi-worker safe).
