@@ -131,6 +131,12 @@ This document outlines a comprehensive, incremental refactor plan for both the N
    - Impact: User experience issues
    - Effort: 2-3 days
    - Files: Auth components and hooks
+   - Status: ✅ Completed (February 22, 2026)
+   - Notes:
+     - **`getToken` session-expiry detection**: Auth0 session-expiry errors (`login_required`, `interaction_required`, `consent_required`, `missing_refresh_token`) now call `forceReAuth` immediately and return `null`, avoiding a wasted network round-trip (old path: token missing → request sent without auth → 401 → forceReAuth; new path: fail fast at `getToken`)
+     - **`forceReAuth` deduplication**: Added `isForceReAuthInProgress` ref guard — when multiple API calls fail simultaneously, only the first `forceReAuth` call triggers `logout()`; subsequent calls log and return early, preventing duplicate redirects
+     - **`error` type narrowed**: `AuthContextValue.error` changed from `unknown` to `Error | null | undefined` to match what Auth0 actually provides
+     - Added 7 new tests covering: `login_required`, `interaction_required`, `consent_required`, `missing_refresh_token` detection; generic-error non-triggering; `forceReAuth` deduplication; `forceReAuth` first-call behavior; total tests: 730 (up from 723)
 
 ### Priority 2: High (Quality & Maintainability)
 
